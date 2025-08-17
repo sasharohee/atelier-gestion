@@ -180,11 +180,11 @@ const Administration: React.FC = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Avatar src={user.avatar} sx={{ mr: 2 }}>
-                          {user.name.charAt(0)}
+                          {user.firstName.charAt(0)}
                         </Avatar>
                         <Box>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {user.name}
+                            {`${user.firstName} ${user.lastName}`}
                           </Typography>
                           {user.id === currentUser?.id && (
                             <Chip label="Vous" size="small" color="primary" />

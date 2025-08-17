@@ -269,7 +269,7 @@ const Sidebar: React.FC = () => {
                   src={currentUser?.avatar}
                   sx={{ width: 32, height: 32, mr: 1 }}
                 >
-                  {currentUser?.name?.charAt(0)}
+                  {currentUser?.firstName?.charAt(0)}
                 </Avatar>
                 <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                   <Typography
@@ -281,7 +281,7 @@ const Sidebar: React.FC = () => {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {currentUser?.name}
+                    {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''}
                   </Typography>
                   <Typography
                     variant="caption"

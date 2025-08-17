@@ -200,7 +200,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 src={currentUser?.avatar}
                 sx={{ width: 32, height: 32 }}
               >
-                {currentUser?.name?.charAt(0)}
+                {currentUser?.firstName?.charAt(0)}
               </Avatar>
             </IconButton>
           </Box>
@@ -234,7 +234,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       >
         <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {currentUser?.name}
+            {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {currentUser?.email}

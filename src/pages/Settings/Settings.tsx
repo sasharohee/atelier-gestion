@@ -61,7 +61,7 @@ const Settings: React.FC = () => {
                   src={currentUser?.avatar}
                   sx={{ width: 80, height: 80, mr: 3 }}
                 >
-                  {currentUser?.name?.charAt(0)}
+                  {currentUser?.firstName?.charAt(0)}
                 </Avatar>
                 <Button variant="outlined" size="small">
                   Changer l'avatar
@@ -73,14 +73,14 @@ const Settings: React.FC = () => {
                   <TextField
                     fullWidth
                     label="Prénom"
-                    defaultValue={currentUser?.name?.split(' ')[0] || ''}
+                    defaultValue={currentUser?.firstName || ''}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="Nom"
-                    defaultValue={currentUser?.name?.split(' ')[1] || ''}
+                    defaultValue={currentUser?.lastName || ''}
                   />
                 </Grid>
                 <Grid item xs={12}>

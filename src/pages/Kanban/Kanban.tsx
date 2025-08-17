@@ -173,10 +173,10 @@ const Kanban: React.FC = () => {
           {technician && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
               <Avatar sx={{ width: 20, height: 20, fontSize: '0.75rem' }}>
-                {technician.name.charAt(0)}
+                {technician.firstName.charAt(0)}
               </Avatar>
               <Typography variant="caption" color="text.secondary">
-                {technician.name}
+                {`${technician.firstName} ${technician.lastName}`}
               </Typography>
             </Box>
           )}
@@ -328,7 +328,7 @@ const Kanban: React.FC = () => {
                       .filter(user => user.role === 'technician')
                       .map((user) => (
                         <MenuItem key={user.id} value={user.id}>
-                          {user.name}
+                          {`${user.firstName} ${user.lastName}`}
                         </MenuItem>
                       ))}
                   </Select>

@@ -1,7 +1,8 @@
 // Types de base
 export interface User {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   role: 'admin' | 'technician' | 'manager';
   avatar?: string;
@@ -86,8 +87,11 @@ export interface Repair {
   status: string; // ID du statut
   assignedTechnicianId?: string;
   description: string;
+  issue: string;
   estimatedDuration: number; // en minutes
   actualDuration?: number;
+  estimatedStartDate?: Date;
+  estimatedEndDate?: Date;
   startDate?: Date;
   endDate?: Date;
   dueDate: Date;
@@ -125,17 +129,18 @@ export interface Message {
   content: string;
   isRead: boolean;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Appointment {
   id: string;
-  clientId: string;
+  clientId?: string;
   repairId?: string;
   title: string;
   description: string;
   startDate: Date;
   endDate: Date;
-  assignedTechnicianId?: string;
+  assignedUserId?: string;
   status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
   createdAt: Date;
   updatedAt: Date;

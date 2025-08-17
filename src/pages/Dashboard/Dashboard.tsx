@@ -15,6 +15,7 @@ import {
   LinearProgress,
   Divider,
 } from '@mui/material';
+import SupabaseTest from '../../components/SupabaseTest';
 import {
   Build as BuildIcon,
   CheckCircle as CheckCircleIcon,
@@ -341,7 +342,7 @@ const Dashboard: React.FC = () => {
               ) : (
                 <List>
                   {todayAppointments.map((appointment) => {
-                    const client = getClientById(appointment.clientId);
+                    const client = appointment.clientId ? getClientById(appointment.clientId) : null;
                     return (
                       <ListItem key={appointment.id} alignItems="flex-start">
                         <ListItemAvatar>
@@ -371,6 +372,11 @@ const Dashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Test Supabase */}
+      <Box sx={{ mt: 4 }}>
+        <SupabaseTest />
+      </Box>
     </Box>
   );
 };

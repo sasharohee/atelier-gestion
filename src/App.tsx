@@ -64,6 +64,10 @@ function App() {
     setAuthenticated(true);
 
     // Charger les données de démonstration
+    mockUsers.forEach(user => {
+      // Ajouter les utilisateurs au store
+      useAppStore.getState().users.push(user);
+    });
     mockClients.forEach(addClient);
     mockDevices.forEach(addDevice);
     mockServices.forEach(addService);

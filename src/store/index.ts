@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { v4 as uuidv4 } from 'uuid';
 import {
   User,
   Client,
@@ -24,6 +25,7 @@ interface AppState {
   isAuthenticated: boolean;
   
   // Données principales
+  users: User[];
   clients: Client[];
   devices: Device[];
   services: Service[];
@@ -81,11 +83,11 @@ interface AppActions {
   updateRepair: (id: string, updates: Partial<Repair>) => void;
   deleteRepair: (id: string) => void;
   
-  addMessage: (message: Message) => void;
+  addMessage: (message: Omit<Message, 'id'>) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
   deleteMessage: (id: string) => void;
   
-  addAppointment: (appointment: Appointment) => void;
+  addAppointment: (appointment: Omit<Appointment, 'id'>) => void;
   updateAppointment: (id: string, updates: Partial<Appointment>) => void;
   deleteAppointment: (id: string) => void;
   
@@ -113,6 +115,7 @@ interface AppActions {
   
   // Getters
   getRepairsByStatus: (statusId: string) => Repair[];
+  getUserById: (id: string) => User | undefined;
   getClientById: (id: string) => Client | undefined;
   getDeviceById: (id: string) => Device | undefined;
   getServiceById: (id: string) => Service | undefined;
@@ -133,6 +136,7 @@ export const useAppStore = create<AppStore>()(
       currentUser: null,
       isAuthenticated: false,
       
+      users: [],
       clients: [],
       devices: [],
       services: [],
@@ -221,7 +225,9 @@ export const useAppStore = create<AppStore>()(
         repairs: state.repairs.filter(repair => repair.id !== id)
       })),
       
-      addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
+      addMessage: (message) => set((state) => ({ 
+        messages: [...state.messages, { ...message, id: uuidv4() }] 
+      })),
       updateMessage: (id, updates) => set((state) => ({
         messages: state.messages.map(message => 
           message.id === id ? { ...message, ...updates } : message
@@ -231,7 +237,9 @@ export const useAppStore = create<AppStore>()(
         messages: state.messages.filter(message => message.id !== id)
       })),
       
-      addAppointment: (appointment) => set((state) => ({ appointments: [...state.appointments, appointment] })),
+      addAppointment: (appointment) => set((state) => ({ 
+        appointments: [...state.appointments, { ...appointment, id: uuidv4() }] 
+      })),
       updateAppointment: (id, updates) => set((state) => ({
         appointments: state.appointments.map(appointment => 
           appointment.id === id ? { ...appointment, ...updates, updatedAt: new Date() } : appointment
@@ -284,6 +292,11 @@ export const useAppStore = create<AppStore>()(
       })),
       
       // Getters
+      getUserById: (id) => {
+        const state = get();
+        return state.users.find(user => user.id === id);
+      },
+      
       getRepairsByStatus: (statusId) => {
         const state = get();
         return state.repairs.filter(repair => repair.status === statusId);

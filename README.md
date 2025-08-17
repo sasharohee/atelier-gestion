@@ -59,6 +59,7 @@ Une application complète de gestion d'atelier de réparation d'appareils élect
 
 - **React 18** - Framework frontend
 - **TypeScript** - Typage statique
+- **Vite** - Build tool et serveur de développement
 - **Material-UI (MUI)** - Composants UI
 - **Zustand** - Gestion d'état
 - **React Router** - Navigation
@@ -81,6 +82,10 @@ npm install
 
 3. **Démarrer l'application**
 ```bash
+# Avec Vite (recommandé - plus rapide)
+npm run dev
+
+# Ou avec React Scripts
 npm start
 ```
 
