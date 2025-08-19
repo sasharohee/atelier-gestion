@@ -153,7 +153,7 @@ export const userService = {
     // Créer l'utilisateur dans Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: userData.email,
-      password: userData.password || 'tempPassword123!',
+      password: 'tempPassword123!',
       email_confirm: true,
       user_metadata: {
         firstName: userData.firstName,
@@ -967,11 +967,13 @@ export const dashboardService = {
 
       const stats: DashboardStats = {
         totalRepairs,
+        activeRepairs: totalRepairs - completedRepairs,
         completedRepairs,
-        pendingRepairs: totalRepairs - completedRepairs,
-        totalSales,
-        lowStockCount,
-        completionRate: totalRepairs > 0 ? (completedRepairs / totalRepairs) * 100 : 0
+        overdueRepairs: 0,
+        todayAppointments: 0,
+        monthlyRevenue: 0,
+        lowStockItems: lowStockCount,
+        pendingMessages: 0
       };
 
       return handleSupabaseSuccess(stats);

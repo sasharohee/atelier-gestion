@@ -809,7 +809,7 @@ class DemoDataService {
         startDate: new Date(new Date().setHours(10, 0, 0, 0)),
         endDate: new Date(new Date().setHours(11, 0, 0, 0)),
         status: 'confirmed',
-        notes: 'Client souhaite une réparation express',
+
         createdAt: this.getPastDate(1),
         updatedAt: this.getCurrentDate()
       },
@@ -821,7 +821,7 @@ class DemoDataService {
         startDate: new Date(new Date().setHours(14, 0, 0, 0)),
         endDate: new Date(new Date().setHours(15, 0, 0, 0)),
         status: 'confirmed',
-        notes: 'Problème de performance',
+
         createdAt: this.getPastDate(1),
         updatedAt: this.getCurrentDate()
       },
@@ -832,8 +832,7 @@ class DemoDataService {
         clientId: demoClients[2].id,
         startDate: new Date(new Date().setHours(16, 0, 0, 0)),
         endDate: new Date(new Date().setHours(18, 0, 0, 0)),
-        status: 'pending',
-        notes: 'Urgent - données importantes',
+        status: 'scheduled',
         createdAt: this.getCurrentDate(),
         updatedAt: this.getCurrentDate()
       }
@@ -1065,7 +1064,7 @@ class DemoDataService {
             start_date: appointment.startDate.toISOString(),
             end_date: appointment.endDate.toISOString(),
             status: appointment.status,
-            notes: appointment.notes,
+
             created_at: appointment.createdAt.toISOString(),
             updated_at: appointment.updatedAt.toISOString()
           }]);
@@ -1105,6 +1104,11 @@ class DemoDataService {
   // Méthode pour vérifier si le guide a déjà été complété
   isOnboardingCompleted(): boolean {
     return localStorage.getItem('onboarding-completed') === 'true';
+  }
+
+  // Méthode pour marquer le guide comme terminé
+  markOnboardingCompleted(): void {
+    localStorage.setItem('onboarding-completed', 'true');
   }
 
   // Méthode pour réinitialiser le guide (pour les tests)

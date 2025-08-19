@@ -180,7 +180,7 @@ function App() {
                   )}
                   
                   {/* Notification d'intégration */}
-                  <OnboardingNotification />
+                  <OnboardingNotification onShowGuide={() => setShowOnboarding(true)} />
                   
                   {/* Toast notifications */}
                   <Toaster position="top-right" />

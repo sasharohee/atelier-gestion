@@ -91,7 +91,7 @@ export const checkConnectionHealth = async () => {
     return { 
       healthy: false, 
       error: error instanceof Error ? error.message : 'Erreur inconnue',
-      responseTime: null
+      responseTime: undefined
     };
   }
 };

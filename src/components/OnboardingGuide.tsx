@@ -44,11 +44,12 @@ interface OnboardingStep {
 }
 
 interface OnboardingGuideProps {
-  open: boolean;
-  onClose: () => void;
+  open?: boolean;
+  onClose?: () => void;
+  onComplete?: () => void;
 }
 
-export const OnboardingGuide: React.FC<OnboardingGuideProps> = ({ open, onClose }) => {
+export const OnboardingGuide: React.FC<OnboardingGuideProps> = ({ open = false, onClose, onComplete }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -114,7 +115,7 @@ export const OnboardingGuide: React.FC<OnboardingGuideProps> = ({ open, onClose 
       
       setTimeout(() => {
         setIsLoading(false);
-        onClose();
+        onClose?.();
       }, 1000);
       
     } catch (error) {

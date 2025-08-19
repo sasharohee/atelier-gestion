@@ -188,7 +188,7 @@ const Administration: React.FC = () => {
 
       // Si les paramètres ne sont pas encore chargés, afficher un message
       if (systemSettings.length === 0) {
-        setSnackbar({ open: true, message: 'Chargement des paramètres en cours...', severity: 'info' });
+        setSnackbar({ open: true, message: 'Chargement des paramètres en cours...', severity: 'success' });
         return;
       }
 
@@ -212,7 +212,7 @@ const Administration: React.FC = () => {
         setLocalSettings(newLocalSettings);
         setSnackbar({ open: true, message: 'Paramètres sauvegardés avec succès', severity: 'success' });
       } else {
-        setSnackbar({ open: true, message: 'Aucun paramètre à sauvegarder', severity: 'info' });
+        setSnackbar({ open: true, message: 'Aucun paramètre à sauvegarder', severity: 'success' });
       }
     } catch (error: any) {
       console.error('Erreur lors de la sauvegarde:', error);
@@ -351,8 +351,7 @@ const Administration: React.FC = () => {
               { id: '12', key: 'max_file_size', value: '10', description: 'Taille maximale des fichiers en MB', category: 'system', createdAt: new Date(), updatedAt: new Date() },
             ];
             // Utiliser directement le store pour forcer l'état
-            const { set } = useAppStore.getState();
-            set({ systemSettings: defaultSettings });
+            useAppStore.setState({ systemSettings: defaultSettings });
             setSnackbar({ open: true, message: 'Paramètres activés avec succès !', severity: 'success' });
           }}
         >

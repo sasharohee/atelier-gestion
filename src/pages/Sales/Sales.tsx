@@ -150,13 +150,13 @@ const Sales: React.FC = () => {
     
     switch (selectedItemType) {
       case 'product':
-        categories = [...new Set(products.filter(p => p.isActive).map(p => p.category))];
+        categories = Array.from(new Set(products.filter(p => p.isActive).map(p => p.category)));
         break;
       case 'service':
-        categories = [...new Set(services.filter(s => s.isActive).map(s => s.category))];
+        categories = Array.from(new Set(services.filter(s => s.isActive).map(s => s.category)));
         break;
       case 'part':
-        categories = [...new Set(parts.filter(p => p.isActive && p.stockQuantity > 0).map(p => p.brand))];
+        categories = Array.from(new Set(parts.filter(p => p.isActive && p.stockQuantity > 0).map(p => p.brand)));
         break;
     }
     

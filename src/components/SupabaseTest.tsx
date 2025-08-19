@@ -17,7 +17,11 @@ const SupabaseTest: React.FC = () => {
         setConnectionStatus('success');
         // Vérifier la santé de la connexion
         const health = await checkConnectionHealth();
-        setHealthData(health);
+        setHealthData({
+          healthy: health.healthy,
+          responseTime: health.responseTime,
+          message: health.message
+        });
       } else {
         setConnectionStatus('no-tables');
         setErrorMessage('Connexion réussie mais les tables n\'existent pas encore');

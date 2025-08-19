@@ -159,7 +159,7 @@ const Calendar: React.FC = () => {
 
   const handleSubmit = () => {
     // Convertir les chaînes vides en null pour l'envoi à Supabase
-    const convertEmptyToNull = (value: string) => value.trim() === '' ? null : value;
+    const convertEmptyToNull = (value: string) => value.trim() === '' ? undefined : value;
     
     if (selectedEvent) {
       // Mettre à jour le rendez-vous existant
