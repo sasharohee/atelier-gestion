@@ -1,4 +1,14 @@
 // Types de base
+export interface SystemSetting {
+  id: string;
+  key: string;
+  value: string;
+  description?: string;
+  category: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface User {
   id: string;
   firstName: string;
@@ -234,4 +244,36 @@ export interface SearchFilters {
   query: string;
   type: 'repairs' | 'clients' | 'devices' | 'parts' | 'services';
   filters?: Record<string, any>;
+}
+
+// Types pour les paramètres utilisateur
+export interface UserProfile {
+  id?: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UserPreferences {
+  id?: string;
+  user_id: string;
+  notifications_email: boolean;
+  notifications_push: boolean;
+  notifications_sms: boolean;
+  theme_dark_mode: boolean;
+  theme_compact_mode: boolean;
+  language: string;
+  two_factor_auth: boolean;
+  multiple_sessions: boolean;
+  repair_notifications: boolean;
+  status_notifications: boolean;
+  stock_notifications: boolean;
+  daily_reports: boolean;
+  created_at?: string;
+  updated_at?: string;
 }

@@ -1,146 +1,139 @@
-# 🛠️ Application de Gestion d'Atelier
+# 🏪 Application de Gestion d'Atelier
 
-Une application moderne de gestion d'atelier de réparation d'appareils électroniques, construite avec React, TypeScript, Material-UI, Supabase et déployée sur Vercel.
+Application complète de gestion d'atelier de réparation d'appareils électroniques avec interface moderne. L'atelier est vierge et prêt à recevoir vos données.
 
-## 🚀 Fonctionnalités
+## 🚀 Démarrage Rapide
 
-- **Dashboard interactif** avec statistiques en temps réel
-- **Gestion des clients** - CRUD complet
-- **Catalogue de produits** avec gestion des stocks
-- **Services de réparation** avec tarification
-- **Suivi des réparations** avec statuts
-- **Gestion des pièces détachées**
-- **Commandes et facturation**
-- **Calendrier de rendez-vous**
-- **Interface Kanban** pour le suivi des tâches
-- **Messagerie intégrée**
-- **Statistiques et rapports**
-
-## 🛠️ Technologies Utilisées
-
-- **Frontend** : React 18, TypeScript, Material-UI
-- **Backend** : Supabase (PostgreSQL + API REST)
-- **Build Tool** : Vite
-- **Déploiement** : Vercel
-- **État Global** : Zustand
-- **Routing** : React Router DOM
-- **Calendrier** : FullCalendar
-- **Graphiques** : Recharts
-- **Drag & Drop** : React Beautiful DnD
-
-## 📦 Installation
-
-### Prérequis
-
-- Node.js 18+ 
-- npm ou yarn
-- Compte Supabase (gratuit)
-
-### Installation locale
+### 1. Installation des Dépendances
 
 ```bash
-# Cloner le repository
-git clone https://github.com/votre-username/atelier-gestion.git
-cd atelier-gestion
-
-# Installer les dépendances
 npm install
+```
 
-# Démarrer le serveur de développement
+### 2. Démarrage de l'Application
+
+```bash
 npm run dev
 ```
 
-L'application sera accessible sur `http://localhost:3000`
+L'application sera accessible sur `http://localhost:3001`
 
-## 🔧 Configuration Supabase
+## 🎯 Fonctionnalités
 
-1. Créez un projet sur [Supabase](https://supabase.com)
-2. Récupérez vos clés d'API dans les paramètres du projet
-3. Exécutez le script SQL dans l'éditeur Supabase (voir `SUPABASE_SETUP.md`)
-4. Mettez à jour les variables d'environnement dans `src/lib/supabase.ts`
+### 📋 Gestion des Clients
+- Ajout, modification et suppression de clients
+- Historique des réparations par client
+- Gestion des coordonnées et informations
 
-## 🚀 Déploiement
+### 🔧 Suivi des Réparations
+- Création et suivi des réparations
+- Statuts : en attente, en cours, terminée, annulée
+- Estimation et facturation des prix
+- Notes et commentaires
 
-### Déploiement sur Vercel
+### 📦 Catalogue de Produits
+- Gestion du stock de produits
+- Catégorisation des articles
+- Suivi des prix et disponibilités
 
-```bash
-# Installer Vercel CLI
-npm install -g vercel
+### 🛠️ Services et Pièces
+- Catalogue des services proposés
+- Gestion des pièces détachées
+- Tarification et durée estimée
 
-# Déployer
-vercel --prod
-```
+### 📅 Gestion des Rendez-vous
+- Planification des rendez-vous
+- Calendrier interactif
+- Gestion des disponibilités
 
-### Déploiement sur GitHub Pages
+### 📊 Tableau de Bord
+- Statistiques en temps réel
+- Graphiques et indicateurs
+- Vue d'ensemble de l'activité
 
-```bash
-# Build de production
-npm run build
+### 💼 Gestion des Commandes
+- Création et suivi des commandes
+- Gestion des statuts de livraison
+- Facturation automatique
 
-# Déployer (si configuré)
-npm run deploy
-```
+## 🛠️ Technologies Utilisées
+
+- **Frontend** : React 18, TypeScript, Vite
+- **UI** : Material-UI (MUI), Emotion
+- **État** : Zustand
+- **Routing** : React Router DOM
+- **Graphiques** : Recharts
+- **Calendrier** : FullCalendar
+- **Notifications** : React Hot Toast
 
 ## 📁 Structure du Projet
 
 ```
-atelier-gestion/
-├── src/
-│   ├── components/          # Composants réutilisables
-│   │   ├── Layout/         # Layout principal
-│   │   └── SupabaseTest/   # Test de connexion
-│   ├── pages/              # Pages de l'application
-│   │   ├── Dashboard/      # Tableau de bord
-│   │   ├── Catalog/        # Catalogue produits
-│   │   ├── Sales/          # Ventes
-│   │   ├── Calendar/       # Calendrier
-│   │   ├── Kanban/         # Kanban
-│   │   └── ...
-│   ├── hooks/              # Hooks personnalisés
-│   ├── services/           # Services Supabase
-│   ├── lib/                # Configuration Supabase
-│   ├── store/              # État global (Zustand)
-│   ├── types/              # Types TypeScript
-│   └── theme/              # Thème Material-UI
-├── database/               # Schéma de base de données
-├── scripts/                # Scripts utilitaires
-├── public/                 # Assets statiques
-└── docs/                   # Documentation
+src/
+├── components/          # Composants réutilisables
+│   └── Layout/         # Layout principal et sidebar
+├── pages/              # Pages de l'application
+│   ├── Administration/
+│   ├── Calendar/
+│   ├── Catalog/
+│   ├── Dashboard/
+│   ├── Kanban/
+│   ├── Messaging/
+│   ├── Sales/
+│   ├── Settings/
+│   └── Statistics/
+├── hooks/              # Hooks personnalisés
+├── store/              # État global (Zustand)
+├── types/              # Types TypeScript
+└── theme/              # Configuration du thème
 ```
 
-## 🗄️ Base de Données
+## 🔧 Scripts Disponibles
 
-### Tables principales
+```bash
+# Développement
+npm run dev          # Démarrer le serveur de développement
+npm run start        # Alias pour dev
 
-- **clients** - Informations des clients
-- **produits** - Catalogue des produits
-- **services** - Services de réparation
-- **reparations** - Suivi des réparations
-- **pieces** - Pièces détachées
-- **commandes** - Commandes clients
-- **users** - Utilisateurs système
-- **rendez_vous** - Calendrier
+# Build
+npm run build        # Construire pour la production
+npm run preview      # Prévisualiser le build
+```
 
-### Relations
+## 📊 Données Locales
 
-- Réparations ↔ Clients (Many-to-One)
-- Commandes ↔ Clients (Many-to-One)
-- Commande_Produits ↔ Commandes (Many-to-One)
-- Commande_Produits ↔ Produits (Many-to-One)
+L'application utilise des données locales stockées dans le store Zustand. L'atelier est complètement vierge au démarrage et toutes les données se réinitialisent au rechargement de la page.
 
-## 🔐 Sécurité
+### Types de Données Disponibles
 
-- **Row Level Security (RLS)** activé sur toutes les tables
-- **Authentification** via Supabase Auth
-- **Validation** côté client et serveur
-- **HTTPS** obligatoire en production
+- **Clients** : Gestion des informations clients
+- **Produits** : Catalogue des produits
+- **Services** : Services de réparation
+- **Réparations** : Suivi des réparations
+- **Pièces** : Pièces détachées
+- **Commandes** : Commandes clients
+- **Rendez-vous** : Gestion des rendez-vous
 
-## 📊 Fonctionnalités Avancées
+## 🎨 Interface Utilisateur
 
-### Dashboard
+### Design System
+- **Material-UI** pour les composants
+- **Thème personnalisé** avec couleurs adaptées
+- **Responsive design** pour tous les écrans
+- **Animations fluides** et transitions
+
+### Navigation
+- **Sidebar** avec navigation principale
+- **Breadcrumbs** pour la navigation
+- **Recherche globale** intégrée
+- **Notifications** en temps réel
+
+## 📈 Fonctionnalités Avancées
+
+### Dashboard Interactif
 - Statistiques en temps réel
-- Graphiques interactifs
-- Vue d'ensemble des réparations
+- Graphiques dynamiques
+- Vue d'ensemble complète
 - Alertes et notifications
 
 ### Gestion des Réparations
@@ -149,70 +142,54 @@ atelier-gestion/
 - Estimation des coûts
 - Historique complet
 
-### Catalogue
+### Catalogue Intelligent
 - Gestion des stocks
-- Catégorisation
-- Images des produits
+- Catégorisation automatique
 - Prix dynamiques
+- Images des produits
 
-### Clients
+### Clients et Relations
 - Profils complets
 - Historique des réparations
 - Communication intégrée
 - Fidélisation
 
-## 🧪 Tests
+## 🚨 Dépannage
 
-```bash
-# Tests unitaires
-npm test
+### Problèmes Courants
 
-# Tests d'intégration
-npm run test:integration
+1. **Erreur de port**
+   - L'application utilise le port 3001 par défaut
+   - Si le port est occupé, Vite choisira automatiquement un autre port
 
-# Tests E2E
-npm run test:e2e
-```
+2. **Problèmes de build**
+   - Vérifiez que toutes les dépendances sont installées
+   - Consultez les logs d'erreur
 
-## 📈 Performance
-
-- **Lazy Loading** des composants
-- **Code Splitting** automatique
-- **Optimisation** des images
-- **Cache** intelligent
-- **PWA** ready
+3. **Données perdues**
+   - L'atelier est vierge au démarrage
+   - Toutes les données se réinitialisent au rechargement de la page
 
 ## 🤝 Contribution
 
 1. Fork le projet
-2. Créez une branche feature (`git checkout -b feature/AmazingFeature`)
-3. Commit vos changements (`git commit -m 'Add some AmazingFeature'`)
-4. Push vers la branche (`git push origin feature/AmazingFeature`)
+2. Créez une branche pour votre fonctionnalité
+3. Committez vos changements
+4. Poussez vers la branche
 5. Ouvrez une Pull Request
 
-## 📝 License
+## 📄 Licence
 
-Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
+Ce projet est sous licence MIT. Voir le fichier [LICENSE](./LICENSE) pour plus de détails.
 
 ## 🆘 Support
 
-- **Documentation** : `SUPABASE_SETUP.md`
-- **Issues** : [GitHub Issues](https://github.com/votre-username/atelier-gestion/issues)
-- **Discussions** : [GitHub Discussions](https://github.com/votre-username/atelier-gestion/discussions)
+Si vous rencontrez des problèmes :
 
-## 🙏 Remerciements
-
-- [Supabase](https://supabase.com) pour le backend
-- [Vercel](https://vercel.com) pour l'hébergement
-- [Material-UI](https://mui.com) pour les composants
-- [React](https://reactjs.org) pour le framework
+1. Consultez la documentation
+2. Vérifiez les issues existantes
+3. Créez une nouvelle issue avec les détails du problème
 
 ---
 
-**Développé avec ❤️ pour les ateliers de réparation**
-
-## 🔗 Liens Utiles
-
-- **Application en ligne** : [https://atelier-gestion-8kjroglwg-sasharohees-projects.vercel.app](https://atelier-gestion-8kjroglwg-sasharohees-projects.vercel.app)
-- **Dashboard Supabase** : [https://supabase.com/dashboard/project/wlqyrmntfxwdvkzzsujv](https://supabase.com/dashboard/project/wlqyrmntfxwdvkzzsujv)
-- **Documentation Supabase** : [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
+**Développé avec ❤️ pour la gestion d'atelier de réparation**

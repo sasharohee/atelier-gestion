@@ -1,189 +1,346 @@
-# Configuration Supabase pour l'Application de Gestion d'Atelier
+# Configuration Supabase
 
-## 🚀 Vue d'ensemble
+## Étape 1: Récupérer les clés Supabase
 
-Ce guide vous explique comment configurer Supabase pour votre application de gestion d'atelier de réparation d'appareils électroniques.
+1. Connectez-vous à votre dashboard Supabase : https://supabase.com/dashboard
+2. Sélectionnez votre projet
+3. Allez dans Settings > API
+4. Copiez l'URL et la clé anon (anon key)
 
-## 📋 Prérequis
+## Étape 2: Configuration des variables d'environnement
 
-- Un compte Supabase (gratuit)
-- Les clés d'API Supabase (déjà configurées dans le projet)
+Créez un fichier `.env` à la racine du projet avec le contenu suivant :
 
-## 🔧 Configuration
+```env
+# Configuration Supabase
+VITE_SUPABASE_URL=https://gggoqnxrspviuxadvkbh.supabase.co
+VITE_SUPABASE_ANON_KEY=votre-clé-anon-ici
 
-### 1. Accès au Dashboard Supabase
-
-1. Allez sur [https://supabase.com/dashboard/project/wlqyrmntfxwdvkzzsujv/editor](https://supabase.com/dashboard/project/wlqyrmntfxwdvkzzsujv/editor)
-2. Connectez-vous à votre compte Supabase
-
-### 2. Création des Tables
-
-1. Dans le dashboard Supabase, cliquez sur **"SQL Editor"** dans le menu de gauche
-2. Cliquez sur **"New query"**
-3. Copiez le contenu du fichier `database/schema.sql` et collez-le dans l'éditeur
-4. Cliquez sur **"Run"** pour exécuter le script
-
-### 3. Vérification des Tables
-
-Après l'exécution du script, vous devriez voir les tables suivantes créées :
-
-- ✅ `clients` - Gestion des clients
-- ✅ `produits` - Catalogue des produits
-- ✅ `services` - Services proposés
-- ✅ `reparations` - Suivi des réparations
-- ✅ `pieces` - Pièces détachées
-- ✅ `commandes` - Commandes clients
-- ✅ `commande_produits` - Détails des commandes
-- ✅ `users` - Utilisateurs de l'application
-- ✅ `rendez_vous` - Gestion des rendez-vous
-
-## 🔐 Configuration de la Sécurité
-
-### Row Level Security (RLS)
-
-Le script SQL configure automatiquement :
-- RLS activé sur toutes les tables
-- Politiques d'accès permettant les opérations CRUD complètes
-- Triggers pour mettre à jour automatiquement `updated_at`
-
-### Variables d'Environnement
-
-Les variables d'environnement sont déjà configurées dans `src/lib/supabase.ts` :
-
-```typescript
-const supabaseUrl = 'https://wlqyrmntfxwdvkzzsujv.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+# Configuration PostgreSQL (optionnel)
+VITE_POSTGRES_HOST=db.gggoqnxrspviuxadvkbh.supabase.co
+VITE_POSTGRES_PORT=5432
+VITE_POSTGRES_DB=postgres
+VITE_POSTGRES_USER=postgres
+VITE_POSTGRES_PASSWORD=wi?8sN$wn&#BVr7
 ```
 
-## 🧪 Test de la Connexion
+## Étape 3: Création des tables dans Supabase
 
-### 1. Démarrage de l'Application
+Exécutez le script SQL suivant dans l'éditeur SQL de Supabase :
 
-```bash
-npm run dev
-```
-
-### 2. Accès au Test
-
-1. Ouvrez votre navigateur sur `http://localhost:3000`
-2. Allez sur la page Dashboard
-3. Faites défiler jusqu'à la section "Test de Connexion Supabase"
-
-### 3. Vérification
-
-Le composant de test affichera :
-- ✅ **Statut de connexion** : Succès ou erreur
-- 📊 **Données des tables** : Clients, produits, services
-- ➕ **Formulaires d'ajout** : Pour tester les opérations CRUD
-
-## 📊 Structure des Données
-
-### Table `clients`
 ```sql
-- id (UUID, Primary Key)
-- nom (VARCHAR)
-- email (VARCHAR, Unique)
-- telephone (VARCHAR)
-- adresse (TEXT)
-- created_at (TIMESTAMP)
-- updated_at (TIMESTAMP)
+-- Table des utilisateurs (extension de auth.users)
+CREATE TABLE public.users (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  first_name TEXT,
+  last_name TEXT,
+  role TEXT DEFAULT 'technician',
+  avatar TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des clients
+CREATE TABLE public.clients (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  phone TEXT,
+  address TEXT,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des appareils
+CREATE TABLE public.devices (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  brand TEXT NOT NULL,
+  model TEXT NOT NULL,
+  serial_number TEXT,
+  type TEXT NOT NULL,
+  specifications JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des services
+CREATE TABLE public.services (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  duration INTEGER NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  category TEXT,
+  applicable_devices TEXT[],
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des pièces
+CREATE TABLE public.parts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  part_number TEXT,
+  brand TEXT,
+  compatible_devices TEXT[],
+  stock_quantity INTEGER DEFAULT 0,
+  min_stock_level INTEGER DEFAULT 5,
+  price DECIMAL(10,2) NOT NULL,
+  supplier TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des produits
+CREATE TABLE public.products (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  category TEXT,
+  price DECIMAL(10,2) NOT NULL,
+  stock_quantity INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des réparations
+CREATE TABLE public.repairs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id UUID REFERENCES public.clients(id),
+  device_id UUID REFERENCES public.devices(id),
+  status TEXT DEFAULT 'new',
+  assigned_technician_id UUID REFERENCES public.users(id),
+  description TEXT,
+  issue TEXT,
+  estimated_duration INTEGER,
+  actual_duration INTEGER,
+  estimated_start_date TIMESTAMP WITH TIME ZONE,
+  estimated_end_date TIMESTAMP WITH TIME ZONE,
+  start_date TIMESTAMP WITH TIME ZONE,
+  end_date TIMESTAMP WITH TIME ZONE,
+  due_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  is_urgent BOOLEAN DEFAULT false,
+  notes TEXT,
+  total_price DECIMAL(10,2) DEFAULT 0,
+  is_paid BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des services de réparation
+CREATE TABLE public.repair_services (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  repair_id UUID REFERENCES public.repairs(id) ON DELETE CASCADE,
+  service_id UUID REFERENCES public.services(id),
+  quantity INTEGER DEFAULT 1,
+  price DECIMAL(10,2) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des pièces de réparation
+CREATE TABLE public.repair_parts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  repair_id UUID REFERENCES public.repairs(id) ON DELETE CASCADE,
+  part_id UUID REFERENCES public.parts(id),
+  quantity INTEGER DEFAULT 1,
+  price DECIMAL(10,2) NOT NULL,
+  is_used BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des ventes
+CREATE TABLE public.sales (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id UUID REFERENCES public.clients(id),
+  subtotal DECIMAL(10,2) NOT NULL,
+  tax DECIMAL(10,2) DEFAULT 0,
+  total DECIMAL(10,2) NOT NULL,
+  payment_method TEXT DEFAULT 'cash',
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des éléments de vente
+CREATE TABLE public.sale_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  sale_id UUID REFERENCES public.sales(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  item_id UUID,
+  name TEXT NOT NULL,
+  quantity INTEGER DEFAULT 1,
+  unit_price DECIMAL(10,2) NOT NULL,
+  total_price DECIMAL(10,2) NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des rendez-vous
+CREATE TABLE public.appointments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id UUID REFERENCES public.clients(id),
+  repair_id UUID REFERENCES public.repairs(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  start_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  assigned_user_id UUID REFERENCES public.users(id),
+  status TEXT DEFAULT 'scheduled',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des messages
+CREATE TABLE public.messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  sender_id UUID REFERENCES public.users(id),
+  recipient_id UUID REFERENCES public.users(id),
+  repair_id UUID REFERENCES public.repairs(id),
+  subject TEXT NOT NULL,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des alertes de stock
+CREATE TABLE public.stock_alerts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  part_id UUID REFERENCES public.parts(id),
+  type TEXT NOT NULL,
+  message TEXT NOT NULL,
+  is_resolved BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des notifications
+CREATE TABLE public.notifications (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id),
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  related_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLS (Row Level Security)
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.parts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.repairs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.repair_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.repair_parts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sale_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stock_alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+-- Politiques RLS (à adapter selon vos besoins)
+CREATE POLICY "Enable read access for authenticated users" ON public.users FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.clients FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.devices FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.services FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.parts FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.products FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.repairs FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.repair_services FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.repair_parts FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.sales FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.sale_items FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.appointments FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.messages FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.stock_alerts FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.notifications FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Politiques d'écriture (à adapter selon vos besoins)
+CREATE POLICY "Enable insert for authenticated users" ON public.users FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.clients FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.devices FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.services FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.parts FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.products FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.repairs FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.repair_services FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.repair_parts FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.sales FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.sale_items FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.appointments FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.messages FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.stock_alerts FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.notifications FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- Politiques de mise à jour (à adapter selon vos besoins)
+CREATE POLICY "Enable update for authenticated users" ON public.users FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.clients FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.devices FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.services FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.parts FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.products FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.repairs FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.repair_services FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.repair_parts FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.sales FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.sale_items FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.appointments FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.messages FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.stock_alerts FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.notifications FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Politiques de suppression (à adapter selon vos besoins)
+CREATE POLICY "Enable delete for authenticated users" ON public.users FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.clients FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.devices FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.services FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.parts FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.products FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.repairs FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.repair_services FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.repair_parts FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.sales FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.sale_items FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.appointments FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.messages FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.stock_alerts FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.notifications FOR DELETE USING (auth.role() = 'authenticated');
 ```
 
-### Table `produits`
-```sql
-- id (UUID, Primary Key)
-- nom (VARCHAR)
-- description (TEXT)
-- prix (DECIMAL)
-- stock (INTEGER)
-- categorie (VARCHAR)
-- created_at (TIMESTAMP)
-- updated_at (TIMESTAMP)
-```
+## Étape 4: Test de la connexion
 
-### Table `reparations`
-```sql
-- id (UUID, Primary Key)
-- client_id (UUID, Foreign Key)
-- appareil (VARCHAR)
-- probleme (TEXT)
-- statut (ENUM: en_attente, en_cours, terminee, annulee)
-- date_creation (TIMESTAMP)
-- date_fin_estimee (TIMESTAMP)
-- date_fin_reelle (TIMESTAMP)
-- prix_estime (DECIMAL)
-- prix_final (DECIMAL)
-- notes (TEXT)
-- created_at (TIMESTAMP)
-- updated_at (TIMESTAMP)
-```
+1. Démarrez l'application : `npm run dev`
+2. Ouvrez la console du navigateur
+3. La connexion Supabase devrait être testée automatiquement
 
-## 🔄 Services et Hooks
+## Étape 5: Utilisation
 
-### Services Supabase
+L'application est maintenant connectée à Supabase ! Toutes les opérations CRUD sont gérées par les services dans `src/services/supabaseService.ts`.
 
-Le projet inclut des services complets pour chaque table :
+### Fonctionnalités disponibles :
 
-- `clientService` - Gestion des clients
-- `produitService` - Gestion des produits
-- `serviceService` - Gestion des services
-- `reparationService` - Gestion des réparations
-- `pieceService` - Gestion des pièces
-- `commandeService` - Gestion des commandes
+- **Authentification** : Connexion/déconnexion avec Supabase Auth
+- **Gestion des clients** : CRUD complet
+- **Gestion des appareils** : CRUD complet
+- **Gestion des réparations** : CRUD complet avec relations
+- **Gestion des pièces** : CRUD complet avec alertes de stock
+- **Gestion des produits** : CRUD complet
+- **Gestion des ventes** : CRUD complet
+- **Gestion des rendez-vous** : CRUD complet
+- **Statistiques du tableau de bord** : Calculs automatiques
 
-### Hooks React
+### Notes importantes :
 
-Des hooks personnalisés sont disponibles :
-
-- `useClients()` - État et opérations clients
-- `useProduits()` - État et opérations produits
-- `useServices()` - État et opérations services
-- `useReparations()` - État et opérations réparations
-- `usePieces()` - État et opérations pièces
-- `useCommandes()` - État et opérations commandes
-
-## 🚨 Dépannage
-
-### Erreur "Table does not exist"
-
-1. Vérifiez que le script SQL a été exécuté correctement
-2. Allez dans **"Table Editor"** dans Supabase
-3. Vérifiez que toutes les tables sont présentes
-
-### Erreur de connexion
-
-1. Vérifiez les clés d'API dans `src/lib/supabase.ts`
-2. Assurez-vous que l'URL Supabase est correcte
-3. Vérifiez que le projet Supabase est actif
-
-### Erreur RLS
-
-1. Allez dans **"Authentication" > "Policies"**
-2. Vérifiez que les politiques RLS sont configurées
-3. Si nécessaire, exécutez à nouveau la partie RLS du script SQL
-
-## 📈 Prochaines Étapes
-
-1. **Authentification** : Configurer l'authentification Supabase
-2. **Stockage** : Configurer le stockage de fichiers pour les images
-3. **Notifications** : Configurer les notifications en temps réel
-4. **Backup** : Configurer les sauvegardes automatiques
-
-## 🔗 Liens Utiles
-
-- [Documentation Supabase](https://supabase.com/docs)
-- [Dashboard du Projet](https://supabase.com/dashboard/project/wlqyrmntfxwdvkzzsujv)
-- [API Reference](https://supabase.com/docs/reference/javascript)
-
-## 📞 Support
-
-Si vous rencontrez des problèmes :
-
-1. Vérifiez les logs dans la console du navigateur
-2. Consultez les logs Supabase dans le dashboard
-3. Vérifiez la documentation Supabase
-4. Contactez l'équipe de développement
-
----
-
-**Note** : Ce projet utilise Supabase comme backend-as-a-service pour simplifier le développement et le déploiement. Toutes les données sont stockées de manière sécurisée dans la base de données PostgreSQL de Supabase.
+1. **Sécurité** : Les politiques RLS sont configurées pour les utilisateurs authentifiés
+2. **Performance** : Utilisez les requêtes avec relations pour optimiser les performances
+3. **Backup** : Configurez des sauvegardes automatiques dans Supabase
+4. **Monitoring** : Surveillez les logs dans le dashboard Supabase

@@ -1,0 +1,192 @@
+/* Styles pour l'impression de facture */
+@media print {
+  /* Masquer les éléments non nécessaires à l'impression */
+  .MuiDialog-root,
+  .MuiDialog-backdrop,
+  .MuiDialogTitle-root,
+  .MuiDialogActions-root,
+  .MuiIconButton-root {
+    display: none !important;
+  }
+
+  /* Afficher seulement le contenu de la facture */
+  #invoice-content {
+    display: block !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    background: white !important;
+  }
+
+  /* Styles pour le papier */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    font-family: Arial, sans-serif !important;
+  }
+
+  /* Styles pour les tableaux */
+  .MuiTable-root {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .MuiTableCell-root {
+    border: 1px solid #ddd !important;
+    padding: 8px !important;
+    text-align: left !important;
+  }
+
+  .MuiTableHead-root .MuiTableCell-root {
+    background-color: #f2f2f2 !important;
+    font-weight: bold !important;
+  }
+
+  /* Styles pour les totaux */
+  .MuiBox-root {
+    page-break-inside: avoid !important;
+  }
+
+  /* Éviter les sauts de page dans les tableaux */
+  .MuiTableContainer-root {
+    page-break-inside: avoid !important;
+  }
+
+  /* Styles pour les titres */
+  .MuiTypography-h4 {
+    font-size: 24px !important;
+    font-weight: bold !important;
+    margin-bottom: 10px !important;
+  }
+
+  .MuiTypography-h6 {
+    font-size: 18px !important;
+    font-weight: bold !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* Styles pour les séparateurs */
+  .MuiDivider-root {
+    border-color: #ddd !important;
+    margin: 10px 0 !important;
+  }
+
+  /* Styles pour les boutons (masqués à l'impression) */
+  .MuiButton-root {
+    display: none !important;
+  }
+
+  /* Styles pour les icônes (masquées à l'impression) */
+  .MuiSvgIcon-root {
+    display: none !important;
+  }
+
+  /* Styles pour les couleurs */
+  .MuiTypography-root {
+    color: black !important;
+  }
+
+  /* Styles pour les marges */
+  .MuiPaper-root {
+    margin: 0 !important;
+    padding: 20px !important;
+    box-shadow: none !important;
+  }
+
+  /* Styles pour les listes */
+  .MuiList-root {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .MuiListItem-root {
+    padding: 4px 0 !important;
+  }
+
+  /* Styles pour les chips (masqués à l'impression) */
+  .MuiChip-root {
+    display: none !important;
+  }
+
+  /* Styles pour les dialogues (masqués à l'impression) */
+  .MuiDialog-root {
+    position: static !important;
+    transform: none !important;
+  }
+
+  .MuiDialogContent-root {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Styles pour les grilles */
+  .MuiGrid-root {
+    display: block !important;
+  }
+
+  .MuiGrid-item {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* Styles pour les conteneurs flex */
+  .MuiBox-root[style*="display: flex"] {
+    display: block !important;
+  }
+
+  /* Styles pour les alignements */
+  [style*="text-align: right"] {
+    text-align: right !important;
+  }
+
+  [style*="text-align: center"] {
+    text-align: center !important;
+  }
+
+  /* Styles pour les espacements */
+  .MuiBox-root[style*="justify-content: space-between"] {
+    display: flex !important;
+    justify-content: space-between !important;
+  }
+
+  /* Styles pour les couleurs de texte */
+  [style*="color: text.secondary"] {
+    color: #666 !important;
+  }
+
+  [style*="color: primary.main"] {
+    color: #1976d2 !important;
+  }
+
+  /* Styles pour les polices */
+  [style*="font-weight: bold"] {
+    font-weight: bold !important;
+  }
+
+  [style*="font-weight: 600"] {
+    font-weight: 600 !important;
+  }
+
+  /* Styles pour les tailles de police */
+  [style*="font-size: 12px"] {
+    font-size: 12px !important;
+  }
+
+  [style*="font-size: 14px"] {
+    font-size: 14px !important;
+  }
+
+  [style*="font-size: 16px"] {
+    font-size: 16px !important;
+  }
+
+  [style*="font-size: 18px"] {
+    font-size: 18px !important;
+  }
+
+  [style*="font-size: 24px"] {
+    font-size: 24px !important;
+  }
+}

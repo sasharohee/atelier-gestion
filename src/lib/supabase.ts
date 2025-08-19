@@ -1,86 +1,97 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://wlqyrmntfxwdvkzzsujv.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscXlybW50Znh3ZHZrenpzdWp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjUyMDAsImV4cCI6MjA3MTAwMTIwMH0.9XvA_8VtPhBdF80oycWefBgY9nIyvqQUPHDGlw3f2D8'
+// Configuration Supabase
+const supabaseUrl = 'https://wlqyrmntfxwdvkzzsujv.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscXlybW50Znh3ZHZrenpzdWp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjUyMDAsImV4cCI6MjA3MTAwMTIwMH0.9XvA_8VtPhBdF80oycWefBgY9nIyvqQUPHDGlw3f2D8';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Création du client Supabase
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: 'atelier-auth-token'
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'atelier-gestion-app'
+    }
+  }
+});
 
-// Types pour les tables
-export interface Client {
-  id: string
-  nom: string
-  email: string
-  telephone: string
-  adresse: string
-  created_at: string
-  updated_at: string
+// Configuration pour la connexion directe PostgreSQL (optionnel)
+export const postgresConfig = {
+  host: 'db.wlqyrmntfxwdvkzzsujv.supabase.co',
+  port: 5432,
+  database: 'postgres',
+  user: 'postgres',
+  password: 'wi?8sN$wn&#BVr7'
+};
+
+// Types pour les réponses Supabase
+export interface SupabaseResponse<T> {
+  data: T | null;
+  error: any;
+  count?: number;
 }
 
-export interface Produit {
-  id: string
-  nom: string
-  description: string
-  prix: number
-  stock: number
-  categorie: string
-  created_at: string
-  updated_at: string
-}
+// Fonctions utilitaires pour la gestion des erreurs
+export const handleSupabaseError = (error: any) => {
+  console.error('Supabase error:', error);
+  return {
+    success: false,
+    error: error?.message || 'Une erreur est survenue'
+  };
+};
 
-export interface Service {
-  id: string
-  nom: string
-  description: string
-  prix: number
-  duree_estimee: number
-  created_at: string
-  updated_at: string
-}
+export const handleSupabaseSuccess = <T>(data: T) => {
+  return {
+    success: true,
+    data
+  };
+};
 
-export interface Reparation {
-  id: string
-  client_id: string
-  appareil: string
-  probleme: string
-  statut: 'en_attente' | 'en_cours' | 'terminee' | 'annulee'
-  date_creation: string
-  date_fin_estimee: string
-  date_fin_reelle?: string
-  prix_estime: number
-  prix_final?: number
-  notes?: string
-  created_at: string
-  updated_at: string
-}
+// Fonction pour vérifier la connexion
+export const testConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('clients').select('count').limit(1);
+    if (error) {
+      console.error('Erreur de connexion Supabase:', error);
+      return false;
+    }
+    console.log('✅ Connexion Supabase réussie');
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur lors du test de connexion:', error);
+    return false;
+  }
+};
 
-export interface Piece {
-  id: string
-  nom: string
-  description: string
-  prix: number
-  stock: number
-  fournisseur: string
-  created_at: string
-  updated_at: string
-}
-
-export interface Commande {
-  id: string
-  client_id: string
-  statut: 'en_attente' | 'confirmee' | 'en_preparation' | 'expediee' | 'livree' | 'annulee'
-  total: number
-  date_commande: string
-  date_livraison_estimee?: string
-  date_livraison_reelle?: string
-  created_at: string
-  updated_at: string
-}
-
-export interface CommandeProduit {
-  id: string
-  commande_id: string
-  produit_id: string
-  quantite: number
-  prix_unitaire: number
-  created_at: string
-}
+// Fonction pour vérifier la santé de la connexion
+export const checkConnectionHealth = async () => {
+  try {
+    const startTime = Date.now();
+    const { data, error } = await supabase.from('clients').select('count').limit(1);
+    const endTime = Date.now();
+    const responseTime = endTime - startTime;
+    
+    if (error) {
+      return { healthy: false, error: error.message, responseTime };
+    }
+    
+    return { 
+      healthy: true, 
+      responseTime,
+      message: `Connexion stable (${responseTime}ms)`
+    };
+  } catch (error) {
+    return { 
+      healthy: false, 
+      error: error instanceof Error ? error.message : 'Erreur inconnue',
+      responseTime: null
+    };
+  }
+};

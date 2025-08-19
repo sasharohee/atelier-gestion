@@ -158,6 +158,9 @@ const Calendar: React.FC = () => {
   };
 
   const handleSubmit = () => {
+    // Convertir les chaînes vides en null pour l'envoi à Supabase
+    const convertEmptyToNull = (value: string) => value.trim() === '' ? null : value;
+    
     if (selectedEvent) {
       // Mettre à jour le rendez-vous existant
       updateAppointment(selectedEvent.id, {
@@ -166,9 +169,9 @@ const Calendar: React.FC = () => {
         description: formData.description,
         startDate: new Date(formData.startDate),
         endDate: new Date(formData.endDate),
-        clientId: formData.clientId,
-        repairId: formData.repairId,
-        assignedUserId: formData.assignedUserId,
+        clientId: convertEmptyToNull(formData.clientId),
+        repairId: convertEmptyToNull(formData.repairId),
+        assignedUserId: convertEmptyToNull(formData.assignedUserId),
       });
     } else {
       // Créer un nouveau rendez-vous
@@ -177,9 +180,9 @@ const Calendar: React.FC = () => {
         description: formData.description,
         startDate: new Date(formData.startDate),
         endDate: new Date(formData.endDate),
-        clientId: formData.clientId,
-        repairId: formData.repairId,
-        assignedUserId: formData.assignedUserId,
+        clientId: convertEmptyToNull(formData.clientId),
+        repairId: convertEmptyToNull(formData.repairId),
+        assignedUserId: convertEmptyToNull(formData.assignedUserId),
         status: 'scheduled',
         createdAt: new Date(),
         updatedAt: new Date(),

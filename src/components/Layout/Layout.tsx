@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
+import ConnectionStatus from '../ConnectionStatus';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -174,6 +175,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Actions de droite */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Statut de connexion */}
+            <ConnectionStatus />
+            
             {/* Recherche */}
             <IconButton color="inherit" size="large">
               <SearchIcon />

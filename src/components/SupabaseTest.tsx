@@ -1,397 +1,328 @@
-import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { useClients, useProduits, useServices } from '../hooks/useSupabase'
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  TextField,
-  Grid,
-  Alert,
-  CircularProgress,
-  List,
-  ListItem,
-  ListItemText,
-  Divider
-} from '@mui/material'
+import React, { useEffect, useState } from 'react';
+import { testConnection, checkConnectionHealth } from '../lib/supabase';
+import { Box, Typography, Alert, CircularProgress, Button, Paper, Chip } from '@mui/material';
+import { Download as DownloadIcon, CheckCircle as CheckIcon, Warning as WarningIcon } from '@mui/icons-material';
 
 const SupabaseTest: React.FC = () => {
-  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'error'>('checking')
-  const [testMessage, setTestMessage] = useState('')
+  const [connectionStatus, setConnectionStatus] = useState<'loading' | 'success' | 'error' | 'no-tables'>('loading');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [retryCount, setRetryCount] = useState(0);
+  const [healthData, setHealthData] = useState<{ healthy: boolean; responseTime?: number; message?: string } | null>(null);
 
-  // Hooks pour les données
-  const { clients, loading: clientsLoading, error: clientsError, addClient } = useClients()
-  const { produits, loading: produitsLoading, error: produitsError, addProduit } = useProduits()
-  const { services, loading: servicesLoading, error: servicesError, addService } = useServices()
-
-  // État pour les formulaires
-  const [newClient, setNewClient] = useState({ nom: '', email: '', telephone: '', adresse: '' })
-  const [newProduit, setNewProduit] = useState({ nom: '', description: '', prix: '', stock: '', categorie: '' })
-  const [newService, setNewService] = useState({ nom: '', description: '', prix: '', duree_estimee: '' })
-
-  // Vérifier la connexion Supabase
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        const { data, error } = await supabase.from('clients').select('count').limit(1)
-        if (error) {
-          console.log('Erreur de connexion:', error)
-          setConnectionStatus('error')
-          setTestMessage('Erreur de connexion à Supabase. Vérifiez que les tables sont créées.')
-        } else {
-          setConnectionStatus('connected')
-          setTestMessage('Connexion à Supabase réussie!')
-        }
-      } catch (err) {
-        setConnectionStatus('error')
-        setTestMessage('Erreur lors de la vérification de la connexion')
+  const testSupabaseConnection = async () => {
+    try {
+      setConnectionStatus('loading');
+      const isConnected = await testConnection();
+      if (isConnected) {
+        setConnectionStatus('success');
+        // Vérifier la santé de la connexion
+        const health = await checkConnectionHealth();
+        setHealthData(health);
+      } else {
+        setConnectionStatus('no-tables');
+        setErrorMessage('Connexion réussie mais les tables n\'existent pas encore');
       }
-    }
-
-    checkConnection()
-  }, [])
-
-  // Fonctions pour ajouter des données
-  const handleAddClient = async () => {
-    try {
-      await addClient({
-        nom: newClient.nom,
-        email: newClient.email,
-        telephone: newClient.telephone,
-        adresse: newClient.adresse
-      })
-      setNewClient({ nom: '', email: '', telephone: '', adresse: '' })
     } catch (error) {
-      console.error('Erreur lors de l\'ajout du client:', error)
+      setConnectionStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Erreur inconnue');
     }
-  }
+  };
 
-  const handleAddProduit = async () => {
-    try {
-      await addProduit({
-        nom: newProduit.nom,
-        description: newProduit.description,
-        prix: parseFloat(newProduit.prix),
-        stock: parseInt(newProduit.stock),
-        categorie: newProduit.categorie
-      })
-      setNewProduit({ nom: '', description: '', prix: '', stock: '', categorie: '' })
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout du produit:', error)
-    }
-  }
+  useEffect(() => {
+    testSupabaseConnection();
+  }, []);
 
-  const handleAddService = async () => {
-    try {
-      await addService({
-        nom: newService.nom,
-        description: newService.description,
-        prix: parseFloat(newService.prix),
-        duree_estimee: parseInt(newService.duree_estimee)
-      })
-      setNewService({ nom: '', description: '', prix: '', duree_estimee: '' })
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout du service:', error)
-    }
-  }
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    testSupabaseConnection();
+  };
+
+  const downloadSQLScript = () => {
+    const element = document.createElement('a');
+    const file = new Blob([`
+-- Script de création des tables pour l'application Atelier
+-- À exécuter dans l'éditeur SQL de Supabase
+
+-- Table des utilisateurs (extension de auth.users)
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID REFERENCES auth.users(id) PRIMARY KEY,
+  first_name TEXT,
+  last_name TEXT,
+  role TEXT DEFAULT 'technician',
+  avatar TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des clients
+CREATE TABLE IF NOT EXISTS public.clients (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  phone TEXT,
+  address TEXT,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des appareils
+CREATE TABLE IF NOT EXISTS public.devices (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  brand TEXT NOT NULL,
+  model TEXT NOT NULL,
+  serial_number TEXT,
+  type TEXT NOT NULL,
+  specifications JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des réparations
+CREATE TABLE IF NOT EXISTS public.repairs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id UUID REFERENCES public.clients(id),
+  device_id UUID REFERENCES public.devices(id),
+  status TEXT DEFAULT 'new',
+  assigned_technician_id UUID REFERENCES public.users(id),
+  description TEXT,
+  issue TEXT,
+  estimated_duration INTEGER,
+  actual_duration INTEGER,
+  estimated_start_date TIMESTAMP WITH TIME ZONE,
+  estimated_end_date TIMESTAMP WITH TIME ZONE,
+  start_date TIMESTAMP WITH TIME ZONE,
+  end_date TIMESTAMP WITH TIME ZONE,
+  due_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  is_urgent BOOLEAN DEFAULT false,
+  notes TEXT,
+  total_price DECIMAL(10,2) DEFAULT 0,
+  is_paid BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des pièces
+CREATE TABLE IF NOT EXISTS public.parts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  part_number TEXT,
+  brand TEXT,
+  compatible_devices TEXT[],
+  stock_quantity INTEGER DEFAULT 0,
+  min_stock_level INTEGER DEFAULT 5,
+  price DECIMAL(10,2) NOT NULL,
+  supplier TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des produits
+CREATE TABLE IF NOT EXISTS public.products (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  category TEXT,
+  price DECIMAL(10,2) NOT NULL,
+  stock_quantity INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des ventes
+CREATE TABLE IF NOT EXISTS public.sales (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id UUID REFERENCES public.clients(id),
+  subtotal DECIMAL(10,2) NOT NULL,
+  tax DECIMAL(10,2) DEFAULT 0,
+  total DECIMAL(10,2) NOT NULL,
+  payment_method TEXT DEFAULT 'cash',
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Table des rendez-vous
+CREATE TABLE IF NOT EXISTS public.appointments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id UUID REFERENCES public.clients(id),
+  repair_id UUID REFERENCES public.repairs(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  start_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  end_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  assigned_user_id UUID REFERENCES public.users(id),
+  status TEXT DEFAULT 'scheduled',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- RLS (Row Level Security) - Activer pour toutes les tables
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.repairs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.parts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+
+-- Politiques RLS basiques pour les utilisateurs authentifiés
+CREATE POLICY "Enable read access for authenticated users" ON public.users FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.clients FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.devices FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.repairs FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.parts FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.products FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.sales FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable read access for authenticated users" ON public.appointments FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Politiques d'écriture
+CREATE POLICY "Enable insert for authenticated users" ON public.users FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.clients FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.devices FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.repairs FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.parts FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.products FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.sales FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Enable insert for authenticated users" ON public.appointments FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+
+-- Politiques de mise à jour
+CREATE POLICY "Enable update for authenticated users" ON public.users FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.clients FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.devices FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.repairs FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.parts FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.products FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.sales FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable update for authenticated users" ON public.appointments FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Politiques de suppression
+CREATE POLICY "Enable delete for authenticated users" ON public.users FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.clients FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.devices FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.repairs FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.parts FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.products FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.sales FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Enable delete for authenticated users" ON public.appointments FOR DELETE USING (auth.role() = 'authenticated');
+
+-- Insérer quelques données de test
+INSERT INTO public.clients (first_name, last_name, email, phone) VALUES
+('Jean', 'Dupont', 'jean.dupont@email.com', '0123456789'),
+('Marie', 'Martin', 'marie.martin@email.com', '0987654321'),
+('Pierre', 'Durand', 'pierre.durand@email.com', '0555666777')
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO public.devices (brand, model, type, serial_number) VALUES
+('Apple', 'iPhone 13', 'smartphone', 'SN001'),
+('Samsung', 'Galaxy S21', 'smartphone', 'SN002'),
+('Dell', 'XPS 13', 'laptop', 'SN003');
+
+INSERT INTO public.parts (name, description, part_number, brand, stock_quantity, price) VALUES
+('Écran iPhone 13', 'Écran de remplacement pour iPhone 13', 'IP13-SCR-001', 'Apple', 5, 89.99),
+('Batterie Samsung S21', 'Batterie de remplacement', 'SS21-BAT-001', 'Samsung', 3, 45.50),
+('Clavier Dell XPS', 'Clavier de remplacement', 'DX13-KBD-001', 'Dell', 2, 120.00);
+    `], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    element.download = 'create_tables.sql';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Test de Connexion Supabase
+    <Paper sx={{ p: 3, mb: 3 }}>
+      <Typography variant="h6" gutterBottom>
+        🔗 Test de connexion Supabase
       </Typography>
-
-      {/* Statut de connexion */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Statut de la Connexion
-          </Typography>
-          {connectionStatus === 'checking' && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <CircularProgress size={20} />
-              <Typography>Vérification de la connexion...</Typography>
+      
+      {connectionStatus === 'loading' && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <CircularProgress size={20} />
+          <Typography>Test de la connexion à Supabase...</Typography>
+        </Box>
+      )}
+      
+      {connectionStatus === 'success' && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <CheckIcon color="success" />
+            <strong>Connexion Supabase réussie !</strong>
+          </Box>
+          L'application est prête à utiliser la base de données. Toutes les tables sont créées et fonctionnelles.
+          {healthData && healthData.healthy && (
+            <Box sx={{ mt: 1 }}>
+              <Chip 
+                icon={<CheckIcon />} 
+                label={healthData.message || `Réponse: ${healthData.responseTime}ms`}
+                color="success" 
+                size="small"
+                component="div"
+              />
             </Box>
           )}
-          {connectionStatus === 'connected' && (
-            <Alert severity="success">
-              ✅ {testMessage}
-            </Alert>
-          )}
-          {connectionStatus === 'error' && (
-            <Alert severity="error">
-              ❌ {testMessage}
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+        </Alert>
+      )}
+      
+      {connectionStatus === 'no-tables' && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          ⚠️ <strong>Connexion réussie mais tables manquantes</strong>
+          <br />
+          La connexion à Supabase fonctionne, mais les tables de la base de données n'existent pas encore.
+          <br />
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={downloadSQLScript}
+            sx={{ mt: 1 }}
+          >
+            Télécharger le script SQL
+          </Button>
+        </Alert>
+      )}
+      
+      {connectionStatus === 'error' && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          ❌ <strong>Erreur de connexion</strong>
+          <br />
+          {errorMessage}
+          <br />
+          <Button
+            variant="outlined"
+            onClick={handleRetry}
+            sx={{ mt: 1 }}
+          >
+            Réessayer ({retryCount})
+          </Button>
+        </Alert>
+      )}
 
-      <Grid container spacing={3}>
-        {/* Section Clients */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Clients ({clients.length})
-              </Typography>
-              
-              {clientsLoading ? (
-                <CircularProgress size={20} />
-              ) : clientsError ? (
-                <Alert severity="error">{clientsError}</Alert>
-              ) : (
-                <>
-                  <List dense>
-                    {clients.slice(0, 5).map((client) => (
-                      <ListItem key={client.id}>
-                        <ListItemText
-                          primary={client.nom}
-                          secondary={`${client.email} - ${client.telephone}`}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                  
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Typography variant="subtitle2" gutterBottom>
-                    Ajouter un client
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Nom"
-                    value={newClient.nom}
-                    onChange={(e) => setNewClient(prev => ({ ...prev, nom: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Email"
-                    value={newClient.email}
-                    onChange={(e) => setNewClient(prev => ({ ...prev, email: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Téléphone"
-                    value={newClient.telephone}
-                    onChange={(e) => setNewClient(prev => ({ ...prev, telephone: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Adresse"
-                    value={newClient.adresse}
-                    onChange={(e) => setNewClient(prev => ({ ...prev, adresse: e.target.value }))}
-                    sx={{ mb: 2 }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleAddClient}
-                    disabled={!newClient.nom || !newClient.email}
-                    fullWidth
-                  >
-                    Ajouter Client
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
+      <Typography variant="body2" color="text.secondary">
+        <strong>Instructions :</strong>
+        {connectionStatus === 'no-tables' && (
+          <>
+            <br />1. Téléchargez le script SQL ci-dessus
+            <br />2. Allez sur <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">Supabase Dashboard</a>
+            <br />3. Sélectionnez votre projet
+            <br />4. Allez dans "SQL Editor"
+            <br />5. Collez et exécutez le script SQL
+            <br />6. Revenez ici et cliquez sur "Réessayer"
+          </>
+        )}
+        {connectionStatus === 'success' && (
+          <>
+            <br />✅ Votre application est maintenant connectée à Supabase !
+            <br />Toutes les fonctionnalités CRUD sont opérationnelles.
+          </>
+        )}
+      </Typography>
+    </Paper>
+  );
+};
 
-        {/* Section Produits */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Produits ({produits.length})
-              </Typography>
-              
-              {produitsLoading ? (
-                <CircularProgress size={20} />
-              ) : produitsError ? (
-                <Alert severity="error">{produitsError}</Alert>
-              ) : (
-                <>
-                  <List dense>
-                    {produits.slice(0, 5).map((produit) => (
-                      <ListItem key={produit.id}>
-                        <ListItemText
-                          primary={produit.nom}
-                          secondary={`${produit.prix}€ - Stock: ${produit.stock}`}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                  
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Typography variant="subtitle2" gutterBottom>
-                    Ajouter un produit
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Nom"
-                    value={newProduit.nom}
-                    onChange={(e) => setNewProduit(prev => ({ ...prev, nom: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Description"
-                    value={newProduit.description}
-                    onChange={(e) => setNewProduit(prev => ({ ...prev, description: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Prix"
-                    type="number"
-                    value={newProduit.prix}
-                    onChange={(e) => setNewProduit(prev => ({ ...prev, prix: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Stock"
-                    type="number"
-                    value={newProduit.stock}
-                    onChange={(e) => setNewProduit(prev => ({ ...prev, stock: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Catégorie"
-                    value={newProduit.categorie}
-                    onChange={(e) => setNewProduit(prev => ({ ...prev, categorie: e.target.value }))}
-                    sx={{ mb: 2 }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleAddProduit}
-                    disabled={!newProduit.nom || !newProduit.prix}
-                    fullWidth
-                  >
-                    Ajouter Produit
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Section Services */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Services ({services.length})
-              </Typography>
-              
-              {servicesLoading ? (
-                <CircularProgress size={20} />
-              ) : servicesError ? (
-                <Alert severity="error">{servicesError}</Alert>
-              ) : (
-                <>
-                  <List dense>
-                    {services.slice(0, 5).map((service) => (
-                      <ListItem key={service.id}>
-                        <ListItemText
-                          primary={service.nom}
-                          secondary={`${service.prix}€ - ${service.duree_estimee}min`}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                  
-                  <Divider sx={{ my: 2 }} />
-                  
-                  <Typography variant="subtitle2" gutterBottom>
-                    Ajouter un service
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Nom"
-                    value={newService.nom}
-                    onChange={(e) => setNewService(prev => ({ ...prev, nom: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Description"
-                    value={newService.description}
-                    onChange={(e) => setNewService(prev => ({ ...prev, description: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Prix"
-                    type="number"
-                    value={newService.prix}
-                    onChange={(e) => setNewService(prev => ({ ...prev, prix: e.target.value }))}
-                    sx={{ mb: 1 }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Durée (minutes)"
-                    type="number"
-                    value={newService.duree_estimee}
-                    onChange={(e) => setNewService(prev => ({ ...prev, duree_estimee: e.target.value }))}
-                    sx={{ mb: 2 }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={handleAddService}
-                    disabled={!newService.nom || !newService.prix}
-                    fullWidth
-                  >
-                    Ajouter Service
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Instructions */}
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Instructions pour créer les tables
-          </Typography>
-          <Typography variant="body2" paragraph>
-            1. Allez sur le dashboard Supabase: 
-            <a href="https://supabase.com/dashboard/project/wlqyrmntfxwdvkzzsujv/editor" target="_blank" rel="noopener noreferrer">
-              https://supabase.com/dashboard/project/wlqyrmntfxwdvkzzsujv/editor
-            </a>
-          </Typography>
-          <Typography variant="body2" paragraph>
-            2. Dans l'éditeur SQL, copiez et exécutez le contenu du fichier <code>database/schema.sql</code>
-          </Typography>
-          <Typography variant="body2" paragraph>
-            3. Une fois les tables créées, rechargez cette page pour tester la connexion
-          </Typography>
-        </CardContent>
-      </Card>
-    </Box>
-  )
-}
-
-export default SupabaseTest
+export default SupabaseTest;

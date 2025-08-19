@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Drawer,
   List,
@@ -27,9 +27,12 @@ import {
   Notifications as NotificationsIcon,
   AccountCircle as AccountIcon,
   ChevronLeft as ChevronLeftIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { GuideButton } from '../GuideButton';
 
 const drawerWidth = 280;
 
@@ -102,6 +105,8 @@ const Sidebar: React.FC = () => {
     getUnreadMessagesCount,
     getUnreadNotificationsCount,
   } = useAppStore();
+
+  const { workshopSettings } = useWorkshopSettings();
 
   const unreadMessages = getUnreadMessagesCount();
   const unreadNotifications = getUnreadNotificationsCount();
@@ -246,7 +251,59 @@ const Sidebar: React.FC = () => {
               </ListItemButton>
             </ListItem>
           ))}
+          
+          {/* Bouton Guide */}
+          <ListItem disablePadding>
+            <Box sx={{ px: sidebarOpen ? 3 : 2.5, py: 1, width: '100%' }}>
+              <GuideButton 
+                variant="outlined" 
+                size="small" 
+                color="info"
+              />
+            </Box>
+          </ListItem>
         </List>
+
+        {/* Nom de l'atelier */}
+        <Box
+          sx={{
+            p: 2,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'grey.50',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: sidebarOpen ? 'flex-start' : 'center',
+            }}
+          >
+            <BusinessIcon 
+              sx={{ 
+                fontSize: sidebarOpen ? '1.2rem' : '1.5rem',
+                color: 'primary.main',
+                mr: sidebarOpen ? 1 : 0
+              }} 
+            />
+            {sidebarOpen && (
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 500,
+                  color: 'primary.main',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {workshopSettings.name}
+              </Typography>
+            )}
+          </Box>
+        </Box>
 
         {/* Profil utilisateur */}
         <Box
