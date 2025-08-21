@@ -849,13 +849,13 @@ export const repairService = {
       return handleSupabaseError(new Error('Utilisateur non connecté'));
     }
 
-    // Vérifier que le client appartient à l'utilisateur connecté
+    // Vérifier que le client appartient à l'utilisateur connecté ou est un client système
     if (repair.clientId) {
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('id')
         .eq('id', repair.clientId)
-        .eq('user_id', user.id)
+        .or(`user_id.eq.${user.id},user_id.eq.00000000-0000-0000-0000-000000000000`)
         .single();
       
       if (clientError || !clientData) {
@@ -863,13 +863,13 @@ export const repairService = {
       }
     }
 
-    // Vérifier que le device appartient à l'utilisateur connecté
+    // Vérifier que le device appartient à l'utilisateur connecté ou est un device système
     if (repair.deviceId) {
       const { data: deviceData, error: deviceError } = await supabase
         .from('devices')
         .select('id')
         .eq('id', repair.deviceId)
-        .eq('user_id', user.id)
+        .or(`user_id.eq.${user.id},user_id.eq.00000000-0000-0000-0000-000000000000`)
         .single();
       
       if (deviceError || !deviceData) {
