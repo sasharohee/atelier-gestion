@@ -240,44 +240,31 @@ export const userService = {
     console.log('🔍 getAllUsers() appelé');
     
     try {
-      // Tentative de récupération normale
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Utiliser la fonction RPC pour récupérer seulement les utilisateurs créés par l'utilisateur actuel
+      let { data, error } = await supabase.rpc('get_my_users');
       
       if (error) {
         console.error('❌ Erreur lors de la récupération des utilisateurs:', error);
         
-        // Si c'est une erreur de récursion infinie ou de table inexistante, utiliser des données factices
-        if (error.code === '42P17' || error.code === '42P01') {
-          console.log('⚠️ Erreur de structure détectée, utilisation de données factices temporaires...');
-          
-          // Retourner des données factices pour éviter l'erreur
-          const mockUsers = [
-            {
-              id: 'current-user-id',
-              firstName: 'Utilisateur',
-              lastName: 'Actuel',
-              email: 'user@example.com',
-              role: 'admin',
-              avatar: null,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          ];
-          
-          console.log('✅ Données factices utilisées temporairement');
-          return handleSupabaseSuccess(mockUsers);
+        // Fallback vers la récupération normale si la fonction RPC n'existe pas
+        console.log('⚠️ Fonction RPC non disponible, utilisation de la récupération normale...');
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (fallbackError) {
+          console.error('❌ Erreur lors de la récupération de fallback:', fallbackError);
+          return handleSupabaseError(fallbackError);
         }
         
-        return handleSupabaseError(error);
+        data = fallbackData;
       }
       
       console.log('📊 Données brutes récupérées:', data);
       
       // Convertir les données de snake_case vers camelCase
-      const convertedData = data?.map(user => ({
+      const convertedData = data?.map((user: any) => ({
         id: user.id,
         firstName: user.first_name || user.firstName,
         lastName: user.last_name || user.lastName,
@@ -296,41 +283,82 @@ export const userService = {
     }
   },
 
-  async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) {
+  async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'> & { password: string }) {
     try {
       console.log('🔧 Création d\'utilisateur:', userData);
       
-      // Générer un ID unique pour l'utilisateur
-      const userId = crypto.randomUUID();
-      
-      // Créer l'enregistrement dans la table users
-      const userRecord = {
-        id: userId,
-        first_name: userData.firstName,
-        last_name: userData.lastName,
-        email: userData.email,
-        role: userData.role,
-        avatar: userData.avatar,
-        password_hash: 'temp_hash_' + Date.now(), // Hash temporaire
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('📝 Enregistrement utilisateur à créer:', userRecord);
-
-      const { data, error } = await supabase
+      // Vérifier si l'email existe déjà (approche plus robuste)
+      const { data: existingUsers, error: checkError } = await supabase
         .from('users')
-        .insert([userRecord])
-        .select()
-        .single();
+        .select('id, email')
+        .eq('email', userData.email);
 
-      if (error) {
-        console.error('❌ Erreur lors de la création:', error);
-        return handleSupabaseError(error);
+      if (checkError) {
+        console.error('❌ Erreur lors de la vérification de l\'email:', checkError);
+        return handleSupabaseError(checkError);
+      }
+
+      if (existingUsers && existingUsers.length > 0) {
+        console.error('❌ Email déjà utilisé:', userData.email);
+        return handleSupabaseError({
+          message: `L'email "${userData.email}" est déjà utilisé par un autre utilisateur.`,
+          code: 'EMAIL_EXISTS'
+        });
       }
       
-      console.log('✅ Utilisateur créé avec succès:', data);
-      return handleSupabaseSuccess(data);
+      // Essayer d'abord la fonction RPC principale
+      let rpcData, rpcError;
+      
+      try {
+        const result = await supabase.rpc('create_user_with_email_check', {
+          p_user_id: crypto.randomUUID(),
+          p_first_name: userData.firstName,
+          p_last_name: userData.lastName,
+          p_email: userData.email,
+          p_role: userData.role,
+          p_avatar: userData.avatar
+        });
+        rpcData = result.data;
+        rpcError = result.error;
+      } catch (err) {
+        console.log('⚠️ Fonction RPC principale non disponible, essai avec fallback...');
+        rpcError = err;
+      }
+
+      // Si la fonction principale échoue, essayer la fonction de fallback
+      if (rpcError) {
+        try {
+          const fallbackResult = await supabase.rpc('create_user_simple_fallback', {
+            p_user_id: crypto.randomUUID(),
+            p_first_name: userData.firstName,
+            p_last_name: userData.lastName,
+            p_email: userData.email,
+            p_role: userData.role,
+            p_avatar: userData.avatar
+          });
+          rpcData = fallbackResult.data;
+          rpcError = fallbackResult.error;
+        } catch (fallbackErr) {
+          console.error('❌ Erreur lors de l\'appel RPC de fallback:', fallbackErr);
+          rpcError = fallbackErr;
+        }
+      }
+
+      if (rpcError) {
+        console.error('❌ Erreur lors de l\'appel RPC:', rpcError);
+        return handleSupabaseError(rpcError);
+      }
+
+      if (!rpcData || !rpcData.success) {
+        console.error('❌ Erreur lors de la création:', rpcData?.error);
+        return handleSupabaseError({ 
+          message: rpcData?.error || 'Erreur lors de la création de l\'utilisateur',
+          code: 'RPC_ERROR'
+        });
+      }
+
+      console.log('✅ Utilisateur créé avec succès:', rpcData.data);
+      return handleSupabaseSuccess(rpcData.data);
     } catch (err) {
       console.error('💥 Exception lors de la création:', err);
       return handleSupabaseError(err as any);

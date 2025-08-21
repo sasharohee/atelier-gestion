@@ -96,7 +96,7 @@ interface AppActions {
   checkAuth: () => Promise<{ success: boolean; data?: any; error?: string }>;
   
   // CRUD Operations avec Supabase
-  addUser: (user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+        addUser: (user: Omit<User, 'id' | 'createdAt' | 'updatedAt'> & { password: string }) => Promise<void>;
   updateUser: (id: string, updates: Partial<User>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
   

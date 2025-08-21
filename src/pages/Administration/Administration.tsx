@@ -164,7 +164,18 @@ const Administration: React.FC = () => {
         role: 'technician',
       });
     } catch (error: any) {
-      setSnackbar({ open: true, message: error.message || 'Erreur lors de la création', severity: 'error' });
+      // Gestion spécifique des erreurs
+      let errorMessage = 'Erreur lors de la création';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.code === '23505') {
+        errorMessage = 'Cet email est déjà utilisé par un autre utilisateur.';
+      } else if (error.code === 'EMAIL_EXISTS') {
+        errorMessage = error.message;
+      }
+      
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     }
   };
 
