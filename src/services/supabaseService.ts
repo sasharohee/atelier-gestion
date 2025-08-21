@@ -438,7 +438,8 @@ export const userService = {
       email,
       password,
       options: {
-        data: userData
+        data: userData,
+        emailRedirectTo: `${window.location.origin}/auth?tab=confirm`
       }
     });
     if (error) return handleSupabaseError(error);
