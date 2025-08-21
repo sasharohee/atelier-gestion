@@ -671,10 +671,44 @@ export const clientService = {
 // Service pour les appareils
 export const deviceService = {
   async getAll() {
-    // Récupérer tous les appareils sans filtrage par utilisateur pour le développement
+    // Récupérer l'utilisateur connecté avec son rôle
+    const currentUser = await getCurrentUser();
+    
+    if (!currentUser) {
+      console.log('⚠️ Aucun utilisateur connecté, retourner une liste vide');
+      return handleSupabaseSuccess([]);
+    }
+    
+    // Si l'utilisateur est admin, récupérer tous les appareils
+    if (currentUser.role === 'admin') {
+      console.log('🔧 Utilisateur admin, récupération de tous les appareils');
+      const { data, error } = await supabase
+        .from('devices')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) return handleSupabaseError(error);
+      
+      const convertedData = data?.map(device => ({
+        id: device.id,
+        brand: device.brand,
+        model: device.model,
+        serialNumber: device.serial_number,
+        type: device.type,
+        specifications: device.specifications,
+        createdAt: device.created_at,
+        updatedAt: device.updated_at
+      })) || [];
+      
+      return handleSupabaseSuccess(convertedData);
+    }
+    
+    // Sinon, récupérer les appareils de l'utilisateur connecté ET les appareils système
+    console.log('🔒 Utilisateur normal, récupération de ses appareils et appareils système');
     const { data, error } = await supabase
       .from('devices')
       .select('*')
+      .or(`user_id.eq.${currentUser.id},user_id.eq.00000000-0000-0000-0000-000000000000`)
       .order('created_at', { ascending: false });
     
     if (error) return handleSupabaseError(error);
@@ -1470,9 +1504,48 @@ export const serviceService = {
 // Service pour les rendez-vous
 export const appointmentService = {
   async getAll() {
+    // Récupérer l'utilisateur connecté avec son rôle
+    const currentUser = await getCurrentUser();
+    
+    if (!currentUser) {
+      console.log('⚠️ Aucun utilisateur connecté, retourner une liste vide');
+      return handleSupabaseSuccess([]);
+    }
+    
+    // Si l'utilisateur est admin, récupérer tous les rendez-vous
+    if (currentUser.role === 'admin') {
+      console.log('🔧 Utilisateur admin, récupération de tous les rendez-vous');
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .order('start_date', { ascending: true });
+      
+      if (error) return handleSupabaseError(error);
+      
+      const convertedData = data?.map(appointment => ({
+        id: appointment.id,
+        userId: appointment.user_id,
+        clientId: appointment.client_id,
+        repairId: appointment.repair_id,
+        title: appointment.title,
+        description: appointment.description,
+        startDate: new Date(appointment.start_date),
+        endDate: new Date(appointment.end_date),
+        assignedUserId: appointment.assigned_user_id,
+        status: appointment.status,
+        createdAt: new Date(appointment.created_at),
+        updatedAt: new Date(appointment.updated_at)
+      })) || [];
+      
+      return handleSupabaseSuccess(convertedData);
+    }
+    
+    // Sinon, récupérer les rendez-vous de l'utilisateur connecté ET les rendez-vous système
+    console.log('🔒 Utilisateur normal, récupération de ses rendez-vous et rendez-vous système');
     const { data, error } = await supabase
       .from('appointments')
       .select('*')
+      .or(`user_id.eq.${currentUser.id},user_id.eq.00000000-0000-0000-0000-000000000000`)
       .order('start_date', { ascending: true });
     
     if (error) return handleSupabaseError(error);

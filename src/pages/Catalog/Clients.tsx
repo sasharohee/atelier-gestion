@@ -17,6 +17,12 @@ import {
   Avatar,
   Alert,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Grid,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -29,9 +35,18 @@ import {
 import { useAppStore } from '../../store';
 
 const Clients: React.FC = () => {
-  const { clients, loadClients } = useAppStore();
+  const { clients, loadClients, addClient } = useAppStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    notes: '',
+  });
 
   useEffect(() => {
     const loadClientsData = async () => {
