@@ -530,12 +530,12 @@ export const clientService = {
       return handleSupabaseSuccess(convertedData);
     }
     
-    // Sinon, récupérer seulement les clients de l'utilisateur connecté
-    console.log('🔒 Utilisateur normal, récupération de ses clients uniquement');
+    // Sinon, récupérer les clients de l'utilisateur connecté ET les clients système
+    console.log('🔒 Utilisateur normal, récupération de ses clients et clients système');
     const { data, error } = await supabase
       .from('clients')
       .select('*')
-      .eq('user_id', currentUser.id)
+      .or(`user_id.eq.${currentUser.id},user_id.eq.00000000-0000-0000-0000-000000000000`)
       .order('created_at', { ascending: false });
     
     if (error) return handleSupabaseError(error);
