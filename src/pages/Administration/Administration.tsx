@@ -235,7 +235,7 @@ const Administration: React.FC = () => {
         setLocalSettings(newLocalSettings);
         setSnackbar({ open: true, message: 'Paramètres sauvegardés avec succès', severity: 'success' });
       } else {
-        setSnackbar({ open: true, message: 'Aucun paramètre à sauvegarder', severity: 'info' });
+        setSnackbar({ open: true, message: 'Aucun paramètre à sauvegarder', severity: 'success' });
       }
     } catch (error: any) {
       console.error('❌ Erreur lors de la sauvegarde:', error);
@@ -359,7 +359,7 @@ const Administration: React.FC = () => {
           onClick={() => {
             console.log('🔄 Rechargement forcé des paramètres');
             loadSystemSettings();
-            setSnackbar({ open: true, message: 'Rechargement des paramètres...', severity: 'info' });
+            setSnackbar({ open: true, message: 'Rechargement des paramètres...', severity: 'success' });
           }}
         >
           Recharger paramètres

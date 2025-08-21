@@ -347,12 +347,12 @@ export const useAppStore = create<AppStore>()(
           if (supabaseUser) {
             const appUser: User = {
               id: supabaseUser.id,
-              firstName: supabaseUser.user_metadata?.firstName || '',
-              lastName: supabaseUser.user_metadata?.lastName || '',
+              firstName: (supabaseUser as any).user_metadata?.firstName || '',
+              lastName: (supabaseUser as any).user_metadata?.lastName || '',
               email: supabaseUser.email || '',
-              role: supabaseUser.user_metadata?.role || 'technician',
-              avatar: supabaseUser.user_metadata?.avatar,
-              createdAt: new Date(supabaseUser.created_at)
+              role: (supabaseUser as any).user_metadata?.role || 'technician',
+              avatar: (supabaseUser as any).user_metadata?.avatar,
+              createdAt: new Date((supabaseUser as any).created_at)
             };
             set({ 
               currentUser: appUser, 
