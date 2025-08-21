@@ -144,6 +144,7 @@ export interface Message {
 
 export interface Appointment {
   id: string;
+  userId?: string;
   clientId?: string;
   repairId?: string;
   title: string;

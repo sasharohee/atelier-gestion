@@ -1480,6 +1480,7 @@ export const appointmentService = {
     // Convertir les données de snake_case vers camelCase
     const convertedData = data?.map(appointment => ({
       id: appointment.id,
+      userId: appointment.user_id,
       clientId: appointment.client_id,
       repairId: appointment.repair_id,
       title: appointment.title,
@@ -1507,6 +1508,7 @@ export const appointmentService = {
     // Convertir les données de snake_case vers camelCase
     const convertedData = {
       id: data.id,
+      userId: data.user_id,
       clientId: data.client_id,
       repairId: data.repair_id,
       title: data.title,
@@ -1523,9 +1525,14 @@ export const appointmentService = {
   },
 
   async create(appointment: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>) {
+    // Récupérer l'utilisateur connecté
+    const currentUser = await getCurrentUser();
+    const userId = currentUser?.id || '00000000-0000-0000-0000-000000000000';
+    
     // Convertir les noms de propriétés camelCase vers snake_case
     // Gérer les valeurs vides en les convertissant en null
     const appointmentData = {
+      user_id: userId, // Ajouter l'utilisateur connecté
       client_id: appointment.clientId && appointment.clientId.trim() !== '' ? appointment.clientId : null,
       repair_id: appointment.repairId && appointment.repairId.trim() !== '' ? appointment.repairId : null,
       title: appointment.title,
