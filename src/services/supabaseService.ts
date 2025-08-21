@@ -596,7 +596,7 @@ export const clientService = {
       phone: client.phone,
       address: client.address,
       notes: client.notes,
-      user_id: currentUserId, // Associer à l'utilisateur connecté
+      user_id: currentUserId || '00000000-0000-0000-0000-000000000000', // Utiliser l'utilisateur système par défaut si non connecté
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
