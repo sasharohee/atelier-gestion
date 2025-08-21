@@ -10,11 +10,15 @@ SELECT
 FROM public.clients;
 
 -- 2. Option 1: Modifier les politiques RLS pour permettre l'accès aux clients système
--- Supprimer les politiques existantes
+-- Supprimer TOUTES les politiques existantes pour clients
 DROP POLICY IF EXISTS "Users can view own clients" ON public.clients;
 DROP POLICY IF EXISTS "Users can update own clients" ON public.clients;
 DROP POLICY IF EXISTS "Users can delete own clients" ON public.clients;
 DROP POLICY IF EXISTS "Users can create own clients" ON public.clients;
+DROP POLICY IF EXISTS "Users can view own and system clients" ON public.clients;
+DROP POLICY IF EXISTS "Users can update own and system clients" ON public.clients;
+DROP POLICY IF EXISTS "Users can delete own and system clients" ON public.clients;
+DROP POLICY IF EXISTS "Users can create clients" ON public.clients;
 
 -- Créer de nouvelles politiques qui permettent l'accès aux clients système
 CREATE POLICY "Users can view own and system clients" ON public.clients
@@ -42,10 +46,15 @@ CREATE POLICY "Users can create clients" ON public.clients
     );
 
 -- 3. Option 2: Modifier les politiques pour les devices aussi
+-- Supprimer TOUTES les politiques existantes pour devices
 DROP POLICY IF EXISTS "Users can view own devices" ON public.devices;
 DROP POLICY IF EXISTS "Users can update own devices" ON public.devices;
 DROP POLICY IF EXISTS "Users can delete own devices" ON public.devices;
 DROP POLICY IF EXISTS "Users can create own devices" ON public.devices;
+DROP POLICY IF EXISTS "Users can view own and system devices" ON public.devices;
+DROP POLICY IF EXISTS "Users can update own and system devices" ON public.devices;
+DROP POLICY IF EXISTS "Users can delete own and system devices" ON public.devices;
+DROP POLICY IF EXISTS "Users can create devices" ON public.devices;
 
 CREATE POLICY "Users can view own and system devices" ON public.devices
     FOR SELECT USING (
