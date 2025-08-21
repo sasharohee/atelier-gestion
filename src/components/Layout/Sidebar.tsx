@@ -28,11 +28,13 @@ import {
   AccountCircle as AccountIcon,
   ChevronLeft as ChevronLeftIcon,
   Business as BusinessIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { GuideButton } from '../GuideButton';
+import { userService } from '../../services/supabaseService';
 
 const drawerWidth = 280;
 
@@ -40,50 +42,50 @@ const menuItems = [
   {
     text: 'Dashboard',
     icon: <DashboardIcon />,
-    path: '/dashboard',
+    path: '/app/dashboard',
   },
   {
     text: 'Kanban',
     icon: <KanbanIcon />,
-    path: '/kanban',
+    path: '/app/kanban',
   },
   {
     text: 'Calendrier',
     icon: <CalendarIcon />,
-    path: '/calendar',
+    path: '/app/calendar',
   },
   {
     text: 'Messagerie',
     icon: <MessageIcon />,
-    path: '/messaging',
+    path: '/app/messaging',
   },
   {
     text: 'Catalogue',
     icon: <CatalogIcon />,
-    path: '/catalog',
+    path: '/app/catalog',
     subItems: [
-      { text: 'Appareils', path: '/catalog/devices' },
-      { text: 'Services', path: '/catalog/services' },
-      { text: 'Pièces détachées', path: '/catalog/parts' },
-      { text: 'Produits', path: '/catalog/products' },
-      { text: 'Ruptures', path: '/catalog/out-of-stock' },
-      { text: 'Clients', path: '/catalog/clients' },
+      { text: 'Appareils', path: '/app/catalog/devices' },
+      { text: 'Services', path: '/app/catalog/services' },
+      { text: 'Pièces détachées', path: '/app/catalog/parts' },
+      { text: 'Produits', path: '/app/catalog/products' },
+      { text: 'Ruptures', path: '/app/catalog/out-of-stock' },
+      { text: 'Clients', path: '/app/catalog/clients' },
     ],
   },
   {
     text: 'Ventes',
     icon: <SalesIcon />,
-    path: '/sales',
+    path: '/app/sales',
   },
   {
     text: 'Statistiques',
     icon: <StatisticsIcon />,
-    path: '/statistics',
+    path: '/app/statistics',
   },
   {
     text: 'Administration',
     icon: <AdminIcon />,
-    path: '/administration',
+    path: '/app/administration',
   },
 ];
 
@@ -91,7 +93,7 @@ const bottomMenuItems = [
   {
     text: 'Réglages',
     icon: <SettingsIcon />,
-    path: '/settings',
+    path: '/app/settings',
   },
 ];
 
@@ -113,6 +115,15 @@ const Sidebar: React.FC = () => {
 
   const handleNavigation = (path: string) => {
     navigate(path);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await userService.signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
   };
 
   const isActive = (path: string) => {
@@ -369,6 +380,11 @@ const Sidebar: React.FC = () => {
                   </IconButton>
                 </Tooltip>
               )}
+              <Tooltip title="Se déconnecter">
+                <IconButton size="small" onClick={handleLogout}>
+                  <LogoutIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
           </Box>
         </Box>

@@ -8,6 +8,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { fr } from 'date-fns/locale';
 
 import { theme } from './theme';
+import { useAuthenticatedData } from './hooks/useAuthenticatedData';
 import { useAppStore } from './store';
 import { WorkshopSettingsProvider } from './contexts/WorkshopSettingsContext';
 import './styles/print.css';
@@ -16,11 +17,14 @@ import './styles/print.css';
 import Layout from './components/Layout/Layout';
 import Sidebar from './components/Layout/Sidebar';
 
-// Composants de guide
+// Composants de guide et d'authentification
 import { OnboardingGuide } from './components/OnboardingGuide';
 import { OnboardingNotification } from './components/OnboardingNotification';
+import AuthGuard from './components/AuthGuard';
 
 // Pages
+import Landing from './pages/Landing/Landing';
+import Auth from './pages/Auth/Auth';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Kanban from './pages/Kanban/Kanban';
 import Calendar from './pages/Calendar/Calendar';
@@ -69,42 +73,15 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   
-  const {
-    setCurrentUser,
-    setAuthenticated,
-    loadClients,
-    loadDevices,
-    loadServices,
-    loadParts,
-    loadProducts,
-    loadRepairs,
-    loadSales,
-    loadAppointments,
-  } = useAppStore();
+  const { setCurrentUser, setAuthenticated } = useAppStore();
+  const { isDataLoaded, isLoading: isDataLoading, error: dataError } = useAuthenticatedData();
 
   // Initialisation de l'application avec gestion d'erreur
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Simuler une authentification basique
-        setAuthenticated(true);
-        
         // S'assurer que les données de démonstration sont chargées
         await demoDataService.ensureDemoData();
-        
-        // Charger les données depuis Supabase (en arrière-plan)
-        Promise.all([
-          loadClients(),
-          loadDevices(),
-          loadServices(),
-          loadParts(),
-          loadProducts(),
-          loadRepairs(),
-          loadSales(),
-          loadAppointments(),
-        ]).catch(err => {
-          console.error('Erreur lors du chargement des données:', err);
-        });
         
         setIsLoading(false);
         
@@ -120,7 +97,14 @@ function App() {
     };
 
     initializeApp();
-  }, [setAuthenticated, loadClients, loadDevices, loadServices, loadParts, loadProducts, loadRepairs, loadSales, loadAppointments]);
+  }, []);
+
+  // Gérer les erreurs de chargement des données
+  useEffect(() => {
+    if (dataError) {
+      setError(dataError);
+    }
+  }, [dataError]);
 
   const resetError = () => {
     setError(null);
@@ -152,41 +136,49 @@ function App() {
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <WorkshopSettingsProvider>
-            <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-              <Sidebar />
-              <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/kanban" element={<Kanban />} />
-                    <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/messaging" element={<Messaging />} />
-                    <Route path="/catalog/*" element={<Catalog />} />
-                    <Route path="/sales" element={<Sales />} />
-                    <Route path="/statistics" element={<Statistics />} />
-                    <Route path="/administration" element={<Administration />} />
-                    <Route path="/settings" element={<Settings />} />
-                  </Routes>
-                  
-                  {/* Guide d'intégration */}
-                  {showOnboarding && (
-                    <OnboardingGuide 
-                      onComplete={() => {
-                        setShowOnboarding(false);
-                        demoDataService.markOnboardingCompleted();
-                      }}
-                    />
-                  )}
-                  
-                  {/* Notification d'intégration */}
-                  <OnboardingNotification onShowGuide={() => setShowOnboarding(true)} />
-                  
-                  {/* Toast notifications */}
-                  <Toaster position="top-right" />
-                </Layout>
-              </Box>
-            </Box>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/app/*" element={
+                <AuthGuard>
+                  <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+                    <Sidebar />
+                    <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Layout>
+                        <Routes>
+                          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="/kanban" element={<Kanban />} />
+                          <Route path="/calendar" element={<Calendar />} />
+                          <Route path="/messaging" element={<Messaging />} />
+                          <Route path="/catalog/*" element={<Catalog />} />
+                          <Route path="/sales" element={<Sales />} />
+                          <Route path="/statistics" element={<Statistics />} />
+                          <Route path="/administration" element={<Administration />} />
+                          <Route path="/settings" element={<Settings />} />
+                        </Routes>
+                        
+                        {/* Guide d'intégration */}
+                        {showOnboarding && (
+                          <OnboardingGuide 
+                            onComplete={() => {
+                              setShowOnboarding(false);
+                              demoDataService.markOnboardingCompleted();
+                            }}
+                          />
+                        )}
+                        
+                        {/* Notification d'intégration */}
+                        <OnboardingNotification onShowGuide={() => setShowOnboarding(true)} />
+                      </Layout>
+                    </Box>
+                  </Box>
+                </AuthGuard>
+              } />
+            </Routes>
+            
+            {/* Toast notifications */}
+            <Toaster position="top-right" />
           </WorkshopSettingsProvider>
         </Router>
       </LocalizationProvider>

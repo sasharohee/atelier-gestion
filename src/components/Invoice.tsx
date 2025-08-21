@@ -44,6 +44,49 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, client, open, onClose }) => {
     }
   }, [systemSettings.length, loadSystemSettings]);
 
+  // Fonction utilitaire pour normaliser les données de vente
+  const normalizeSaleData = (saleData: Sale): Sale => {
+    // S'assurer que items est toujours un tableau
+    let normalizedItems = saleData.items;
+    
+    // Si items n'est pas un tableau, essayer de le convertir
+    if (!Array.isArray(normalizedItems)) {
+      try {
+        // Si c'est une chaîne JSON, la parser
+        if (typeof normalizedItems === 'string') {
+          normalizedItems = JSON.parse(normalizedItems);
+        }
+        // Si c'est un objet, essayer de l'extraire
+        else if (typeof normalizedItems === 'object' && normalizedItems !== null) {
+          // Vérifier si c'est un objet avec des propriétés d'articles
+          const itemsObj = normalizedItems as any;
+          if (itemsObj && typeof itemsObj === 'object' && 'items' in itemsObj) {
+            normalizedItems = itemsObj.items;
+          } else {
+            // Essayer de convertir l'objet en tableau
+            normalizedItems = Object.values(itemsObj);
+          }
+        }
+        // Si ce n'est toujours pas un tableau, créer un tableau vide
+        if (!Array.isArray(normalizedItems)) {
+          console.warn('Impossible de normaliser les items de vente:', saleData.items);
+          normalizedItems = [];
+        }
+      } catch (error) {
+        console.error('Erreur lors de la normalisation des items de vente:', error);
+        normalizedItems = [];
+      }
+    }
+
+    return {
+      ...saleData,
+      items: normalizedItems
+    };
+  };
+
+  // Normaliser les données de vente
+  const normalizedSale = normalizeSaleData(sale);
+
   // Extraire les paramètres de l'atelier depuis les paramètres système
   const getSettingValue = (key: string, defaultValue: string = '') => {
     const setting = systemSettings.find(s => s.key === key);
@@ -382,7 +425,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, client, open, onClose }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    ${sale.items.map(item => `
+                    ${Array.isArray(normalizedSale.items) ? normalizedSale.items.map(item => `
                       <tr>
                         <td><span class="item-name">${item.name}</span></td>
                         <td><span class="item-type">${item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'}</span></td>
@@ -390,7 +433,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, client, open, onClose }) => {
                         <td style="text-align: center;">${item.quantity}</td>
                         <td style="text-align: right;"><span class="price">${item.totalPrice.toLocaleString('fr-FR')} €</span></td>
                       </tr>
-                    `).join('')}
+                    `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666; font-style: italic;">Aucun article disponible</td></tr>'}
                   </tbody>
                 </table>
 
@@ -759,7 +802,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, client, open, onClose }) => {
                 </tr>
               </thead>
               <tbody>
-                ${sale.items.map(item => `
+                ${Array.isArray(normalizedSale.items) ? normalizedSale.items.map(item => `
                   <tr>
                     <td><span class="item-name">${item.name}</span></td>
                     <td><span class="item-type">${item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'}</span></td>
@@ -767,7 +810,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, client, open, onClose }) => {
                     <td style="text-align: center;">${item.quantity}</td>
                     <td style="text-align: right;"><span class="price">${item.totalPrice.toLocaleString('fr-FR')} €</span></td>
                   </tr>
-                `).join('')}
+                `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666; font-style: italic;">Aucun article disponible</td></tr>'}
               </tbody>
             </table>
 
@@ -1030,7 +1073,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, client, open, onClose }) => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {sale.items.map((item, index) => (
+                  {Array.isArray(normalizedSale.items) ? normalizedSale.items.map((item, index) => (
                     <TableRow key={index}>
                       <TableCell sx={{ 
                         borderBottom: '1px solid #f1f1f1', 
@@ -1092,7 +1135,18 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, client, open, onClose }) => {
                         </Typography>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={5} sx={{ 
+                        textAlign: 'center', 
+                        py: 3,
+                        color: '#666',
+                        fontStyle: 'italic'
+                      }}>
+                        Aucun article disponible dans cette vente
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
           </Box>

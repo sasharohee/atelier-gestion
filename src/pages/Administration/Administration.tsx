@@ -94,8 +94,20 @@ const Administration: React.FC = () => {
 
   // Charger les utilisateurs et paramètres système au montage
   useEffect(() => {
-    loadUsers();
+    // Charger les paramètres système d'abord
     loadSystemSettings();
+    
+    // Charger les utilisateurs avec gestion d'erreur
+    const loadUsersSafely = async () => {
+      try {
+        await loadUsers();
+      } catch (error) {
+        console.error('Erreur lors du chargement des utilisateurs:', error);
+        // Ne pas bloquer l'interface si les utilisateurs ne peuvent pas être chargés
+      }
+    };
+    
+    loadUsersSafely();
     
     // Forcer le rechargement des paramètres après 2 secondes si pas encore chargés
     const timer = setTimeout(() => {
@@ -182,13 +194,13 @@ const Administration: React.FC = () => {
 
   const handleSaveSettings = async (category: string) => {
     try {
-      console.log('Sauvegarde des paramètres pour la catégorie:', category);
-      console.log('Paramètres système chargés:', systemSettings.length);
-      console.log('Modifications locales:', localSettings);
+      console.log('💾 Sauvegarde des paramètres pour la catégorie:', category);
+      console.log('📊 Paramètres système chargés:', systemSettings.length);
+      console.log('🔧 Modifications locales:', localSettings);
 
       // Si les paramètres ne sont pas encore chargés, afficher un message
       if (systemSettings.length === 0) {
-        setSnackbar({ open: true, message: 'Chargement des paramètres en cours...', severity: 'success' });
+        setSnackbar({ open: true, message: 'Aucun paramètre à sauvegarder. Veuillez d\'abord exécuter le script de correction.', severity: 'error' });
         return;
       }
 
@@ -200,7 +212,7 @@ const Administration: React.FC = () => {
           value: localSettings[setting.key] !== undefined ? localSettings[setting.key] : setting.value
         }));
 
-      console.log('Paramètres à mettre à jour:', settingsToUpdate);
+      console.log('📝 Paramètres à mettre à jour:', settingsToUpdate);
 
       if (settingsToUpdate.length > 0) {
         await updateMultipleSystemSettings(settingsToUpdate);
@@ -212,10 +224,10 @@ const Administration: React.FC = () => {
         setLocalSettings(newLocalSettings);
         setSnackbar({ open: true, message: 'Paramètres sauvegardés avec succès', severity: 'success' });
       } else {
-        setSnackbar({ open: true, message: 'Aucun paramètre à sauvegarder', severity: 'success' });
+        setSnackbar({ open: true, message: 'Aucun paramètre à sauvegarder', severity: 'info' });
       }
     } catch (error: any) {
-      console.error('Erreur lors de la sauvegarde:', error);
+      console.error('❌ Erreur lors de la sauvegarde:', error);
       setSnackbar({ open: true, message: error.message || 'Erreur lors de la sauvegarde', severity: 'error' });
     }
   };
@@ -334,28 +346,12 @@ const Administration: React.FC = () => {
           variant="contained"
           color="secondary"
           onClick={() => {
-            console.log('🚀 Force activation des paramètres par défaut');
-            // Forcer l'activation en simulant des paramètres chargés
-            const defaultSettings = [
-              { id: '1', key: 'workshop_name', value: 'Atelier de réparation', description: 'Nom de l\'atelier', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-              { id: '2', key: 'workshop_address', value: '123 Rue de la Paix, 75001 Paris', description: 'Adresse de l\'atelier', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-              { id: '3', key: 'workshop_phone', value: '01 23 45 67 89', description: 'Numéro de téléphone de contact', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-              { id: '4', key: 'workshop_email', value: 'contact@atelier.fr', description: 'Adresse email de contact', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-              { id: '5', key: 'vat_rate', value: '20', description: 'Taux de TVA en pourcentage', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-              { id: '6', key: 'currency', value: 'EUR', description: 'Devise utilisée pour les factures', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-              { id: '7', key: 'invoice_prefix', value: 'FACT-', description: 'Préfixe pour les numéros de facture', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-              { id: '8', key: 'date_format', value: 'dd/MM/yyyy', description: 'Format d\'affichage des dates', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-              { id: '9', key: 'auto_backup', value: 'true', description: 'Activer la sauvegarde automatique', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-              { id: '10', key: 'notifications', value: 'true', description: 'Activer les notifications', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-              { id: '11', key: 'backup_frequency', value: 'daily', description: 'Fréquence de sauvegarde', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-              { id: '12', key: 'max_file_size', value: '10', description: 'Taille maximale des fichiers en MB', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-            ];
-            // Utiliser directement le store pour forcer l'état
-            useAppStore.setState({ systemSettings: defaultSettings });
-            setSnackbar({ open: true, message: 'Paramètres activés avec succès !', severity: 'success' });
+            console.log('🔄 Rechargement forcé des paramètres');
+            loadSystemSettings();
+            setSnackbar({ open: true, message: 'Rechargement des paramètres...', severity: 'info' });
           }}
         >
-          Activer paramètres
+          Recharger paramètres
         </Button>
       </Box>
 
@@ -527,6 +523,14 @@ const Administration: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                   Paramètres généraux
+                  {!isSettingsLoaded && (
+                    <Chip 
+                      label="Non chargés" 
+                      size="small" 
+                      color="warning" 
+                      sx={{ ml: 1 }}
+                    />
+                  )}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   {!isSettingsLoaded && <CircularProgress size={16} />}
@@ -579,6 +583,14 @@ const Administration: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                   Paramètres de facturation
+                  {!isSettingsLoaded && (
+                    <Chip 
+                      label="Non chargés" 
+                      size="small" 
+                      color="warning" 
+                      sx={{ ml: 1 }}
+                    />
+                  )}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   {!isSettingsLoaded && <CircularProgress size={16} />}
@@ -636,6 +648,14 @@ const Administration: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                   Paramètres système
+                  {!isSettingsLoaded && (
+                    <Chip 
+                      label="Non chargés" 
+                      size="small" 
+                      color="warning" 
+                      sx={{ ml: 1 }}
+                    />
+                  )}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   {!isSettingsLoaded && <CircularProgress size={16} />}

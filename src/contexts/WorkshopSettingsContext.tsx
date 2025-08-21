@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { useAppStore } from '../store';
 
 export interface WorkshopSettings {
   name: string;
@@ -21,7 +22,7 @@ const defaultSettings: WorkshopSettings = {
 interface WorkshopSettingsContextType {
   workshopSettings: WorkshopSettings;
   isLoading: boolean;
-  saveSettings: (newSettings: Partial<WorkshopSettings>) => boolean;
+  saveSettings: (newSettings: Partial<WorkshopSettings>) => Promise<boolean>;
   loadSettings: () => void;
 }
 
@@ -43,36 +44,88 @@ export const WorkshopSettingsProvider: React.FC<WorkshopSettingsProviderProps> =
   const [workshopSettings, setWorkshopSettings] = useState<WorkshopSettings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Charger les paramètres depuis localStorage
-  const loadSettings = useCallback(() => {
+  const { 
+    systemSettings, 
+    loadSystemSettings, 
+    updateMultipleSystemSettings 
+  } = useAppStore();
+
+  // Charger les paramètres depuis la base de données
+  const loadSettings = useCallback(async () => {
     try {
-      const savedSettings = localStorage.getItem('atelier-settings');
-      if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
-        if (parsed.workshop) {
-          setWorkshopSettings(parsed.workshop);
-        }
-      }
+      setIsLoading(true);
+      await loadSystemSettings();
     } catch (error) {
       console.error('Erreur lors du chargement des paramètres de l\'atelier:', error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadSystemSettings]);
 
-  // Sauvegarder les paramètres dans localStorage
-  const saveSettings = useCallback((newSettings: Partial<WorkshopSettings>) => {
+  // Mettre à jour les paramètres quand systemSettings change
+  useEffect(() => {
+    if (systemSettings.length > 0) {
+      const newSettings = { ...defaultSettings };
+      
+      // Mettre à jour les paramètres de l'atelier depuis la base de données
+      systemSettings.forEach(setting => {
+        switch (setting.key) {
+          case 'workshop_name':
+            newSettings.name = setting.value;
+            break;
+          case 'workshop_address':
+            newSettings.address = setting.value;
+            break;
+          case 'workshop_phone':
+            newSettings.phone = setting.value;
+            break;
+          case 'workshop_email':
+            newSettings.email = setting.value;
+            break;
+          case 'vat_rate':
+            newSettings.vatRate = setting.value;
+            break;
+          case 'currency':
+            newSettings.currency = setting.value;
+            break;
+        }
+      });
+      
+      setWorkshopSettings(newSettings);
+    }
+  }, [systemSettings]);
+
+  // Sauvegarder les paramètres dans la base de données
+  const saveSettings = useCallback(async (newSettings: Partial<WorkshopSettings>) => {
     try {
-      const currentSettings = localStorage.getItem('atelier-settings');
-      let parsedSettings = currentSettings ? JSON.parse(currentSettings) : {};
+      setIsLoading(true);
       
-      // Mettre à jour les paramètres de l'atelier
-      parsedSettings.workshop = {
-        ...parsedSettings.workshop,
-        ...newSettings
-      };
+      // Préparer les paramètres à sauvegarder
+      const settingsToUpdate = [];
       
-      localStorage.setItem('atelier-settings', JSON.stringify(parsedSettings));
+      if (newSettings.name !== undefined) {
+        settingsToUpdate.push({ key: 'workshop_name', value: newSettings.name });
+      }
+      if (newSettings.address !== undefined) {
+        settingsToUpdate.push({ key: 'workshop_address', value: newSettings.address });
+      }
+      if (newSettings.phone !== undefined) {
+        settingsToUpdate.push({ key: 'workshop_phone', value: newSettings.phone });
+      }
+      if (newSettings.email !== undefined) {
+        settingsToUpdate.push({ key: 'workshop_email', value: newSettings.email });
+      }
+      if (newSettings.vatRate !== undefined) {
+        settingsToUpdate.push({ key: 'vat_rate', value: newSettings.vatRate });
+      }
+      if (newSettings.currency !== undefined) {
+        settingsToUpdate.push({ key: 'currency', value: newSettings.currency });
+      }
+
+      // Sauvegarder dans la base de données
+      if (settingsToUpdate.length > 0) {
+        await updateMultipleSystemSettings(settingsToUpdate);
+      }
       
       // Mettre à jour l'état local
       setWorkshopSettings(prev => ({
@@ -82,41 +135,21 @@ export const WorkshopSettingsProvider: React.FC<WorkshopSettingsProviderProps> =
 
       // Déclencher un événement personnalisé pour notifier les autres composants
       window.dispatchEvent(new CustomEvent('workshopSettingsUpdated', {
-        detail: { workshop: parsedSettings.workshop }
+        detail: { workshop: { ...workshopSettings, ...newSettings } }
       }));
 
       return true;
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des paramètres:', error);
       return false;
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [updateMultipleSystemSettings, workshopSettings]);
 
-  // Écouter les changements de paramètres
+  // Charger les paramètres au montage
   useEffect(() => {
     loadSettings();
-
-    // Écouter les événements de mise à jour
-    const handleSettingsUpdate = (event: CustomEvent) => {
-      if (event.detail?.workshop) {
-        setWorkshopSettings(event.detail.workshop);
-      }
-    };
-
-    // Écouter les changements de localStorage
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === 'atelier-settings') {
-        loadSettings();
-      }
-    };
-
-    window.addEventListener('workshopSettingsUpdated', handleSettingsUpdate as EventListener);
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('workshopSettingsUpdated', handleSettingsUpdate as EventListener);
-      window.removeEventListener('storage', handleStorageChange);
-    };
   }, [loadSettings]);
 
   const value = {

@@ -17,10 +17,22 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    sourcemap: false, // Désactiver en production
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          mui: ['@mui/material', '@mui/icons-material'],
+          supabase: ['@supabase/supabase-js']
+        }
+      }
+    }
   },
   define: {
     global: 'globalThis',
   },
+  optimizeDeps: {
+    include: ['react', 'react-dom', '@supabase/supabase-js']
+  }
 })
 

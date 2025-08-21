@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -14,6 +14,18 @@ import {
   Paper,
   Chip,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -23,7 +35,90 @@ import {
 import { useAppStore } from '../../store';
 
 const Products: React.FC = () => {
-  const { products } = useAppStore();
+  const { products, addProduct } = useAppStore();
+  const [openDialog, setOpenDialog] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    category: 'accessoire',
+    price: 0,
+    stockQuantity: 0,
+    isActive: true,
+  });
+
+  const productCategories = [
+    { value: 'accessoire', label: 'Accessoire' },
+    { value: 'protection', label: 'Protection' },
+    { value: 'connectique', label: 'Connectique' },
+    { value: 'logiciel', label: 'Logiciel' },
+    { value: 'autre', label: 'Autre' },
+  ];
+
+  const handleOpenDialog = () => {
+    setOpenDialog(true);
+    setError(null);
+    setFormData({
+      name: '',
+      description: '',
+      category: 'accessoire',
+      price: 0,
+      stockQuantity: 0,
+      isActive: true,
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setError(null);
+  };
+
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name) {
+      setError('Le nom du produit est obligatoire');
+      return;
+    }
+
+    if (formData.price < 0) {
+      setError('Le prix ne peut pas être négatif');
+      return;
+    }
+
+    if (formData.stockQuantity < 0) {
+      setError('Le stock ne peut pas être négatif');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const newProduct = {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        price: formData.price,
+        stockQuantity: formData.stockQuantity,
+        isActive: formData.isActive,
+      };
+
+      await addProduct(newProduct as any);
+      handleCloseDialog();
+    } catch (err) {
+      setError('Erreur lors de la création du produit');
+      console.error('Erreur création produit:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Box>
@@ -37,7 +132,11 @@ const Products: React.FC = () => {
       </Box>
 
       <Box sx={{ mb: 3 }}>
-        <Button variant="contained" startIcon={<AddIcon />}>
+        <Button 
+          variant="contained" 
+          startIcon={<AddIcon />}
+          onClick={handleOpenDialog}
+        >
           Nouveau produit
         </Button>
       </Box>
@@ -104,6 +203,94 @@ const Products: React.FC = () => {
           </TableContainer>
         </CardContent>
       </Card>
+
+      {/* Dialogue de création */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>Créer un nouveau produit</DialogTitle>
+        <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              fullWidth
+              label="Nom du produit *"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              required
+            />
+            
+            <TextField
+              fullWidth
+              label="Description"
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              multiline
+              rows={3}
+            />
+            
+            <FormControl fullWidth>
+              <InputLabel>Catégorie</InputLabel>
+              <Select
+                value={formData.category}
+                label="Catégorie"
+                onChange={(e) => handleInputChange('category', e.target.value)}
+              >
+                {productCategories.map((category) => (
+                  <MenuItem key={category.value} value={category.value}>
+                    {category.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                fullWidth
+                label="Prix (€)"
+                type="number"
+                value={formData.price}
+                onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
+                inputProps={{ min: 0, step: 0.01 }}
+              />
+              
+              <TextField
+                fullWidth
+                label="Stock"
+                type="number"
+                value={formData.stockQuantity}
+                onChange={(e) => handleInputChange('stockQuantity', parseInt(e.target.value) || 0)}
+                inputProps={{ min: 0 }}
+              />
+            </Box>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.isActive}
+                  onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                />
+              }
+              label="Produit actif"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} disabled={loading}>
+            Annuler
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            variant="contained" 
+            disabled={loading || !formData.name}
+          >
+            {loading ? 'Création...' : 'Créer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

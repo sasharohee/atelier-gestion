@@ -64,28 +64,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const handleLogout = () => {
     // Logique de déconnexion
     handleMenuClose();
-    navigate('/login');
+    navigate('/auth');
   };
 
   const getPageTitle = () => {
     const path = location.pathname;
     const titles: Record<string, string> = {
       '/': 'Dashboard',
-      '/dashboard': 'Dashboard',
-      '/kanban': 'Tableau Kanban',
-      '/calendar': 'Calendrier',
-      '/messaging': 'Messagerie',
-      '/catalog': 'Catalogue',
-      '/catalog/devices': 'Appareils',
-      '/catalog/services': 'Services',
-      '/catalog/parts': 'Pièces détachées',
-      '/catalog/products': 'Produits',
-      '/catalog/out-of-stock': 'Ruptures de stock',
-      '/catalog/clients': 'Clients',
-      '/sales': 'Ventes',
-      '/statistics': 'Statistiques',
-      '/administration': 'Administration',
-      '/settings': 'Réglages',
+      '/app': 'Dashboard',
+      '/app/dashboard': 'Dashboard',
+      '/app/kanban': 'Tableau Kanban',
+      '/app/calendar': 'Calendrier',
+      '/app/messaging': 'Messagerie',
+      '/app/catalog': 'Catalogue',
+      '/app/catalog/devices': 'Appareils',
+      '/app/catalog/services': 'Services',
+      '/app/catalog/parts': 'Pièces détachées',
+      '/app/catalog/products': 'Produits',
+      '/app/catalog/out-of-stock': 'Ruptures de stock',
+      '/app/catalog/clients': 'Clients',
+      '/app/sales': 'Ventes',
+      '/app/statistics': 'Statistiques',
+      '/app/administration': 'Administration',
+      '/app/settings': 'Réglages',
     };
     return titles[path] || 'Page';
   };
@@ -94,15 +95,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const path = location.pathname;
     const breadcrumbs = [];
 
-    if (path.startsWith('/catalog/')) {
+    if (path.startsWith('/app/catalog/')) {
       breadcrumbs.push(
         <Link
           key="catalog"
           color="inherit"
-          href="/catalog"
+          href="/app/catalog"
           onClick={(e) => {
             e.preventDefault();
-            navigate('/catalog');
+            navigate('/app/catalog');
           }}
           sx={{ textDecoration: 'none' }}
         >
@@ -110,7 +111,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </Link>
       );
       
-      const subPath = path.replace('/catalog/', '');
+      const subPath = path.replace('/app/catalog/', '');
       const subTitles: Record<string, string> = {
         'devices': 'Appareils',
         'services': 'Services',
@@ -250,7 +251,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             sx={{ mt: 1 }}
           />
         </Box>
-        <MenuItem onClick={() => { handleMenuClose(); navigate('/settings'); }}>
+        <MenuItem onClick={() => { handleMenuClose(); navigate('/app/settings'); }}>
           <SettingsIcon sx={{ mr: 2 }} />
           Réglages
         </MenuItem>

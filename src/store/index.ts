@@ -30,6 +30,7 @@ import {
   repairService,
   partService,
   productService,
+  serviceService,
   saleService,
   appointmentService,
   dashboardService
@@ -418,6 +419,8 @@ export const useAppStore = create<AppStore>()(
       loadSystemSettings: async () => {
         try {
           console.log('🔄 Chargement des paramètres système...');
+          set({ loading: true });
+          
           const result = await systemSettingsService.getAll();
           console.log('📊 Résultat du chargement:', result);
           
@@ -432,46 +435,14 @@ export const useAppStore = create<AppStore>()(
               updatedAt: new Date(setting.updated_at),
             }));
             console.log('✅ Paramètres système chargés:', transformedSettings);
-            set({ systemSettings: transformedSettings });
+            set({ systemSettings: transformedSettings, loading: false });
           } else {
-            console.log('⚠️ Aucun paramètre système trouvé, utilisation des valeurs par défaut');
-            // Utiliser des paramètres par défaut si le chargement échoue
-            const defaultSettings = [
-              { id: '1', key: 'workshop_name', value: 'Atelier de réparation', description: 'Nom de l\'atelier', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-              { id: '2', key: 'workshop_address', value: '123 Rue de la Paix, 75001 Paris', description: 'Adresse de l\'atelier', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-              { id: '3', key: 'workshop_phone', value: '01 23 45 67 89', description: 'Numéro de téléphone de contact', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-              { id: '4', key: 'workshop_email', value: 'contact@atelier.fr', description: 'Adresse email de contact', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-              { id: '5', key: 'vat_rate', value: '20', description: 'Taux de TVA en pourcentage', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-              { id: '6', key: 'currency', value: 'EUR', description: 'Devise utilisée pour les factures', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-              { id: '7', key: 'invoice_prefix', value: 'FACT-', description: 'Préfixe pour les numéros de facture', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-              { id: '8', key: 'date_format', value: 'dd/MM/yyyy', description: 'Format d\'affichage des dates', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-              { id: '9', key: 'auto_backup', value: 'true', description: 'Activer la sauvegarde automatique', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-              { id: '10', key: 'notifications', value: 'true', description: 'Activer les notifications', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-              { id: '11', key: 'backup_frequency', value: 'daily', description: 'Fréquence de sauvegarde', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-              { id: '12', key: 'max_file_size', value: '10', description: 'Taille maximale des fichiers en MB', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-            ];
-            console.log('📋 Utilisation des paramètres par défaut:', defaultSettings);
-            set({ systemSettings: defaultSettings });
+            console.log('⚠️ Aucun paramètre système trouvé');
+            set({ systemSettings: [], loading: false });
           }
         } catch (error) {
           console.error('❌ Erreur lors du chargement des paramètres système:', error);
-          // En cas d'erreur, utiliser aussi les paramètres par défaut
-          const defaultSettings = [
-            { id: '1', key: 'workshop_name', value: 'Atelier de réparation', description: 'Nom de l\'atelier', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-            { id: '2', key: 'workshop_address', value: '123 Rue de la Paix, 75001 Paris', description: 'Adresse de l\'atelier', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-            { id: '3', key: 'workshop_phone', value: '01 23 45 67 89', description: 'Numéro de téléphone de contact', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-            { id: '4', key: 'workshop_email', value: 'contact@atelier.fr', description: 'Adresse email de contact', category: 'general', createdAt: new Date(), updatedAt: new Date() },
-            { id: '5', key: 'vat_rate', value: '20', description: 'Taux de TVA en pourcentage', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-            { id: '6', key: 'currency', value: 'EUR', description: 'Devise utilisée pour les factures', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-            { id: '7', key: 'invoice_prefix', value: 'FACT-', description: 'Préfixe pour les numéros de facture', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-            { id: '8', key: 'date_format', value: 'dd/MM/yyyy', description: 'Format d\'affichage des dates', category: 'billing', createdAt: new Date(), updatedAt: new Date() },
-            { id: '9', key: 'auto_backup', value: 'true', description: 'Activer la sauvegarde automatique', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-            { id: '10', key: 'notifications', value: 'true', description: 'Activer les notifications', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-            { id: '11', key: 'backup_frequency', value: 'daily', description: 'Fréquence de sauvegarde', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-            { id: '12', key: 'max_file_size', value: '10', description: 'Taille maximale des fichiers en MB', category: 'system', createdAt: new Date(), updatedAt: new Date() },
-          ];
-          console.log('📋 Utilisation des paramètres par défaut (erreur):', defaultSettings);
-          set({ systemSettings: defaultSettings });
+          set({ systemSettings: [], loading: false, error: 'Erreur lors du chargement des paramètres' });
         }
       },
       
@@ -692,8 +663,10 @@ export const useAppStore = create<AppStore>()(
       
       addService: async (service) => {
         try {
-          // Pour l'instant, on ajoute juste en local
-          set((state) => ({ services: [...state.services, service] }));
+          const result = await serviceService.create(service);
+          if (result.success) {
+            set((state) => ({ services: [...state.services, service] }));
+          }
         } catch (error) {
           console.error('Erreur lors de l\'ajout du service:', error);
         }
@@ -701,11 +674,14 @@ export const useAppStore = create<AppStore>()(
       
       updateService: async (id, updates) => {
         try {
-          set((state) => ({
-            services: state.services.map(service => 
-              service.id === id ? { ...service, ...updates, updatedAt: new Date() } : service
-            )
-          }));
+          const result = await serviceService.update(id, updates);
+          if (result.success) {
+            set((state) => ({
+              services: state.services.map(service => 
+                service.id === id ? { ...service, ...updates, updatedAt: new Date() } : service
+              )
+            }));
+          }
         } catch (error) {
           console.error('Erreur lors de la mise à jour du service:', error);
         }
@@ -713,9 +689,12 @@ export const useAppStore = create<AppStore>()(
       
       deleteService: async (id) => {
         try {
-          set((state) => ({
-            services: state.services.filter(service => service.id !== id)
-          }));
+          const result = await serviceService.delete(id);
+          if (result.success) {
+            set((state) => ({
+              services: state.services.filter(service => service.id !== id)
+            }));
+          }
         } catch (error) {
           console.error('Erreur lors de la suppression du service:', error);
         }
@@ -1065,10 +1044,23 @@ export const useAppStore = create<AppStore>()(
       
       loadServices: async () => {
         try {
-          // Charger les services depuis les données de démonstration
-          const { demoDataService } = await import('../services/demoDataService');
-          const demoData = await demoDataService.getDemoData();
-          set({ services: demoData.services });
+          const result = await serviceService.getAll();
+          if (result.success && 'data' in result && result.data) {
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedServices = result.data.map((service: any) => ({
+              id: service.id,
+              name: service.name,
+              description: service.description,
+              duration: service.duration,
+              price: service.price,
+              category: service.category,
+              applicableDevices: service.applicable_devices || service.applicableDevices,
+              isActive: service.is_active !== undefined ? service.is_active : service.isActive,
+              createdAt: service.created_at ? new Date(service.created_at) : new Date(),
+              updatedAt: service.updated_at ? new Date(service.updated_at) : new Date(),
+            }));
+            set({ services: transformedServices });
+          }
         } catch (error) {
           console.error('Erreur lors du chargement des services:', error);
         }

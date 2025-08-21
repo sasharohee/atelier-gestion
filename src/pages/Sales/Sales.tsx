@@ -32,6 +32,8 @@ import {
   Alert,
   Autocomplete,
   InputAdornment,
+  Tooltip,
+  Badge,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,6 +42,8 @@ import {
   Email as EmailIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
+  Info as InfoIcon,
+  Inventory as InventoryIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -162,6 +166,44 @@ const Sales: React.FC = () => {
     
     return ['all', ...categories];
   }, [selectedItemType, products, services, parts]);
+
+  // Fonction pour obtenir des informations détaillées sur un article
+  const getItemDetails = (item: { id: string; name: string; price: number; type: string; category?: string }) => {
+    switch (item.type) {
+      case 'product':
+        const product = products.find(p => p.id === item.id);
+        return {
+          description: product?.description || 'Aucune description',
+          stock: product?.stockQuantity || 0,
+          category: product?.category || 'Non catégorisé',
+          type: 'Produit'
+        };
+      case 'service':
+        const service = services.find(s => s.id === item.id);
+        return {
+          description: service?.description || 'Aucune description',
+          duration: service?.duration || 0,
+          category: service?.category || 'Non catégorisé',
+          type: 'Service'
+        };
+      case 'part':
+        const part = parts.find(p => p.id === item.id);
+        return {
+          description: part?.description || 'Aucune description',
+          stock: part?.stockQuantity || 0,
+          brand: part?.brand || 'Marque inconnue',
+          partNumber: part?.partNumber || 'N/A',
+          type: 'Pièce détachée'
+        };
+      default:
+        return {
+          description: 'Aucune information disponible',
+          stock: 0,
+          category: 'Inconnu',
+          type: 'Article'
+        };
+    }
+  };
 
   const getStatusColor = (status: string) => {
     const colors = {
@@ -598,7 +640,7 @@ const Sales: React.FC = () => {
             {/* Sélection d'articles */}
             <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>
-                Sélection d'articles
+                📦 Sélection d'articles
               </Typography>
               
               {/* Type d'article */}
@@ -609,12 +651,43 @@ const Sales: React.FC = () => {
                   onChange={(e) => {
                     setSelectedItemType(e.target.value as 'product' | 'service' | 'part');
                     setSelectedCategory('all'); // Réinitialiser la catégorie
+                    setSearchQuery(''); // Réinitialiser la recherche
                   }}
                   label="Type d'article"
                 >
-                  <MenuItem value="product">🛍️ Produits & Accessoires</MenuItem>
-                  <MenuItem value="service">🔧 Services de Réparation</MenuItem>
-                  <MenuItem value="part">🔩 Pièces Détachées</MenuItem>
+                  <MenuItem value="product">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      🛍️ Produits & Accessoires
+                      <Chip 
+                        label={products.filter(p => p.isActive).length} 
+                        size="small" 
+                        color="primary" 
+                        variant="outlined"
+                      />
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="service">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      🔧 Services de Réparation
+                      <Chip 
+                        label={services.filter(s => s.isActive).length} 
+                        size="small" 
+                        color="primary" 
+                        variant="outlined"
+                      />
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="part">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      🔩 Pièces Détachées
+                      <Chip 
+                        label={parts.filter(p => p.isActive && p.stockQuantity > 0).length} 
+                        size="small" 
+                        color="primary" 
+                        variant="outlined"
+                      />
+                    </Box>
+                  </MenuItem>
                 </Select>
               </FormControl>
 
@@ -628,7 +701,7 @@ const Sales: React.FC = () => {
                 >
                   {availableCategories.map((category) => (
                     <MenuItem key={category} value={category}>
-                      {category === 'all' ? '📂 Toutes les catégories' : category}
+                      {category === 'all' ? '📂 Toutes les catégories' : `🏷️ ${category}`}
                     </MenuItem>
                   ))}
                 </Select>
@@ -637,7 +710,7 @@ const Sales: React.FC = () => {
               {/* Recherche */}
               <TextField
                 fullWidth
-                placeholder="Rechercher un article..."
+                placeholder={`Rechercher un ${selectedItemType === 'product' ? 'produit' : selectedItemType === 'service' ? 'service' : 'pièce'}...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 InputProps={{
@@ -650,44 +723,116 @@ const Sales: React.FC = () => {
                 sx={{ mb: 2 }}
               />
 
+              {/* Informations sur les articles disponibles */}
+              <Box sx={{ mb: 2, p: 1, bgcolor: 'info.50', borderRadius: 1, border: '1px solid', borderColor: 'info.200' }}>
+                <Typography variant="body2" color="info.main">
+                  📊 {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} disponible{filteredItems.length > 1 ? 's' : ''}
+                  {selectedItemType === 'part' && (
+                    <span> • Seules les pièces en stock sont affichées</span>
+                  )}
+                </Typography>
+              </Box>
+
               {/* Liste des articles disponibles */}
-              <Box sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <Box sx={{ 
+                maxHeight: 350, 
+                overflow: 'auto', 
+                border: '1px solid', 
+                borderColor: 'divider', 
+                borderRadius: 1,
+                bgcolor: 'background.paper'
+              }}>
                 <List dense>
-                  {filteredItems.map((item) => (
-                    <ListItem 
-                      key={item.id} 
-                      button 
-                      onClick={() => addItemToSale(item)}
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <ListItemText
-                        primary={item.name}
-                        secondary={
-                          <Box>
-                            <Typography variant="caption" display="block">
-                              {item.category && `${item.category} • `}{item.price.toLocaleString('fr-FR')} €
-                            </Typography>
-                            {selectedItemType === 'part' && (
-                              <Typography variant="caption" color="text.secondary">
-                                En stock
+                  {filteredItems.map((item) => {
+                    const details = getItemDetails(item);
+                    return (
+                      <ListItem 
+                        key={item.id} 
+                        button 
+                        onClick={() => addItemToSale(item)}
+                        sx={{ 
+                          cursor: 'pointer',
+                          '&:hover': {
+                            bgcolor: 'action.hover'
+                          },
+                          borderBottom: '1px solid',
+                          borderColor: 'divider'
+                        }}
+                      >
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                {item.name}
                               </Typography>
-                            )}
-                          </Box>
-                        }
-                      />
-                      <IconButton size="small" onClick={(e) => {
-                        e.stopPropagation();
-                        addItemToSale(item);
-                      }}>
-                        <AddIcon fontSize="small" />
-                      </IconButton>
-                    </ListItem>
-                  ))}
+                              {selectedItemType === 'part' && (
+                                <Chip 
+                                  label="En stock" 
+                                  size="small" 
+                                  color="success" 
+                                  variant="outlined"
+                                />
+                              )}
+                            </Box>
+                          }
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                              {details.description && (
+                                <Tooltip title={details.description}>
+                                  <InfoIcon fontSize="small" color="action" />
+                                </Tooltip>
+                              )}
+                              {item.category && item.category !== 'all' && (
+                                <Chip 
+                                  label={item.category} 
+                                  size="small" 
+                                  variant="outlined"
+                                  sx={{ fontSize: '0.7rem' }}
+                                />
+                              )}
+                              <Typography variant="body2" color="text.secondary">
+                                💰 {item.price.toLocaleString('fr-FR')} €
+                              </Typography>
+                              {selectedItemType === 'part' && (
+                                <Typography variant="body2" color="text.secondary">
+                                  • Stock: {details.stock}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
+                        />
+                        <IconButton 
+                          size="small" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addItemToSale(item);
+                          }}
+                          sx={{ 
+                            color: 'primary.main',
+                            '&:hover': {
+                              bgcolor: 'primary.light',
+                              color: 'white'
+                            }
+                          }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </ListItem>
+                    );
+                  })}
                   {filteredItems.length === 0 && (
                     <ListItem>
                       <ListItemText 
-                        primary="Aucun article trouvé" 
-                        secondary="Essayez de modifier votre recherche"
+                        primary={
+                          <Box sx={{ textAlign: 'center', py: 2 }}>
+                            <Typography variant="body1" color="text.secondary">
+                              🔍 Aucun article trouvé
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Essayez de modifier votre recherche ou changer de catégorie
+                            </Typography>
+                          </Box>
+                        }
                       />
                     </ListItem>
                   )}
@@ -698,21 +843,63 @@ const Sales: React.FC = () => {
             {/* Panier */}
             <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>
-                Panier ({saleItems.length} articles)
+                🛒 Panier ({saleItems.length} article{saleItems.length > 1 ? 's' : ''})
               </Typography>
               
-              <Box sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2 }}>
+              <Box sx={{ 
+                maxHeight: 350, 
+                overflow: 'auto', 
+                border: '1px solid', 
+                borderColor: 'divider', 
+                borderRadius: 1, 
+                p: 2,
+                bgcolor: 'background.paper'
+              }}>
                 {saleItems.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    Aucun article dans le panier
-                  </Typography>
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+                      🛒 Votre panier est vide
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Sélectionnez des articles dans la liste à gauche
+                    </Typography>
+                  </Box>
                 ) : (
                   <List dense>
-                    {saleItems.map((item) => (
-                      <ListItem key={item.itemId}>
+                    {saleItems.map((item, index) => (
+                      <ListItem 
+                        key={item.itemId}
+                        sx={{ 
+                          borderBottom: index < saleItems.length - 1 ? '1px solid' : 'none',
+                          borderColor: 'divider',
+                          py: 1
+                        }}
+                      >
                         <ListItemText
-                          primary={item.name}
-                          secondary={`${item.unitPrice.toLocaleString('fr-FR')} € x ${item.quantity}`}
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                {item.name}
+                              </Typography>
+                              <Chip 
+                                label={item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'} 
+                                size="small" 
+                                color={item.type === 'product' ? 'primary' : item.type === 'service' ? 'secondary' : 'success'}
+                                variant="outlined"
+                                sx={{ fontSize: '0.7rem' }}
+                              />
+                            </Box>
+                          }
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                💰 {item.unitPrice.toLocaleString('fr-FR')} € l'unité
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                📦 Quantité: {item.quantity}
+                              </Typography>
+                            </Box>
+                          }
                         />
                         <ListItemSecondaryAction>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -721,16 +908,25 @@ const Sales: React.FC = () => {
                               size="small"
                               value={item.quantity}
                               onChange={(e) => updateItemQuantity(item.itemId, parseInt(e.target.value) || 0)}
-                              sx={{ width: 60 }}
-                              inputProps={{ min: 1 }}
+                              sx={{ width: 70 }}
+                              inputProps={{ 
+                                min: 1,
+                                style: { textAlign: 'center' }
+                              }}
                             />
-                            <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 60 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 80, textAlign: 'right' }}>
                               {item.totalPrice.toLocaleString('fr-FR')} €
                             </Typography>
                             <IconButton 
                               size="small" 
                               onClick={() => removeItemFromSale(item.itemId)}
                               color="error"
+                              sx={{
+                                '&:hover': {
+                                  bgcolor: 'error.light',
+                                  color: 'white'
+                                }
+                              }}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -744,19 +940,33 @@ const Sales: React.FC = () => {
 
               {/* Totaux */}
               {saleItems.length > 0 && (
-                <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Box sx={{ 
+                  mt: 2, 
+                  p: 2, 
+                  bgcolor: 'grey.50', 
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'grey.200'
+                }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.primary' }}>
+                    📊 Récapitulatif
+                  </Typography>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography>Sous-total:</Typography>
-                    <Typography>{totals.subtotal.toLocaleString('fr-FR')} €</Typography>
+                    <Typography variant="body2">Sous-total:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {totals.subtotal.toLocaleString('fr-FR')} €
+                    </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography>TVA (20%):</Typography>
-                    <Typography>{totals.tax.toLocaleString('fr-FR')} €</Typography>
+                    <Typography variant="body2">TVA (20%):</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {totals.tax.toLocaleString('fr-FR')} €
+                    </Typography>
                   </Box>
                   <Divider sx={{ my: 1 }} />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>Total:</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
                       {totals.total.toLocaleString('fr-FR')} €
                     </Typography>
                   </Box>

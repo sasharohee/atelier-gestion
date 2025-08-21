@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { supabase } from '../../lib/supabase';
 
 interface SettingsData {
   profile: {
@@ -31,6 +33,13 @@ const Settings: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   
+  const { 
+    systemSettings, 
+    loadSystemSettings, 
+    updateMultipleSystemSettings,
+    currentUser 
+  } = useAppStore();
+  
   const [settings, setSettings] = useState<SettingsData>({
     profile: {
       firstName: 'Utilisateur',
@@ -43,7 +52,7 @@ const Settings: React.FC = () => {
       notificationsPush: true,
       notificationsSms: false,
       themeDarkMode: false,
-    language: 'fr',
+      language: 'fr',
       twoFactorAuth: false
     },
     workshop: {
@@ -56,20 +65,96 @@ const Settings: React.FC = () => {
     }
   });
 
+  const [passwordStrength, setPasswordStrength] = useState<{
+    score: number;
+    feedback: string;
+    color: string;
+  }>({ score: 0, feedback: '', color: '#666' });
+  
+  const [passwordMatch, setPasswordMatch] = useState<{
+    match: boolean;
+    message: string;
+    color: string;
+  }>({ match: false, message: '', color: '#666' });
+
   const { saveSettings } = useWorkshopSettings();
 
-  // Charger les paramètres depuis localStorage
+  // Charger les paramètres depuis la base de données
   useEffect(() => {
-    const savedSettings = localStorage.getItem('atelier-settings');
-    if (savedSettings) {
+    const loadSettings = async () => {
       try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings(parsed);
+        await loadSystemSettings();
       } catch (error) {
-        console.log('Erreur lors du chargement des paramètres');
+        console.error('Erreur lors du chargement des paramètres:', error);
       }
+    };
+    
+    loadSettings();
+  }, [loadSystemSettings]);
+
+  // Mettre à jour les paramètres quand systemSettings change
+  useEffect(() => {
+    if (systemSettings.length > 0) {
+      const newSettings = { ...settings };
+      
+      // Mettre à jour les paramètres de l'atelier depuis la base de données
+      systemSettings.forEach(setting => {
+        switch (setting.key) {
+          case 'workshop_name':
+            newSettings.workshop.name = setting.value;
+            break;
+          case 'workshop_address':
+            newSettings.workshop.address = setting.value;
+            break;
+          case 'workshop_phone':
+            newSettings.workshop.phone = setting.value;
+            break;
+          case 'workshop_email':
+            newSettings.workshop.email = setting.value;
+            break;
+          case 'vat_rate':
+            newSettings.workshop.vatRate = setting.value;
+            break;
+          case 'currency':
+            newSettings.workshop.currency = setting.value;
+            break;
+          case 'notifications':
+            newSettings.preferences.notificationsEmail = setting.value === 'true';
+            break;
+          case 'language':
+            newSettings.preferences.language = setting.value;
+            break;
+          case 'user_first_name':
+            newSettings.profile.firstName = setting.value;
+            break;
+          case 'user_last_name':
+            newSettings.profile.lastName = setting.value;
+            break;
+          case 'user_email':
+            newSettings.profile.email = setting.value;
+            break;
+          case 'user_phone':
+            newSettings.profile.phone = setting.value;
+            break;
+        }
+      });
+      
+      // Mettre à jour le profil avec les données de l'utilisateur connecté si pas encore défini
+      if (currentUser) {
+        if (!newSettings.profile.firstName || newSettings.profile.firstName === 'Utilisateur') {
+          newSettings.profile.firstName = currentUser.firstName;
+        }
+        if (!newSettings.profile.lastName || newSettings.profile.lastName === 'Test') {
+          newSettings.profile.lastName = currentUser.lastName;
+        }
+        if (!newSettings.profile.email || newSettings.profile.email === 'user@example.com') {
+          newSettings.profile.email = currentUser.email;
+        }
+      }
+      
+      setSettings(newSettings);
     }
-  }, []);
+  }, [systemSettings, currentUser]);
 
   const showMessage = (text: string, type: 'success' | 'error' | 'info') => {
     setMessage({ text, type });
@@ -79,16 +164,38 @@ const Settings: React.FC = () => {
   const saveSettingsData = async () => {
     setLoading(true);
     try {
-      // Sauvegarder dans localStorage
-      localStorage.setItem('atelier-settings', JSON.stringify(settings));
+      // Préparer les paramètres à sauvegarder
+      const settingsToUpdate = [
+        // Paramètres de l'atelier
+        { key: 'workshop_name', value: settings.workshop.name },
+        { key: 'workshop_address', value: settings.workshop.address },
+        { key: 'workshop_phone', value: settings.workshop.phone },
+        { key: 'workshop_email', value: settings.workshop.email },
+        { key: 'vat_rate', value: settings.workshop.vatRate },
+        { key: 'currency', value: settings.workshop.currency },
+        
+        // Paramètres des préférences
+        { key: 'notifications', value: settings.preferences.notificationsEmail.toString() },
+        { key: 'language', value: settings.preferences.language },
+        
+        // Paramètres du profil utilisateur
+        { key: 'user_first_name', value: settings.profile.firstName },
+        { key: 'user_last_name', value: settings.profile.lastName },
+        { key: 'user_email', value: settings.profile.email },
+        { key: 'user_phone', value: settings.profile.phone }
+      ];
+
+      // Sauvegarder dans la base de données
+      await updateMultipleSystemSettings(settingsToUpdate);
       
-      // Mettre à jour les paramètres de l'atelier via le hook
+      // Mettre à jour les paramètres de l'atelier via le hook (maintenant avec isolation)
       if (settings.workshop) {
-        saveSettings(settings.workshop);
+        await saveSettings(settings.workshop);
       }
       
       showMessage('Paramètres sauvegardés avec succès !', 'success');
     } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
       showMessage('Erreur lors de la sauvegarde', 'error');
     } finally {
       setLoading(false);
@@ -104,27 +211,37 @@ const Settings: React.FC = () => {
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (!passwordMatch.match) {
       showMessage('Les mots de passe ne correspondent pas', 'error');
       return;
     }
     
-    if (password.length < 6) {
-      showMessage('Le mot de passe doit contenir au moins 6 caractères', 'error');
+    if (passwordStrength.score < 3) {
+      showMessage('Le mot de passe est trop faible. Veuillez choisir un mot de passe plus sécurisé.', 'error');
       return;
     }
     
     setLoading(true);
     try {
-      // Simuler une sauvegarde asynchrone
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Utiliser l'API Supabase pour changer le mot de passe
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
       showMessage('Mot de passe modifié avec succès !', 'success');
       
-      // Vider les champs
+      // Vider les champs et réinitialiser les états
       (document.getElementById('newPassword') as HTMLInputElement).value = '';
       (document.getElementById('confirmPassword') as HTMLInputElement).value = '';
-    } catch (error) {
-      showMessage('Erreur lors de la modification du mot de passe', 'error');
+      setPasswordStrength({ score: 0, feedback: '', color: '#666' });
+      setPasswordMatch({ match: false, message: '', color: '#666' });
+    } catch (error: any) {
+      console.error('Erreur lors de la modification du mot de passe:', error);
+      showMessage(error?.message || 'Erreur lors de la modification du mot de passe', 'error');
     } finally {
       setLoading(false);
     }
@@ -134,6 +251,77 @@ const Settings: React.FC = () => {
     const field = document.getElementById(fieldId) as HTMLInputElement;
     if (field) {
       field.type = field.type === 'password' ? 'text' : 'password';
+    }
+  };
+
+  const evaluatePasswordStrength = (password: string) => {
+    let score = 0;
+    let feedback = '';
+    
+    if (password.length >= 6) score += 1;
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+    if (/[a-z]/.test(password)) score += 1;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/[0-9]/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    
+    let color = '#666';
+    if (score <= 2) {
+      feedback = 'Très faible';
+      color = '#dc3545';
+    } else if (score <= 4) {
+      feedback = 'Faible';
+      color = '#fd7e14';
+    } else if (score <= 6) {
+      feedback = 'Moyen';
+      color = '#ffc107';
+    } else {
+      feedback = 'Fort';
+      color = '#28a745';
+    }
+    
+    return { score, feedback, color };
+  };
+
+  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const password = event.target.value;
+    const strength = evaluatePasswordStrength(password);
+    setPasswordStrength(strength);
+    
+    // Vérifier si les mots de passe correspondent
+    const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value;
+    if (confirmPassword) {
+      checkPasswordMatch(password, confirmPassword);
+    }
+  };
+
+  const handleConfirmPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const confirmPassword = event.target.value;
+    const password = (document.getElementById('newPassword') as HTMLInputElement)?.value;
+    if (password) {
+      checkPasswordMatch(password, confirmPassword);
+    }
+  };
+
+  const checkPasswordMatch = (password: string, confirmPassword: string) => {
+    if (!password || !confirmPassword) {
+      setPasswordMatch({ match: false, message: '', color: '#666' });
+      return;
+    }
+    
+    if (password === confirmPassword) {
+      setPasswordMatch({ 
+        match: true, 
+        message: '✅ Les mots de passe correspondent', 
+        color: '#28a745' 
+      });
+    } else {
+      setPasswordMatch({ 
+        match: false, 
+        message: '❌ Les mots de passe ne correspondent pas', 
+        color: '#dc3545' 
+      });
     }
   };
 
@@ -353,102 +541,234 @@ const Settings: React.FC = () => {
 
           {activeTab === 1 && (
             <div>
-              <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
-                Préférences de notifications
-              </h2>
-              
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  color: '#333'
+              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <div style={{ 
+                  fontSize: '60px', 
+                  color: '#ff9800', 
+                  marginBottom: '16px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
                 }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.preferences.notificationsEmail}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      preferences: { ...prev.preferences, notificationsEmail: e.target.checked }
-                    }))}
-                    style={{ marginRight: '8px' }}
-                  />
-                  Notifications par email
-                </label>
+                  🚧
+                </div>
+                <h2 style={{ margin: '0 0 12px 0', fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
+                  Section en Construction
+                </h2>
+                <p style={{ margin: '0', color: '#666', fontSize: '16px' }}>
+                  Les paramètres de notifications sont actuellement en cours de développement
+                </p>
               </div>
-              
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  color: '#333'
+
+              <div style={{ 
+                backgroundColor: '#fff3cd', 
+                border: '1px solid #ffeaa7', 
+                borderRadius: '8px', 
+                padding: '20px', 
+                marginBottom: '24px' 
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                  <div style={{ 
+                    fontSize: '32px', 
+                    color: '#007bff', 
+                    marginRight: '12px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    👨‍💻
+                  </div>
+                  <div>
+                    <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
+                      Développement en cours
+                    </h3>
+                    <p style={{ margin: '0', color: '#666', fontSize: '14px' }}>
+                      Notre équipe travaille activement sur cette fonctionnalité
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ 
+                    margin: '0 0 12px 0', 
+                    fontSize: '16px', 
+                    fontWeight: '600', 
+                    color: '#333',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    📋 Fonctionnalités prévues
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{
+                      backgroundColor: '#e3f2fd',
+                      color: '#1976d2',
+                      padding: '6px 12px',
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      border: '1px solid #bbdefb'
+                    }}>
+                      Notifications par email
+                    </span>
+                    <span style={{
+                      backgroundColor: '#e3f2fd',
+                      color: '#1976d2',
+                      padding: '6px 12px',
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      border: '1px solid #bbdefb'
+                    }}>
+                      Notifications push
+                    </span>
+                    <span style={{
+                      backgroundColor: '#e3f2fd',
+                      color: '#1976d2',
+                      padding: '6px 12px',
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      border: '1px solid #bbdefb'
+                    }}>
+                      Notifications SMS
+                    </span>
+                    <span style={{
+                      backgroundColor: '#e3f2fd',
+                      color: '#1976d2',
+                      padding: '6px 12px',
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      border: '1px solid #bbdefb'
+                    }}>
+                      Personnalisation avancée
+                    </span>
+                    <span style={{
+                      backgroundColor: '#e3f2fd',
+                      color: '#1976d2',
+                      padding: '6px 12px',
+                      borderRadius: '16px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      border: '1px solid #bbdefb'
+                    }}>
+                      Programmation des alertes
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ 
+                  backgroundColor: '#f8f9fa', 
+                  border: '1px solid #e9ecef', 
+                  borderRadius: '6px', 
+                  padding: '16px' 
                 }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.preferences.notificationsPush}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      preferences: { ...prev.preferences, notificationsPush: e.target.checked }
-                    }))}
-                    style={{ marginRight: '8px' }}
-                  />
-                  Notifications push
-                </label>
+                  <h4 style={{ 
+                    margin: '0 0 12px 0', 
+                    fontSize: '16px', 
+                    fontWeight: '600', 
+                    color: '#333',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    📊 Progression du développement
+                  </h4>
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '14px', color: '#666' }}>Interface utilisateur</span>
+                      <span style={{ fontSize: '14px', color: '#666' }}>75%</span>
+                    </div>
+                    <div style={{ 
+                      width: '100%', 
+                      height: '8px', 
+                      backgroundColor: '#e9ecef', 
+                      borderRadius: '4px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{ 
+                        width: '75%', 
+                        height: '100%', 
+                        backgroundColor: '#007bff', 
+                        borderRadius: '4px' 
+                      }}></div>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '14px', color: '#666' }}>Logique de notifications</span>
+                      <span style={{ fontSize: '14px', color: '#666' }}>45%</span>
+                    </div>
+                    <div style={{ 
+                      width: '100%', 
+                      height: '8px', 
+                      backgroundColor: '#e9ecef', 
+                      borderRadius: '4px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{ 
+                        width: '45%', 
+                        height: '100%', 
+                        backgroundColor: '#007bff', 
+                        borderRadius: '4px' 
+                      }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '14px', color: '#666' }}>Tests et optimisation</span>
+                      <span style={{ fontSize: '14px', color: '#666' }}>20%</span>
+                    </div>
+                    <div style={{ 
+                      width: '100%', 
+                      height: '8px', 
+                      backgroundColor: '#e9ecef', 
+                      borderRadius: '4px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{ 
+                        width: '20%', 
+                        height: '100%', 
+                        backgroundColor: '#007bff', 
+                        borderRadius: '4px' 
+                      }}></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ 
+                  backgroundColor: '#d1ecf1', 
+                  border: '1px solid #bee5eb', 
+                  borderRadius: '6px', 
+                  padding: '12px', 
+                  marginTop: '16px' 
+                }}>
+                  <p style={{ 
+                    margin: '0', 
+                    fontSize: '14px', 
+                    color: '#0c5460',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    <strong>ℹ️ Information :</strong> La date de disponibilité n'est pas encore fixée, 
+                    mais cette fonctionnalité sera disponible ultérieurement. Nous vous tiendrons informés des avancées.
+                  </p>
+                </div>
               </div>
-              
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  color: '#333'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.preferences.notificationsSms}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      preferences: { ...prev.preferences, notificationsSms: e.target.checked }
-                    }))}
-                    style={{ marginRight: '8px' }}
-                  />
-                  Notifications par SMS
-                </label>
-              </div>
-              
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '6px', 
-                  fontWeight: '500',
-                  color: '#333',
-                  fontSize: '14px'
-                }}>
-                  Langue
-                </label>
-                <select
-                  value={settings.preferences.language}
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    preferences: { ...prev.preferences, language: e.target.value }
-                  }))}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <option value="fr">Français</option>
-                  <option value="en">English</option>
-                  <option value="es">Español</option>
-                </select>
+
+              <div style={{ 
+                backgroundColor: '#f8f9fa', 
+                border: '1px solid #e9ecef', 
+                borderRadius: '8px', 
+                padding: '20px' 
+              }}>
+                <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600', color: '#333' }}>
+                  En attendant...
+                </h4>
+                <p style={{ margin: '0', color: '#666', fontSize: '14px', lineHeight: '1.5' }}>
+                  Vous pouvez configurer les autres paramètres de votre profil et de votre atelier. 
+                  Les notifications seront bientôt disponibles pour vous permettre de personnaliser 
+                  vos alertes et communications.
+                </p>
               </div>
             </div>
           )}
@@ -481,78 +801,204 @@ const Settings: React.FC = () => {
               </div>
               
               <div style={{ 
-                padding: '16px', 
+                padding: '20px', 
                 backgroundColor: '#f8f9fa', 
-                borderRadius: '4px',
-                marginBottom: '20px'
+                borderRadius: '8px',
+                marginBottom: '20px',
+                border: '1px solid #e9ecef'
               }}>
-                <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600', color: '#333' }}>
-                  Changer le mot de passe
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
+                  🔐 Changer le mot de passe
                 </h3>
                 
-                <div style={{ marginBottom: '12px' }}>
+                <div style={{ marginBottom: '16px' }}>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
+                    marginBottom: '8px', 
                     fontWeight: '500',
                     color: '#333',
                     fontSize: '14px'
                   }}>
                     Nouveau mot de passe
                   </label>
-                  <input
-                    id="newPassword"
-                    type="password"
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      id="newPassword"
+                      type="password"
+                      placeholder="Entrez votre nouveau mot de passe"
+                      onChange={handlePasswordChange}
+                      style={{
+                        width: '100%',
+                        padding: '12px 40px 12px 12px',
+                        border: '1px solid #ddd',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('newPassword')}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        color: '#666'
+                      }}
+                    >
+                      👁️
+                    </button>
+                  </div>
+                  
+                  {/* Indicateur de force du mot de passe */}
+                  {(document.getElementById('newPassword') as HTMLInputElement)?.value && (
+                    <div style={{ marginTop: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ 
+                          fontSize: '12px', 
+                          color: '#666', 
+                          marginRight: '8px' 
+                        }}>
+                          Force du mot de passe:
+                        </span>
+                        <span style={{ 
+                          fontSize: '12px', 
+                          fontWeight: '600',
+                          color: passwordStrength.color 
+                        }}>
+                          {passwordStrength.feedback}
+                        </span>
+                      </div>
+                      <div style={{ 
+                        width: '100%', 
+                        height: '4px', 
+                        backgroundColor: '#e9ecef', 
+                        borderRadius: '2px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{ 
+                          width: `${(passwordStrength.score / 7) * 100}%`, 
+                          height: '100%', 
+                          backgroundColor: passwordStrength.color, 
+                          borderRadius: '2px',
+                          transition: 'all 0.3s ease'
+                        }}></div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
-                <div style={{ marginBottom: '12px' }}>
+                <div style={{ marginBottom: '16px' }}>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
+                    marginBottom: '8px', 
                     fontWeight: '500',
                     color: '#333',
                     fontSize: '14px'
                   }}>
                     Confirmer le mot de passe
                   </label>
-                  <input
-                    id="confirmPassword"
-                    type="password"
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
-                    }}
-                  />
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="Confirmez votre nouveau mot de passe"
+                      onChange={handleConfirmPasswordChange}
+                      style={{
+                        width: '100%',
+                        padding: '12px 40px 12px 12px',
+                        border: '1px solid #ddd',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('confirmPassword')}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '16px',
+                        color: '#666'
+                      }}
+                    >
+                      👁️
+                    </button>
+                  </div>
+                  
+                  {/* Indicateur de correspondance des mots de passe */}
+                  {passwordMatch.message && (
+                    <div style={{ marginTop: '8px' }}>
+                      <span style={{ 
+                        fontSize: '12px', 
+                        fontWeight: '500',
+                        color: passwordMatch.color 
+                      }}>
+                        {passwordMatch.message}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                <div style={{ 
+                  backgroundColor: '#e3f2fd', 
+                  border: '1px solid #bbdefb', 
+                  borderRadius: '6px', 
+                  padding: '12px', 
+                  marginBottom: '16px' 
+                }}>
+                  <h4 style={{ 
+                    margin: '0 0 8px 0', 
+                    fontSize: '14px', 
+                    fontWeight: '600', 
+                    color: '#1976d2',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    🔒 Exigences de sécurité
+                  </h4>
+                  <ul style={{ 
+                    margin: '0', 
+                    paddingLeft: '20px', 
+                    fontSize: '13px', 
+                    color: '#1976d2',
+                    lineHeight: '1.4'
+                  }}>
+                    <li>Au moins 6 caractères</li>
+                    <li>Utilisez des lettres, chiffres et symboles</li>
+                    <li>Évitez les mots de passe courants</li>
+                  </ul>
                 </div>
                 
                 <button
                   onClick={changePassword}
-                  disabled={loading}
+                  disabled={loading || !passwordMatch.match || passwordStrength.score < 3}
                   style={{
-                    backgroundColor: '#007bff',
+                    backgroundColor: passwordMatch.match && passwordStrength.score >= 3 ? '#007bff' : '#6c757d',
                     color: 'white',
                     border: 'none',
-                    padding: '10px 20px',
-                    borderRadius: '4px',
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: (loading || !passwordMatch.match || passwordStrength.score < 3) ? 'not-allowed' : 'pointer',
                     fontSize: '14px',
-                    opacity: loading ? 0.6 : 1
+                    fontWeight: '600',
+                    opacity: (loading || !passwordMatch.match || passwordStrength.score < 3) ? 0.6 : 1,
+                    transition: 'all 0.2s ease',
+                    width: '100%'
                   }}
                 >
-                  {loading ? 'Modification...' : 'Modifier le mot de passe'}
+                  {loading ? '🔄 Modification en cours...' : '🔐 Modifier le mot de passe'}
                 </button>
               </div>
             </div>
