@@ -10,7 +10,7 @@ import {
   Avatar,
 } from '@mui/material';
 import {
-  Phone as PhoneIcon,
+  DeviceHub as DeviceHubIcon,
   Build as BuildIcon,
   Inventory as InventoryIcon,
   ShoppingCart as ShoppingCartIcon,
@@ -20,7 +20,7 @@ import {
 import { useAppStore } from '../../store';
 
 // Sous-pages du catalogue
-import Devices from './Devices';
+import Models from './Models';
 import Services from './Services';
 import Parts from './Parts';
 import Products from './Products';
@@ -35,10 +35,10 @@ const Catalog: React.FC = () => {
 
   const catalogSections = [
     {
-      title: 'Appareils',
+      title: 'Modèles',
       description: 'Gestion des modèles d\'appareils',
-      icon: <PhoneIcon />,
-      path: '/app/catalog/devices',
+      icon: <DeviceHubIcon />,
+      path: '/app/catalog/models',
       count: devices.length,
       color: '#2196f3',
     },
@@ -140,7 +140,7 @@ const Catalog: React.FC = () => {
           </Grid>
         </Box>
       } />
-      <Route path="/devices" element={<Devices />} />
+      <Route path="/models" element={<Models />} />
       <Route path="/services" element={<Services />} />
       <Route path="/parts" element={<Parts />} />
       <Route path="/products" element={<Products />} />

@@ -11,6 +11,7 @@ export const useAuthenticatedData = () => {
   const {
     loadClients,
     loadDevices,
+    loadDeviceModels,
     loadServices,
     loadParts,
     loadProducts,
@@ -34,6 +35,7 @@ export const useAuthenticatedData = () => {
         await Promise.all([
           loadClients(),
           loadDevices(),
+          loadDeviceModels(),
           loadServices(),
           loadParts(),
           loadProducts(),
@@ -52,7 +54,7 @@ export const useAuthenticatedData = () => {
     };
 
     loadData();
-  }, [isAuthenticated, user, loadClients, loadDevices, loadServices, loadParts, loadProducts, loadRepairs, loadSales, loadAppointments]);
+  }, [isAuthenticated, user, loadClients, loadDevices, loadDeviceModels, loadServices, loadParts, loadProducts, loadRepairs, loadSales, loadAppointments]);
 
   return {
     isDataLoaded,

@@ -8,6 +8,7 @@ import {
   UserPreferences,
   Client,
   Device,
+  DeviceModel,
   Service,
   Part,
   Product,
@@ -27,6 +28,7 @@ import {
   userSettingsService,
   clientService,
   deviceService,
+  deviceModelService,
   repairService,
   partService,
   productService,
@@ -59,6 +61,7 @@ interface AppState {
   userPreferences: UserPreferences | null;
   clients: Client[];
   devices: Device[];
+  deviceModels: DeviceModel[];
   services: Service[];
   parts: Part[];
   products: Product[];
@@ -112,13 +115,17 @@ interface AppActions {
   updateUserPreferences: (userId: string, preferences: Partial<UserPreferences>) => Promise<void>;
   changePassword: (userId: string, oldPassword: string, newPassword: string) => Promise<void>;
   
-  addClient: (client: Client) => Promise<void>;
+  addClient: (client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
   
   addDevice: (device: Device) => Promise<void>;
   updateDevice: (id: string, updates: Partial<Device>) => Promise<void>;
   deleteDevice: (id: string) => Promise<void>;
+  
+  addDeviceModel: (model: Omit<DeviceModel, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateDeviceModel: (id: string, updates: Partial<DeviceModel>) => Promise<void>;
+  deleteDeviceModel: (id: string) => Promise<void>;
   
   addService: (service: Service) => Promise<void>;
   updateService: (id: string, updates: Partial<Service>) => Promise<void>;
@@ -148,16 +155,24 @@ interface AppActions {
   updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
   
+  // Gestion des alertes de stock
+  addStockAlert: (alert: Omit<StockAlert, 'id' | 'createdAt'>) => Promise<void>;
+  updateStockAlert: (id: string, updates: Partial<StockAlert>) => Promise<void>;
+  deleteStockAlert: (id: string) => Promise<void>;
+  resolveStockAlert: (id: string) => Promise<void>;
+  
   // Chargement des données depuis Supabase
   loadUsers: () => Promise<void>;
   loadClients: () => Promise<void>;
   loadDevices: () => Promise<void>;
+  loadDeviceModels: () => Promise<void>;
   loadServices: () => Promise<void>;
   loadParts: () => Promise<void>;
   loadProducts: () => Promise<void>;
   loadRepairs: () => Promise<void>;
   loadSales: () => Promise<void>;
   loadAppointments: () => Promise<void>;
+  loadStockAlerts: () => Promise<void>;
   
   // Filtres et recherche
   setRepairFilters: (filters: RepairFilters) => void;
@@ -182,6 +197,7 @@ interface AppActions {
   getUserById: (id: string) => User | undefined;
   getClientById: (id: string) => Client | undefined;
   getDeviceById: (id: string) => Device | undefined;
+  getDeviceModelById: (id: string) => DeviceModel | undefined;
   getServiceById: (id: string) => Service | undefined;
   getPartById: (id: string) => Part | undefined;
   getProductById: (id: string) => Product | undefined;
@@ -206,6 +222,7 @@ export const useAppStore = create<AppStore>()(
       userPreferences: null,
       clients: [],
       devices: [],
+      deviceModels: [],
       services: [],
       parts: [],
       products: [],
@@ -243,7 +260,7 @@ export const useAppStore = create<AppStore>()(
         },
         {
           id: 'cancelled',
-          name: 'Annulée',
+          name: 'Restitué',
           color: '#757575',
           order: 6,
         },
@@ -575,6 +592,8 @@ export const useAppStore = create<AppStore>()(
               updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
             };
             set((state) => ({ clients: [...state.clients, transformedClient] }));
+          } else {
+            throw new Error('Échec de la création du client');
           }
         } catch (error) {
           console.error('Erreur lors de l\'ajout du client:', error);
@@ -661,6 +680,46 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
+      addDeviceModel: async (model) => {
+        try {
+          const result = await deviceModelService.create(model);
+          if (result.success && 'data' in result && result.data) {
+            set((state) => ({ deviceModels: [...state.deviceModels, result.data] }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de l\'ajout du modèle:', error);
+          throw error;
+        }
+      },
+      
+      updateDeviceModel: async (id, updates) => {
+        try {
+          const result = await deviceModelService.update(id, updates);
+          if (result.success) {
+            set((state) => ({
+              deviceModels: state.deviceModels.map(model => 
+                model.id === id ? { ...model, ...updates, updatedAt: new Date() } : model
+              )
+            }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour du modèle:', error);
+        }
+      },
+      
+      deleteDeviceModel: async (id) => {
+        try {
+          const result = await deviceModelService.delete(id);
+          if (result.success) {
+            set((state) => ({
+              deviceModels: state.deviceModels.filter(model => model.id !== id)
+            }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de la suppression du modèle:', error);
+        }
+      },
+      
       addService: async (service) => {
         try {
           const result = await serviceService.create(service);
@@ -704,7 +763,29 @@ export const useAppStore = create<AppStore>()(
         try {
           const result = await partService.create(part);
           if (result.success) {
-            set((state) => ({ parts: [...state.parts, part] }));
+            const newPart = part;
+            set((state) => ({ parts: [...state.parts, newPart] }));
+            
+            // Vérifier si une alerte de stock doit être créée
+            if (newPart.stockQuantity <= 0) {
+              // Créer une alerte de rupture de stock
+              const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
+                partId: newPart.id,
+                type: 'out_of_stock',
+                message: `Rupture de stock pour ${newPart.name}`,
+                isResolved: false,
+              };
+              await get().addStockAlert(alert);
+            } else if (newPart.stockQuantity <= newPart.minStockLevel) {
+              // Créer une alerte de stock faible
+              const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
+                partId: newPart.id,
+                type: 'low_stock',
+                message: `Stock faible pour ${newPart.name}`,
+                isResolved: false,
+              };
+              await get().addStockAlert(alert);
+            }
           }
         } catch (error) {
           console.error('Erreur lors de l\'ajout de la pièce:', error);
@@ -715,11 +796,46 @@ export const useAppStore = create<AppStore>()(
         try {
           const result = await partService.update(id, updates);
           if (result.success) {
+            const updatedPart = { ...get().parts.find(p => p.id === id)!, ...updates };
             set((state) => ({
               parts: state.parts.map(part => 
                 part.id === id ? { ...part, ...updates, updatedAt: new Date() } : part
               )
             }));
+            
+            // Vérifier si une alerte de stock doit être créée ou mise à jour
+            if (updates.stockQuantity !== undefined) {
+              const currentAlerts = get().stockAlerts.filter(alert => alert.partId === id && !alert.isResolved);
+              
+              if (updates.stockQuantity <= 0) {
+                // Créer une alerte de rupture de stock si elle n'existe pas déjà
+                if (!currentAlerts.some(alert => alert.type === 'out_of_stock')) {
+                  const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
+                    partId: id,
+                    type: 'out_of_stock',
+                    message: `Rupture de stock pour ${updatedPart.name}`,
+                    isResolved: false,
+                  };
+                  await get().addStockAlert(alert);
+                }
+              } else if (updates.stockQuantity <= updatedPart.minStockLevel) {
+                // Créer une alerte de stock faible si elle n'existe pas déjà
+                if (!currentAlerts.some(alert => alert.type === 'low_stock')) {
+                  const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
+                    partId: id,
+                    type: 'low_stock',
+                    message: `Stock faible pour ${updatedPart.name}`,
+                    isResolved: false,
+                  };
+                  await get().addStockAlert(alert);
+                }
+              } else {
+                // Si le stock est suffisant, résoudre les alertes existantes
+                currentAlerts.forEach(alert => {
+                  get().resolveStockAlert(alert.id);
+                });
+              }
+            }
           }
         } catch (error) {
           console.error('Erreur lors de la mise à jour de la pièce:', error);
@@ -926,6 +1042,81 @@ export const useAppStore = create<AppStore>()(
           // Ajouter immédiatement au store local pour l'affichage
           set((state) => ({ sales: [saleWithId, ...state.sales] }));
           
+          // Mettre à jour le stock des produits/pièces vendus
+          const state = get();
+          const updatedParts: Part[] = [];
+          const updatedProducts: Product[] = [];
+          
+          for (const item of sale.items) {
+            if (item.type === 'part') {
+              const part = state.parts.find(p => p.id === item.itemId);
+              if (part && part.stockQuantity >= item.quantity) {
+                const newStockQuantity = part.stockQuantity - item.quantity;
+                const updatedPart = { ...part, stockQuantity: newStockQuantity };
+                updatedParts.push(updatedPart);
+                
+                // Mettre à jour le stock dans le store
+                set((state) => ({
+                  parts: state.parts.map(p => 
+                    p.id === item.itemId ? updatedPart : p
+                  )
+                }));
+                
+                // Vérifier si une alerte de stock doit être créée
+                if (newStockQuantity <= 0) {
+                  const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
+                    partId: item.itemId,
+                    type: 'out_of_stock',
+                    message: `Rupture de stock pour ${part.name} après vente`,
+                    isResolved: false,
+                  };
+                  await get().addStockAlert(alert);
+                } else if (newStockQuantity <= part.minStockLevel) {
+                  const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
+                    partId: item.itemId,
+                    type: 'low_stock',
+                    message: `Stock faible pour ${part.name} après vente`,
+                    isResolved: false,
+                  };
+                  await get().addStockAlert(alert);
+                }
+              }
+            } else if (item.type === 'product') {
+              const product = state.products.find(p => p.id === item.itemId);
+              if (product && product.stockQuantity >= item.quantity) {
+                const newStockQuantity = product.stockQuantity - item.quantity;
+                const updatedProduct = { ...product, stockQuantity: newStockQuantity };
+                updatedProducts.push(updatedProduct);
+                
+                // Mettre à jour le stock dans le store
+                set((state) => ({
+                  products: state.products.map(p => 
+                    p.id === item.itemId ? updatedProduct : p
+                  )
+                }));
+                
+                // Vérifier si une alerte de stock doit être créée pour les produits
+                if (newStockQuantity <= 0) {
+                  const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
+                    partId: item.itemId, // Utiliser partId même pour les produits
+                    type: 'out_of_stock',
+                    message: `Rupture de stock pour ${product.name} après vente`,
+                    isResolved: false,
+                  };
+                  await get().addStockAlert(alert);
+                } else if (newStockQuantity <= (product.minStockLevel || 5)) {
+                  const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
+                    partId: item.itemId, // Utiliser partId même pour les produits
+                    type: 'low_stock',
+                    message: `Stock faible pour ${product.name} après vente`,
+                    isResolved: false,
+                  };
+                  await get().addStockAlert(alert);
+                }
+              }
+            }
+          }
+          
           // Envoyer au backend en arrière-plan
           const result = await saleService.create(saleWithId);
           if (result.success && 'data' in result && result.data) {
@@ -938,6 +1129,20 @@ export const useAppStore = create<AppStore>()(
               )
             }));
           }
+          
+          // Mettre à jour les stocks dans la base de données
+          for (const part of updatedParts) {
+            if (part.id) {
+              await partService.update(part.id, { stockQuantity: part.stockQuantity });
+            }
+          }
+          
+          for (const product of updatedProducts) {
+            if (product.id) {
+              await productService.update(product.id, { stockQuantity: product.stockQuantity });
+            }
+          }
+          
         } catch (error) {
           console.error('Erreur lors de l\'ajout de la vente:', error);
           // En cas d'erreur, on garde la vente en local
@@ -961,6 +1166,68 @@ export const useAppStore = create<AppStore>()(
       
       deleteSale: async (id) => {
         try {
+          const state = get();
+          const saleToDelete = state.sales.find(s => s.id === id);
+          
+          if (saleToDelete) {
+            // Restaurer le stock des produits/pièces vendus
+            for (const item of saleToDelete.items) {
+              if (item.type === 'part') {
+                const part = state.parts.find(p => p.id === item.itemId);
+                if (part) {
+                  const newStockQuantity = part.stockQuantity + item.quantity;
+                  const updatedPart = { ...part, stockQuantity: newStockQuantity };
+                  
+                  // Mettre à jour le stock dans le store
+                  set((state) => ({
+                    parts: state.parts.map(p => 
+                      p.id === item.itemId ? updatedPart : p
+                    )
+                  }));
+                  
+                  // Mettre à jour dans la base de données
+                  await partService.update(part.id, { stockQuantity: newStockQuantity });
+                  
+                  // Résoudre les alertes de stock si le stock redevient suffisant
+                  if (newStockQuantity > part.minStockLevel) {
+                    const currentAlerts = state.stockAlerts.filter(alert => 
+                      alert.partId === item.itemId && !alert.isResolved
+                    );
+                    for (const alert of currentAlerts) {
+                      await get().resolveStockAlert(alert.id);
+                    }
+                  }
+                }
+              } else if (item.type === 'product') {
+                const product = state.products.find(p => p.id === item.itemId);
+                if (product) {
+                  const newStockQuantity = product.stockQuantity + item.quantity;
+                  const updatedProduct = { ...product, stockQuantity: newStockQuantity };
+                  
+                  // Mettre à jour le stock dans le store
+                  set((state) => ({
+                    products: state.products.map(p => 
+                      p.id === item.itemId ? updatedProduct : p
+                    )
+                  }));
+                  
+                  // Mettre à jour dans la base de données
+                  await productService.update(product.id, { stockQuantity: newStockQuantity });
+                  
+                  // Résoudre les alertes de stock si le stock redevient suffisant
+                  if (newStockQuantity > (product.minStockLevel || 5)) {
+                    const currentAlerts = state.stockAlerts.filter(alert => 
+                      alert.partId === item.itemId && !alert.isResolved
+                    );
+                    for (const alert of currentAlerts) {
+                      await get().resolveStockAlert(alert.id);
+                    }
+                  }
+                }
+              }
+            }
+          }
+          
           const result = await saleService.delete(id);
           if (result.success) {
             set((state) => ({
@@ -1042,6 +1309,18 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
+      loadDeviceModels: async () => {
+        try {
+          const result = await deviceModelService.getAll();
+          if (result.success && 'data' in result && result.data) {
+            set({ deviceModels: result.data });
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement des modèles:', error);
+          // En cas d'erreur, on garde les données existantes
+        }
+      },
+      
       loadServices: async () => {
         try {
           const result = await serviceService.getAll();
@@ -1070,22 +1349,33 @@ export const useAppStore = create<AppStore>()(
         try {
           const result = await partService.getAll();
           if (result.success && 'data' in result && result.data) {
+            console.log('Données brutes des pièces:', result.data);
+            
             // Transformer les données de Supabase vers le format de l'application
-            const transformedParts = result.data.map((part: any) => ({
-              id: part.id,
-              name: part.name,
-              description: part.description,
-              partNumber: part.part_number || part.partNumber,
-              brand: part.brand,
-              compatibleDevices: part.compatible_devices || part.compatibleDevices,
-              stockQuantity: part.stock_quantity || part.stockQuantity,
-              minStockLevel: part.min_stock_level || part.minStockLevel,
-              price: part.price,
-              supplier: part.supplier,
-              isActive: part.is_active !== undefined ? part.is_active : part.isActive,
-              createdAt: part.created_at ? new Date(part.created_at) : new Date(),
-              updatedAt: part.updated_at ? new Date(part.updated_at) : new Date(),
-            }));
+            const transformedParts = result.data.map((part: any) => {
+              const transformedPart = {
+                id: part.id,
+                name: part.name,
+                description: part.description,
+                partNumber: part.part_number || part.partNumber,
+                brand: part.brand,
+                compatibleDevices: part.compatible_devices || part.compatibleDevices,
+                stockQuantity: part.stock_quantity !== null && part.stock_quantity !== undefined 
+                  ? part.stock_quantity 
+                  : (part.stockQuantity || 0),
+                minStockLevel: part.min_stock_level || part.minStockLevel,
+                price: part.price,
+                supplier: part.supplier,
+                isActive: part.is_active !== undefined ? part.is_active : part.isActive,
+                createdAt: part.created_at ? new Date(part.created_at) : new Date(),
+                updatedAt: part.updated_at ? new Date(part.updated_at) : new Date(),
+              };
+              
+              console.log(`Pièce ${part.name}: stock_quantity=${part.stock_quantity}, stockQuantity=${transformedPart.stockQuantity}`);
+              return transformedPart;
+            });
+            
+            console.log('Pièces transformées:', transformedParts);
             set({ parts: transformedParts });
           }
         } catch (error) {
@@ -1097,18 +1387,29 @@ export const useAppStore = create<AppStore>()(
         try {
           const result = await productService.getAll();
           if (result.success && 'data' in result && result.data) {
+            console.log('Données brutes des produits:', result.data);
+            
             // Transformer les données de Supabase vers le format de l'application
-            const transformedProducts = result.data.map((product: any) => ({
-              id: product.id,
-              name: product.name,
-              description: product.description,
-              category: product.category,
-              price: product.price,
-              stockQuantity: product.stock_quantity || product.stockQuantity,
-              isActive: product.is_active !== undefined ? product.is_active : product.isActive,
-              createdAt: product.created_at ? new Date(product.created_at) : new Date(),
-              updatedAt: product.updated_at ? new Date(product.updated_at) : new Date(),
-            }));
+            const transformedProducts = result.data.map((product: any) => {
+              const transformedProduct = {
+                id: product.id,
+                name: product.name,
+                description: product.description,
+                category: product.category,
+                price: product.price,
+                stockQuantity: product.stock_quantity !== null && product.stock_quantity !== undefined 
+                  ? product.stock_quantity 
+                  : (product.stockQuantity || 0),
+                isActive: product.is_active !== undefined ? product.is_active : product.isActive,
+                createdAt: product.created_at ? new Date(product.created_at) : new Date(),
+                updatedAt: product.updated_at ? new Date(product.updated_at) : new Date(),
+              };
+              
+              console.log(`Produit ${product.name}: stock_quantity=${product.stock_quantity}, stockQuantity=${transformedProduct.stockQuantity}`);
+              return transformedProduct;
+            });
+            
+            console.log('Produits transformés:', transformedProducts);
             set({ products: transformedProducts });
           }
         } catch (error) {
@@ -1146,6 +1447,64 @@ export const useAppStore = create<AppStore>()(
           }
         } catch (error) {
           console.error('Erreur lors du chargement des rendez-vous:', error);
+        }
+      },
+      
+      loadStockAlerts: async () => {
+        try {
+          // Générer des alertes basées sur les pièces ET produits en rupture
+          const state = get();
+          const alerts: StockAlert[] = [];
+          
+          // Vérifier les pièces en rupture de stock
+          state.parts.forEach(part => {
+            if (part.stockQuantity <= 0) {
+              alerts.push({
+                id: uuidv4(),
+                partId: part.id,
+                type: 'out_of_stock',
+                message: `Rupture de stock pour ${part.name}`,
+                isResolved: false,
+                createdAt: new Date()
+              });
+            } else if (part.stockQuantity <= part.minStockLevel) {
+              alerts.push({
+                id: uuidv4(),
+                partId: part.id,
+                type: 'low_stock',
+                message: `Stock faible pour ${part.name}`,
+                isResolved: false,
+                createdAt: new Date()
+              });
+            }
+          });
+          
+          // Vérifier les produits en rupture de stock
+          state.products.forEach(product => {
+            if (product.stockQuantity <= 0) {
+              alerts.push({
+                id: uuidv4(),
+                partId: product.id, // Utiliser partId même pour les produits
+                type: 'out_of_stock',
+                message: `Rupture de stock pour ${product.name}`,
+                isResolved: false,
+                createdAt: new Date()
+              });
+            } else if (product.stockQuantity <= (product.minStockLevel || 5)) {
+              alerts.push({
+                id: uuidv4(),
+                partId: product.id, // Utiliser partId même pour les produits
+                type: 'low_stock',
+                message: `Stock faible pour ${product.name}`,
+                isResolved: false,
+                createdAt: new Date()
+              });
+            }
+          });
+          
+          set({ stockAlerts: alerts });
+        } catch (error) {
+          console.error('Erreur lors du chargement des alertes de stock:', error);
         }
       },
       
@@ -1199,6 +1558,44 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
+      addStockAlert: async (alert) => {
+        try {
+          const newAlert: StockAlert = {
+            id: uuidv4(),
+            ...alert,
+            createdAt: new Date()
+          };
+          
+          set((state) => ({
+            stockAlerts: [...state.stockAlerts, newAlert]
+          }));
+        } catch (error) {
+          console.error('Erreur lors de la création de l\'alerte:', error);
+        }
+      },
+      
+      updateStockAlert: async (id, updates) => {
+        try {
+          set((state) => ({
+            stockAlerts: state.stockAlerts.map(alert => 
+              alert.id === id ? { ...alert, ...updates } : alert
+            )
+          }));
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour de l\'alerte:', error);
+        }
+      },
+      
+      deleteStockAlert: async (id) => {
+        try {
+          set((state) => ({
+            stockAlerts: state.stockAlerts.filter(alert => alert.id !== id)
+          }));
+        } catch (error) {
+          console.error('Erreur lors de la suppression de l\'alerte:', error);
+        }
+      },
+      
       // Getters
       getUserById: (id) => {
         const state = get();
@@ -1218,6 +1615,11 @@ export const useAppStore = create<AppStore>()(
       getDeviceById: (id) => {
         const state = get();
         return state.devices.find(device => device.id === id);
+      },
+      
+      getDeviceModelById: (id) => {
+        const state = get();
+        return state.deviceModels.find(model => model.id === id);
       },
       
       getServiceById: (id) => {

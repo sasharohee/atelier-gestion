@@ -13,7 +13,6 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   IconButton,
   Dialog,
   DialogTitle,
@@ -100,7 +99,7 @@ const Sales: React.FC = () => {
     switch (selectedItemType) {
       case 'product':
         items = products
-          .filter(product => product.isActive)
+          .filter(product => product.isActive && product.id) // Vérifier que l'ID existe
           .map(product => ({
             id: product.id,
             name: product.name,
@@ -111,7 +110,7 @@ const Sales: React.FC = () => {
         break;
       case 'service':
         items = services
-          .filter(service => service.isActive)
+          .filter(service => service.isActive && service.id) // Vérifier que l'ID existe
           .map(service => ({
             id: service.id,
             name: service.name,
@@ -122,7 +121,7 @@ const Sales: React.FC = () => {
         break;
       case 'part':
         items = parts
-          .filter(part => part.isActive && part.stockQuantity > 0)
+          .filter(part => part.isActive && part.stockQuantity > 0 && part.id) // Vérifier que l'ID existe
           .map(part => ({
             id: part.id,
             name: part.name,
@@ -218,7 +217,7 @@ const Sales: React.FC = () => {
     const labels = {
       pending: 'En attente',
       completed: 'Terminée',
-      cancelled: 'Annulée',
+              cancelled: 'Restitué',
     };
     return labels[status as keyof typeof labels] || status;
   };
@@ -382,9 +381,9 @@ const Sales: React.FC = () => {
         <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
           Ventes
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <span style={{ color: 'text.secondary', fontSize: '1rem' }}>
           Gestion des ventes et facturation
-        </Typography>
+        </span>
       </Box>
 
       {/* Actions */}
@@ -547,19 +546,34 @@ const Sales: React.FC = () => {
                           {safeFormatDate(sale.createdAt, 'dd/MM/yyyy HH:mm')}
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>
                             {sale.total.toLocaleString('fr-FR')} €
-                          </Typography>
+                          </span>
                         </TableCell>
                         <TableCell>
                           {getPaymentMethodLabel(sale.paymentMethod)}
                         </TableCell>
                         <TableCell>
-                          <Chip
-                            label={getStatusLabel(sale.status)}
-                            color={getStatusColor(sale.status) as any}
-                            size="small"
-                          />
+                          <span style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center',
+                            padding: '4px 8px',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            color: getStatusColor(sale.status) === 'success' ? '#2e7d32' : 
+                                   getStatusColor(sale.status) === 'warning' ? '#ed6c02' : 
+                                   getStatusColor(sale.status) === 'error' ? '#d32f2f' : '#1976d2',
+                            backgroundColor: getStatusColor(sale.status) === 'success' ? '#e8f5e8' : 
+                                           getStatusColor(sale.status) === 'warning' ? '#fff4e5' : 
+                                           getStatusColor(sale.status) === 'error' ? '#ffebee' : '#e3f2fd',
+                            border: `1px solid ${getStatusColor(sale.status) === 'success' ? '#4caf50' : 
+                                              getStatusColor(sale.status) === 'warning' ? '#ff9800' : 
+                                              getStatusColor(sale.status) === 'error' ? '#f44336' : '#1976d2'}`,
+                            borderRadius: '12px',
+                            textTransform: 'uppercase'
+                          }}>
+                            {getStatusLabel(sale.status)}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
@@ -657,35 +671,56 @@ const Sales: React.FC = () => {
                 >
                   <MenuItem value="product">
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      🛍️ Produits & Accessoires
-                      <Chip 
-                        label={products.filter(p => p.isActive).length} 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined"
-                      />
+                      <span>🛍️ Produits & Accessoires</span>
+                      <span style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center',
+                        padding: '2px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        color: '#1976d2',
+                        backgroundColor: '#e3f2fd',
+                        border: '1px solid #1976d2',
+                        borderRadius: '12px'
+                      }}>
+                        {products.filter(p => p.isActive).length}
+                      </span>
                     </Box>
                   </MenuItem>
                   <MenuItem value="service">
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      🔧 Services de Réparation
-                      <Chip 
-                        label={services.filter(s => s.isActive).length} 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined"
-                      />
+                      <span>🔧 Services de Réparation</span>
+                      <span style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center',
+                        padding: '2px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        color: '#1976d2',
+                        backgroundColor: '#e3f2fd',
+                        border: '1px solid #1976d2',
+                        borderRadius: '12px'
+                      }}>
+                        {services.filter(s => s.isActive).length}
+                      </span>
                     </Box>
                   </MenuItem>
                   <MenuItem value="part">
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      🔩 Pièces Détachées
-                      <Chip 
-                        label={parts.filter(p => p.isActive && p.stockQuantity > 0).length} 
-                        size="small" 
-                        color="primary" 
-                        variant="outlined"
-                      />
+                      <span>🔩 Pièces Détachées</span>
+                      <span style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center',
+                        padding: '2px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        color: '#1976d2',
+                        backgroundColor: '#e3f2fd',
+                        border: '1px solid #1976d2',
+                        borderRadius: '12px'
+                      }}>
+                        {parts.filter(p => p.isActive && p.stockQuantity > 0).length}
+                      </span>
                     </Box>
                   </MenuItem>
                 </Select>
@@ -725,12 +760,12 @@ const Sales: React.FC = () => {
 
               {/* Informations sur les articles disponibles */}
               <Box sx={{ mb: 2, p: 1, bgcolor: 'info.50', borderRadius: 1, border: '1px solid', borderColor: 'info.200' }}>
-                <Typography variant="body2" color="info.main">
+                <span style={{ color: 'info.main', fontSize: '0.875rem' }}>
                   📊 {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} disponible{filteredItems.length > 1 ? 's' : ''}
                   {selectedItemType === 'part' && (
                     <span> • Seules les pièces en stock sont affichées</span>
                   )}
-                </Typography>
+                </span>
               </Box>
 
               {/* Liste des articles disponibles */}
@@ -761,44 +796,59 @@ const Sales: React.FC = () => {
                       >
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontWeight: 500 }}>
                                 {item.name}
-                              </Typography>
+                              </span>
                               {selectedItemType === 'part' && (
-                                <Chip 
-                                  label="En stock" 
-                                  size="small" 
-                                  color="success" 
-                                  variant="outlined"
-                                />
+                                <span style={{ 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center',
+                                  padding: '2px 8px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 500,
+                                  color: '#2e7d32',
+                                  backgroundColor: '#e8f5e8',
+                                  border: '1px solid #4caf50',
+                                  borderRadius: '12px',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  En stock
+                                </span>
                               )}
-                            </Box>
+                            </span>
                           }
                           secondary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                               {details.description && (
                                 <Tooltip title={details.description}>
                                   <InfoIcon fontSize="small" color="action" />
                                 </Tooltip>
                               )}
                               {item.category && item.category !== 'all' && (
-                                <Chip 
-                                  label={item.category} 
-                                  size="small" 
-                                  variant="outlined"
-                                  sx={{ fontSize: '0.7rem' }}
-                                />
+                                <span style={{ 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center',
+                                  padding: '2px 6px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 500,
+                                  color: '#666',
+                                  backgroundColor: '#f5f5f5',
+                                  border: '1px solid #ddd',
+                                  borderRadius: '8px'
+                                }}>
+                                  {item.category}
+                                </span>
                               )}
-                              <Typography variant="body2" color="text.secondary">
+                              <span style={{ color: 'text.secondary' }}>
                                 💰 {item.price.toLocaleString('fr-FR')} €
-                              </Typography>
+                              </span>
                               {selectedItemType === 'part' && (
-                                <Typography variant="body2" color="text.secondary">
+                                <span style={{ color: 'text.secondary' }}>
                                   • Stock: {details.stock}
-                                </Typography>
+                                </span>
                               )}
-                            </Box>
+                            </span>
                           }
                         />
                         <IconButton 
@@ -824,14 +874,14 @@ const Sales: React.FC = () => {
                     <ListItem>
                       <ListItemText 
                         primary={
-                          <Box sx={{ textAlign: 'center', py: 2 }}>
-                            <Typography variant="body1" color="text.secondary">
+                          <span style={{ textAlign: 'center', padding: '16px 0' }}>
+                            <span style={{ color: 'text.secondary', display: 'block', marginBottom: '8px' }}>
                               🔍 Aucun article trouvé
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
+                            </span>
+                            <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
                               Essayez de modifier votre recherche ou changer de catégorie
-                            </Typography>
-                          </Box>
+                            </span>
+                          </span>
                         }
                       />
                     </ListItem>
@@ -857,12 +907,12 @@ const Sales: React.FC = () => {
               }}>
                 {saleItems.length === 0 ? (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+                    <span style={{ color: 'text.secondary', display: 'block', marginBottom: '8px' }}>
                       🛒 Votre panier est vide
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    </span>
+                    <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
                       Sélectionnez des articles dans la liste à gauche
-                    </Typography>
+                    </span>
                   </Box>
                 ) : (
                   <List dense>
@@ -877,28 +927,35 @@ const Sales: React.FC = () => {
                       >
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontWeight: 500 }}>
                                 {item.name}
-                              </Typography>
-                              <Chip 
-                                label={item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'} 
-                                size="small" 
-                                color={item.type === 'product' ? 'primary' : item.type === 'service' ? 'secondary' : 'success'}
-                                variant="outlined"
-                                sx={{ fontSize: '0.7rem' }}
-                              />
-                            </Box>
+                              </span>
+                              <span style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center',
+                                padding: '2px 6px',
+                                fontSize: '0.7rem',
+                                fontWeight: 500,
+                                color: item.type === 'product' ? '#1976d2' : item.type === 'service' ? '#9c27b0' : '#2e7d32',
+                                backgroundColor: item.type === 'product' ? '#e3f2fd' : item.type === 'service' ? '#f3e5f5' : '#e8f5e8',
+                                border: `1px solid ${item.type === 'product' ? '#1976d2' : item.type === 'service' ? '#9c27b0' : '#2e7d32'}`,
+                                borderRadius: '8px',
+                                textTransform: 'uppercase'
+                              }}>
+                                {item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'}
+                              </span>
+                            </span>
                           }
                           secondary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5 }}>
-                              <Typography variant="body2" color="text.secondary">
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 4 }}>
+                              <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
                                 💰 {item.unitPrice.toLocaleString('fr-FR')} € l'unité
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
+                              </span>
+                              <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
                                 📦 Quantité: {item.quantity}
-                              </Typography>
-                            </Box>
+                              </span>
+                            </span>
                           }
                         />
                         <ListItemSecondaryAction>
@@ -914,9 +971,9 @@ const Sales: React.FC = () => {
                                 style: { textAlign: 'center' }
                               }}
                             />
-                            <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 80, textAlign: 'right' }}>
+                            <span style={{ fontWeight: 600, minWidth: 80, textAlign: 'right', fontSize: '0.875rem' }}>
                               {item.totalPrice.toLocaleString('fr-FR')} €
-                            </Typography>
+                            </span>
                             <IconButton 
                               size="small" 
                               onClick={() => removeItemFromSale(item.itemId)}
@@ -948,27 +1005,27 @@ const Sales: React.FC = () => {
                   border: '1px solid',
                   borderColor: 'grey.200'
                 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.primary' }}>
+                  <span style={{ display: 'block', marginBottom: '16px', fontWeight: 600, color: 'text.primary', fontSize: '0.875rem' }}>
                     📊 Récapitulatif
-                  </Typography>
+                  </span>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">Sous-total:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    <span style={{ fontSize: '0.875rem' }}>Sous-total:</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
                       {totals.subtotal.toLocaleString('fr-FR')} €
-                    </Typography>
+                    </span>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2">TVA (20%):</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    <span style={{ fontSize: '0.875rem' }}>TVA (20%):</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
                       {totals.tax.toLocaleString('fr-FR')} €
-                    </Typography>
+                    </span>
                   </Box>
                   <Divider sx={{ my: 1 }} />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>Total:</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                    <span style={{ fontWeight: 600, fontSize: '1.25rem' }}>Total:</span>
+                    <span style={{ fontWeight: 600, color: 'primary.main', fontSize: '1.25rem' }}>
                       {totals.total.toLocaleString('fr-FR')} €
-                    </Typography>
+                    </span>
                   </Box>
                 </Box>
               )}
@@ -1019,41 +1076,41 @@ const Sales: React.FC = () => {
             {saleToDelete && (
               <Box>
                 <Alert severity="warning" sx={{ mb: 2 }}>
-                  <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                  <span style={{ fontWeight: 600, fontSize: '1rem' }}>
                     Êtes-vous sûr de vouloir supprimer cette vente ?
-                  </Typography>
+                  </span>
                 </Alert>
                 
                 <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
-                  <Typography variant="subtitle1" gutterBottom>
+                  <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '1rem' }}>
                     <strong>Détails de la vente :</strong>
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  </span>
+                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
                     <strong>N° Vente :</strong> {saleToDelete.id.slice(0, 8)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  </span>
+                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
                     <strong>Client :</strong> {saleToDelete.clientId ? 
                       `${getClientById(saleToDelete.clientId)?.firstName} ${getClientById(saleToDelete.clientId)?.lastName}` : 
                       'Client anonyme'}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  </span>
+                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
                     <strong>Date :</strong> {safeFormatDate(saleToDelete.createdAt, 'dd/MM/yyyy HH:mm')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  </span>
+                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
                     <strong>Montant :</strong> {saleToDelete.total.toLocaleString('fr-FR')} €
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  </span>
+                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
                     <strong>Méthode de paiement :</strong> {getPaymentMethodLabel(saleToDelete.paymentMethod)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  </span>
+                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
                     <strong>Articles :</strong> {saleToDelete.items.length} article(s)
-                  </Typography>
+                  </span>
                 </Box>
                 
                 <Alert severity="error">
-                  <Typography variant="body2">
+                  <span style={{ fontSize: '0.875rem' }}>
                     <strong>Attention :</strong> Cette action est irréversible. Toutes les données de cette vente seront définitivement supprimées.
-                  </Typography>
+                  </span>
                 </Alert>
               </Box>
             )}

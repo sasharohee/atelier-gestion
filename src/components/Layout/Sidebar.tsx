@@ -13,6 +13,7 @@ import {
   Avatar,
   IconButton,
   Tooltip,
+  Collapse,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -29,6 +30,16 @@ import {
   ChevronLeft as ChevronLeftIcon,
   Business as BusinessIcon,
   Logout as LogoutIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
+  People as PeopleIcon,
+  Phone as PhoneIcon,
+  Receipt as ReceiptIcon,
+  DeviceHub as DeviceHubIcon,
+  Build as BuildIcon,
+  Memory as MemoryIcon,
+  Inventory2 as Inventory2Icon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
@@ -64,18 +75,22 @@ const menuItems = [
     icon: <CatalogIcon />,
     path: '/app/catalog',
     subItems: [
-      { text: 'Appareils', path: '/app/catalog/devices' },
+      { text: 'Modèles', path: '/app/catalog/models' },
       { text: 'Services', path: '/app/catalog/services' },
       { text: 'Pièces détachées', path: '/app/catalog/parts' },
       { text: 'Produits', path: '/app/catalog/products' },
       { text: 'Ruptures', path: '/app/catalog/out-of-stock' },
-      { text: 'Clients', path: '/app/catalog/clients' },
     ],
   },
   {
-    text: 'Ventes',
-    icon: <SalesIcon />,
-    path: '/app/sales',
+    text: 'Transaction',
+    icon: <ReceiptIcon />,
+    path: '/app/transaction',
+    subItems: [
+      { text: 'Clients', path: '/app/transaction/clients' },
+      { text: 'Appareils', path: '/app/transaction/devices' },
+      { text: 'Ventes', path: '/app/transaction/sales' },
+    ],
   },
   {
     text: 'Statistiques',
@@ -108,6 +123,8 @@ const Sidebar: React.FC = () => {
     getUnreadNotificationsCount,
   } = useAppStore();
 
+  const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>({});
+
   const { workshopSettings } = useWorkshopSettings();
 
   const unreadMessages = getUnreadMessagesCount();
@@ -124,6 +141,13 @@ const Sidebar: React.FC = () => {
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }
+  };
+
+  const handleSubMenuToggle = (menuText: string) => {
+    setOpenSubMenus(prev => ({
+      ...prev,
+      [menuText]: !prev[menuText]
+    }));
   };
 
   const isActive = (path: string) => {
@@ -175,48 +199,115 @@ const Sidebar: React.FC = () => {
         {/* Navigation principale */}
         <List sx={{ flexGrow: 1, py: 1 }}>
           {menuItems.map((item) => (
-            <ListItem key={item.text} disablePadding>
-              <ListItemButton
-                onClick={() => handleNavigation(item.path)}
-                selected={isActive(item.path)}
-                sx={{
-                  minHeight: 48,
-                  px: sidebarOpen ? 3 : 2.5,
-                  '&.Mui-selected': {
-                    backgroundColor: 'primary.light',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      backgroundColor: 'primary.main',
-                    },
-                  },
-                }}
-              >
-                <ListItemIcon
+            <React.Fragment key={item.text}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  onClick={() => {
+                    if (item.subItems) {
+                      handleSubMenuToggle(item.text);
+                    } else {
+                      handleNavigation(item.path);
+                    }
+                  }}
+                  selected={isActive(item.path)}
                   sx={{
-                    minWidth: 0,
-                    mr: sidebarOpen ? 2 : 0,
-                    color: 'inherit',
+                    minHeight: 48,
+                    px: sidebarOpen ? 3 : 2.5,
+                    '&.Mui-selected': {
+                      backgroundColor: 'primary.light',
+                      color: 'primary.contrastText',
+                      '&:hover': {
+                        backgroundColor: 'primary.main',
+                      },
+                    },
                   }}
                 >
-                  {item.text === 'Messagerie' ? (
-                    <Badge badgeContent={unreadMessages} color="error">
-                      {item.icon}
-                    </Badge>
-                  ) : (
-                    item.icon
-                  )}
-                </ListItemIcon>
-                {sidebarOpen && (
-                  <ListItemText
-                    primary={item.text}
-                    primaryTypographyProps={{
-                      fontSize: '0.875rem',
-                      fontWeight: isActive(item.path) ? 600 : 400,
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 0,
+                      mr: sidebarOpen ? 2 : 0,
+                      color: 'inherit',
                     }}
-                  />
-                )}
-              </ListItemButton>
-            </ListItem>
+                  >
+                    {item.text === 'Messagerie' ? (
+                      <Badge badgeContent={unreadMessages} color="error">
+                        {item.icon}
+                      </Badge>
+                    ) : (
+                      item.icon
+                    )}
+                  </ListItemIcon>
+                  {sidebarOpen && (
+                    <>
+                      <ListItemText
+                        primary={item.text}
+                        primaryTypographyProps={{
+                          fontSize: '0.875rem',
+                          fontWeight: isActive(item.path) ? 600 : 400,
+                        }}
+                      />
+                      {item.subItems && (
+                        openSubMenus[item.text] ? <ExpandLessIcon /> : <ExpandMoreIcon />
+                      )}
+                    </>
+                  )}
+                </ListItemButton>
+              </ListItem>
+              
+              {/* Sous-menus */}
+              {item.subItems && (
+                <Collapse in={openSubMenus[item.text]} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {item.subItems.map((subItem) => (
+                      <ListItem key={subItem.text} disablePadding>
+                        <ListItemButton
+                          onClick={() => handleNavigation(subItem.path)}
+                          selected={isActive(subItem.path)}
+                          sx={{
+                            minHeight: 40,
+                            pl: sidebarOpen ? 6 : 2.5,
+                            pr: sidebarOpen ? 3 : 2.5,
+                            '&.Mui-selected': {
+                              backgroundColor: 'primary.light',
+                              color: 'primary.contrastText',
+                              '&:hover': {
+                                backgroundColor: 'primary.main',
+                              },
+                            },
+                          }}
+                        >
+                          <ListItemIcon
+                            sx={{
+                              minWidth: 0,
+                              mr: sidebarOpen ? 2 : 0,
+                              color: 'inherit',
+                            }}
+                          >
+                            {subItem.text === 'Clients' && <PeopleIcon />}
+                            {subItem.text === 'Appareils' && <PhoneIcon />}
+                            {subItem.text === 'Ventes' && <SalesIcon />}
+                            {subItem.text === 'Modèles' && <DeviceHubIcon />}
+                            {subItem.text === 'Services' && <BuildIcon />}
+                            {subItem.text === 'Pièces détachées' && <MemoryIcon />}
+                            {subItem.text === 'Produits' && <Inventory2Icon />}
+                            {subItem.text === 'Ruptures' && <WarningIcon />}
+                          </ListItemIcon>
+                          {sidebarOpen && (
+                            <ListItemText
+                              primary={subItem.text}
+                              primaryTypographyProps={{
+                                fontSize: '0.8rem',
+                                fontWeight: isActive(subItem.path) ? 600 : 400,
+                              }}
+                            />
+                          )}
+                        </ListItemButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                </Collapse>
+              )}
+            </React.Fragment>
           ))}
         </List>
 

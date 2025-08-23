@@ -30,6 +30,7 @@ import Kanban from './pages/Kanban/Kanban';
 import Calendar from './pages/Calendar/Calendar';
 import Messaging from './pages/Messaging/Messaging';
 import Catalog from './pages/Catalog/Catalog';
+import Transaction from './pages/Transaction/Transaction';
 import Sales from './pages/Sales/Sales';
 import Statistics from './pages/Statistics/Statistics';
 import Administration from './pages/Administration/Administration';
@@ -152,6 +153,7 @@ function App() {
                           <Route path="/calendar" element={<Calendar />} />
                           <Route path="/messaging" element={<Messaging />} />
                           <Route path="/catalog/*" element={<Catalog />} />
+                          <Route path="/transaction/*" element={<Transaction />} />
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/statistics" element={<Statistics />} />
                           <Route path="/administration" element={<Administration />} />

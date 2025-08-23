@@ -35,7 +35,7 @@ import {
 import { useAppStore } from '../../store';
 
 const Services: React.FC = () => {
-  const { services, addService } = useAppStore();
+  const { services, addService, deleteService } = useAppStore();
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +89,17 @@ const Services: React.FC = () => {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleDeleteService = async (serviceId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce service ?')) {
+      try {
+        await deleteService(serviceId);
+      } catch (error) {
+        console.error('Erreur lors de la suppression du service:', error);
+        alert('Erreur lors de la suppression du service');
+      }
+    }
   };
 
   const handleSubmit = async () => {
@@ -191,7 +202,12 @@ const Services: React.FC = () => {
                         <IconButton size="small" title="Modifier">
                           <EditIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" title="Supprimer" color="error">
+                        <IconButton 
+                          size="small" 
+                          title="Supprimer" 
+                          color="error"
+                          onClick={() => handleDeleteService(service.id)}
+                        >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Box>

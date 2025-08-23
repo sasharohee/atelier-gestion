@@ -877,7 +877,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, client, open, onClose }) => {
     const labels = {
       pending: 'En attente',
       completed: 'Payée',
-      cancelled: 'Annulée',
+              cancelled: 'Restitué',
     };
     return labels[status as keyof typeof labels] || status;
   };

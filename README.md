@@ -27,7 +27,7 @@ L'application sera accessible sur `http://localhost:3001`
 
 ### 🔧 Suivi des Réparations
 - Création et suivi des réparations
-- Statuts : en attente, en cours, terminée, annulée
+- Statuts : en attente, en cours, terminée, restitué
 - Estimation et facturation des prix
 - Notes et commentaires
 

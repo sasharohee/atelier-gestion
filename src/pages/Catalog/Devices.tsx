@@ -39,7 +39,7 @@ import { useAppStore } from '../../store';
 import { deviceTypeColors } from '../../theme';
 
 const Devices: React.FC = () => {
-  const { devices, addDevice } = useAppStore();
+  const { devices, addDevice, deleteDevice } = useAppStore();
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +101,17 @@ const Devices: React.FC = () => {
         ...prev,
         [field]: value,
       }));
+    }
+  };
+
+  const handleDeleteDevice = async (deviceId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet appareil ?')) {
+      try {
+        await deleteDevice(deviceId);
+      } catch (error) {
+        console.error('Erreur lors de la suppression de l\'appareil:', error);
+        alert('Erreur lors de la suppression de l\'appareil');
+      }
     }
   };
 
@@ -243,7 +254,12 @@ const Devices: React.FC = () => {
                         <IconButton size="small" title="Modifier">
                           <EditIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" title="Supprimer" color="error">
+                        <IconButton 
+                          size="small" 
+                          title="Supprimer" 
+                          color="error"
+                          onClick={() => handleDeleteDevice(device.id)}
+                        >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Box>

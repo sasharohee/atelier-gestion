@@ -77,12 +77,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       '/app/calendar': 'Calendrier',
       '/app/messaging': 'Messagerie',
       '/app/catalog': 'Catalogue',
-      '/app/catalog/devices': 'Appareils',
+      '/app/catalog/models': 'Modèles',
       '/app/catalog/services': 'Services',
       '/app/catalog/parts': 'Pièces détachées',
       '/app/catalog/products': 'Produits',
       '/app/catalog/out-of-stock': 'Ruptures de stock',
-      '/app/catalog/clients': 'Clients',
+      '/app/transaction': 'Transaction',
+      '/app/transaction/clients': 'Clients',
+      '/app/transaction/devices': 'Appareils',
+      '/app/transaction/sales': 'Ventes',
       '/app/sales': 'Ventes',
       '/app/statistics': 'Statistiques',
       '/app/administration': 'Administration',
@@ -113,12 +116,41 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       
       const subPath = path.replace('/app/catalog/', '');
       const subTitles: Record<string, string> = {
-        'devices': 'Appareils',
+        'models': 'Modèles',
         'services': 'Services',
         'parts': 'Pièces détachées',
         'products': 'Produits',
         'out-of-stock': 'Ruptures de stock',
+      };
+      
+      if (subTitles[subPath]) {
+        breadcrumbs.push(
+          <Typography key="sub" color="text.primary">
+            {subTitles[subPath]}
+          </Typography>
+        );
+      }
+    } else if (path.startsWith('/app/transaction/')) {
+      breadcrumbs.push(
+        <Link
+          key="transaction"
+          color="inherit"
+          href="/app/transaction"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate('/app/transaction');
+          }}
+          sx={{ textDecoration: 'none' }}
+        >
+          Transaction
+        </Link>
+      );
+      
+      const subPath = path.replace('/app/transaction/', '');
+      const subTitles: Record<string, string> = {
         'clients': 'Clients',
+        'devices': 'Appareils',
+        'sales': 'Ventes',
       };
       
       if (subTitles[subPath]) {

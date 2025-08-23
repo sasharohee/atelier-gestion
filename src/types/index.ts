@@ -31,13 +31,37 @@ export interface Client {
   updatedAt: Date;
 }
 
+export type DeviceType = 'smartphone' | 'tablet' | 'laptop' | 'desktop' | 'other';
+
 export interface Device {
   id: string;
   brand: string;
   model: string;
   serialNumber?: string;
-  type: 'smartphone' | 'tablet' | 'laptop' | 'desktop' | 'other';
+  type: DeviceType;
   specifications?: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DeviceModel {
+  id: string;
+  brand: string;
+  model: string;
+  type: DeviceType;
+  year: number;
+  specifications: {
+    screen?: string;
+    processor?: string;
+    ram?: string;
+    storage?: string;
+    battery?: string;
+    os?: string;
+  };
+  commonIssues: string[];
+  repairDifficulty: 'easy' | 'medium' | 'hard';
+  partsAvailability: 'high' | 'medium' | 'low';
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

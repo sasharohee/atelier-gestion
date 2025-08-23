@@ -35,8 +35,9 @@ import {
 import { useAppStore } from '../../store';
 
 const Parts: React.FC = () => {
-  const { parts, addPart } = useAppStore();
+  const { parts, addPart, deletePart, updatePart } = useAppStore();
   const [openDialog, setOpenDialog] = useState(false);
+  const [editingPart, setEditingPart] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -60,26 +61,44 @@ const Parts: React.FC = () => {
     { value: 'other', label: 'Autre' },
   ];
 
-  const handleOpenDialog = () => {
+  const handleOpenDialog = (part?: any) => {
     setOpenDialog(true);
     setError(null);
-    setFormData({
-      name: '',
-      description: '',
-      partNumber: '',
-      brand: '',
-      compatibleDevices: [],
-      stockQuantity: 0,
-      minStockLevel: 5,
-      price: 0,
-      supplier: '',
-      isActive: true,
-    });
+    if (part) {
+      setEditingPart(part.id);
+      setFormData({
+        name: part.name,
+        description: part.description,
+        partNumber: part.partNumber,
+        brand: part.brand,
+        compatibleDevices: part.compatibleDevices || [],
+        stockQuantity: part.stockQuantity,
+        minStockLevel: part.minStockLevel,
+        price: part.price,
+        supplier: part.supplier,
+        isActive: part.isActive,
+      });
+    } else {
+      setEditingPart(null);
+      setFormData({
+        name: '',
+        description: '',
+        partNumber: '',
+        brand: '',
+        compatibleDevices: [],
+        stockQuantity: 0,
+        minStockLevel: 5,
+        price: 0,
+        supplier: '',
+        isActive: true,
+      });
+    }
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setError(null);
+    setEditingPart(null);
   };
 
   const handleInputChange = (field: string, value: any) => {
@@ -87,6 +106,17 @@ const Parts: React.FC = () => {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleDeletePart = async (partId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette pièce ?')) {
+      try {
+        await deletePart(partId);
+      } catch (error) {
+        console.error('Erreur lors de la suppression de la pièce:', error);
+        alert('Erreur lors de la suppression de la pièce');
+      }
+    }
   };
 
   const handleSubmit = async () => {
@@ -109,24 +139,42 @@ const Parts: React.FC = () => {
     setError(null);
 
     try {
-      const newPart = {
-        name: formData.name,
-        description: formData.description,
-        partNumber: formData.partNumber,
-        brand: formData.brand,
-        compatibleDevices: formData.compatibleDevices,
-        stockQuantity: formData.stockQuantity,
-        minStockLevel: formData.minStockLevel,
-        price: formData.price,
-        supplier: formData.supplier || undefined,
-        isActive: formData.isActive,
-      };
+      if (editingPart) {
+        // Mode édition
+        await updatePart(editingPart, {
+          name: formData.name,
+          description: formData.description,
+          partNumber: formData.partNumber,
+          brand: formData.brand,
+          compatibleDevices: formData.compatibleDevices,
+          stockQuantity: formData.stockQuantity,
+          minStockLevel: formData.minStockLevel,
+          price: formData.price,
+          supplier: formData.supplier || undefined,
+          isActive: formData.isActive,
+        });
+      } else {
+        // Mode création
+        const newPart = {
+          name: formData.name,
+          description: formData.description,
+          partNumber: formData.partNumber,
+          brand: formData.brand,
+          compatibleDevices: formData.compatibleDevices,
+          stockQuantity: formData.stockQuantity,
+          minStockLevel: formData.minStockLevel,
+          price: formData.price,
+          supplier: formData.supplier || undefined,
+          isActive: formData.isActive,
+        };
 
-      await addPart(newPart as any);
+        await addPart(newPart as any);
+      }
+      
       handleCloseDialog();
     } catch (err) {
-      setError('Erreur lors de la création de la pièce');
-      console.error('Erreur création pièce:', err);
+      setError('Erreur lors de la sauvegarde de la pièce');
+      console.error('Erreur sauvegarde pièce:', err);
     } finally {
       setLoading(false);
     }
@@ -200,10 +248,19 @@ const Parts: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <IconButton size="small" title="Modifier">
+                        <IconButton 
+                          size="small" 
+                          title="Modifier"
+                          onClick={() => handleOpenDialog(part)}
+                        >
                           <EditIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" title="Supprimer" color="error">
+                        <IconButton 
+                          size="small" 
+                          title="Supprimer" 
+                          color="error"
+                          onClick={() => handleDeletePart(part.id)}
+                        >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Box>
@@ -216,9 +273,9 @@ const Parts: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Dialogue de création */}
+      {/* Dialogue de création/édition */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>Créer une nouvelle pièce</DialogTitle>
+        <DialogTitle>{editingPart ? 'Modifier la pièce' : 'Créer une nouvelle pièce'}</DialogTitle>
         <DialogContent>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -336,7 +393,7 @@ const Parts: React.FC = () => {
             variant="contained" 
             disabled={loading || !formData.name || !formData.partNumber || !formData.brand}
           >
-            {loading ? 'Création...' : 'Créer'}
+            {loading ? (editingPart ? 'Modification...' : 'Création...') : (editingPart ? 'Modifier' : 'Créer')}
           </Button>
         </DialogActions>
       </Dialog>

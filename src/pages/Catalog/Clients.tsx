@@ -23,6 +23,10 @@ import {
   DialogActions,
   TextField,
   Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -31,14 +35,16 @@ import {
   Email as EmailIcon,
   Phone as PhoneIcon,
   Refresh as RefreshIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 
 const Clients: React.FC = () => {
-  const { clients, loadClients, addClient } = useAppStore();
+  const { clients, loadClients, addClient, deleteClient } = useAppStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -67,6 +73,100 @@ const Clients: React.FC = () => {
     loadClientsData();
   }, [clients.length, loadClients]);
 
+  const handleOpenDialog = () => {
+    setOpenDialog(true);
+    setError(null);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      address: '',
+      notes: '',
+    });
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setError(null);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      address: '',
+      notes: '',
+    });
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleDeleteClient = async (clientId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
+      try {
+        await deleteClient(clientId);
+      } catch (error) {
+        console.error('Erreur lors de la suppression du client:', error);
+        alert('Erreur lors de la suppression du client');
+      }
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Validation des champs obligatoires
+    if (!formData.firstName.trim()) {
+      setError('Le prénom est obligatoire');
+      return;
+    }
+
+    if (!formData.lastName.trim()) {
+      setError('Le nom de famille est obligatoire');
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError('L\'email est obligatoire');
+      return;
+    }
+
+    // Validation basique de l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Format d\'email invalide');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await addClient({
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+        notes: formData.notes.trim(),
+      });
+
+      handleCloseDialog();
+      
+      // Recharger les clients pour afficher le nouveau
+      await loadClients();
+      
+    } catch (err) {
+      console.error('Erreur lors de la création du client:', err);
+      setError('Erreur lors de la création du client. Veuillez réessayer.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ mb: 4 }}>
@@ -79,7 +179,11 @@ const Clients: React.FC = () => {
       </Box>
 
       <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
-        <Button variant="contained" startIcon={<AddIcon />}>
+        <Button 
+          variant="contained" 
+          startIcon={<AddIcon />}
+          onClick={handleOpenDialog}
+        >
           Nouveau client
         </Button>
         <Button 
@@ -99,16 +203,6 @@ const Clients: React.FC = () => {
           disabled={isLoading}
         >
           Actualiser
-        </Button>
-        <Button 
-          variant="outlined" 
-          onClick={() => {
-            console.log('État des clients:', clients);
-            console.log('Nombre de clients:', clients.length);
-            alert(`Nombre de clients chargés: ${clients.length}`);
-          }}
-        >
-          Debug
         </Button>
         {isLoading && <CircularProgress size={20} />}
       </Box>
@@ -197,7 +291,12 @@ const Clients: React.FC = () => {
                             <IconButton size="small" title="Modifier">
                               <EditIcon fontSize="small" />
                             </IconButton>
-                            <IconButton size="small" title="Supprimer" color="error">
+                            <IconButton 
+                              size="small" 
+                              title="Supprimer" 
+                              color="error"
+                              onClick={() => handleDeleteClient(client.id)}
+                            >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </Box>
@@ -211,6 +310,110 @@ const Clients: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialogue de création de client */}
+      <Dialog 
+        open={openDialog} 
+        onClose={handleCloseDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Nouveau client</Typography>
+            <IconButton onClick={handleCloseDialog} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Prénom *"
+                  value={formData.firstName}
+                  onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Nom de famille *"
+                  value={formData.lastName}
+                  onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Email *"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  required
+                  disabled={isSubmitting}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Téléphone"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Adresse"
+                  multiline
+                  rows={2}
+                  value={formData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Notes"
+                  multiline
+                  rows={3}
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  disabled={isSubmitting}
+                  placeholder="Informations supplémentaires sur le client..."
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 3 }}>
+          <Button 
+            onClick={handleCloseDialog}
+            disabled={isSubmitting}
+          >
+            Annuler
+          </Button>
+          <Button 
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
+          >
+            {isSubmitting ? 'Création...' : 'Créer le client'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

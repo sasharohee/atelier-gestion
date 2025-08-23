@@ -35,8 +35,9 @@ import {
 import { useAppStore } from '../../store';
 
 const Products: React.FC = () => {
-  const { products, addProduct } = useAppStore();
+  const { products, addProduct, deleteProduct, updateProduct } = useAppStore();
   const [openDialog, setOpenDialog] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -56,22 +57,36 @@ const Products: React.FC = () => {
     { value: 'autre', label: 'Autre' },
   ];
 
-  const handleOpenDialog = () => {
+  const handleOpenDialog = (product?: any) => {
     setOpenDialog(true);
     setError(null);
-    setFormData({
-      name: '',
-      description: '',
-      category: 'accessoire',
-      price: 0,
-      stockQuantity: 0,
-      isActive: true,
-    });
+    if (product) {
+      setEditingProduct(product.id);
+      setFormData({
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        price: product.price,
+        stockQuantity: product.stockQuantity,
+        isActive: product.isActive,
+      });
+    } else {
+      setEditingProduct(null);
+      setFormData({
+        name: '',
+        description: '',
+        category: 'accessoire',
+        price: 0,
+        stockQuantity: 0,
+        isActive: true,
+      });
+    }
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setError(null);
+    setEditingProduct(null);
   };
 
   const handleInputChange = (field: string, value: any) => {
@@ -79,6 +94,17 @@ const Products: React.FC = () => {
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
+      try {
+        await deleteProduct(productId);
+      } catch (error) {
+        console.error('Erreur lors de la suppression du produit:', error);
+        alert('Erreur lors de la suppression du produit');
+      }
+    }
   };
 
   const handleSubmit = async () => {
@@ -101,20 +127,32 @@ const Products: React.FC = () => {
     setError(null);
 
     try {
-      const newProduct = {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        price: formData.price,
-        stockQuantity: formData.stockQuantity,
-        isActive: formData.isActive,
-      };
-
-      await addProduct(newProduct as any);
+      if (editingProduct) {
+        // Mode édition
+        await updateProduct(editingProduct, {
+          name: formData.name,
+          description: formData.description,
+          category: formData.category,
+          price: formData.price,
+          stockQuantity: formData.stockQuantity,
+          isActive: formData.isActive,
+        });
+      } else {
+        // Mode création
+        await addProduct({
+          name: formData.name,
+          description: formData.description,
+          category: formData.category,
+          price: formData.price,
+          stockQuantity: formData.stockQuantity,
+          isActive: formData.isActive,
+        } as any);
+      }
+      
       handleCloseDialog();
     } catch (err) {
-      setError('Erreur lors de la création du produit');
-      console.error('Erreur création produit:', err);
+      setError('Erreur lors de la sauvegarde du produit');
+      console.error('Erreur sauvegarde produit:', err);
     } finally {
       setLoading(false);
     }
@@ -156,7 +194,7 @@ const Products: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {products.map((product) => (
+                {products.filter(product => product.id).map((product) => (
                   <TableRow key={product.id}>
                     <TableCell>
                       <Box>
@@ -188,10 +226,19 @@ const Products: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
-                        <IconButton size="small" title="Modifier">
+                        <IconButton 
+                          size="small" 
+                          title="Modifier"
+                          onClick={() => handleOpenDialog(product)}
+                        >
                           <EditIcon fontSize="small" />
                         </IconButton>
-                        <IconButton size="small" title="Supprimer" color="error">
+                        <IconButton 
+                          size="small" 
+                          title="Supprimer" 
+                          color="error"
+                          onClick={() => handleDeleteProduct(product.id)}
+                        >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Box>
@@ -204,9 +251,9 @@ const Products: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Dialogue de création */}
+      {/* Dialogue de création/édition */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
-        <DialogTitle>Créer un nouveau produit</DialogTitle>
+        <DialogTitle>{editingProduct ? 'Modifier le produit' : 'Créer un nouveau produit'}</DialogTitle>
         <DialogContent>
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
@@ -287,7 +334,7 @@ const Products: React.FC = () => {
             variant="contained" 
             disabled={loading || !formData.name}
           >
-            {loading ? 'Création...' : 'Créer'}
+            {loading ? (editingProduct ? 'Modification...' : 'Création...') : (editingProduct ? 'Modifier' : 'Créer')}
           </Button>
         </DialogActions>
       </Dialog>

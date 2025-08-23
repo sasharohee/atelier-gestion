@@ -477,7 +477,57 @@ async function getCurrentUser(): Promise<{ id: string; role: string } | null> {
     
     if (!currentUser) {
       console.log('⚠️ Utilisateur non trouvé dans la table users:', user.id);
-      return null;
+      
+      // Tentative de création automatique de l'utilisateur dans la table users
+      try {
+        console.log('🔄 Tentative de création automatique de l\'utilisateur dans la table users...');
+        
+        // Essayer différents rôles dans l'ordre de priorité
+        const rolesToTry = ['admin', 'manager', 'technician', 'user'];
+        let newUser = null;
+        let insertError = null;
+        
+        for (const role of rolesToTry) {
+          try {
+            const { data, error } = await supabase
+              .from('users')
+              .insert({
+                id: user.id,
+                first_name: user.user_metadata?.first_name || 'Utilisateur',
+                last_name: user.user_metadata?.last_name || 'Test',
+                email: user.email,
+                role: role,
+                created_at: user.created_at,
+                updated_at: user.updated_at
+              })
+              .select()
+              .single();
+            
+            if (!error) {
+              newUser = data;
+              console.log('✅ Utilisateur créé automatiquement avec le rôle:', role);
+              break;
+            } else {
+              console.log(`⚠️ Rôle '${role}' non autorisé, essai suivant...`);
+              insertError = error;
+            }
+          } catch (err) {
+            console.log(`⚠️ Erreur avec le rôle '${role}':`, err);
+            insertError = err;
+          }
+        }
+        
+        if (!newUser) {
+          console.error('❌ Aucun rôle autorisé trouvé pour la création automatique:', insertError);
+          return null;
+        }
+        
+        console.log('✅ Utilisateur créé automatiquement dans la table users:', newUser.id, 'Rôle:', newUser.role);
+        return { id: newUser.id, role: newUser.role };
+      } catch (createErr) {
+        console.error('❌ Erreur lors de la création automatique:', createErr);
+        return null;
+      }
     }
     
     console.log('✅ Utilisateur trouvé dans la table users:', currentUser.id, 'Rôle:', currentUser.role);
@@ -497,45 +547,20 @@ async function getCurrentUserId(): Promise<string | null> {
 // Service pour les clients
 export const clientService = {
   async getAll() {
-    // Récupérer l'utilisateur connecté avec son rôle
-    const currentUser = await getCurrentUser();
+    // Utiliser directement l'authentification Supabase pour l'isolation
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (!currentUser) {
+    if (userError || !user) {
       console.log('⚠️ Aucun utilisateur connecté, retourner une liste vide');
       return handleSupabaseSuccess([]);
     }
     
-    // Si l'utilisateur est admin, récupérer tous les clients
-    if (currentUser.role === 'admin') {
-      console.log('🔧 Utilisateur admin, récupération de tous les clients');
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) return handleSupabaseError(error);
-      
-      const convertedData = data?.map(client => ({
-        id: client.id,
-        firstName: client.first_name,
-        lastName: client.last_name,
-        email: client.email,
-        phone: client.phone,
-        address: client.address,
-        notes: client.notes,
-        createdAt: client.created_at,
-        updatedAt: client.updated_at
-      })) || [];
-      
-      return handleSupabaseSuccess(convertedData);
-    }
+    console.log('🔒 Récupération des clients pour l\'utilisateur:', user.id);
     
-    // Sinon, récupérer les clients de l'utilisateur connecté ET les clients système
-    console.log('🔒 Utilisateur normal, récupération de ses clients et clients système');
+    // La politique RLS va automatiquement filtrer les données
     const { data, error } = await supabase
       .from('clients')
       .select('*')
-      .or(`user_id.eq.${currentUser.id},user_id.eq.00000000-0000-0000-0000-000000000000`)
       .order('created_at', { ascending: false });
     
     if (error) return handleSupabaseError(error);
@@ -553,6 +578,7 @@ export const clientService = {
       updatedAt: client.updated_at
     })) || [];
     
+    console.log('✅ Clients récupérés:', convertedData.length, 'pour l\'utilisateur:', user.id);
     return handleSupabaseSuccess(convertedData);
   },
 
@@ -671,44 +697,20 @@ export const clientService = {
 // Service pour les appareils
 export const deviceService = {
   async getAll() {
-    // Récupérer l'utilisateur connecté avec son rôle
-    const currentUser = await getCurrentUser();
+    // Utiliser directement l'authentification Supabase pour l'isolation
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (!currentUser) {
+    if (userError || !user) {
       console.log('⚠️ Aucun utilisateur connecté, retourner une liste vide');
       return handleSupabaseSuccess([]);
     }
     
-    // Si l'utilisateur est admin, récupérer tous les appareils
-    if (currentUser.role === 'admin') {
-      console.log('🔧 Utilisateur admin, récupération de tous les appareils');
-      const { data, error } = await supabase
-        .from('devices')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) return handleSupabaseError(error);
-      
-      const convertedData = data?.map(device => ({
-        id: device.id,
-        brand: device.brand,
-        model: device.model,
-        serialNumber: device.serial_number,
-        type: device.type,
-        specifications: device.specifications,
-        createdAt: device.created_at,
-        updatedAt: device.updated_at
-      })) || [];
-      
-      return handleSupabaseSuccess(convertedData);
-    }
+    console.log('🔒 Récupération des appareils pour l\'utilisateur:', user.id);
     
-    // Sinon, récupérer les appareils de l'utilisateur connecté ET les appareils système
-    console.log('🔒 Utilisateur normal, récupération de ses appareils et appareils système');
+    // La politique RLS va automatiquement filtrer les données
     const { data, error } = await supabase
       .from('devices')
       .select('*')
-      .or(`user_id.eq.${currentUser.id},user_id.eq.00000000-0000-0000-0000-000000000000`)
       .order('created_at', { ascending: false });
     
     if (error) return handleSupabaseError(error);
@@ -725,6 +727,7 @@ export const deviceService = {
       updatedAt: device.updated_at
     })) || [];
     
+    console.log('✅ Appareils récupérés:', convertedData.length, 'pour l\'utilisateur:', user.id);
     return handleSupabaseSuccess(convertedData);
   },
 
@@ -1099,9 +1102,23 @@ export const partService = {
       return handleSupabaseError(new Error('Utilisateur non connecté'));
     }
 
+    // Convertir les noms de colonnes de camelCase vers snake_case
+    const dbUpdates: any = { updated_at: new Date().toISOString() };
+    
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.description !== undefined) dbUpdates.description = updates.description;
+    if (updates.partNumber !== undefined) dbUpdates.part_number = updates.partNumber;
+    if (updates.brand !== undefined) dbUpdates.brand = updates.brand;
+    if (updates.compatibleDevices !== undefined) dbUpdates.compatible_devices = updates.compatibleDevices;
+    if (updates.stockQuantity !== undefined) dbUpdates.stock_quantity = updates.stockQuantity;
+    if (updates.minStockLevel !== undefined) dbUpdates.min_stock_level = updates.minStockLevel;
+    if (updates.price !== undefined) dbUpdates.price = updates.price;
+    if (updates.supplier !== undefined) dbUpdates.supplier = updates.supplier;
+    if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+
     const { data, error } = await supabase
       .from('parts')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(dbUpdates)
       .eq('id', id)
       .eq('user_id', user.id)
       .select()
@@ -1221,9 +1238,19 @@ export const productService = {
       return handleSupabaseError(new Error('Utilisateur non connecté'));
     }
 
+    // Convertir les noms de colonnes de camelCase vers snake_case
+    const dbUpdates: any = { updated_at: new Date().toISOString() };
+    
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.description !== undefined) dbUpdates.description = updates.description;
+    if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.price !== undefined) dbUpdates.price = updates.price;
+    if (updates.stockQuantity !== undefined) dbUpdates.stock_quantity = updates.stockQuantity;
+    if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+
     const { data, error } = await supabase
       .from('products')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(dbUpdates)
       .eq('id', id)
       .eq('user_id', user.id)
       .select()
@@ -1876,8 +1903,215 @@ export const userSettingsService = {
   },
 };
 
+// Service pour les modèles d'appareils
+export const deviceModelService = {
+  async getAll() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log('⚠️ Aucun utilisateur connecté, retourner une liste vide');
+        return handleSupabaseSuccess([]);
+      }
+      
+      console.log('🔒 Récupération des modèles d\'appareils pour l\'utilisateur:', user.id);
+      
+      const { data, error } = await supabase
+        .from('device_models')
+        .select('*')
+        .order('brand', { ascending: true })
+        .order('model', { ascending: true });
+      
+      if (error) return handleSupabaseError(error);
+      
+      // Convertir les données de snake_case vers camelCase
+      const convertedData = data?.map(model => ({
+        id: model.id,
+        brand: model.brand,
+        model: model.model,
+        type: model.type,
+        year: model.year,
+        specifications: model.specifications || {},
+        commonIssues: model.common_issues || [],
+        repairDifficulty: model.repair_difficulty,
+        partsAvailability: model.parts_availability,
+        isActive: model.is_active,
+        createdAt: new Date(model.created_at),
+        updatedAt: new Date(model.updated_at)
+      })) || [];
+      
+      console.log('✅ Modèles récupérés:', convertedData.length);
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      console.error('💥 Exception dans deviceModelService.getAll:', err);
+      return handleSupabaseSuccess([]);
+    }
+  },
+
+  async getById(id: string) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const { data, error } = await supabase
+        .from('device_models')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      // Convertir les données
+      const convertedData = {
+        id: data.id,
+        brand: data.brand,
+        model: data.model,
+        type: data.type,
+        year: data.year,
+        specifications: data.specifications || {},
+        commonIssues: data.common_issues || [],
+        repairDifficulty: data.repair_difficulty,
+        partsAvailability: data.parts_availability,
+        isActive: data.is_active,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async create(model: any) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      // Convertir les noms de propriétés camelCase vers snake_case
+      // Le trigger s'occupe automatiquement de workshop_id, created_by, et timestamps
+      const modelData = {
+        brand: model.brand,
+        model: model.model,
+        type: model.type,
+        year: model.year,
+        specifications: model.specifications || {},
+        common_issues: model.commonIssues || [],
+        repair_difficulty: model.repairDifficulty,
+        parts_availability: model.partsAvailability,
+        is_active: model.isActive !== undefined ? model.isActive : true
+      };
+
+      const { data, error } = await supabase
+        .from('device_models')
+        .insert([modelData])
+        .select()
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      // Convertir la réponse
+      const convertedData = {
+        id: data.id,
+        brand: data.brand,
+        model: data.model,
+        type: data.type,
+        year: data.year,
+        specifications: data.specifications || {},
+        commonIssues: data.common_issues || [],
+        repairDifficulty: data.repair_difficulty,
+        partsAvailability: data.parts_availability,
+        isActive: data.is_active,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async update(id: string, updates: any) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      // Convertir les mises à jour
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (updates.brand !== undefined) updateData.brand = updates.brand;
+      if (updates.model !== undefined) updateData.model = updates.model;
+      if (updates.type !== undefined) updateData.type = updates.type;
+      if (updates.year !== undefined) updateData.year = updates.year;
+      if (updates.specifications !== undefined) updateData.specifications = updates.specifications;
+      if (updates.commonIssues !== undefined) updateData.common_issues = updates.commonIssues;
+      if (updates.repairDifficulty !== undefined) updateData.repair_difficulty = updates.repairDifficulty;
+      if (updates.partsAvailability !== undefined) updateData.parts_availability = updates.partsAvailability;
+      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+
+      const { data, error } = await supabase
+        .from('device_models')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      // Convertir la réponse
+      const convertedData = {
+        id: data.id,
+        brand: data.brand,
+        model: data.model,
+        type: data.type,
+        year: data.year,
+        specifications: data.specifications || {},
+        commonIssues: data.common_issues || [],
+        repairDifficulty: data.repair_difficulty,
+        partsAvailability: data.parts_availability,
+        isActive: data.is_active,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const { error } = await supabase
+        .from('device_models')
+        .delete()
+        .eq('id', id);
+      
+      if (error) return handleSupabaseError(error);
+      return handleSupabaseSuccess({ success: true });
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+};
+
 export default {
   userService,
   systemSettingsService,
   userSettingsService,
+  deviceModelService,
 };

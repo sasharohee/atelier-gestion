@@ -10,11 +10,44 @@ import {
   Select,
   MenuItem,
   Chip,
+  Avatar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Tabs,
+  Tab,
+  Divider,
+  Alert,
+  LinearProgress,
+  Tooltip,
+  IconButton,
+  Badge,
 } from '@mui/material';
 import {
   BarChart as BarChartIcon,
   PieChart as PieChartIcon,
   TrendingUp as TrendingUpIcon,
+  TrendingDown as TrendingDownIcon,
+  Speed as SpeedIcon,
+  AttachMoney as MoneyIcon,
+  People as PeopleIcon,
+  Phone as PhoneIcon,
+  Build as BuildIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  Schedule as ScheduleIcon,
+  Star as StarIcon,
+  Download as DownloadIcon,
+  Refresh as RefreshIcon,
+  CalendarToday as CalendarIcon,
+  Inventory as InventoryIcon,
+  ShoppingCart as ShoppingCartIcon,
+  Assessment as AssessmentIcon,
+  Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
 import {
   BarChart,
@@ -22,7 +55,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
   PieChart,
@@ -32,41 +65,148 @@ import {
   Line,
   Area,
   AreaChart,
+  ComposedChart,
+  Scatter,
+  ScatterChart,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
 } from 'recharts';
 import { useAppStore } from '../../store';
+import { format, subDays, subMonths, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#4ECDC4'];
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`stats-tabpanel-${index}`}
+      aria-labelledby={`stats-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  );
+}
 
 const Statistics: React.FC = () => {
   const {
     repairs,
     sales,
     devices,
+    clients,
     repairStatuses,
+    users,
+    getClientById,
+    getDeviceById,
   } = useAppStore();
 
   const [period, setPeriod] = useState('month');
   const [deviceType, setDeviceType] = useState('all');
+  const [activeTab, setActiveTab] = useState(0);
 
-  // Calcul des statistiques des réparations par statut
-  const repairsByStatus = useMemo(() => {
-    const statusCounts = repairStatuses.map(status => ({
-      name: status.name,
-      count: repairs.filter(repair => repair.status === status.id).length,
-      color: status.color,
-    }));
-    const filteredStatusCounts = statusCounts.filter(item => item.count > 0);
+  // Calcul de la période sélectionnée
+  const getPeriodData = useMemo(() => {
+    const now = new Date();
+    let startDate: Date;
     
-    // Si pas de données, retourner un tableau vide pour afficher l'état vierge
-    return filteredStatusCounts;
-  }, [repairs, repairStatuses]);
+    switch (period) {
+      case 'week':
+        startDate = subDays(now, 7);
+        break;
+      case 'month':
+        startDate = subMonths(now, 1);
+        break;
+      case 'quarter':
+        startDate = subMonths(now, 3);
+        break;
+      case 'year':
+        startDate = subMonths(now, 12);
+        break;
+      default:
+        startDate = subMonths(now, 1);
+    }
+    
+    return { startDate, endDate: now };
+  }, [period]);
 
-  // Calcul des réparations par type d'appareil
+  // Statistiques générales
+  const generalStats = useMemo(() => {
+    const { startDate, endDate } = getPeriodData;
+    
+    const periodRepairs = repairs.filter(repair => {
+      const repairDate = new Date(repair.createdAt);
+      return repairDate >= startDate && repairDate <= endDate;
+    });
+    
+    const periodSales = sales.filter(sale => {
+      const saleDate = new Date(sale.createdAt);
+      return saleDate >= startDate && saleDate <= endDate;
+    });
+
+    const totalRevenue = periodSales.reduce((sum, sale) => sum + sale.total, 0);
+    const avgRepairTime = periodRepairs.length > 0 
+      ? periodRepairs.reduce((sum, repair) => {
+          const created = new Date(repair.createdAt);
+          const updated = new Date(repair.updatedAt);
+          return sum + (updated.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
+        }, 0) / periodRepairs.length
+      : 0;
+
+    return {
+      totalRepairs: periodRepairs.length,
+      totalSales: periodSales.length,
+      totalRevenue,
+      avgRepairTime: Math.round(avgRepairTime * 10) / 10,
+      totalClients: clients.length,
+      totalDevices: devices.length,
+      successRate: periodRepairs.length > 0 
+        ? Math.round((periodRepairs.filter(r => r.status === 'completed').length / periodRepairs.length) * 100)
+        : 0,
+    };
+  }, [repairs, sales, clients, devices, getPeriodData]);
+
+  // Réparations par statut
+  const repairsByStatus = useMemo(() => {
+    const { startDate, endDate } = getPeriodData;
+    const periodRepairs = repairs.filter(repair => {
+      const repairDate = new Date(repair.createdAt);
+      return repairDate >= startDate && repairDate <= endDate;
+    });
+
+    return repairStatuses.map(status => ({
+      name: status.name,
+      count: periodRepairs.filter(repair => repair.status === status.id).length,
+      color: status.color,
+      percentage: periodRepairs.length > 0 
+        ? Math.round((periodRepairs.filter(repair => repair.status === status.id).length / periodRepairs.length) * 100)
+        : 0,
+    })).filter(item => item.count > 0);
+  }, [repairs, repairStatuses, getPeriodData]);
+
+  // Réparations par type d'appareil
   const repairsByDeviceType = useMemo(() => {
-    // Créer un Map pour éviter les doublons
+    const { startDate, endDate } = getPeriodData;
+    const periodRepairs = repairs.filter(repair => {
+      const repairDate = new Date(repair.createdAt);
+      return repairDate >= startDate && repairDate <= endDate;
+    });
+
     const deviceTypeMap = new Map<string, number>();
     
-    repairs.forEach(repair => {
+    periodRepairs.forEach(repair => {
       const repairDevice = devices.find(d => d.id === repair.deviceId);
       if (repairDevice) {
         const deviceType = repairDevice.type;
@@ -74,105 +214,171 @@ const Statistics: React.FC = () => {
       }
     });
     
-    // Convertir le Map en tableau pour le graphique
-    const deviceTypeCounts = Array.from(deviceTypeMap.entries()).map(([type, count], index) => ({
+    return Array.from(deviceTypeMap.entries()).map(([type, count], index) => ({
       name: type.charAt(0).toUpperCase() + type.slice(1),
       count,
       color: COLORS[index % COLORS.length],
+      percentage: periodRepairs.length > 0 ? Math.round((count / periodRepairs.length) * 100) : 0,
     }));
-    
-    // Si pas de données, retourner un tableau vide pour afficher l'état vierge
-    return deviceTypeCounts;
-  }, [repairs, devices]);
+  }, [repairs, devices, getPeriodData]);
 
-  // Calcul de l'évolution du chiffre d'affaires (simulation sur les 12 derniers mois)
+  // Évolution du chiffre d'affaires
   const revenueEvolution = useMemo(() => {
-    const months = [];
-    const currentDate = new Date();
+    const { startDate, endDate } = getPeriodData;
+    const days = eachDayOfInterval({ start: startDate, end: endDate });
     
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      const monthName = date.toLocaleDateString('fr-FR', { month: 'short' });
-      
-      // Calculer le revenu pour ce mois (basé sur les ventes existantes)
-      const monthRevenue = sales
-        .filter(sale => {
-          const saleDate = new Date(sale.createdAt);
-          return saleDate.getMonth() === date.getMonth() && 
-                 saleDate.getFullYear() === date.getFullYear();
-        })
-        .reduce((sum, sale) => sum + sale.total, 0);
-      
-      months.push({
-        month: monthName,
-        revenue: monthRevenue,
+    return days.map(day => {
+      const daySales = sales.filter(sale => {
+        const saleDate = new Date(sale.createdAt);
+        return saleDate.toDateString() === day.toDateString();
       });
-    }
-    
-    // Retourner les vraies données (même si vides)
-    return months;
-  }, [sales]);
+      
+      return {
+        date: format(day, 'dd/MM', { locale: fr }),
+        revenue: daySales.reduce((sum, sale) => sum + sale.total, 0),
+        repairs: repairs.filter(repair => {
+          const repairDate = new Date(repair.createdAt);
+          return repairDate.toDateString() === day.toDateString();
+        }).length,
+      };
+    });
+  }, [sales, repairs, getPeriodData]);
 
-  // Calcul des statistiques détaillées
-  const repairStats = useMemo(() => {
-    const totalRepairs = repairs.length;
-    const completedRepairs = repairs.filter(r => r.status === 'completed').length;
-    const inProgressRepairs = repairs.filter(r => r.status === 'in_progress').length;
-    const successRate = totalRepairs > 0 ? Math.round((completedRepairs / totalRepairs) * 100) : 0;
+  // Top clients
+  const topClients = useMemo(() => {
+    const clientRepairs = new Map<string, { client: any; repairs: number; revenue: number }>();
     
-    return {
-      total: totalRepairs,
-      completed: completedRepairs,
-      inProgress: inProgressRepairs,
-      successRate,
-    };
-  }, [repairs]);
+    repairs.forEach(repair => {
+      const client = getClientById(repair.clientId);
+      if (client) {
+        const existing = clientRepairs.get(client.id);
+        if (existing) {
+          existing.repairs += 1;
+          existing.revenue += repair.totalPrice;
+        } else {
+          clientRepairs.set(client.id, { client, repairs: 1, revenue: repair.totalPrice });
+        }
+      }
+    });
+    
+    return Array.from(clientRepairs.values())
+      .sort((a, b) => b.repairs - a.repairs)
+      .slice(0, 10);
+  }, [repairs, getClientById]);
 
-  const salesStats = useMemo(() => {
-    const totalSales = sales.length;
-    const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
-    const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
-    const completedSales = sales.filter(s => s.status === 'completed').length;
+  // Top appareils
+  const topDevices = useMemo(() => {
+    const deviceRepairs = new Map<string, { device: any; repairs: number; revenue: number }>();
     
+    repairs.forEach(repair => {
+      const device = getDeviceById(repair.deviceId);
+      if (device) {
+        const existing = deviceRepairs.get(device.id);
+        if (existing) {
+          existing.repairs += 1;
+          existing.revenue += repair.totalPrice;
+        } else {
+          deviceRepairs.set(device.id, { device, repairs: 1, revenue: repair.totalPrice });
+        }
+      }
+    });
+    
+    return Array.from(deviceRepairs.values())
+      .sort((a, b) => b.repairs - a.repairs)
+      .slice(0, 10);
+  }, [repairs, getDeviceById]);
+
+  // Performance des techniciens
+  const technicianPerformance = useMemo(() => {
+    const techStats = new Map<string, { 
+      technician: any; 
+      repairs: number; 
+      completed: number; 
+      revenue: number; 
+      avgTime: number;
+    }>();
+    
+    repairs.forEach(repair => {
+      if (repair.assignedTechnicianId) {
+        const technician = users.find(u => u.id === repair.assignedTechnicianId);
+        if (technician) {
+          const existing = techStats.get(technician.id);
+          const created = new Date(repair.createdAt);
+          const updated = new Date(repair.updatedAt);
+          const duration = (updated.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
+          
+          if (existing) {
+            existing.repairs += 1;
+            existing.revenue += repair.totalPrice;
+            existing.avgTime = (existing.avgTime + duration) / 2;
+            if (repair.status === 'completed') existing.completed += 1;
+          } else {
+            techStats.set(technician.id, {
+              technician,
+              repairs: 1,
+              completed: repair.status === 'completed' ? 1 : 0,
+              revenue: repair.totalPrice,
+              avgTime: duration,
+            });
+          }
+        }
+      }
+    });
+    
+    return Array.from(techStats.values())
+      .sort((a, b) => b.repairs - a.repairs);
+  }, [repairs, users]);
+
+  // Métriques de performance
+  const performanceMetrics = useMemo(() => {
+    const { startDate, endDate } = getPeriodData;
+    const periodRepairs = repairs.filter(repair => {
+      const repairDate = new Date(repair.createdAt);
+      return repairDate >= startDate && repairDate <= endDate;
+    });
+
+    const urgentRepairs = periodRepairs.filter(r => r.isUrgent).length;
+    const overdueRepairs = periodRepairs.filter(r => {
+      const dueDate = new Date(r.dueDate);
+      return dueDate < new Date() && r.status !== 'completed';
+    }).length;
+
     return {
-      total: totalSales,
-      revenue: totalRevenue,
-      average: averageSale,
-      completed: completedSales,
+      urgentRepairs,
+      overdueRepairs,
+      urgentPercentage: periodRepairs.length > 0 ? Math.round((urgentRepairs / periodRepairs.length) * 100) : 0,
+      overduePercentage: periodRepairs.length > 0 ? Math.round((overdueRepairs / periodRepairs.length) * 100) : 0,
     };
-  }, [sales]);
+  }, [repairs, getPeriodData]);
 
   return (
     <Box>
       {/* En-tête */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-          Statistiques
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Analyses et rapports de l'atelier
-        </Typography>
-        
-        {/* Message d'état vierge */}
-        {repairs.length === 0 && sales.length === 0 && (
-          <Box sx={{ 
-            mt: 2, 
-            p: 2, 
-            backgroundColor: 'info.light', 
-            borderRadius: 1,
-            border: '1px solid',
-            borderColor: 'info.main'
-          }}>
-            <Typography variant="body2" color="info.dark">
-              📊 <strong>Site vierge :</strong> Aucune donnée disponible. Les statistiques s'afficheront automatiquement 
-              lorsque vous ajouterez des clients, appareils, réparations et ventes.
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box>
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+              Tableau de Bord Analytique
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Analyses détaillées et métriques de performance
             </Typography>
           </Box>
-        )}
-      </Box>
-
-      {/* Filtres */}
-      <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip title="Actualiser les données">
+              <IconButton>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Exporter le rapport">
+              <IconButton>
+                <DownloadIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+        
+        {/* Filtres */}
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={6} md={3}>
             <FormControl fullWidth>
@@ -210,23 +416,175 @@ const Statistics: React.FC = () => {
 
       {/* Statistiques principales */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                  <BuildIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" sx={{ fontWeight: 600 }}>
+                    {generalStats.totalRepairs}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Réparations
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
+                  <MoneyIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" sx={{ fontWeight: 600 }}>
+                    {generalStats.totalRevenue.toLocaleString('fr-FR')}€
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Chiffre d'affaires
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
+                  <SpeedIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" sx={{ fontWeight: 600 }}>
+                    {generalStats.avgRepairTime}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Jours moyens
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar sx={{ bgcolor: 'info.main', mr: 2 }}>
+                  <CheckCircleIcon />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" sx={{ fontWeight: 600 }}>
+                    {generalStats.successRate}%
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Taux de réussite
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Métriques de performance */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Réparations urgentes
+              </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <BarChartIcon sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="h6">Réparations par statut</Typography>
+                <Typography variant="h4" sx={{ fontWeight: 600, mr: 2 }}>
+                  {performanceMetrics.urgentRepairs}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  ({performanceMetrics.urgentPercentage}% du total)
+                </Typography>
               </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={performanceMetrics.urgentPercentage} 
+                color="warning"
+                sx={{ height: 8, borderRadius: 4 }}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Réparations en retard
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 600, mr: 2 }}>
+                  {performanceMetrics.overdueRepairs}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  ({performanceMetrics.overduePercentage}% du total)
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={performanceMetrics.overduePercentage} 
+                color="error"
+                sx={{ height: 8, borderRadius: 4 }}
+              />
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Onglets pour les analyses détaillées */}
+      <Card sx={{ mb: 4 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+            <Tab label="Vue d'ensemble" icon={<AssessmentIcon />} />
+            <Tab label="Réparations" icon={<BuildIcon />} />
+            <Tab label="Ventes" icon={<ShoppingCartIcon />} />
+            <Tab label="Clients" icon={<PeopleIcon />} />
+            <Tab label="Performance" icon={<AnalyticsIcon />} />
+          </Tabs>
+        </Box>
+
+        <TabPanel value={activeTab} index={0}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Réparations par statut
+              </Typography>
               {repairsByStatus.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={repairsByStatus}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="count" fill="#8884d8" />
-                  </BarChart>
+                  <PieChart>
+                    <Pie
+                      data={repairsByStatus}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percentage }) => `${name} ${percentage}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="count"
+                    >
+                      {repairsByStatus.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip />
+                  </PieChart>
                 </ResponsiveContainer>
               ) : (
                 <Box sx={{ 
@@ -242,36 +600,59 @@ const Statistics: React.FC = () => {
                   </Typography>
                 </Box>
               )}
-            </CardContent>
-          </Card>
-        </Grid>
+            </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <PieChartIcon sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="h6">Répartition par type d'appareil</Typography>
-              </Box>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Évolution du chiffre d'affaires
+              </Typography>
+              {revenueEvolution.some(day => day.revenue > 0) ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <ComposedChart data={revenueEvolution}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <RechartsTooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="revenue" fill="#8884d8" name="Revenus (€)" />
+                    <Line yAxisId="right" type="monotone" dataKey="repairs" stroke="#82ca9d" name="Réparations" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              ) : (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: 300,
+                  backgroundColor: 'grey.50',
+                  borderRadius: 1
+                }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Aucune donnée disponible
+                  </Typography>
+                </Box>
+              )}
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={1}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Répartition par type d'appareil
+              </Typography>
               {repairsByDeviceType.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={repairsByDeviceType}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {repairsByDeviceType.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
+                  <BarChart data={repairsByDeviceType}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <RechartsTooltip />
+                    <Legend />
+                    <Bar dataKey="count" fill="#8884d8" />
+                  </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <Box sx={{ 
@@ -287,24 +668,56 @@ const Statistics: React.FC = () => {
                   </Typography>
                 </Box>
               )}
-            </CardContent>
-          </Card>
-        </Grid>
+            </Grid>
 
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <TrendingUpIcon sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="h6">Évolution du chiffre d'affaires</Typography>
-              </Box>
-              {revenueEvolution.some(month => month.revenue > 0) ? (
-                <ResponsiveContainer width="100%" height={300}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Top 10 des appareils les plus réparés
+              </Typography>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Appareil</TableCell>
+                      <TableCell align="right">Réparations</TableCell>
+                      <TableCell align="right">CA (€)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {topDevices.map((item, index) => (
+                      <TableRow key={item.device.id}>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar sx={{ width: 24, height: 24, mr: 1, fontSize: '0.75rem' }}>
+                              {index + 1}
+                            </Avatar>
+                            {item.device.brand} {item.device.model}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right">{item.repairs}</TableCell>
+                        <TableCell align="right">{item.revenue.toLocaleString('fr-FR')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>
+                Évolution des ventes
+              </Typography>
+              {revenueEvolution.some(day => day.revenue > 0) ? (
+                <ResponsiveContainer width="100%" height={400}>
                   <AreaChart data={revenueEvolution}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
+                    <XAxis dataKey="date" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`${value} €`, 'Revenus']} />
+                    <RechartsTooltip formatter={(value: any) => [`${value} €`, 'Revenus']} />
                     <Legend />
                     <Area 
                       type="monotone" 
@@ -320,7 +733,7 @@ const Statistics: React.FC = () => {
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center', 
-                  height: 300,
+                  height: 400,
                   backgroundColor: 'grey.50',
                   borderRadius: 1
                 }}>
@@ -329,87 +742,161 @@ const Statistics: React.FC = () => {
                   </Typography>
                 </Box>
               )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+            </Grid>
+          </Grid>
+        </TabPanel>
 
-      {/* Statistiques détaillées */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
+        <TabPanel value={activeTab} index={3}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
               <Typography variant="h6" gutterBottom>
-                Statistiques des réparations
+                Top 10 des clients
+              </Typography>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Client</TableCell>
+                      <TableCell align="right">Réparations</TableCell>
+                      <TableCell align="right">CA (€)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {topClients.map((item, index) => (
+                      <TableRow key={item.client.id}>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar sx={{ width: 24, height: 24, mr: 1, fontSize: '0.75rem' }}>
+                              {index + 1}
+                            </Avatar>
+                            {item.client.firstName} {item.client.lastName}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right">{item.repairs}</TableCell>
+                        <TableCell align="right">{item.revenue.toLocaleString('fr-FR')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Répartition des clients
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Total des réparations</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {repairStats.total}
-                  </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2">Total clients</Typography>
+                  <Chip label={generalStats.totalClients} color="primary" />
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Réparations terminées</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {repairStats.completed}
-                  </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2">Clients actifs</Typography>
+                  <Chip label={topClients.length} color="success" />
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Réparations en cours</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {repairStats.inProgress}
-                  </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="body2">Nouveaux clients</Typography>
+                  <Chip label="0" color="info" />
                 </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Taux de réussite</Typography>
-                  <Chip 
-                    label={`${repairStats.successRate}%`}
-                    color={repairStats.successRate >= 80 ? 'success' : repairStats.successRate >= 60 ? 'warning' : 'error'}
-                    size="small"
+              </Box>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={4}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Performance des techniciens
+              </Typography>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Technicien</TableCell>
+                      <TableCell align="right">Réparations</TableCell>
+                      <TableCell align="right">Taux de réussite</TableCell>
+                      <TableCell align="right">Temps moyen</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {technicianPerformance.map((tech) => (
+                      <TableRow key={tech.technician.id}>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar sx={{ width: 24, height: 24, mr: 1, fontSize: '0.75rem' }}>
+                              {tech.technician.firstName.charAt(0)}
+                            </Avatar>
+                            {tech.technician.firstName} {tech.technician.lastName}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right">{tech.repairs}</TableCell>
+                        <TableCell align="right">
+                          <Chip 
+                            label={`${Math.round((tech.completed / tech.repairs) * 100)}%`}
+                            color={tech.completed / tech.repairs >= 0.8 ? 'success' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="right">{Math.round(tech.avgTime)}j</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Métriques de performance
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2">Temps de réparation moyen</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {generalStats.avgRepairTime} jours
+                    </Typography>
+                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={Math.min(generalStats.avgRepairTime * 10, 100)} 
+                    color="primary"
+                  />
+                </Box>
+                
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2">Taux de réussite</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {generalStats.successRate}%
+                    </Typography>
+                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={generalStats.successRate} 
+                    color="success"
+                  />
+                </Box>
+                
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2">Réparations urgentes</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {performanceMetrics.urgentPercentage}%
+                    </Typography>
+                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={performanceMetrics.urgentPercentage} 
+                    color="warning"
                   />
                 </Box>
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Statistiques des ventes
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Total des ventes</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {salesStats.total}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Chiffre d'affaires total</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {salesStats.revenue.toLocaleString('fr-FR')} €
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Vente moyenne</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {salesStats.average.toFixed(2)} €
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Ventes complétées</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {salesStats.completed}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+            </Grid>
+          </Grid>
+        </TabPanel>
+      </Card>
     </Box>
   );
 };
