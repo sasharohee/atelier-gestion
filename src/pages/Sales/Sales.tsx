@@ -204,11 +204,11 @@ const Sales: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+    const getStatusColor = (status: string) => {
     const colors = {
       pending: 'warning',
       completed: 'success',
-      cancelled: 'error',
+      returned: 'error',
     };
     return colors[status as keyof typeof colors] || 'default';
   };
@@ -217,7 +217,7 @@ const Sales: React.FC = () => {
     const labels = {
       pending: 'En attente',
       completed: 'Terminée',
-              cancelled: 'Restitué',
+      returned: 'Restitué',
     };
     return labels[status as keyof typeof labels] || status;
   };

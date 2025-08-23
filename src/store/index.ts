@@ -258,7 +258,7 @@ export const useAppStore = create<AppStore>()(
           order: 5,
         },
         {
-          id: 'cancelled',
+          id: 'returned',
           name: 'Restitué',
           color: '#757575',
           order: 6,
@@ -694,15 +694,16 @@ export const useAppStore = create<AppStore>()(
       updateDeviceModel: async (id, updates) => {
         try {
           const result = await deviceModelService.update(id, updates);
-          if (result.success) {
+          if (result.success && 'data' in result && result.data) {
             set((state) => ({
               deviceModels: state.deviceModels.map(model => 
-                model.id === id ? { ...model, ...updates, updatedAt: new Date() } : model
+                model.id === id ? result.data : model
               )
             }));
           }
         } catch (error) {
           console.error('Erreur lors de la mise à jour du modèle:', error);
+          throw error; // Propager l'erreur pour l'afficher à l'utilisateur
         }
       },
       
@@ -722,26 +723,54 @@ export const useAppStore = create<AppStore>()(
       addService: async (service) => {
         try {
           const result = await serviceService.create(service);
-          if (result.success) {
-            set((state) => ({ services: [...state.services, service] }));
+          if (result.success && 'data' in result && result.data) {
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedService: Service = {
+              id: result.data.id,
+              name: result.data.name,
+              description: result.data.description,
+              duration: result.data.duration,
+              price: result.data.price,
+              category: result.data.category,
+              applicableDevices: result.data.applicable_devices || result.data.applicableDevices,
+              isActive: result.data.is_active !== undefined ? result.data.is_active : result.data.isActive,
+              createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
+              updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
+            };
+            set((state) => ({ services: [...state.services, transformedService] }));
           }
         } catch (error) {
           console.error('Erreur lors de l\'ajout du service:', error);
+          throw error; // Propager l'erreur pour l'afficher à l'utilisateur
         }
       },
       
       updateService: async (id, updates) => {
         try {
           const result = await serviceService.update(id, updates);
-          if (result.success) {
+          if (result.success && 'data' in result && result.data) {
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedService: Service = {
+              id: result.data.id,
+              name: result.data.name,
+              description: result.data.description,
+              duration: result.data.duration,
+              price: result.data.price,
+              category: result.data.category,
+              applicableDevices: result.data.applicable_devices || result.data.applicableDevices,
+              isActive: result.data.is_active !== undefined ? result.data.is_active : result.data.isActive,
+              createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
+              updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
+            };
             set((state) => ({
               services: state.services.map(service => 
-                service.id === id ? { ...service, ...updates, updatedAt: new Date() } : service
+                service.id === id ? transformedService : service
               )
             }));
           }
         } catch (error) {
           console.error('Erreur lors de la mise à jour du service:', error);
+          throw error; // Propager l'erreur pour l'afficher à l'utilisateur
         }
       },
       
@@ -761,26 +790,44 @@ export const useAppStore = create<AppStore>()(
       addPart: async (part) => {
         try {
           const result = await partService.create(part);
-          if (result.success) {
-            const newPart = part;
-            set((state) => ({ parts: [...state.parts, newPart] }));
+          if (result.success && 'data' in result && result.data) {
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedPart: Part = {
+              id: result.data.id,
+              name: result.data.name,
+              description: result.data.description,
+              partNumber: result.data.part_number || result.data.partNumber,
+              brand: result.data.brand,
+              compatibleDevices: result.data.compatible_devices || result.data.compatibleDevices,
+              stockQuantity: result.data.stock_quantity !== null && result.data.stock_quantity !== undefined 
+                ? result.data.stock_quantity 
+                : (result.data.stockQuantity || 0),
+              minStockLevel: result.data.min_stock_level || result.data.minStockLevel || 5,
+              price: result.data.price,
+              supplier: result.data.supplier,
+              isActive: result.data.is_active !== undefined ? result.data.is_active : result.data.isActive,
+              createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
+              updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
+            };
+            
+            set((state) => ({ parts: [...state.parts, transformedPart] }));
             
             // Vérifier si une alerte de stock doit être créée
-            if (newPart.stockQuantity <= 0) {
+            if (transformedPart.stockQuantity <= 0) {
               // Créer une alerte de rupture de stock
               const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
-                partId: newPart.id,
+                partId: transformedPart.id,
                 type: 'out_of_stock',
-                message: `Rupture de stock pour ${newPart.name}`,
+                message: `Rupture de stock pour ${transformedPart.name}`,
                 isResolved: false,
               };
               await get().addStockAlert(alert);
-            } else if (newPart.stockQuantity <= (newPart.minStockLevel || 5)) {
+            } else if (transformedPart.stockQuantity <= (transformedPart.minStockLevel || 5)) {
               // Créer une alerte de stock faible
               const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
-                partId: newPart.id,
+                partId: transformedPart.id,
                 type: 'low_stock',
-                message: `Stock faible pour ${newPart.name}`,
+                message: `Stock faible pour ${transformedPart.name}`,
                 isResolved: false,
               };
               await get().addStockAlert(alert);
@@ -788,6 +835,7 @@ export const useAppStore = create<AppStore>()(
           }
         } catch (error) {
           console.error('Erreur lors de l\'ajout de la pièce:', error);
+          throw error; // Propager l'erreur pour l'afficher à l'utilisateur
         }
       },
       
@@ -857,26 +905,52 @@ export const useAppStore = create<AppStore>()(
       addProduct: async (product) => {
         try {
           const result = await productService.create(product);
-          if (result.success) {
-            set((state) => ({ products: [...state.products, product] }));
+          if (result.success && 'data' in result && result.data) {
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedProduct: Product = {
+              id: result.data.id,
+              name: result.data.name || '',
+              description: result.data.description || '',
+              category: result.data.category || 'accessoire',
+              price: result.data.price || 0,
+              stockQuantity: result.data.stock_quantity || result.data.stockQuantity || 0,
+              isActive: result.data.is_active !== undefined ? result.data.is_active : (result.data.isActive !== undefined ? result.data.isActive : true),
+              createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
+              updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
+            };
+            set((state) => ({ products: [...state.products, transformedProduct] }));
           }
         } catch (error) {
           console.error('Erreur lors de l\'ajout du produit:', error);
+          throw error; // Propager l'erreur pour l'afficher à l'utilisateur
         }
       },
       
       updateProduct: async (id, updates) => {
         try {
           const result = await productService.update(id, updates);
-          if (result.success) {
+          if (result.success && 'data' in result && result.data) {
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedProduct: Product = {
+              id: result.data.id,
+              name: result.data.name || '',
+              description: result.data.description || '',
+              category: result.data.category || 'accessoire',
+              price: result.data.price || 0,
+              stockQuantity: result.data.stock_quantity || result.data.stockQuantity || 0,
+              isActive: result.data.is_active !== undefined ? result.data.is_active : (result.data.isActive !== undefined ? result.data.isActive : true),
+              createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
+              updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
+            };
             set((state) => ({
               products: state.products.map(product => 
-                product.id === id ? { ...product, ...updates, updatedAt: new Date() } : product
+                product.id === id ? transformedProduct : product
               )
             }));
           }
         } catch (error) {
           console.error('Erreur lors de la mise à jour du produit:', error);
+          throw error; // Propager l'erreur pour l'afficher à l'utilisateur
         }
       },
       
@@ -1392,14 +1466,14 @@ export const useAppStore = create<AppStore>()(
             const transformedProducts = result.data.map((product: any) => {
               const transformedProduct = {
                 id: product.id,
-                name: product.name,
-                description: product.description,
-                category: product.category,
-                price: product.price,
+                name: product.name || '',
+                description: product.description || '',
+                category: product.category || 'accessoire',
+                price: product.price || 0,
                 stockQuantity: product.stock_quantity !== null && product.stock_quantity !== undefined 
                   ? product.stock_quantity 
                   : (product.stockQuantity || 0),
-                isActive: product.is_active !== undefined ? product.is_active : product.isActive,
+                isActive: product.is_active !== undefined ? product.is_active : (product.isActive !== undefined ? product.isActive : true),
                 createdAt: product.created_at ? new Date(product.created_at) : new Date(),
                 updatedAt: product.updated_at ? new Date(product.updated_at) : new Date(),
               };

@@ -18,8 +18,8 @@ import Layout from './components/Layout/Layout';
 import Sidebar from './components/Layout/Sidebar';
 
 // Composants de guide et d'authentification
-import { OnboardingGuide } from './components/OnboardingGuide';
-import { OnboardingNotification } from './components/OnboardingNotification';
+// import { OnboardingGuide } from './components/OnboardingGuide'; // MASQUÉ
+// import { OnboardingNotification } from './components/OnboardingNotification'; // MASQUÉ
 import AuthGuard from './components/AuthGuard';
 
 // Pages
@@ -86,10 +86,10 @@ function App() {
         
         setIsLoading(false);
         
-        // Vérifier si le guide d'intégration doit être affiché
-        if (!demoDataService.isOnboardingCompleted()) {
-          setShowOnboarding(true);
-        }
+        // Vérifier si le guide d'intégration doit être affiché - MASQUÉ
+        // if (!demoDataService.isOnboardingCompleted()) {
+        //   setShowOnboarding(true);
+        // }
       } catch (err) {
         console.error('Erreur lors de l\'initialisation:', err);
         setError(err instanceof Error ? err : new Error('Erreur inconnue'));
@@ -160,18 +160,18 @@ function App() {
                           <Route path="/settings" element={<Settings />} />
                         </Routes>
                         
-                        {/* Guide d'intégration */}
-                        {showOnboarding && (
+                        {/* Guide d'intégration - MASQUÉ */}
+                        {/* {showOnboarding && (
                           <OnboardingGuide 
                             onComplete={() => {
                               setShowOnboarding(false);
                               demoDataService.markOnboardingCompleted();
                             }}
                           />
-                        )}
+                        )} */}
                         
-                        {/* Notification d'intégration */}
-                        <OnboardingNotification onShowGuide={() => setShowOnboarding(true)} />
+                        {/* Notification d'intégration - MASQUÉ */}
+                        {/* <OnboardingNotification onShowGuide={() => setShowOnboarding(true)} /> */}
                       </Layout>
                     </Box>
                   </Box>

@@ -45,6 +45,7 @@ import {
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 
 const Administration: React.FC = () => {
   const {
@@ -62,6 +63,9 @@ const Administration: React.FC = () => {
     error,
     setError,
   } = useAppStore();
+
+  // Hook d'authentification
+  const { user: authUser, loading: authLoading, isAuthenticated } = useAuth();
 
   // États locaux
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
@@ -92,6 +96,189 @@ const Administration: React.FC = () => {
   // État local pour les modifications des paramètres
   const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
 
+  // Fonction pour créer automatiquement l'utilisateur administrateur
+  const ensureAdminUserExists = async () => {
+    console.log('🚀 Début de ensureAdminUserExists');
+    console.log('👤 Utilisateur actuel (store):', currentUser);
+    console.log('👤 Utilisateur authentifié (auth):', authUser);
+    console.log('🔐 Authentifié:', isAuthenticated);
+    console.log('⏳ Chargement auth:', authLoading);
+    
+    // Attendre que l'authentification soit chargée
+    if (authLoading) {
+      console.log('⏳ En attente du chargement de l\'authentification...');
+      setSnackbar({ 
+        open: true, 
+        message: 'Chargement de l\'authentification...', 
+        severity: 'success' 
+      });
+      return;
+    }
+    
+    // Utiliser l'utilisateur authentifié ou l'utilisateur du store
+    const userToUse = authUser || currentUser;
+    
+    if (!userToUse || !isAuthenticated) {
+      console.log('❌ Aucun utilisateur connecté');
+      setSnackbar({ 
+        open: true, 
+        message: 'Aucun utilisateur connecté. Veuillez vous connecter d\'abord.', 
+        severity: 'error' 
+      });
+      return;
+    }
+
+    try {
+      console.log('🔍 Vérification et création de l\'utilisateur administrateur...');
+      console.log('📧 Email:', userToUse.email);
+      console.log('👤 Prénom:', (userToUse as any).firstName || (userToUse as any).user_metadata?.firstName);
+      console.log('👤 Nom:', (userToUse as any).lastName || (userToUse as any).user_metadata?.lastName);
+      
+              // Essayer d'abord la fonction simplifiée
+        console.log('📞 Appel de la fonction RPC create_simple_admin_user...');
+        let { data, error } = await supabase.rpc('create_simple_admin_user', {
+          p_email: userToUse.email
+        });
+
+        // Si la fonction simplifiée n'existe pas, essayer la fonction complète
+        if (error && error.message.includes('function') && error.message.includes('does not exist')) {
+          console.log('⚠️ Fonction simplifiée non disponible, essai avec la fonction complète...');
+          const result = await supabase.rpc('create_admin_user_auto', {
+            p_email: userToUse.email,
+            p_first_name: (userToUse as any).firstName || (userToUse as any).user_metadata?.firstName || null,
+            p_last_name: (userToUse as any).lastName || (userToUse as any).user_metadata?.lastName || null
+          });
+          data = result.data;
+          error = result.error;
+        }
+
+      console.log('📊 Réponse RPC:', { data, error });
+
+      if (error) {
+        console.error('❌ Erreur lors de l\'appel RPC:', error);
+        
+        // Fallback vers l'ancienne méthode si la fonction RPC n'existe pas
+        console.log('⚠️ Fonction RPC non disponible, utilisation de la méthode de fallback...');
+        await ensureAdminUserExistsFallback();
+        return;
+      }
+
+      if (data && data.success) {
+        console.log('✅ Utilisateur administrateur géré avec succès:', data);
+        setSnackbar({ 
+          open: true, 
+          message: data.message || 'Compte administrateur configuré avec succès !', 
+          severity: 'success' 
+        });
+        
+        // Recharger la liste des utilisateurs
+        console.log('🔄 Rechargement de la liste des utilisateurs...');
+        await loadUsers();
+      } else {
+        console.error('❌ Erreur lors de la création:', data?.message);
+        setSnackbar({ 
+          open: true, 
+          message: data?.message || 'Erreur lors de la création du compte administrateur', 
+          severity: 'error' 
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de l\'utilisateur administrateur:', error);
+      setSnackbar({ 
+        open: true, 
+        message: `Erreur lors de la création du compte administrateur: ${error}`, 
+        severity: 'error' 
+      });
+    }
+  };
+
+  // Méthode de fallback si la fonction RPC n'existe pas
+  const ensureAdminUserExistsFallback = async () => {
+    try {
+      console.log('🔄 Utilisation de la méthode de fallback...');
+      
+      const userToUse = authUser || currentUser;
+      if (!userToUse) {
+        console.log('❌ Aucun utilisateur disponible pour le fallback');
+        return;
+      }
+      
+      // Vérifier si l'utilisateur existe déjà dans la table users
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', userToUse.email)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('❌ Erreur lors de la vérification:', checkError);
+        return;
+      }
+
+      if (existingUser) {
+        console.log('✅ Utilisateur administrateur existe déjà:', existingUser);
+        
+        // Vérifier si le rôle est bien 'admin', sinon le mettre à jour
+        if (existingUser.role !== 'admin') {
+          console.log('🔄 Mise à jour du rôle vers administrateur...');
+          await updateUser(existingUser.id, { role: 'admin' });
+          setSnackbar({ 
+            open: true, 
+            message: 'Votre compte a été promu administrateur avec succès', 
+            severity: 'success' 
+          });
+        }
+        return;
+      }
+
+      // L'utilisateur n'existe pas, le créer avec le rôle d'administrateur
+      console.log('🆕 Création de l\'utilisateur administrateur...');
+      
+      // Extraire le prénom et nom de l'email si pas disponibles
+      let firstName = (userToUse as any).firstName || (userToUse as any).user_metadata?.firstName;
+      let lastName = (userToUse as any).lastName || (userToUse as any).user_metadata?.lastName;
+      
+      if (!firstName || !lastName) {
+        const emailParts = userToUse.email?.split('@')[0] || '';
+        const nameParts = emailParts.split('.');
+        if (nameParts.length >= 2) {
+          firstName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1);
+          lastName = nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1);
+        } else {
+          firstName = emailParts.charAt(0).toUpperCase() + emailParts.slice(1);
+          lastName = 'Administrateur';
+        }
+      }
+
+      // Créer l'utilisateur avec le rôle d'administrateur
+      await addUser({
+        firstName: firstName || 'Utilisateur',
+        lastName: lastName || 'Administrateur',
+        email: userToUse.email || '',
+        role: 'admin',
+        password: 'admin123', // Mot de passe temporaire
+      });
+
+      setSnackbar({ 
+        open: true, 
+        message: 'Compte administrateur créé avec succès ! Vous pouvez maintenant gérer les utilisateurs.', 
+        severity: 'success' 
+      });
+
+      // Recharger la liste des utilisateurs
+      await loadUsers();
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de l\'utilisateur administrateur (fallback):', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Erreur lors de la création du compte administrateur', 
+        severity: 'error' 
+      });
+    }
+  };
+
   // Charger les utilisateurs et paramètres système au montage
   useEffect(() => {
     // Charger les paramètres système d'abord
@@ -109,16 +296,53 @@ const Administration: React.FC = () => {
     
     loadUsersSafely();
     
+    // Rendre automatiquement l'utilisateur connecté administrateur
+    const makeUserAdmin = async () => {
+      if (isAuthenticated && authUser && !authLoading) {
+        console.log('🔄 Promotion automatique en administrateur...');
+        try {
+          // Utiliser la fonction RPC pour promouvoir l'utilisateur
+          const { data, error } = await supabase.rpc('create_simple_admin_user', {
+            p_email: authUser.email
+          });
+
+          if (error && error.message.includes('function') && error.message.includes('does not exist')) {
+            console.log('⚠️ Fonction RPC non disponible, utilisation de la méthode de fallback...');
+            await ensureAdminUserExistsFallback();
+          } else if (data && data.success) {
+            console.log('✅ Utilisateur promu administrateur avec succès:', data);
+            setSnackbar({ 
+              open: true, 
+              message: 'Vous avez été automatiquement promu administrateur !', 
+              severity: 'success' 
+            });
+            // Recharger la liste des utilisateurs
+            await loadUsers();
+          }
+        } catch (error) {
+          console.error('❌ Erreur lors de la promotion automatique:', error);
+        }
+      }
+    };
+    
+    // Attendre que l'authentification soit chargée puis promouvoir
+    const adminTimer = setTimeout(() => {
+      makeUserAdmin();
+    }, 1500);
+    
     // Forcer le rechargement des paramètres après 2 secondes si pas encore chargés
-    const timer = setTimeout(() => {
+    const settingsTimer = setTimeout(() => {
       if (systemSettings.length === 0) {
         console.log('⏰ Timeout - Forcer le rechargement des paramètres');
         loadSystemSettings();
       }
     }, 2000);
     
-    return () => clearTimeout(timer);
-  }, [loadUsers, loadSystemSettings, systemSettings.length]);
+    return () => {
+      clearTimeout(adminTimer);
+      clearTimeout(settingsTimer);
+    };
+  }, [loadUsers, loadSystemSettings, systemSettings.length, isAuthenticated, authUser, authLoading]);
 
   // Validation du formulaire
   const validateForm = (form: any, isEdit = false) => {
@@ -183,10 +407,55 @@ const Administration: React.FC = () => {
     if (!validateForm(editUserForm, true)) return;
     
     try {
-      await updateUser(selectedUser.id, editUserForm);
-      setSnackbar({ open: true, message: 'Utilisateur modifié avec succès', severity: 'success' });
+      // Si c'est l'utilisateur connecté, mettre à jour les métadonnées Supabase
+      if (selectedUser.id === authUser?.id) {
+        console.log('🔄 Mise à jour de l\'utilisateur connecté...');
+        
+        // Mettre à jour les métadonnées utilisateur dans Supabase Auth
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: {
+            firstName: editUserForm.firstName,
+            lastName: editUserForm.lastName,
+            role: editUserForm.role
+          }
+        });
+        
+        if (updateError) {
+          throw new Error(`Erreur lors de la mise à jour des métadonnées: ${updateError.message}`);
+        }
+        
+        // Mettre à jour aussi dans la table users si l'utilisateur existe
+        try {
+          await updateUser(selectedUser.id, editUserForm);
+        } catch (tableError) {
+          console.log('⚠️ Utilisateur non trouvé dans la table, création...');
+          // Créer l'utilisateur dans la table si il n'existe pas
+          await addUser({
+            firstName: editUserForm.firstName,
+            lastName: editUserForm.lastName,
+            email: editUserForm.email,
+            role: editUserForm.role,
+            password: 'temp_password' // Mot de passe temporaire
+          });
+        }
+        
+        setSnackbar({ 
+          open: true, 
+          message: 'Vos informations ont été mises à jour avec succès', 
+          severity: 'success' 
+        });
+      } else {
+        // Mise à jour normale pour les autres utilisateurs
+        await updateUser(selectedUser.id, editUserForm);
+        setSnackbar({ open: true, message: 'Utilisateur modifié avec succès', severity: 'success' });
+      }
+      
       setEditUserDialogOpen(false);
       setSelectedUser(null);
+      
+      // Recharger les utilisateurs pour mettre à jour l'affichage
+      await loadUsers();
+      
     } catch (error: any) {
       setSnackbar({ open: true, message: error.message || 'Erreur lors de la modification', severity: 'error' });
     }
@@ -306,7 +575,186 @@ const Administration: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Gestion des utilisateurs et paramètres système
         </Typography>
+        
+        {/* Informations de l'utilisateur connecté */}
+        {isAuthenticated && authUser && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
+              👤 Utilisateur connecté
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Email :</strong> {authUser.email}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>ID :</strong> {authUser.id}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Prénom :</strong> {(authUser as any).user_metadata?.firstName || 'Non défini'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Nom :</strong> {(authUser as any).user_metadata?.lastName || 'Non défini'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Rôle :</strong> {(authUser as any).user_metadata?.role || 'Non défini'}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Connecté depuis :</strong> {new Date(authUser.created_at).toLocaleDateString('fr-FR')}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+        
+        {/* Informations de l'utilisateur depuis le store (si différent) */}
+        {currentUser && currentUser.id !== authUser?.id && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'warning.main' }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'warning.main' }}>
+              ⚠️ Utilisateur du store (différent de l'authentification)
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Email :</strong> {currentUser.email}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>ID :</strong> {currentUser.id}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Prénom :</strong> {currentUser.firstName}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Nom :</strong> {currentUser.lastName}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Rôle :</strong> {currentUser.role}
+                </Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Créé le :</strong> {new Date(currentUser.createdAt).toLocaleDateString('fr-FR')}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
+        
+        {/* État de connexion */}
+        {authLoading && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={16} />
+              Chargement des informations utilisateur...
+            </Typography>
+          </Box>
+        )}
+        
+        {!isAuthenticated && !authLoading && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'warning.light', borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              ⚠️ Aucun utilisateur connecté
+            </Typography>
+          </Box>
+        )}
       </Box>
+
+      {/* Bannière d'avertissement */}
+      <Alert 
+        severity="warning" 
+        sx={{ mb: 3 }}
+        action={
+          <Button 
+            color="inherit" 
+            size="small"
+            onClick={() => {
+              // Navigation vers la page Réglages
+              window.location.href = '/settings';
+            }}
+          >
+            Aller aux Réglages
+          </Button>
+        }
+      >
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          ⚠️ Important : Pour que la page Administration fonctionne parfaitement, 
+          veuillez d'abord configurer les paramètres dans la page Réglages.
+        </Typography>
+        <Typography variant="body2" sx={{ mt: 0.5 }}>
+          Cela garantit que tous les paramètres système sont correctement initialisés.
+        </Typography>
+      </Alert>
+
+      {/* Bannière d'information pour la création automatique d'administrateur */}
+      {isAuthenticated && authUser && (
+        <Alert 
+          severity="info" 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small"
+              onClick={ensureAdminUserExists}
+              disabled={loading || authLoading}
+            >
+              Créer maintenant
+            </Button>
+          }
+        >
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            ℹ️ Bienvenue dans l'Administration ! 
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5 }}>
+            Vous avez été automatiquement promu administrateur ! Votre email ({authUser.email}) 
+            a maintenant les privilèges d'administration. Vous pouvez modifier vos informations en utilisant le bouton d'édition.
+          </Typography>
+        </Alert>
+      )}
+
+      {/* Bannière d'avertissement si non connecté */}
+      {!isAuthenticated && !authLoading && (
+        <Alert 
+          severity="warning" 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small"
+              onClick={() => {
+                // Navigation vers la page d'authentification
+                window.location.href = '/auth';
+              }}
+            >
+              Se connecter
+            </Button>
+          }
+        >
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            ⚠️ Vous devez être connecté pour accéder à l'Administration
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.5 }}>
+            Veuillez vous connecter pour pouvoir créer votre compte administrateur et gérer les utilisateurs.
+          </Typography>
+        </Alert>
+      )}
 
       {/* Actions */}
       <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
@@ -327,42 +775,37 @@ const Administration: React.FC = () => {
         </Button>
         <Button
           variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={loadSystemSettings}
-          disabled={loading}
+          color="primary"
+          onClick={ensureAdminUserExists}
+          disabled={loading || authLoading || !isAuthenticated}
         >
-          Recharger paramètres
+          {authLoading ? 'Chargement...' : !isAuthenticated ? 'Connectez-vous d\'abord' : 'Promouvoir en admin'}
         </Button>
         <Button
           variant="outlined"
+          color="secondary"
           onClick={async () => {
-            console.log('🧪 Test de connexion Supabase...');
+            console.log('🔄 Synchronisation des données utilisateur...');
             try {
-              const { data, error } = await supabase.from('system_settings').select('count');
-              console.log('📊 Test direct Supabase:', { data, error });
-              if (error) {
-                setSnackbar({ open: true, message: `Erreur: ${error.message}`, severity: 'error' });
-              } else {
-                setSnackbar({ open: true, message: `Connexion OK: ${data?.length || 0} paramètres`, severity: 'success' });
-              }
-            } catch (err) {
-              console.error('💥 Erreur test:', err);
-              setSnackbar({ open: true, message: `Erreur: ${err}`, severity: 'error' });
+              // Recharger les données utilisateur depuis le store
+              await loadUsers();
+              setSnackbar({ 
+                open: true, 
+                message: 'Données utilisateur synchronisées', 
+                severity: 'success' 
+              });
+            } catch (error) {
+              console.error('❌ Erreur lors de la synchronisation:', error);
+              setSnackbar({ 
+                open: true, 
+                message: 'Erreur lors de la synchronisation', 
+                severity: 'error' 
+              });
             }
           }}
+          disabled={loading}
         >
-          Test connexion
-        </Button>
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={() => {
-            console.log('🔄 Rechargement forcé des paramètres');
-            loadSystemSettings();
-            setSnackbar({ open: true, message: 'Rechargement des paramètres...', severity: 'success' });
-          }}
-        >
-          Recharger paramètres
+          Synchroniser données
         </Button>
       </Box>
 
@@ -378,7 +821,11 @@ const Administration: React.FC = () => {
                     Total utilisateurs
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    {users.length}
+                    {(() => {
+                      const totalUsers = users.length;
+                      const connectedUserIncluded = isAuthenticated && authUser && !users.some(user => user.id === authUser.id);
+                      return totalUsers + (connectedUserIncluded ? 1 : 0);
+                    })()}
                   </Typography>
                 </Box>
               </Box>
@@ -395,7 +842,13 @@ const Administration: React.FC = () => {
                     Administrateurs
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    {users.filter(u => u.role === 'admin').length}
+                    {(() => {
+                      const adminUsers = users.filter(u => u.role === 'admin').length;
+                      const connectedUserIsAdmin = isAuthenticated && authUser && 
+                        ((authUser as any).user_metadata?.role === 'admin') && 
+                        !users.some(user => user.id === authUser.id);
+                      return adminUsers + (connectedUserIsAdmin ? 1 : 0);
+                    })()}
                   </Typography>
                 </Box>
               </Box>
@@ -412,7 +865,13 @@ const Administration: React.FC = () => {
                     Techniciens
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    {users.filter(u => u.role === 'technician').length}
+                    {(() => {
+                      const technicianUsers = users.filter(u => u.role === 'technician').length;
+                      const connectedUserIsTechnician = isAuthenticated && authUser && 
+                        ((authUser as any).user_metadata?.role === 'technician') && 
+                        !users.some(user => user.id === authUser.id);
+                      return technicianUsers + (connectedUserIsTechnician ? 1 : 0);
+                    })()}
                   </Typography>
                 </Box>
               </Box>
@@ -429,7 +888,13 @@ const Administration: React.FC = () => {
                     Gérants
                   </Typography>
                   <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    {users.filter(u => u.role === 'manager').length}
+                    {(() => {
+                      const managerUsers = users.filter(u => u.role === 'manager').length;
+                      const connectedUserIsManager = isAuthenticated && authUser && 
+                        ((authUser as any).user_metadata?.role === 'manager') && 
+                        !users.some(user => user.id === authUser.id);
+                      return managerUsers + (connectedUserIsManager ? 1 : 0);
+                    })()}
                   </Typography>
                 </Box>
               </Box>
@@ -465,61 +930,83 @@ const Administration: React.FC = () => {
                   <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Avatar src={user.avatar} sx={{ mr: 2 }}>
-                          {user.firstName.charAt(0)}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                            {`${user.firstName} ${user.lastName}`}
-                          </Typography>
-                          {user.id === currentUser?.id && (
-                            <Chip label="Vous" size="small" color="primary" />
-                          )}
+                            <TableBody>
+                {/* Créer une liste combinée des utilisateurs du store et de l'utilisateur connecté */}
+                {(() => {
+                  const allUsers = [...users];
+                  
+                  // Ajouter l'utilisateur connecté s'il n'est pas déjà dans la liste
+                  if (isAuthenticated && authUser) {
+                    const userExists = allUsers.some(user => user.id === authUser.id);
+                    if (!userExists) {
+                      const connectedUser = {
+                        id: authUser.id,
+                        firstName: (authUser as any).user_metadata?.firstName || authUser.email?.split('@')[0] || 'Utilisateur',
+                        lastName: (authUser as any).user_metadata?.lastName || 'Connecté',
+                        email: authUser.email || '',
+                        role: (authUser as any).user_metadata?.role || 'technician',
+                        avatar: (authUser as any).user_metadata?.avatar,
+                        createdAt: new Date(authUser.created_at),
+                        updatedAt: new Date(authUser.updated_at || authUser.created_at)
+                      };
+                      allUsers.unshift(connectedUser); // Ajouter en premier
+                    }
+                  }
+                  
+                  return allUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Avatar src={user.avatar} sx={{ mr: 2 }}>
+                            {user.firstName.charAt(0)}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {`${user.firstName} ${user.lastName}`}
+                            </Typography>
+                            {(user.id === currentUser?.id || user.id === authUser?.id) && (
+                              <Chip label="Vous" size="small" color="primary" />
+                            )}
+                          </Box>
                         </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getRoleLabel(user.role)}
-                        color={getRoleColor(user.role) as any}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {new Date(user.createdAt).toLocaleDateString('fr-FR')}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                        <Tooltip title="Modifier">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => openEditDialog(user)}
-                            disabled={user.id === currentUser?.id}
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        {user.id !== currentUser?.id && (
-                          <Tooltip title="Supprimer">
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getRoleLabel(user.role)}
+                          color={getRoleColor(user.role) as any}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                          <Tooltip title="Modifier">
                             <IconButton 
                               size="small" 
-                              color="error"
-                              onClick={() => openDeleteDialog(user)}
+                              onClick={() => openEditDialog(user)}
                             >
-                              <DeleteIcon fontSize="small" />
+                              <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {user.id !== authUser?.id && (
+                            <Tooltip title="Supprimer">
+                              <IconButton 
+                                size="small" 
+                                color="error"
+                                onClick={() => openDeleteDialog(user)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ));
+                })()}
               </TableBody>
             </Table>
           </TableContainer>

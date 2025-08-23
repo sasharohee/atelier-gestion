@@ -189,7 +189,7 @@ export interface Sale {
   tax: number;
   total: number;
   paymentMethod: 'cash' | 'card' | 'transfer';
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'pending' | 'completed' | 'cancelled' | 'returned';
   createdAt: Date;
   updatedAt: Date;
 }

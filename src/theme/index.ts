@@ -168,6 +168,7 @@ export const repairStatusColors = {
   'waiting_delivery': '#9c27b0',
   'completed': '#4caf50',
   'cancelled': '#757575',
+  'returned': '#757575',
 };
 
 // Couleurs pour les types d'appareils

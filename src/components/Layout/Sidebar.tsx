@@ -44,7 +44,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
-import { GuideButton } from '../GuideButton';
+// import { GuideButton } from '../GuideButton'; // MASQUÉ
 import { userService } from '../../services/supabaseService';
 
 const drawerWidth = 280;
@@ -354,8 +354,8 @@ const Sidebar: React.FC = () => {
             </ListItem>
           ))}
           
-          {/* Bouton Guide */}
-          <ListItem disablePadding>
+          {/* Bouton Guide - MASQUÉ */}
+          {/* <ListItem disablePadding>
             <Box sx={{ px: sidebarOpen ? 3 : 2.5, py: 1, width: '100%' }}>
               <GuideButton 
                 variant="outlined" 
@@ -363,7 +363,7 @@ const Sidebar: React.FC = () => {
                 color="info"
               />
             </Box>
-          </ListItem>
+          </ListItem> */}
         </List>
 
         {/* Nom de l'atelier */}

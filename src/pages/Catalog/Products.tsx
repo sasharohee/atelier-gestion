@@ -63,12 +63,12 @@ const Products: React.FC = () => {
     if (product) {
       setEditingProduct(product.id);
       setFormData({
-        name: product.name,
-        description: product.description,
-        category: product.category,
-        price: product.price,
-        stockQuantity: product.stockQuantity,
-        isActive: product.isActive,
+        name: product.name || '',
+        description: product.description || '',
+        category: product.category || 'accessoire',
+        price: product.price || 0,
+        stockQuantity: product.stockQuantity || 0,
+        isActive: product.isActive !== undefined ? product.isActive : true,
       });
     } else {
       setEditingProduct(null);

@@ -34,8 +34,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../store';
 import { deviceTypeColors, repairStatusColors } from '../../theme';
-import AppStatus from '../../components/AppStatus';
-import SupabaseTest from '../../components/SupabaseTest';
+// import AppStatus from '../../components/AppStatus'; // MASQUÉ
+// import SupabaseTest from '../../components/SupabaseTest'; // MASQUÉ
 import { demoDataService } from '../../services/demoDataService';
 
 const Dashboard: React.FC = () => {
@@ -1011,18 +1011,18 @@ const Dashboard: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* Test de connexion Supabase */}
-      <Box sx={{ mt: 4 }}>
+      {/* Test de connexion Supabase - MASQUÉ */}
+      {/* <Box sx={{ mt: 4 }}>
         <SupabaseTest />
-      </Box>
+      </Box> */}
 
-      {/* Statut de l'application */}
-      <Box sx={{ mt: 4 }}>
+      {/* Statut de l'application - MASQUÉ */}
+      {/* <Box sx={{ mt: 4 }}>
         <AppStatus />
-      </Box>
+      </Box> */}
 
-      {/* Outils d'administration */}
-      <Box sx={{ mt: 4 }}>
+      {/* Outils d'administration - MASQUÉ */}
+      {/* <Box sx={{ mt: 4 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -1087,7 +1087,7 @@ const Dashboard: React.FC = () => {
             </Box>
           </CardContent>
         </Card>
-      </Box>
+      </Box> */}
     </Box>
   );
 };
