@@ -478,38 +478,32 @@ async function getCurrentUser(): Promise<{ id: string; role: string } | null> {
     if (!currentUser) {
       console.log('⚠️ Utilisateur non trouvé dans la table users:', user.id);
       
-      // Tentative de création automatique de l'utilisateur dans la table users
+      // Tentative de création automatique de l'utilisateur via fonction RPC
       try {
-        console.log('🔄 Tentative de création automatique de l\'utilisateur dans la table users...');
+        console.log('🔄 Tentative de création automatique de l\'utilisateur via fonction RPC...');
         
         // Essayer différents rôles dans l'ordre de priorité
-        const rolesToTry = ['admin', 'manager', 'technician', 'user'];
+        const rolesToTry = ['technician', 'manager', 'admin', 'user'];
         let newUser = null;
         let insertError = null;
         
         for (const role of rolesToTry) {
           try {
-            const { data, error } = await supabase
-              .from('users')
-              .insert({
-                id: user.id,
-                first_name: user.user_metadata?.first_name || 'Utilisateur',
-                last_name: user.user_metadata?.last_name || 'Test',
-                email: user.email,
-                role: role,
-                created_at: user.created_at,
-                updated_at: user.updated_at
-              })
-              .select()
-              .single();
+            const { data, error } = await supabase.rpc('create_user_automatically', {
+              user_id: user.id,
+              first_name: user.user_metadata?.first_name || 'Utilisateur',
+              last_name: user.user_metadata?.last_name || 'Test',
+              user_email: user.email,
+              user_role: role
+            });
             
-            if (!error) {
-              newUser = data;
+            if (!error && data && data.success) {
+              newUser = data.user;
               console.log('✅ Utilisateur créé automatiquement avec le rôle:', role);
               break;
             } else {
               console.log(`⚠️ Rôle '${role}' non autorisé, essai suivant...`);
-              insertError = error;
+              insertError = error || data?.error;
             }
           } catch (err) {
             console.log(`⚠️ Erreur avec le rôle '${role}':`, err);
