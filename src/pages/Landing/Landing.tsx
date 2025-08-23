@@ -876,7 +876,7 @@ const Landing: React.FC = () => {
       >
         <Container maxWidth="lg">
           <Typography variant="body2" sx={{ opacity: 0.8 }}>
-            © 2024 Atelier Gestion - Laast.io. Tous droits réservés.
+            © 2024 Atelier Gestion. Tous droits réservés.
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.6, mt: 1 }}>
             Solution de gestion d'atelier de réparation d'appareils électroniques
