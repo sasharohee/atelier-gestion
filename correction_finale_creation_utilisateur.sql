@@ -10,7 +10,16 @@ DELETE FROM user_profiles WHERE user_id IN (
 );
 DELETE FROM users WHERE email LIKE '%@example.com' OR email = 'user@example.com';
 
--- 2. Corriger la fonction RPC pour gérer les emails uniques
+-- 1.5. Supprimer les triggers problématiques
+DROP TRIGGER IF EXISTS set_workshop_context_trigger ON users;
+DROP FUNCTION IF EXISTS set_workshop_context();
+DROP TRIGGER IF EXISTS create_user_profile_trigger ON users;
+DROP FUNCTION IF EXISTS create_user_profile_trigger();
+
+-- 2. Supprimer la fonction existante puis la recréer
+DROP FUNCTION IF EXISTS create_user_automatically(UUID, TEXT, TEXT, TEXT, TEXT);
+
+-- 3. Corriger la fonction RPC pour gérer les emails uniques
 CREATE OR REPLACE FUNCTION create_user_automatically(
   user_id UUID,
   first_name TEXT,
@@ -77,7 +86,7 @@ EXCEPTION
 END;
 $$;
 
--- 3. Créer un utilisateur admin par défaut pour initialiser la base
+-- 5. Créer un utilisateur admin par défaut pour initialiser la base
 INSERT INTO users (id, first_name, last_name, email, role, created_at, updated_at)
 VALUES (
   gen_random_uuid(),
@@ -89,7 +98,7 @@ VALUES (
   NOW()
 ) ON CONFLICT (email) DO NOTHING;
 
--- 4. Créer des données de test pour les paramètres système
+-- 6. Créer des données de test pour les paramètres système
 INSERT INTO system_settings (key, value, description, category, created_at, updated_at)
 VALUES 
   ('workshop_name', 'Atelier de Réparation', 'Nom de l''atelier', 'general', NOW(), NOW()),
@@ -101,7 +110,7 @@ VALUES
   ('auto_create_users', 'true', 'Création automatique d''utilisateurs', 'security', NOW(), NOW())
 ON CONFLICT (key) DO NOTHING;
 
--- 5. Créer des statuts de réparation par défaut
+-- 7. Créer des statuts de réparation par défaut
 INSERT INTO repair_statuses (id, name, color, "order", created_at, updated_at)
 VALUES 
   ('new', 'Nouvelle', '#2196f3', 1, NOW(), NOW()),
@@ -112,7 +121,7 @@ VALUES
   ('cancelled', 'Annulée', '#757575', 6, NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- 6. Créer des modèles d'appareils de test
+-- 8. Créer des modèles d'appareils de test
 INSERT INTO device_models (id, brand, model, type, year, specifications, common_issues, repair_difficulty, parts_availability, is_active, created_at, updated_at)
 VALUES 
   (
@@ -145,7 +154,7 @@ VALUES
   )
 ON CONFLICT DO NOTHING;
 
--- 7. Créer des services de test
+-- 9. Créer des services de test
 INSERT INTO services (id, name, description, duration, price, category, applicable_devices, is_active, created_at, updated_at)
 VALUES 
   (
@@ -186,10 +195,10 @@ VALUES
   )
 ON CONFLICT DO NOTHING;
 
--- 8. Vérifier que tout fonctionne
+-- 10. Vérifier que tout fonctionne
 SELECT 'Correction finale terminée. Base de données initialisée avec des données de test.' as status;
 
--- 9. Afficher les statistiques
+-- 11. Afficher les statistiques
 SELECT 
   'Utilisateurs' as table_name,
   COUNT(*) as count
