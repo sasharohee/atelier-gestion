@@ -190,7 +190,6 @@ interface AppActions {
   // Actions spéciales
   markMessageAsRead: (id: string) => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
-  resolveStockAlert: (id: string) => Promise<void>;
   
   // Getters
   getRepairsByStatus: (statusId: string) => Repair[];
@@ -776,7 +775,7 @@ export const useAppStore = create<AppStore>()(
                 isResolved: false,
               };
               await get().addStockAlert(alert);
-            } else if (newPart.stockQuantity <= newPart.minStockLevel) {
+            } else if (newPart.stockQuantity <= (newPart.minStockLevel || 5)) {
               // Créer une alerte de stock faible
               const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
                 partId: newPart.id,
@@ -818,7 +817,7 @@ export const useAppStore = create<AppStore>()(
                   };
                   await get().addStockAlert(alert);
                 }
-              } else if (updates.stockQuantity <= updatedPart.minStockLevel) {
+              } else if (updates.stockQuantity <= (updatedPart.minStockLevel || 5)) {
                 // Créer une alerte de stock faible si elle n'existe pas déjà
                 if (!currentAlerts.some(alert => alert.type === 'low_stock')) {
                   const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
@@ -1071,7 +1070,7 @@ export const useAppStore = create<AppStore>()(
                     isResolved: false,
                   };
                   await get().addStockAlert(alert);
-                } else if (newStockQuantity <= part.minStockLevel) {
+                } else if (newStockQuantity <= (part.minStockLevel || 5)) {
                   const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
                     partId: item.itemId,
                     type: 'low_stock',
@@ -1104,7 +1103,7 @@ export const useAppStore = create<AppStore>()(
                     isResolved: false,
                   };
                   await get().addStockAlert(alert);
-                } else if (newStockQuantity <= (product.minStockLevel || 5)) {
+                } else if (newStockQuantity <= 5) {
                   const alert: Omit<StockAlert, 'id' | 'createdAt'> = {
                     partId: item.itemId, // Utiliser partId même pour les produits
                     type: 'low_stock',
@@ -1189,7 +1188,7 @@ export const useAppStore = create<AppStore>()(
                   await partService.update(part.id, { stockQuantity: newStockQuantity });
                   
                   // Résoudre les alertes de stock si le stock redevient suffisant
-                  if (newStockQuantity > part.minStockLevel) {
+                  if (newStockQuantity > (part.minStockLevel || 5)) {
                     const currentAlerts = state.stockAlerts.filter(alert => 
                       alert.partId === item.itemId && !alert.isResolved
                     );
@@ -1215,7 +1214,7 @@ export const useAppStore = create<AppStore>()(
                   await productService.update(product.id, { stockQuantity: newStockQuantity });
                   
                   // Résoudre les alertes de stock si le stock redevient suffisant
-                  if (newStockQuantity > (product.minStockLevel || 5)) {
+                  if (newStockQuantity > 5) {
                     const currentAlerts = state.stockAlerts.filter(alert => 
                       alert.partId === item.itemId && !alert.isResolved
                     );
@@ -1363,7 +1362,7 @@ export const useAppStore = create<AppStore>()(
                 stockQuantity: part.stock_quantity !== null && part.stock_quantity !== undefined 
                   ? part.stock_quantity 
                   : (part.stockQuantity || 0),
-                minStockLevel: part.min_stock_level || part.minStockLevel,
+                minStockLevel: part.min_stock_level || part.minStockLevel || 5,
                 price: part.price,
                 supplier: part.supplier,
                 isActive: part.is_active !== undefined ? part.is_active : part.isActive,
@@ -1467,7 +1466,7 @@ export const useAppStore = create<AppStore>()(
                 isResolved: false,
                 createdAt: new Date()
               });
-            } else if (part.stockQuantity <= part.minStockLevel) {
+            } else if (part.stockQuantity <= (part.minStockLevel || 5)) {
               alerts.push({
                 id: uuidv4(),
                 partId: part.id,
@@ -1490,7 +1489,7 @@ export const useAppStore = create<AppStore>()(
                 isResolved: false,
                 createdAt: new Date()
               });
-            } else if (product.stockQuantity <= (product.minStockLevel || 5)) {
+            } else if (product.stockQuantity <= 5) {
               alerts.push({
                 id: uuidv4(),
                 partId: product.id, // Utiliser partId même pour les produits

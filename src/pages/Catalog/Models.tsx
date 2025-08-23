@@ -113,6 +113,7 @@ const Models: React.FC = () => {
     commonIssues: [''],
     repairDifficulty: 'medium' as 'easy' | 'medium' | 'hard',
     partsAvailability: 'medium' as 'high' | 'medium' | 'low',
+    isActive: true,
   });
 
   // Charger les modèles depuis la base de données
@@ -147,22 +148,22 @@ const Models: React.FC = () => {
     return colors[type] || '#757575';
   };
 
-  const getDifficultyColor = (difficulty: string) => {
-    const colors = {
+  const getDifficultyColor = (difficulty: string): 'success' | 'warning' | 'error' | 'default' => {
+    const colors: Record<string, 'success' | 'warning' | 'error'> = {
       easy: 'success',
       medium: 'warning',
       hard: 'error',
     };
-    return colors[difficulty as keyof typeof colors] || 'default';
+    return colors[difficulty] || 'default';
   };
 
-  const getAvailabilityColor = (availability: string) => {
-    const colors = {
+  const getAvailabilityColor = (availability: string): 'success' | 'warning' | 'error' | 'default' => {
+    const colors: Record<string, 'success' | 'warning' | 'error'> = {
       high: 'success',
       medium: 'warning',
       low: 'error',
     };
-    return colors[availability as keyof typeof colors] || 'default';
+    return colors[availability] || 'default';
   };
 
   const filteredModels = models.filter(model => {
@@ -240,6 +241,7 @@ const Models: React.FC = () => {
       commonIssues: [''],
       repairDifficulty: 'medium',
       partsAvailability: 'medium',
+      isActive: true,
     });
   };
 
@@ -250,10 +252,18 @@ const Models: React.FC = () => {
       model: model.model,
       type: model.type,
       year: model.year,
-      specifications: { ...model.specifications },
+      specifications: { 
+        screen: model.specifications.screen || '',
+        processor: model.specifications.processor || '',
+        ram: model.specifications.ram || '',
+        storage: model.specifications.storage || '',
+        battery: model.specifications.battery || '',
+        os: model.specifications.os || '',
+      },
       commonIssues: [...model.commonIssues],
       repairDifficulty: model.repairDifficulty,
       partsAvailability: model.partsAvailability,
+      isActive: model.isActive,
     });
     setDialogOpen(true);
   };

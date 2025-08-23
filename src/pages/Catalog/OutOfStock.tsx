@@ -84,6 +84,7 @@ const OutOfStock: React.FC = () => {
         partId: formData.partId,
         type: formData.type,
         message: formData.message,
+        isResolved: false,
       });
       
       setSuccess('Alerte créée avec succès');
@@ -207,7 +208,7 @@ const OutOfStock: React.FC = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          {part ? part.minStockLevel : product ? (product.minStockLevel || 5) : 0}
+                          {part ? part.minStockLevel : product ? 5 : 0}
                         </TableCell>
                         <TableCell>
                           {new Date(alert.createdAt).toLocaleDateString('fr-FR')}
