@@ -28,11 +28,11 @@ import { useNavigate } from 'react-router-dom';
 
 const SubscriptionBlocked: React.FC = () => {
   const { user } = useAuth();
-  const { subscriptionStatus, checkSubscriptionStatus, loading } = useSubscription();
+  const { subscriptionStatus, refreshStatus, loading } = useSubscription();
   const navigate = useNavigate();
 
   const handleRefresh = async () => {
-    await checkSubscriptionStatus();
+    await refreshStatus();
   };
 
   const handleLogout = async () => {

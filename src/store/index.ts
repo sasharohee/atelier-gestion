@@ -319,12 +319,13 @@ export const useAppStore = create<AppStore>()(
         set({ loading: true, error: null });
         const result = await userService.signUp(email, password, userData);
         if (result.success && 'data' in result && result.data) {
-          const supabaseUser = result.data.user;
+          // Le service signUp retourne un objet avec data.user pour l'utilisateur Supabase
+          const supabaseUser = (result.data as any).user;
           if (supabaseUser) {
             const appUser: User = {
               id: supabaseUser.id,
-              firstName: supabaseUser.user_metadata?.firstName || '',
-              lastName: supabaseUser.user_metadata?.lastName || '',
+              firstName: supabaseUser.user_metadata?.first_name || '',
+              lastName: supabaseUser.user_metadata?.last_name || '',
               email: supabaseUser.email || '',
               role: supabaseUser.user_metadata?.role || 'technician',
               avatar: supabaseUser.user_metadata?.avatar,
