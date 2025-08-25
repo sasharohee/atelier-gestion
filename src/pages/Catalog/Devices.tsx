@@ -37,6 +37,7 @@ import {
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import { deviceTypeColors } from '../../theme';
+import SpecificationsDisplay from '../../components/SpecificationsDisplay';
 
 const Devices: React.FC = () => {
   const { devices, addDevice, deleteDevice } = useAppStore();
@@ -242,9 +243,7 @@ const Devices: React.FC = () => {
                     </TableCell>
                     <TableCell>{device.serialNumber || '-'}</TableCell>
                     <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {device.specifications ? Object.entries(device.specifications).map(([key, value]) => `${key}: ${value}`).join(', ') : '-'}
-                      </Typography>
+                      <SpecificationsDisplay specifications={device.specifications} maxDisplay={2} />
                     </TableCell>
                     <TableCell>
                       {new Date(device.createdAt).toLocaleDateString('fr-FR')}

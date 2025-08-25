@@ -11,6 +11,7 @@ import { theme } from './theme';
 import { useAuthenticatedData } from './hooks/useAuthenticatedData';
 import { useAppStore } from './store';
 import { WorkshopSettingsProvider } from './contexts/WorkshopSettingsContext';
+import { AuthErrorHandler } from './components/AuthErrorHandler';
 import './styles/print.css';
 
 // Composants de layout
@@ -21,6 +22,7 @@ import Sidebar from './components/Layout/Sidebar';
 // import { OnboardingGuide } from './components/OnboardingGuide'; // MASQUÉ
 // import { OnboardingNotification } from './components/OnboardingNotification'; // MASQUÉ
 import AuthGuard from './components/AuthGuard';
+import AdminGuard from './components/AdminGuard';
 
 // Pages
 import Landing from './pages/Landing/Landing';
@@ -34,6 +36,9 @@ import Transaction from './pages/Transaction/Transaction';
 import Sales from './pages/Sales/Sales';
 import Statistics from './pages/Statistics/Statistics';
 import Administration from './pages/Administration/Administration';
+import SubscriptionManagement from './pages/Administration/SubscriptionManagement';
+import UserAccessManagement from './pages/Administration/UserAccessManagement';
+import AdminAccess from './pages/AdminAccess/AdminAccess';
 import Settings from './pages/Settings/Settings';
 
 // Services
@@ -103,6 +108,11 @@ function App() {
   // Gérer les erreurs de chargement des données
   useEffect(() => {
     if (dataError) {
+      // Ne pas afficher les erreurs "Utilisateur non connecté" comme erreurs critiques
+      if (dataError.message.includes('Utilisateur non connecté')) {
+        console.log('ℹ️ Utilisateur non connecté - données non chargées');
+        return;
+      }
       setError(dataError);
     }
   }, [dataError]);
@@ -137,53 +147,50 @@ function App() {
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <WorkshopSettingsProvider>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/app/*" element={
-                <AuthGuard>
-                  <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-                    <Sidebar />
-                    <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Layout>
-                        <Routes>
-                          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                          <Route path="/dashboard" element={<Dashboard />} />
-                          <Route path="/kanban" element={<Kanban />} />
-                          <Route path="/calendar" element={<Calendar />} />
-                          <Route path="/messaging" element={<Messaging />} />
-                          <Route path="/catalog/*" element={<Catalog />} />
-                          <Route path="/transaction/*" element={<Transaction />} />
-                          <Route path="/sales" element={<Sales />} />
-                          <Route path="/statistics" element={<Statistics />} />
-                          <Route path="/administration" element={<Administration />} />
-                          <Route path="/settings" element={<Settings />} />
-                        </Routes>
-                        
-                        {/* Guide d'intégration - MASQUÉ */}
-                        {/* {showOnboarding && (
-                          <OnboardingGuide 
-                            onComplete={() => {
-                              setShowOnboarding(false);
-                              demoDataService.markOnboardingCompleted();
-                            }}
-                          />
-                        )} */}
-                        
-                        {/* Notification d'intégration - MASQUÉ */}
-                        {/* <OnboardingNotification onShowGuide={() => setShowOnboarding(true)} /> */}
-                      </Layout>
+            <AuthErrorHandler>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/admin" element={<AdminAccess />} />
+                <Route path="/app/*" element={
+                  <AuthGuard>
+                    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+                      <Sidebar />
+                      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                        <Layout>
+                          <Routes>
+                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/kanban" element={<Kanban />} />
+                            <Route path="/calendar" element={<Calendar />} />
+                            <Route path="/messaging" element={<Messaging />} />
+                            <Route path="/catalog/*" element={<Catalog />} />
+                            <Route path="/transaction/*" element={<Transaction />} />
+                            <Route path="/sales" element={<Sales />} />
+                            <Route path="/statistics" element={<Statistics />} />
+                            <Route path="/administration" element={<Administration />} />
+                            <Route path="/administration/subscriptions" element={<SubscriptionManagement />} />
+                            <Route path="/administration/user-access" element={<UserAccessManagement />} />
+                            <Route path="/settings" element={<Settings />} />
+                          </Routes>
+                          
+                          {/* Guide d'intégration - MASQUÉ */}
+                          {/* {showOnboarding && (
+                            <OnboardingGuide 
+                              onComplete={() => setShowOnboarding(false)}
+                            />
+                          )} */}
+                        </Layout>
+                      </Box>
                     </Box>
-                  </Box>
-                </AuthGuard>
-              } />
-            </Routes>
-            
-            {/* Toast notifications */}
-            <Toaster position="top-right" />
+                  </AuthGuard>
+                } />
+              </Routes>
+            </AuthErrorHandler>
           </WorkshopSettingsProvider>
         </Router>
       </LocalizationProvider>
+      <Toaster position="top-right" />
     </ThemeProvider>
   );
 }

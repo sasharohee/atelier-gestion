@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useAppStore } from '../store';
 
@@ -20,49 +20,55 @@ export const useAuthenticatedData = () => {
     loadAppointments,
   } = useAppStore();
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (!isAuthenticated || !user) {
-        setIsDataLoaded(false);
-        return;
-      }
+  const loadData = useCallback(async () => {
+    // Vérifier que l'utilisateur est authentifié
+    if (!isAuthenticated || !user) {
+      setIsDataLoaded(false);
+      return;
+    }
 
-      setIsLoading(true);
-      setError(null);
+    console.log('✅ Chargement des données pour utilisateur:', user.email);
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        // Charger toutes les données en parallèle
-        await Promise.all([
-          loadClients(),
-          loadDevices(),
-          loadDeviceModels(),
-          loadServices(),
-          loadParts(),
-          loadProducts(),
-          loadRepairs(),
-          loadSales(),
-          loadAppointments(),
-        ]);
+    try {
+      // Charger toutes les données en parallèle
+      await Promise.all([
+        loadClients(),
+        loadDevices(),
+        loadDeviceModels(),
+        loadServices(),
+        loadParts(),
+        loadProducts(),
+        loadRepairs(),
+        loadSales(),
+        loadAppointments(),
+      ]);
 
-        setIsDataLoaded(true);
-      } catch (err) {
-        console.error('Erreur lors du chargement des données:', err);
-        setError(err instanceof Error ? err : new Error('Erreur inconnue'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
+      setIsDataLoaded(true);
+      console.log('✅ Données chargées avec succès');
+    } catch (err) {
+      console.error('❌ Erreur lors du chargement des données:', err);
+      setError(err instanceof Error ? err : new Error('Erreur inconnue'));
+    } finally {
+      setIsLoading(false);
+    }
   }, [isAuthenticated, user, loadClients, loadDevices, loadDeviceModels, loadServices, loadParts, loadProducts, loadRepairs, loadSales, loadAppointments]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const reload = useCallback(() => {
+    setIsDataLoaded(false);
+    setError(null);
+    loadData();
+  }, [loadData]);
 
   return {
     isDataLoaded,
     isLoading,
     error,
-    reload: () => {
-      setIsDataLoaded(false);
-      setError(null);
-    }
+    reload
   };
 };

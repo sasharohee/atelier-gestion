@@ -42,12 +42,15 @@ import {
   People as PeopleIcon,
   Save as SaveIcon,
   Refresh as RefreshIcon,
+  Lock as LockIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const Administration: React.FC = () => {
+  const navigate = useNavigate();
   const {
     users,
     systemSettings,
@@ -764,6 +767,15 @@ const Administration: React.FC = () => {
           onClick={() => setNewUserDialogOpen(true)}
         >
           Nouvel utilisateur
+        </Button>
+        <Button
+          variant="contained"
+          color="secondary"
+          startIcon={<LockIcon />}
+          onClick={() => navigate('/app/administration/user-access')}
+          disabled={loading}
+        >
+          Gestion des Accès
         </Button>
         <Button
           variant="outlined"

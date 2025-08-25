@@ -13,15 +13,17 @@ import {
   MenuItem,
   Divider,
   Badge,
+  Fade,
+  Tooltip,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Search as SearchIcon,
-  Notifications as NotificationsIcon,
   AccountCircle as AccountIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
   Help as HelpIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
@@ -38,27 +40,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     sidebarOpen,
     toggleSidebar,
     currentUser,
-    getUnreadNotificationsCount,
-    getActiveStockAlerts,
   } = useAppStore();
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [notificationAnchorEl, setNotificationAnchorEl] = React.useState<null | HTMLElement>(null);
-
-  const unreadNotifications = getUnreadNotificationsCount();
-  const stockAlerts = getActiveStockAlerts();
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleNotificationMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchorEl(event.currentTarget);
-  };
-
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setNotificationAnchorEl(null);
   };
 
   const handleLogout = () => {
@@ -98,6 +89,33 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const path = location.pathname;
     const breadcrumbs = [];
 
+    // Ajouter le lien vers le dashboard
+    breadcrumbs.push(
+      <Link
+        key="home"
+        color="inherit"
+        href="/app/dashboard"
+        onClick={(e) => {
+          e.preventDefault();
+          navigate('/app/dashboard');
+        }}
+        sx={{ 
+          textDecoration: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          color: 'text.secondary',
+          '&:hover': {
+            color: 'text.primary',
+          },
+          transition: 'color 0.2s ease-in-out',
+        }}
+      >
+        <HomeIcon sx={{ fontSize: '1rem' }} />
+        Dashboard
+      </Link>
+    );
+
     if (path.startsWith('/app/catalog/')) {
       breadcrumbs.push(
         <Link
@@ -108,7 +126,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             e.preventDefault();
             navigate('/app/catalog');
           }}
-          sx={{ textDecoration: 'none' }}
+          sx={{ 
+            textDecoration: 'none',
+            color: 'text.secondary',
+            '&:hover': {
+              color: 'text.primary',
+            },
+            transition: 'color 0.2s ease-in-out',
+          }}
         >
           Catalogue
         </Link>
@@ -125,7 +150,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       
       if (subTitles[subPath]) {
         breadcrumbs.push(
-          <Typography key="sub" color="text.primary">
+          <Typography key="sub" sx={{ color: 'text.primary', fontWeight: 500 }}>
             {subTitles[subPath]}
           </Typography>
         );
@@ -140,7 +165,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             e.preventDefault();
             navigate('/app/transaction');
           }}
-          sx={{ textDecoration: 'none' }}
+          sx={{ 
+            textDecoration: 'none',
+            color: 'text.secondary',
+            '&:hover': {
+              color: 'text.primary',
+            },
+            transition: 'color 0.2s ease-in-out',
+          }}
         >
           Transaction
         </Link>
@@ -155,14 +187,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       
       if (subTitles[subPath]) {
         breadcrumbs.push(
-          <Typography key="sub" color="text.primary">
+          <Typography key="sub" sx={{ color: 'text.primary', fontWeight: 500 }}>
             {subTitles[subPath]}
           </Typography>
         );
       }
-    } else {
+    } else if (path !== '/app/dashboard') {
       breadcrumbs.push(
-        <Typography key="current" color="text.primary">
+        <Typography key="current" sx={{ color: 'text.primary', fontWeight: 500 }}>
           {getPageTitle()}
         </Typography>
       );
@@ -173,78 +205,103 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Barre de navigation supérieure */}
+      {/* Barre de navigation supérieure avec design moderne */}
       <AppBar
         position="static"
         elevation={0}
         sx={{
-          backgroundColor: 'background.paper',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
+          background: 'white',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
           color: 'text.primary',
+          position: 'relative',
         }}
       >
-        <Toolbar sx={{ minHeight: 64 }}>
-          {/* Bouton menu */}
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            onClick={toggleSidebar}
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-
-          {/* Titre et breadcrumbs */}
+        <Toolbar sx={{ minHeight: 70, position: 'relative', zIndex: 1 }}>
+          {/* Titre et breadcrumbs avec design amélioré */}
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                fontWeight: 700,
+                color: 'text.primary',
+                fontSize: '1.25rem',
+                letterSpacing: '0.5px',
+              }}
+            >
               {getPageTitle()}
             </Typography>
-            <Breadcrumbs aria-label="breadcrumb" sx={{ mt: 0.5 }}>
+            <Breadcrumbs 
+              aria-label="breadcrumb" 
+              sx={{ 
+                mt: 0.5,
+                '& .MuiBreadcrumbs-separator': {
+                  color: 'text.secondary',
+                },
+              }}
+            >
               {getBreadcrumbs()}
             </Breadcrumbs>
           </Box>
 
-          {/* Actions de droite */}
+          {/* Actions de droite avec design amélioré */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {/* Statut de connexion */}
             <ConnectionStatus />
             
-            {/* Recherche */}
-            <IconButton color="inherit" size="large">
-              <SearchIcon />
-            </IconButton>
-
-            {/* Notifications */}
-            <IconButton
-              color="inherit"
-              size="large"
-              onClick={handleNotificationMenuOpen}
-            >
-              <Badge badgeContent={unreadNotifications} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
-
-            {/* Profil utilisateur */}
-            <IconButton
-              color="inherit"
-              size="large"
-              onClick={handleProfileMenuOpen}
-            >
-              <Avatar
-                src={currentUser?.avatar}
-                sx={{ width: 32, height: 32 }}
+            {/* Recherche avec design amélioré */}
+            <Tooltip title="Rechercher" arrow>
+              <IconButton 
+                color="inherit" 
+                size="large"
+                sx={{
+                  backgroundColor: 'rgba(0,0,0,0.04)',
+                  color: 'text.primary',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0,0,0,0.08)',
+                    transform: 'scale(1.05)',
+                  },
+                  transition: 'all 0.2s ease-in-out',
+                }}
               >
-                {currentUser?.firstName?.charAt(0)}
-              </Avatar>
-            </IconButton>
+                <SearchIcon />
+              </IconButton>
+            </Tooltip>
+
+            {/* Profil utilisateur avec redirection vers réglages */}
+            <Tooltip title="Réglages" arrow>
+              <IconButton
+                color="inherit"
+                size="large"
+                onClick={() => navigate('/app/settings')}
+                sx={{
+                  backgroundColor: 'rgba(0,0,0,0.04)',
+                  color: 'text.primary',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0,0,0,0.08)',
+                    transform: 'scale(1.05)',
+                  },
+                  transition: 'all 0.2s ease-in-out',
+                }}
+              >
+                <Avatar
+                  src={currentUser?.avatar}
+                  sx={{ 
+                    width: 32, 
+                    height: 32,
+                    border: '2px solid rgba(0,0,0,0.1)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  }}
+                >
+                  {currentUser?.firstName?.charAt(0)}
+                </Avatar>
+              </IconButton>
+            </Tooltip>
           </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Contenu principal */}
+      {/* Contenu principal avec padding ajusté */}
       <Box
         component="main"
         sx={{
@@ -252,12 +309,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           overflow: 'auto',
           backgroundColor: 'background.default',
           p: 3,
+          background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
+          minHeight: 'calc(100vh - 70px)',
         }}
       >
         {children}
       </Box>
 
-      {/* Menu profil */}
+      {/* Menu profil avec design amélioré */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -265,79 +324,75 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         PaperProps={{
           sx: {
             mt: 1,
-            minWidth: 200,
+            minWidth: 250,
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(10px)',
+            background: 'rgba(255,255,255,0.95)',
           },
         }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
             {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             {currentUser?.email}
           </Typography>
           <Chip
             label={currentUser?.role}
             size="small"
             color="primary"
-            sx={{ mt: 1 }}
+            sx={{ 
+              backgroundColor: 'primary.main',
+              color: 'white',
+              fontWeight: 600,
+            }}
           />
         </Box>
-        <MenuItem onClick={() => { handleMenuClose(); navigate('/app/settings'); }}>
-          <SettingsIcon sx={{ mr: 2 }} />
+        <MenuItem 
+          onClick={() => { handleMenuClose(); navigate('/app/settings'); }}
+          sx={{
+            '&:hover': {
+              backgroundColor: 'primary.light',
+              color: 'primary.contrastText',
+            },
+            transition: 'all 0.2s ease-in-out',
+          }}
+        >
+          <SettingsIcon sx={{ mr: 2, color: 'primary.main' }} />
           Réglages
         </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <HelpIcon sx={{ mr: 2 }} />
+        <MenuItem 
+          onClick={handleMenuClose}
+          sx={{
+            '&:hover': {
+              backgroundColor: 'info.light',
+              color: 'info.contrastText',
+            },
+            transition: 'all 0.2s ease-in-out',
+          }}
+        >
+          <HelpIcon sx={{ mr: 2, color: 'info.main' }} />
           Aide
         </MenuItem>
         <Divider />
-        <MenuItem onClick={handleLogout}>
-          <LogoutIcon sx={{ mr: 2 }} />
+        <MenuItem 
+          onClick={handleLogout}
+          sx={{
+            '&:hover': {
+              backgroundColor: 'error.light',
+              color: 'error.contrastText',
+            },
+            transition: 'all 0.2s ease-in-out',
+          }}
+        >
+          <LogoutIcon sx={{ mr: 2, color: 'error.main' }} />
           Déconnexion
         </MenuItem>
-      </Menu>
-
-      {/* Menu notifications */}
-      <Menu
-        anchorEl={notificationAnchorEl}
-        open={Boolean(notificationAnchorEl)}
-        onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: 300,
-            maxHeight: 400,
-          },
-        }}
-      >
-        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            Notifications
-          </Typography>
-        </Box>
-        {unreadNotifications === 0 ? (
-          <MenuItem disabled>
-            <Typography variant="body2" color="text.secondary">
-              Aucune nouvelle notification
-            </Typography>
-          </MenuItem>
-        ) : (
-          <>
-            {stockAlerts.map((alert) => (
-              <MenuItem key={alert.id} onClick={handleMenuClose}>
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    Alerte stock
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {alert.message}
-                  </Typography>
-                </Box>
-              </MenuItem>
-            ))}
-          </>
-        )}
       </Menu>
     </Box>
   );

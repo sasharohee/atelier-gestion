@@ -54,6 +54,72 @@ export const handleSupabaseSuccess = <T>(data: T) => {
   };
 };
 
+// Fonction pour nettoyer l'état d'authentification
+export const clearAuthState = () => {
+  try {
+    // Nettoyer le localStorage
+    localStorage.removeItem('atelier-auth-token');
+    localStorage.removeItem('supabase.auth.token');
+    localStorage.removeItem('pendingSignupEmail');
+    localStorage.removeItem('confirmationToken');
+    localStorage.removeItem('pendingUserData');
+    
+    // Nettoyer sessionStorage
+    sessionStorage.removeItem('atelier-auth-token');
+    sessionStorage.removeItem('supabase.auth.token');
+    
+    console.log('🧹 État d\'authentification nettoyé');
+  } catch (error) {
+    console.error('❌ Erreur lors du nettoyage:', error);
+  }
+};
+
+// Fonction pour réinitialiser l'authentification
+export const resetAuth = async () => {
+  try {
+    console.log('🔄 Réinitialisation de l\'authentification...');
+    
+    // Déconnexion forcée
+    await supabase.auth.signOut();
+    
+    // Nettoyer l'état
+    clearAuthState();
+    
+    // Recharger la page pour forcer une réinitialisation complète
+    window.location.reload();
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur lors de la réinitialisation:', error);
+    return false;
+  }
+};
+
+// Fonction pour vérifier et corriger l'état d'authentification
+export const checkAndFixAuthState = async () => {
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      console.log('⚠️ Erreur d\'authentification détectée:', error.message);
+      
+      // Si c'est une erreur de token invalide, nettoyer et réinitialiser
+      if (error.message.includes('Invalid Refresh Token') || 
+          error.message.includes('Refresh Token Not Found')) {
+        console.log('🔄 Token invalide détecté, nettoyage en cours...');
+        clearAuthState();
+        return false;
+      }
+    }
+    
+    return !!user;
+  } catch (error) {
+    console.error('❌ Erreur lors de la vérification de l\'authentification:', error);
+    clearAuthState();
+    return false;
+  }
+};
+
 // Fonction pour vérifier la connexion
 export const testConnection = async () => {
   try {

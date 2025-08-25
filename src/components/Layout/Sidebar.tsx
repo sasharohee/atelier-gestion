@@ -14,6 +14,8 @@ import {
   IconButton,
   Tooltip,
   Collapse,
+  Fade,
+  Chip,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -25,7 +27,6 @@ import {
   BarChart as StatisticsIcon,
   AdminPanelSettings as AdminIcon,
   Settings as SettingsIcon,
-  Notifications as NotificationsIcon,
   AccountCircle as AccountIcon,
   ChevronLeft as ChevronLeftIcon,
   Business as BusinessIcon,
@@ -40,6 +41,7 @@ import {
   Memory as MemoryIcon,
   Inventory2 as Inventory2Icon,
   Warning as WarningIcon,
+  Handyman as HandymanIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
@@ -54,53 +56,61 @@ const menuItems = [
     text: 'Dashboard',
     icon: <DashboardIcon />,
     path: '/app/dashboard',
+    color: '#6366f1',
   },
   {
     text: 'Kanban',
     icon: <KanbanIcon />,
     path: '/app/kanban',
+    color: '#06b6d4',
   },
   {
     text: 'Calendrier',
     icon: <CalendarIcon />,
     path: '/app/calendar',
+    color: '#10b981',
   },
   {
     text: 'Messagerie',
     icon: <MessageIcon />,
     path: '/app/messaging',
+    color: '#3b82f6',
   },
   {
     text: 'Catalogue',
     icon: <CatalogIcon />,
     path: '/app/catalog',
+    color: '#8b5cf6',
     subItems: [
-      { text: 'Modèles', path: '/app/catalog/models' },
-      { text: 'Services', path: '/app/catalog/services' },
-      { text: 'Pièces détachées', path: '/app/catalog/parts' },
-      { text: 'Produits', path: '/app/catalog/products' },
-      { text: 'Ruptures', path: '/app/catalog/out-of-stock' },
+      { text: 'Modèles', path: '/app/catalog/models', icon: <DeviceHubIcon /> },
+      { text: 'Services', path: '/app/catalog/services', icon: <BuildIcon /> },
+      { text: 'Pièces détachées', path: '/app/catalog/parts', icon: <MemoryIcon /> },
+      { text: 'Produits', path: '/app/catalog/products', icon: <Inventory2Icon /> },
+      { text: 'Ruptures', path: '/app/catalog/out-of-stock', icon: <WarningIcon /> },
     ],
   },
   {
     text: 'Transaction',
     icon: <ReceiptIcon />,
     path: '/app/transaction',
+    color: '#f59e0b',
     subItems: [
-      { text: 'Clients', path: '/app/transaction/clients' },
-      { text: 'Appareils', path: '/app/transaction/devices' },
-      { text: 'Ventes', path: '/app/transaction/sales' },
+      { text: 'Clients', path: '/app/transaction/clients', icon: <PeopleIcon /> },
+      { text: 'Appareils', path: '/app/transaction/devices', icon: <PhoneIcon /> },
+      { text: 'Ventes', path: '/app/transaction/sales', icon: <SalesIcon /> },
     ],
   },
   {
     text: 'Statistiques',
     icon: <StatisticsIcon />,
     path: '/app/statistics',
+    color: '#ef4444',
   },
   {
     text: 'Administration',
     icon: <AdminIcon />,
     path: '/app/administration',
+    color: '#6b7280',
   },
 ];
 
@@ -109,6 +119,7 @@ const bottomMenuItems = [
     text: 'Réglages',
     icon: <SettingsIcon />,
     path: '/app/settings',
+    color: '#ec4899',
   },
 ];
 
@@ -120,7 +131,6 @@ const Sidebar: React.FC = () => {
     toggleSidebar,
     currentUser,
     getUnreadMessagesCount,
-    getUnreadNotificationsCount,
   } = useAppStore();
 
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>({});
@@ -128,7 +138,6 @@ const Sidebar: React.FC = () => {
   const { workshopSettings } = useWorkshopSettings();
 
   const unreadMessages = getUnreadMessagesCount();
-  const unreadNotifications = getUnreadNotificationsCount();
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -163,44 +172,122 @@ const Sidebar: React.FC = () => {
         '& .MuiDrawer-paper': {
           width: sidebarOpen ? drawerWidth : 70,
           boxSizing: 'border-box',
-          transition: 'width 0.2s ease-in-out',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           overflowX: 'hidden',
+          background: 'linear-gradient(180deg, #1f2937 0%, #374151 50%, #4b5563 100%)',
+          borderRight: 'none',
+          boxShadow: '4px 0 20px rgba(0, 0, 0, 0.15)',
+          '&:hover': {
+            boxShadow: '6px 0 25px rgba(0, 0, 0, 0.2)',
+          },
         },
       }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* Header */}
+        {/* Header avec gradient moderne */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: sidebarOpen ? 'space-between' : 'center',
             p: 2,
-            minHeight: 64,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
+            minHeight: 70,
+            background: 'linear-gradient(135deg, #374151 0%, #4b5563 100%)',
+            position: 'relative',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+              pointerEvents: 'none',
+            },
           }}
         >
           {sidebarOpen && (
-            <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-              Atelier Gestion
-            </Typography>
+            <Fade in={sidebarOpen} timeout={300}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 40,
+                    height: 40,
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                    border: '2px solid rgba(255,255,255,0.2)',
+                  }}
+                >
+                  <HandymanIcon 
+                    sx={{ 
+                      fontSize: '1.4rem',
+                      color: 'white',
+                    }} 
+                  />
+                </Box>
+                <Box>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700, 
+                      color: 'white',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                      fontSize: '1.1rem',
+                      letterSpacing: '0.5px',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    Atelier De Gestion
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: 'rgba(255,255,255,0.8)',
+                      fontSize: '0.7rem',
+                      fontWeight: 500,
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Gestion intelligente
+                  </Typography>
+                </Box>
+              </Box>
+            </Fade>
           )}
-          <IconButton onClick={toggleSidebar} size="small">
+          <IconButton 
+            onClick={toggleSidebar} 
+            size="small"
+            sx={{
+              color: 'white',
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                transform: 'scale(1.05)',
+              },
+              transition: 'all 0.2s ease-in-out',
+            }}
+          >
             <ChevronLeftIcon
               sx={{
                 transform: sidebarOpen ? 'rotate(0deg)' : 'rotate(180deg)',
-                transition: 'transform 0.2s ease-in-out',
+                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             />
           </IconButton>
         </Box>
 
-        {/* Navigation principale */}
-        <List sx={{ flexGrow: 1, py: 1 }}>
+        {/* Navigation principale avec design amélioré */}
+        <List sx={{ flexGrow: 1, py: 1, px: 1 }}>
           {menuItems.map((item) => (
             <React.Fragment key={item.text}>
-              <ListItem disablePadding>
+              <ListItem disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton
                   onClick={() => {
                     if (item.subItems) {
@@ -211,26 +298,61 @@ const Sidebar: React.FC = () => {
                   }}
                   selected={isActive(item.path)}
                   sx={{
-                    minHeight: 48,
-                    px: sidebarOpen ? 3 : 2.5,
+                    minHeight: 52,
+                    px: sidebarOpen ? 2.5 : 2,
+                    borderRadius: 2,
+                    mx: 0.5,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: isActive(item.path) ? 4 : 0,
+                      backgroundColor: item.color,
+                      transition: 'width 0.3s ease-in-out',
+                    },
                     '&.Mui-selected': {
-                      backgroundColor: 'primary.light',
-                      color: 'primary.contrastText',
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      color: 'white',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.15)',
                       '&:hover': {
-                        backgroundColor: 'primary.main',
+                        backgroundColor: 'rgba(255,255,255,0.15)',
+                      },
+                      '& .MuiListItemIcon-root': {
+                        color: item.color,
                       },
                     },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      transform: 'translateX(4px)',
+                    },
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   }}
                 >
                   <ListItemIcon
                     sx={{
                       minWidth: 0,
                       mr: sidebarOpen ? 2 : 0,
-                      color: 'inherit',
+                      color: isActive(item.path) ? item.color : 'rgba(255,255,255,0.8)',
+                      transition: 'all 0.2s ease-in-out',
                     }}
                   >
                     {item.text === 'Messagerie' ? (
-                      <Badge badgeContent={unreadMessages} color="error">
+                      <Badge 
+                        badgeContent={unreadMessages} 
+                        color="error"
+                        sx={{
+                          '& .MuiBadge-badge': {
+                            backgroundColor: '#ff4757',
+                            color: 'white',
+                            fontWeight: 600,
+                          }
+                        }}
+                      >
                         {item.icon}
                       </Badge>
                     ) : (
@@ -243,54 +365,75 @@ const Sidebar: React.FC = () => {
                         primary={item.text}
                         primaryTypographyProps={{
                           fontSize: '0.875rem',
-                          fontWeight: isActive(item.path) ? 600 : 400,
+                          fontWeight: isActive(item.path) ? 600 : 500,
+                          color: isActive(item.path) ? 'white' : 'rgba(255,255,255,0.9)',
                         }}
                       />
                       {item.subItems && (
-                        openSubMenus[item.text] ? <ExpandLessIcon /> : <ExpandMoreIcon />
+                        <Box sx={{ 
+                          color: isActive(item.path) ? item.color : 'rgba(255,255,255,0.7)',
+                          transition: 'color 0.2s ease-in-out',
+                        }}>
+                          {openSubMenus[item.text] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                        </Box>
                       )}
                     </>
                   )}
                 </ListItemButton>
               </ListItem>
               
-              {/* Sous-menus */}
+              {/* Sous-menus avec design amélioré */}
               {item.subItems && (
                 <Collapse in={openSubMenus[item.text]} timeout="auto" unmountOnExit>
-                  <List component="div" disablePadding>
+                  <List component="div" disablePadding sx={{ pl: sidebarOpen ? 2 : 0 }}>
                     {item.subItems.map((subItem) => (
-                      <ListItem key={subItem.text} disablePadding>
+                      <ListItem key={subItem.text} disablePadding sx={{ mb: 0.5 }}>
                         <ListItemButton
                           onClick={() => handleNavigation(subItem.path)}
                           selected={isActive(subItem.path)}
                           sx={{
-                            minHeight: 40,
-                            pl: sidebarOpen ? 6 : 2.5,
-                            pr: sidebarOpen ? 3 : 2.5,
+                            minHeight: 44,
+                            pl: sidebarOpen ? 4 : 2,
+                            pr: sidebarOpen ? 2.5 : 2,
+                            borderRadius: 2,
+                            mx: 0.5,
+                            position: 'relative',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              left: 0,
+                              top: 0,
+                              bottom: 0,
+                              width: isActive(subItem.path) ? 3 : 0,
+                              backgroundColor: item.color,
+                              transition: 'width 0.3s ease-in-out',
+                            },
                             '&.Mui-selected': {
-                              backgroundColor: 'primary.light',
-                              color: 'primary.contrastText',
+                              backgroundColor: 'rgba(255,255,255,0.1)',
+                              color: 'white',
                               '&:hover': {
-                                backgroundColor: 'primary.main',
+                                backgroundColor: 'rgba(255,255,255,0.15)',
+                              },
+                              '& .MuiListItemIcon-root': {
+                                color: item.color,
                               },
                             },
+                            '&:hover': {
+                              backgroundColor: 'rgba(255,255,255,0.05)',
+                              transform: 'translateX(2px)',
+                            },
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                           }}
                         >
                           <ListItemIcon
                             sx={{
                               minWidth: 0,
-                              mr: sidebarOpen ? 2 : 0,
-                              color: 'inherit',
+                              mr: sidebarOpen ? 1.5 : 0,
+                              color: isActive(subItem.path) ? item.color : 'rgba(255,255,255,0.7)',
+                              fontSize: '1.1rem',
                             }}
                           >
-                            {subItem.text === 'Clients' && <PeopleIcon />}
-                            {subItem.text === 'Appareils' && <PhoneIcon />}
-                            {subItem.text === 'Ventes' && <SalesIcon />}
-                            {subItem.text === 'Modèles' && <DeviceHubIcon />}
-                            {subItem.text === 'Services' && <BuildIcon />}
-                            {subItem.text === 'Pièces détachées' && <MemoryIcon />}
-                            {subItem.text === 'Produits' && <Inventory2Icon />}
-                            {subItem.text === 'Ruptures' && <WarningIcon />}
+                            {subItem.icon}
                           </ListItemIcon>
                           {sidebarOpen && (
                             <ListItemText
@@ -298,6 +441,7 @@ const Sidebar: React.FC = () => {
                               primaryTypographyProps={{
                                 fontSize: '0.8rem',
                                 fontWeight: isActive(subItem.path) ? 600 : 400,
+                                color: isActive(subItem.path) ? 'white' : 'rgba(255,255,255,0.8)',
                               }}
                             />
                           )}
@@ -311,32 +455,56 @@ const Sidebar: React.FC = () => {
           ))}
         </List>
 
-        <Divider />
+        <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2 }} />
 
-        {/* Menu du bas */}
-        <List sx={{ py: 1 }}>
+        {/* Menu du bas avec design amélioré */}
+        <List sx={{ py: 1, px: 1 }}>
           {bottomMenuItems.map((item) => (
-            <ListItem key={item.text} disablePadding>
+            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton
                 onClick={() => handleNavigation(item.path)}
                 selected={isActive(item.path)}
                 sx={{
-                  minHeight: 48,
-                  px: sidebarOpen ? 3 : 2.5,
+                  minHeight: 52,
+                  px: sidebarOpen ? 2.5 : 2,
+                  borderRadius: 2,
+                  mx: 0.5,
+                  position: 'relative',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: isActive(item.path) ? 4 : 0,
+                    backgroundColor: item.color,
+                    transition: 'width 0.3s ease-in-out',
+                  },
                   '&.Mui-selected': {
-                    backgroundColor: 'primary.light',
-                    color: 'primary.contrastText',
+                    backgroundColor: 'rgba(255,255,255,0.15)',
+                    color: 'white',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)',
                     '&:hover': {
-                      backgroundColor: 'primary.main',
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                    },
+                    '& .MuiListItemIcon-root': {
+                      color: item.color,
                     },
                   },
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.08)',
+                    transform: 'translateX(4px)',
+                  },
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
                     mr: sidebarOpen ? 2 : 0,
-                    color: 'inherit',
+                    color: isActive(item.path) ? item.color : 'rgba(255,255,255,0.8)',
+                    transition: 'all 0.2s ease-in-out',
                   }}
                 >
                   {item.icon}
@@ -346,33 +514,23 @@ const Sidebar: React.FC = () => {
                     primary={item.text}
                     primaryTypographyProps={{
                       fontSize: '0.875rem',
-                      fontWeight: isActive(item.path) ? 600 : 400,
+                      fontWeight: isActive(item.path) ? 600 : 500,
+                      color: isActive(item.path) ? 'white' : 'rgba(255,255,255,0.9)',
                     }}
                   />
                 )}
               </ListItemButton>
             </ListItem>
           ))}
-          
-          {/* Bouton Guide - MASQUÉ */}
-          {/* <ListItem disablePadding>
-            <Box sx={{ px: sidebarOpen ? 3 : 2.5, py: 1, width: '100%' }}>
-              <GuideButton 
-                variant="outlined" 
-                size="small" 
-                color="info"
-              />
-            </Box>
-          </ListItem> */}
         </List>
 
-        {/* Nom de l'atelier */}
+        {/* Section atelier avec design moderne */}
         <Box
           sx={{
             p: 2,
-            borderTop: '1px solid',
-            borderColor: 'divider',
-            backgroundColor: 'grey.50',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(255,255,255,0.03)',
+            backdropFilter: 'blur(10px)',
           }}
         >
           <Box
@@ -382,37 +540,70 @@ const Sidebar: React.FC = () => {
               justifyContent: sidebarOpen ? 'flex-start' : 'center',
             }}
           >
-            <BusinessIcon 
-              sx={{ 
-                fontSize: sidebarOpen ? '1.2rem' : '1.5rem',
-                color: 'primary.main',
-                mr: sidebarOpen ? 1 : 0
-              }} 
-            />
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #374151 0%, #4b5563 100%)',
+                mr: sidebarOpen ? 1.5 : 0,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              <HandymanIcon 
+                sx={{ 
+                  fontSize: '1.1rem',
+                  color: 'white',
+                }} 
+              />
+            </Box>
             {sidebarOpen && (
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 500,
-                  color: 'primary.main',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  fontSize: '0.875rem',
-                }}
-              >
-                {workshopSettings.name}
-              </Typography>
+              <Fade in={sidebarOpen} timeout={300}>
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 600,
+                      color: 'white',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      fontSize: '0.875rem',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    {workshopSettings.name}
+                  </Typography>
+                  <Chip
+                    label="Actif"
+                    size="small"
+                    sx={{
+                      backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                      color: '#4caf50',
+                      fontSize: '0.7rem',
+                      height: 20,
+                      mt: 0.5,
+                      '& .MuiChip-label': {
+                        px: 1,
+                      },
+                    }}
+                  />
+                </Box>
+              </Fade>
             )}
           </Box>
         </Box>
 
-        {/* Profil utilisateur */}
+        {/* Profil utilisateur avec design moderne */}
         <Box
           sx={{
             p: 2,
-            borderTop: '1px solid',
-            borderColor: 'divider',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(0,0,0,0.1)',
+            backdropFilter: 'blur(10px)',
           }}
         >
           <Box
@@ -423,56 +614,85 @@ const Sidebar: React.FC = () => {
             }}
           >
             {sidebarOpen && (
-              <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-                <Avatar
-                  src={currentUser?.avatar}
-                  sx={{ width: 32, height: 32, mr: 1 }}
-                >
-                  {currentUser?.firstName?.charAt(0)}
-                </Avatar>
-                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      fontWeight: 500,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+              <Fade in={sidebarOpen} timeout={300}>
+                <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+                  <Avatar
+                    src={currentUser?.avatar}
+                    sx={{ 
+                      width: 36, 
+                      height: 36, 
+                      mr: 1.5,
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                     }}
                   >
-                    {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: 'text.secondary',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {currentUser?.role}
-                  </Typography>
+                    {currentUser?.firstName?.charAt(0)}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: 'white',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        fontSize: '0.875rem',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                      }}
+                    >
+                      {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'rgba(255,255,255,0.7)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {currentUser?.role}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
+              </Fade>
             )}
             <Box sx={{ display: 'flex', gap: 0.5 }}>
-              <Tooltip title="Notifications">
-                <IconButton size="small">
-                  <Badge badgeContent={unreadNotifications} color="error">
-                    <NotificationsIcon fontSize="small" />
-                  </Badge>
-                </IconButton>
-              </Tooltip>
               {sidebarOpen && (
-                <Tooltip title="Mon compte">
-                  <IconButton size="small">
+                <Tooltip title="Réglages" arrow>
+                  <IconButton 
+                    size="small"
+                    onClick={() => navigate('/app/settings')}
+                    sx={{
+                      color: 'rgba(255,255,255,0.8)',
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.15)',
+                        color: 'white',
+                      },
+                      transition: 'all 0.2s ease-in-out',
+                    }}
+                  >
                     <AccountIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
               )}
-              <Tooltip title="Se déconnecter">
-                <IconButton size="small" onClick={handleLogout}>
+              <Tooltip title="Se déconnecter" arrow>
+                <IconButton 
+                  size="small" 
+                  onClick={handleLogout}
+                  sx={{
+                    color: 'rgba(255,255,255,0.8)',
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                      color: '#ef4444',
+                    },
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                >
                   <LogoutIcon fontSize="small" />
                 </IconButton>
               </Tooltip>

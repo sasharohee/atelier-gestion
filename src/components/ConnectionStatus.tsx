@@ -71,7 +71,19 @@ const ConnectionStatus: React.FC = () => {
           color={getStatusColor()}
           size="small"
           onClick={retry}
-          sx={{ cursor: 'pointer' }}
+          sx={{ 
+            cursor: 'pointer',
+            ...(isConnected && {
+              backgroundColor: 'success.main',
+              color: 'white',
+              '& .MuiChip-label': {
+                color: 'white',
+              },
+              '& .MuiChip-icon': {
+                color: 'white',
+              },
+            })
+          }}
         />
       </Tooltip>
       

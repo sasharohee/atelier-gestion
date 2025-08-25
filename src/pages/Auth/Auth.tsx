@@ -186,7 +186,13 @@ const Auth: React.FC = () => {
       );
 
       if (result.success) {
-        setSuccess('Inscription réussie ! Vérifiez votre email pour confirmer votre compte.');
+        // Vérifier si c'est un cas de demande existante avec nouvel email envoyé
+        const message = 'data' in result && result.data?.message ? result.data.message : '';
+        if (message.includes('nouvel email de confirmation')) {
+          setSuccess('Un nouvel email de confirmation a été envoyé à votre adresse email.');
+        } else {
+          setSuccess('Inscription réussie ! Vérifiez votre email pour confirmer votre compte.');
+        }
         setRegisterForm({
           firstName: '',
           lastName: '',
@@ -197,7 +203,9 @@ const Auth: React.FC = () => {
           confirmPassword: ''
         });
       } else {
-        setError('Erreur lors de l\'inscription');
+        // Afficher le message d'erreur spécifique du service
+        const errorMessage = 'error' in result && result.error ? result.error : 'Erreur lors de l\'inscription';
+        setError(errorMessage);
       }
     } catch (err) {
       setError('Erreur lors de l\'inscription');

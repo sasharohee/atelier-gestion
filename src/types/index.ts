@@ -302,3 +302,32 @@ export interface UserPreferences {
   created_at?: string;
   updated_at?: string;
 }
+
+// Types pour le système d'abonnement
+export interface SubscriptionStatus {
+  id: string;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_active: boolean;
+  subscription_type: 'free' | 'premium' | 'enterprise';
+  created_at: string;
+  updated_at: string;
+  activated_at?: string;
+  activated_by?: string;
+  notes?: string;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  type: 'free' | 'premium' | 'enterprise';
+  price: number;
+  currency: string;
+  billing_cycle: 'monthly' | 'yearly';
+  features: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
