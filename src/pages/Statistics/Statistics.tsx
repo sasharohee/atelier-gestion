@@ -111,11 +111,33 @@ const Statistics: React.FC = () => {
     users,
     getClientById,
     getDeviceById,
+    loadRepairs,
+    loadSales,
+    loadClients,
+    loadDevices,
   } = useAppStore();
 
   const [period, setPeriod] = useState('month');
   const [deviceType, setDeviceType] = useState('all');
   const [activeTab, setActiveTab] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fonction de rechargement des données
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        loadRepairs(),
+        loadSales(),
+        loadClients(),
+        loadDevices(),
+      ]);
+    } catch (error) {
+      console.error('Erreur lors du rechargement des données:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Calcul de la période sélectionnée
   const getPeriodData = useMemo(() => {
@@ -156,7 +178,11 @@ const Statistics: React.FC = () => {
       return saleDate >= startDate && saleDate <= endDate;
     });
 
-    const totalRevenue = periodSales.reduce((sum, sale) => sum + sale.total, 0);
+    const salesRevenue = periodSales.reduce((sum, sale) => sum + sale.total, 0);
+    const repairsRevenue = periodRepairs
+      .filter(repair => repair.isPaid)
+      .reduce((sum, repair) => sum + repair.totalPrice, 0);
+    const totalRevenue = salesRevenue + repairsRevenue;
     const avgRepairTime = periodRepairs.length > 0 
       ? periodRepairs.reduce((sum, repair) => {
           const created = new Date(repair.createdAt);
@@ -366,7 +392,14 @@ const Statistics: React.FC = () => {
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Tooltip title="Actualiser les données">
-              <IconButton>
+              <IconButton 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                sx={{
+                  transform: isRefreshing ? 'rotate(360deg)' : 'none',
+                  transition: 'transform 1s linear',
+                }}
+              >
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
@@ -449,6 +482,9 @@ const Statistics: React.FC = () => {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Chiffre d'affaires
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Ventes + Réparations payées
                   </Typography>
                 </Box>
               </Box>
