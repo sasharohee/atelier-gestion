@@ -44,10 +44,10 @@ import {
   Email as EmailIcon,
   Archive as ArchiveIcon,
   RestoreFromTrash as RestoreIcon,
-  Delete as DeleteIcon,
   CalendarToday as CalendarIcon,
   Person as PersonIcon,
   DeviceHub as DeviceIcon,
+  Payment as PaymentIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -64,7 +64,6 @@ const Archive: React.FC = () => {
     getClientById,
     getDeviceById,
     updateRepair,
-    deleteRepair,
   } = useAppStore();
 
   // Filtrer uniquement les réparations restituées
@@ -83,8 +82,6 @@ const Archive: React.FC = () => {
   // États pour les modales
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [selectedRepairForInvoice, setSelectedRepairForInvoice] = useState<Repair | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [repairToDelete, setRepairToDelete] = useState<Repair | null>(null);
 
   // Filtrer les réparations selon les critères
   const filteredRepairs = useMemo(() => {
@@ -188,22 +185,21 @@ const Archive: React.FC = () => {
     setInvoiceOpen(true);
   };
 
-  const handleDeleteRepair = (repair: Repair) => {
-    setRepairToDelete(repair);
-    setDeleteDialogOpen(true);
-  };
 
-  const confirmDeleteRepair = async () => {
-    if (repairToDelete) {
-      await deleteRepair(repairToDelete.id);
-      setDeleteDialogOpen(false);
-      setRepairToDelete(null);
-    }
-  };
 
   const handleRestoreRepair = async (repair: Repair) => {
     // Remettre la réparation en statut "completed" pour qu'elle réapparaisse dans le Kanban
     await updateRepair(repair.id, { status: 'completed' });
+  };
+
+  const handleTogglePaymentStatus = async (repair: Repair) => {
+    try {
+      await updateRepair(repair.id, { isPaid: !repair.isPaid });
+      alert(`✅ Statut de paiement mis à jour : ${!repair.isPaid ? 'Payée' : 'En attente'}`);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut de paiement:', error);
+      alert('❌ Erreur lors de la mise à jour du statut de paiement');
+    }
   };
 
   return (
@@ -384,6 +380,15 @@ const Archive: React.FC = () => {
                           <ReceiptIcon />
                         </IconButton>
                       </Tooltip>
+                      <Tooltip title={repair.isPaid ? "Marquer comme non payée" : "Marquer comme payée"}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleTogglePaymentStatus(repair)}
+                          color={repair.isPaid ? "warning" : "success"}
+                        >
+                          <PaymentIcon />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Restaurer">
                         <IconButton
                           size="small"
@@ -391,15 +396,6 @@ const Archive: React.FC = () => {
                           color="secondary"
                         >
                           <RestoreIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Supprimer définitivement">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteRepair(repair)}
-                          color="error"
-                        >
-                          <DeleteIcon />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -450,24 +446,11 @@ const Archive: React.FC = () => {
             setSelectedRepairForInvoice(null);
           }}
           repair={selectedRepairForInvoice}
+          client={getClientById(selectedRepairForInvoice.clientId)}
         />
       )}
 
-      {/* Dialog de confirmation de suppression */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogContent>
-          <Typography>
-            Êtes-vous sûr de vouloir supprimer définitivement cette réparation ? 
-            Cette action est irréversible.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Annuler</Button>
-          <Button onClick={confirmDeleteRepair} color="error" variant="contained">
-            Supprimer
-          </Button>
-        </DialogActions>
-      </Dialog>
+
     </Box>
   );
 };

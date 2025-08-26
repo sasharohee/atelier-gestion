@@ -284,7 +284,7 @@ const Kanban: React.FC = () => {
       const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
         brand: newDevice.brand.trim(),
         model: newDevice.model.trim(),
-        serialNumber: newDevice.serialNumber.trim() || null, // Numéro de série optionnel
+        serialNumber: newDevice.serialNumber.trim() || undefined, // Numéro de série optionnel
         type: newDevice.type,
         specifications: {},
       };

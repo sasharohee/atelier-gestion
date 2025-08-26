@@ -43,6 +43,7 @@ import {
   Search as SearchIcon,
   Info as InfoIcon,
   Inventory as InventoryIcon,
+  Payment as PaymentIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -68,7 +69,7 @@ const Sales: React.FC = () => {
     parts,
     getClientById,
     addSale,
-    deleteSale,
+    updateSale,
   } = useAppStore();
 
   const [newSaleDialogOpen, setNewSaleDialogOpen] = useState(false);
@@ -80,8 +81,6 @@ const Sales: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSaleForInvoice, setSelectedSaleForInvoice] = useState<Sale | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
 
   // Calcul des totaux
   const totals = useMemo(() => {
@@ -354,25 +353,19 @@ const Sales: React.FC = () => {
     setSelectedSaleForInvoice(null);
   };
 
-  // Gestion de la suppression
-  const handleDeleteSale = (sale: Sale) => {
-    setSaleToDelete(sale);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDeleteSale = async () => {
-    if (saleToDelete) {
-      try {
-        await deleteSale(saleToDelete.id);
-        setDeleteDialogOpen(false);
-        setSaleToDelete(null);
-        alert('✅ Vente supprimée avec succès !');
-      } catch (error) {
-        console.error('Erreur lors de la suppression de la vente:', error);
-        alert('❌ Erreur lors de la suppression de la vente');
-      }
+  // Changer le statut de paiement
+  const handleTogglePaymentStatus = async (sale: Sale) => {
+    try {
+      const newStatus = sale.status === 'completed' ? 'pending' : 'completed';
+      await updateSale(sale.id, { status: newStatus });
+      alert(`✅ Statut de paiement mis à jour : ${newStatus === 'completed' ? 'Payée' : 'En attente'}`);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut de paiement:', error);
+      alert('❌ Erreur lors de la mise à jour du statut de paiement');
     }
   };
+
+
 
   return (
     <Box>
@@ -596,12 +589,13 @@ const Sales: React.FC = () => {
                             </IconButton>
                             <IconButton 
                               size="small" 
-                              title="Supprimer"
-                              onClick={() => handleDeleteSale(sale)}
-                              sx={{ color: 'error.main' }}
+                              title={sale.status === 'completed' ? "Marquer comme non payée" : "Marquer comme payée"}
+                              onClick={() => handleTogglePaymentStatus(sale)}
+                              color={sale.status === 'completed' ? "warning" : "success"}
                             >
-                              <DeleteIcon fontSize="small" />
+                              <PaymentIcon fontSize="small" />
                             </IconButton>
+
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -1059,79 +1053,7 @@ const Sales: React.FC = () => {
           />
         )}
 
-        {/* Dialog de confirmation de suppression */}
-        <Dialog
-          open={deleteDialogOpen}
-          onClose={() => setDeleteDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <DeleteIcon color="error" />
-              <Typography variant="h6">Confirmer la suppression</Typography>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            {saleToDelete && (
-              <Box>
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  <span style={{ fontWeight: 600, fontSize: '1rem' }}>
-                    Êtes-vous sûr de vouloir supprimer cette vente ?
-                  </span>
-                </Alert>
-                
-                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
-                  <span style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '1rem' }}>
-                    <strong>Détails de la vente :</strong>
-                  </span>
-                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
-                    <strong>N° Vente :</strong> {saleToDelete.id.slice(0, 8)}
-                  </span>
-                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
-                    <strong>Client :</strong> {saleToDelete.clientId ? 
-                      `${getClientById(saleToDelete.clientId)?.firstName} ${getClientById(saleToDelete.clientId)?.lastName}` : 
-                      'Client anonyme'}
-                  </span>
-                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
-                    <strong>Date :</strong> {safeFormatDate(saleToDelete.createdAt, 'dd/MM/yyyy HH:mm')}
-                  </span>
-                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
-                    <strong>Montant :</strong> {saleToDelete.total.toLocaleString('fr-FR')} €
-                  </span>
-                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
-                    <strong>Méthode de paiement :</strong> {getPaymentMethodLabel(saleToDelete.paymentMethod)}
-                  </span>
-                  <span style={{ display: 'block', color: 'text.secondary', fontSize: '0.875rem', marginBottom: '4px' }}>
-                    <strong>Articles :</strong> {saleToDelete.items.length} article(s)
-                  </span>
-                </Box>
-                
-                <Alert severity="error">
-                  <span style={{ fontSize: '0.875rem' }}>
-                    <strong>Attention :</strong> Cette action est irréversible. Toutes les données de cette vente seront définitivement supprimées.
-                  </span>
-                </Alert>
-              </Box>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={() => setDeleteDialogOpen(false)}
-              variant="outlined"
-            >
-              Annuler
-            </Button>
-            <Button 
-              onClick={confirmDeleteSale}
-              variant="contained" 
-              color="error"
-              startIcon={<DeleteIcon />}
-            >
-              Supprimer définitivement
-            </Button>
-          </DialogActions>
-        </Dialog>
+
       </Box>
     );
   };
