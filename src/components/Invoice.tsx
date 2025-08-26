@@ -65,6 +65,8 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
     address: getSettingValue('workshop_address', '123 Rue de la Paix, 75001 Paris'),
     phone: getSettingValue('workshop_phone', '07 59 23 91 70'),
     email: getSettingValue('workshop_email', 'contact.ateliergestion@gmail.com'),
+    siret: getSettingValue('workshop_siret', ''),
+    vatNumber: getSettingValue('workshop_vat_number', ''),
     vatRate: getSettingValue('vat_rate', '20'),
     currency: getSettingValue('currency', 'EUR')
   };
@@ -140,8 +142,9 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                   <h1>${workshopSettings.name}</h1>
                   <div class="subtitle">${workshopSettings.address}</div>
                   <div class="contact-info">
-                    Tél: ${workshopSettings.phone} • Email: ${workshopSettings.email}<br>
-                    SIRET: 123 456 789 00012 • TVA: FR12345678901
+                    Tél: ${workshopSettings.phone} • Email: ${workshopSettings.email}
+                    ${workshopSettings.siret ? `<br>SIRET: ${workshopSettings.siret}` : ''}
+                    ${workshopSettings.vatNumber ? ` • TVA: ${workshopSettings.vatNumber}` : ''}
                   </div>
                 </div>
 
@@ -228,7 +231,9 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                 <div class="footer">
                   <h3>${workshopSettings.name}</h3>
                   <p>Tél: ${workshopSettings.phone} • Email: ${workshopSettings.email}</p>
-                  <p>SIRET: 123 456 789 00012 • TVA: FR12345678901</p>
+                  <p>Tél: ${workshopSettings.phone} • Email: ${workshopSettings.email}</p>
+                  ${workshopSettings.siret ? `<p>SIRET: ${workshopSettings.siret}</p>` : ''}
+                  ${workshopSettings.vatNumber ? `<p>TVA: ${workshopSettings.vatNumber}</p>` : ''}
                   <div class="thank-you">Merci de votre confiance !</div>
                 </div>
               </div>
@@ -290,9 +295,16 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                 <Typography sx={{ mb: 0.5 }}>
                   Tél: {workshopSettings.phone} • Email: {workshopSettings.email}
                 </Typography>
-                <Typography>
-                  SIRET: 123 456 789 00012 • TVA: FR12345678901
-                </Typography>
+                {workshopSettings.siret && (
+                  <Typography>
+                    SIRET: {workshopSettings.siret}
+                  </Typography>
+                )}
+                {workshopSettings.vatNumber && (
+                  <Typography>
+                    TVA: {workshopSettings.vatNumber}
+                  </Typography>
+                )}
               </Box>
             </Box>
             
@@ -717,13 +729,24 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
               }}>
                 Tél: {workshopSettings.phone} • Email: {workshopSettings.email}
               </Typography>
-              <Typography sx={{ 
-                fontSize: '12px', 
-                color: '#666', 
-                mb: 1 
-              }}>
-                SIRET: 123 456 789 00012 • TVA: FR12345678901
-              </Typography>
+              {workshopSettings.siret && (
+                <Typography sx={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  mb: 0.5 
+                }}>
+                  SIRET: {workshopSettings.siret}
+                </Typography>
+              )}
+              {workshopSettings.vatNumber && (
+                <Typography sx={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  mb: 1 
+                }}>
+                  TVA: {workshopSettings.vatNumber}
+                </Typography>
+              )}
               <Typography sx={{ 
                 fontWeight: 600, 
                 color: '#1976d2', 

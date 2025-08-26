@@ -157,51 +157,56 @@ const Calendar: React.FC = () => {
     setOpenDialog(true);
   };
 
-  const handleSubmit = () => {
-    // Convertir les chaînes vides en null pour l'envoi à Supabase
-    const convertEmptyToNull = (value: string) => value.trim() === '' ? undefined : value;
-    
-    if (selectedEvent) {
-      // Mettre à jour le rendez-vous existant
-      updateAppointment(selectedEvent.id, {
-        ...selectedEvent,
-        title: formData.title,
-        description: formData.description,
-        startDate: new Date(formData.startDate),
-        endDate: new Date(formData.endDate),
-        clientId: convertEmptyToNull(formData.clientId),
-        repairId: convertEmptyToNull(formData.repairId),
-        assignedUserId: convertEmptyToNull(formData.assignedUserId),
+  const handleSubmit = async () => {
+    try {
+      // Convertir les chaînes vides en null pour l'envoi à Supabase
+      const convertEmptyToNull = (value: string) => value.trim() === '' ? null : value;
+      
+      if (selectedEvent) {
+        // Mettre à jour le rendez-vous existant
+        await updateAppointment(selectedEvent.id, {
+          ...selectedEvent,
+          title: formData.title,
+          description: formData.description,
+          startDate: new Date(formData.startDate),
+          endDate: new Date(formData.endDate),
+          clientId: convertEmptyToNull(formData.clientId),
+          repairId: convertEmptyToNull(formData.repairId),
+          assignedUserId: convertEmptyToNull(formData.assignedUserId),
+        });
+      } else {
+        // Créer un nouveau rendez-vous
+        const newAppointment: Omit<Appointment, 'id'> = {
+          title: formData.title,
+          description: formData.description,
+          startDate: new Date(formData.startDate),
+          endDate: new Date(formData.endDate),
+          clientId: convertEmptyToNull(formData.clientId),
+          repairId: convertEmptyToNull(formData.repairId),
+          assignedUserId: convertEmptyToNull(formData.assignedUserId),
+          status: 'scheduled',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        await addAppointment(newAppointment);
+      }
+      
+      setOpenDialog(false);
+      setSelectedEvent(null);
+      setFormData({
+        title: '',
+        description: '',
+        startDate: '',
+        endDate: '',
+        clientId: '',
+        repairId: '',
+        assignedUserId: '',
+        type: 'appointment',
       });
-    } else {
-      // Créer un nouveau rendez-vous
-      const newAppointment: Omit<Appointment, 'id'> = {
-        title: formData.title,
-        description: formData.description,
-        startDate: new Date(formData.startDate),
-        endDate: new Date(formData.endDate),
-        clientId: convertEmptyToNull(formData.clientId),
-        repairId: convertEmptyToNull(formData.repairId),
-        assignedUserId: convertEmptyToNull(formData.assignedUserId),
-        status: 'scheduled',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      addAppointment(newAppointment);
+    } catch (error) {
+      console.error('Erreur lors de la création/mise à jour du rendez-vous:', error);
+      alert('❌ Erreur lors de la sauvegarde du rendez-vous. Veuillez réessayer.');
     }
-    
-    setOpenDialog(false);
-    setSelectedEvent(null);
-    setFormData({
-      title: '',
-      description: '',
-      startDate: '',
-      endDate: '',
-      clientId: '',
-      repairId: '',
-      assignedUserId: '',
-      type: 'appointment',
-    });
   };
 
   const handleDelete = () => {

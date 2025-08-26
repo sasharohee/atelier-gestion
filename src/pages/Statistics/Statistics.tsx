@@ -168,9 +168,18 @@ const Statistics: React.FC = () => {
   const generalStats = useMemo(() => {
     const { startDate, endDate } = getPeriodData;
     
+    // Filtrer les réparations par période et type d'appareil
     const periodRepairs = repairs.filter(repair => {
       const repairDate = new Date(repair.createdAt);
-      return repairDate >= startDate && repairDate <= endDate;
+      const isInPeriod = repairDate >= startDate && repairDate <= endDate;
+      
+      // Si un type d'appareil spécifique est sélectionné, filtrer par type
+      if (deviceType !== 'all') {
+        const repairDevice = devices.find(d => d.id === repair.deviceId);
+        return isInPeriod && repairDevice && repairDevice.type === deviceType;
+      }
+      
+      return isInPeriod;
     });
     
     const periodSales = sales.filter(sale => {
@@ -199,17 +208,25 @@ const Statistics: React.FC = () => {
       totalClients: clients.length,
       totalDevices: devices.length,
       successRate: periodRepairs.length > 0 
-        ? Math.round((periodRepairs.filter(r => r.status === 'completed').length / periodRepairs.length) * 100)
+        ? Math.round((periodRepairs.filter(r => r.status === 'completed' || r.status === 'returned').length / periodRepairs.length) * 100)
         : 0,
     };
-  }, [repairs, sales, clients, devices, getPeriodData]);
+  }, [repairs, sales, clients, devices, getPeriodData, deviceType]);
 
   // Réparations par statut
   const repairsByStatus = useMemo(() => {
     const { startDate, endDate } = getPeriodData;
     const periodRepairs = repairs.filter(repair => {
       const repairDate = new Date(repair.createdAt);
-      return repairDate >= startDate && repairDate <= endDate;
+      const isInPeriod = repairDate >= startDate && repairDate <= endDate;
+      
+      // Si un type d'appareil spécifique est sélectionné, filtrer par type
+      if (deviceType !== 'all') {
+        const repairDevice = devices.find(d => d.id === repair.deviceId);
+        return isInPeriod && repairDevice && repairDevice.type === deviceType;
+      }
+      
+      return isInPeriod;
     });
 
     return repairStatuses.map(status => ({
@@ -220,14 +237,22 @@ const Statistics: React.FC = () => {
         ? Math.round((periodRepairs.filter(repair => repair.status === status.id).length / periodRepairs.length) * 100)
         : 0,
     })).filter(item => item.count > 0);
-  }, [repairs, repairStatuses, getPeriodData]);
+  }, [repairs, repairStatuses, getPeriodData, deviceType, devices]);
 
   // Réparations par type d'appareil
   const repairsByDeviceType = useMemo(() => {
     const { startDate, endDate } = getPeriodData;
     const periodRepairs = repairs.filter(repair => {
       const repairDate = new Date(repair.createdAt);
-      return repairDate >= startDate && repairDate <= endDate;
+      const isInPeriod = repairDate >= startDate && repairDate <= endDate;
+      
+      // Si un type d'appareil spécifique est sélectionné, filtrer par type
+      if (deviceType !== 'all') {
+        const repairDevice = devices.find(d => d.id === repair.deviceId);
+        return isInPeriod && repairDevice && repairDevice.type === deviceType;
+      }
+      
+      return isInPeriod;
     });
 
     const deviceTypeMap = new Map<string, number>();
@@ -246,7 +271,7 @@ const Statistics: React.FC = () => {
       color: COLORS[index % COLORS.length],
       percentage: periodRepairs.length > 0 ? Math.round((count / periodRepairs.length) * 100) : 0,
     }));
-  }, [repairs, devices, getPeriodData]);
+  }, [repairs, devices, getPeriodData, deviceType]);
 
   // Évolution du chiffre d'affaires
   const revenueEvolution = useMemo(() => {
@@ -259,22 +284,40 @@ const Statistics: React.FC = () => {
         return saleDate.toDateString() === day.toDateString();
       });
       
+      const dayRepairs = repairs.filter(repair => {
+        const repairDate = new Date(repair.createdAt);
+        const isSameDay = repairDate.toDateString() === day.toDateString();
+        
+        // Si un type d'appareil spécifique est sélectionné, filtrer par type
+        if (deviceType !== 'all') {
+          const repairDevice = devices.find(d => d.id === repair.deviceId);
+          return isSameDay && repairDevice && repairDevice.type === deviceType;
+        }
+        
+        return isSameDay;
+      });
+      
       return {
         date: format(day, 'dd/MM', { locale: fr }),
         revenue: daySales.reduce((sum, sale) => sum + sale.total, 0),
-        repairs: repairs.filter(repair => {
-          const repairDate = new Date(repair.createdAt);
-          return repairDate.toDateString() === day.toDateString();
-        }).length,
+        repairs: dayRepairs.length,
       };
     });
-  }, [sales, repairs, getPeriodData]);
+  }, [sales, repairs, getPeriodData, deviceType, devices]);
 
   // Top clients
   const topClients = useMemo(() => {
     const clientRepairs = new Map<string, { client: any; repairs: number; revenue: number }>();
     
     repairs.forEach(repair => {
+      // Si un type d'appareil spécifique est sélectionné, filtrer par type
+      if (deviceType !== 'all') {
+        const repairDevice = devices.find(d => d.id === repair.deviceId);
+        if (!repairDevice || repairDevice.type !== deviceType) {
+          return;
+        }
+      }
+      
       const client = getClientById(repair.clientId);
       if (client) {
         const existing = clientRepairs.get(client.id);
@@ -290,7 +333,7 @@ const Statistics: React.FC = () => {
     return Array.from(clientRepairs.values())
       .sort((a, b) => b.repairs - a.repairs)
       .slice(0, 10);
-  }, [repairs, getClientById]);
+  }, [repairs, getClientById, deviceType, devices]);
 
   // Top appareils
   const topDevices = useMemo(() => {
@@ -299,6 +342,11 @@ const Statistics: React.FC = () => {
     repairs.forEach(repair => {
       const device = getDeviceById(repair.deviceId);
       if (device) {
+        // Si un type d'appareil spécifique est sélectionné, filtrer par type
+        if (deviceType !== 'all' && device.type !== deviceType) {
+          return;
+        }
+        
         const existing = deviceRepairs.get(device.id);
         if (existing) {
           existing.repairs += 1;
@@ -312,7 +360,7 @@ const Statistics: React.FC = () => {
     return Array.from(deviceRepairs.values())
       .sort((a, b) => b.repairs - a.repairs)
       .slice(0, 10);
-  }, [repairs, getDeviceById]);
+  }, [repairs, getDeviceById, deviceType]);
 
   // Performance des techniciens
   const technicianPerformance = useMemo(() => {
@@ -325,6 +373,14 @@ const Statistics: React.FC = () => {
     }>();
     
     repairs.forEach(repair => {
+      // Si un type d'appareil spécifique est sélectionné, filtrer par type
+      if (deviceType !== 'all') {
+        const repairDevice = devices.find(d => d.id === repair.deviceId);
+        if (!repairDevice || repairDevice.type !== deviceType) {
+          return;
+        }
+      }
+      
       if (repair.assignedTechnicianId) {
         const technician = users.find(u => u.id === repair.assignedTechnicianId);
         if (technician) {
@@ -337,12 +393,12 @@ const Statistics: React.FC = () => {
             existing.repairs += 1;
             existing.revenue += repair.totalPrice;
             existing.avgTime = (existing.avgTime + duration) / 2;
-            if (repair.status === 'completed') existing.completed += 1;
+            if (repair.status === 'completed' || repair.status === 'returned') existing.completed += 1;
           } else {
             techStats.set(technician.id, {
               technician,
               repairs: 1,
-              completed: repair.status === 'completed' ? 1 : 0,
+              completed: (repair.status === 'completed' || repair.status === 'returned') ? 1 : 0,
               revenue: repair.totalPrice,
               avgTime: duration,
             });
@@ -353,20 +409,28 @@ const Statistics: React.FC = () => {
     
     return Array.from(techStats.values())
       .sort((a, b) => b.repairs - a.repairs);
-  }, [repairs, users]);
+  }, [repairs, users, deviceType, devices]);
 
   // Métriques de performance
   const performanceMetrics = useMemo(() => {
     const { startDate, endDate } = getPeriodData;
     const periodRepairs = repairs.filter(repair => {
       const repairDate = new Date(repair.createdAt);
-      return repairDate >= startDate && repairDate <= endDate;
+      const isInPeriod = repairDate >= startDate && repairDate <= endDate;
+      
+      // Si un type d'appareil spécifique est sélectionné, filtrer par type
+      if (deviceType !== 'all') {
+        const repairDevice = devices.find(d => d.id === repair.deviceId);
+        return isInPeriod && repairDevice && repairDevice.type === deviceType;
+      }
+      
+      return isInPeriod;
     });
 
     const urgentRepairs = periodRepairs.filter(r => r.isUrgent).length;
     const overdueRepairs = periodRepairs.filter(r => {
       const dueDate = new Date(r.dueDate);
-      return dueDate < new Date() && r.status !== 'completed';
+      return dueDate < new Date() && r.status !== 'completed' && r.status !== 'returned';
     }).length;
 
     return {
@@ -375,7 +439,7 @@ const Statistics: React.FC = () => {
       urgentPercentage: periodRepairs.length > 0 ? Math.round((urgentRepairs / periodRepairs.length) * 100) : 0,
       overduePercentage: periodRepairs.length > 0 ? Math.round((overdueRepairs / periodRepairs.length) * 100) : 0,
     };
-  }, [repairs, getPeriodData]);
+  }, [repairs, getPeriodData, deviceType, devices]);
 
   return (
     <Box>

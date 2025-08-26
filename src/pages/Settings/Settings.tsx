@@ -20,6 +20,8 @@ interface SettingsData {
     address: string;
     phone: string;
     email: string;
+    siret: string;
+    vatNumber: string;
     vatRate: string;
     currency: string;
   };
@@ -54,6 +56,8 @@ const Settings: React.FC = () => {
       address: '123 Rue de la Paix, 75001 Paris',
       phone: '07 59 23 91 70',
       email: 'contact.ateliergestion@gmail.com',
+      siret: '',
+      vatNumber: '',
       vatRate: '20',
       currency: 'EUR'
     }
@@ -105,6 +109,12 @@ const Settings: React.FC = () => {
             break;
           case 'workshop_email':
             newSettings.workshop.email = setting.value;
+            break;
+          case 'workshop_siret':
+            newSettings.workshop.siret = setting.value;
+            break;
+          case 'workshop_vat_number':
+            newSettings.workshop.vatNumber = setting.value;
             break;
           case 'vat_rate':
             newSettings.workshop.vatRate = setting.value;
@@ -163,6 +173,8 @@ const Settings: React.FC = () => {
         { key: 'workshop_address', value: settings.workshop.address },
         { key: 'workshop_phone', value: settings.workshop.phone },
         { key: 'workshop_email', value: settings.workshop.email },
+        { key: 'workshop_siret', value: settings.workshop.siret },
+        { key: 'workshop_vat_number', value: settings.workshop.vatNumber },
         { key: 'vat_rate', value: settings.workshop.vatRate },
         { key: 'currency', value: settings.workshop.currency },
         
@@ -892,6 +904,64 @@ const Settings: React.FC = () => {
                     color: '#333',
                     fontSize: '14px'
                   }}>
+                    SIRET
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.workshop.siret}
+                    onChange={(e) => setSettings(prev => ({
+                      ...prev,
+                      workshop: { ...prev.workshop, siret: e.target.value }
+                    }))}
+                    placeholder="123 456 789 00012"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '6px', 
+                    fontWeight: '500',
+                    color: '#333',
+                    fontSize: '14px'
+                  }}>
+                    Numéro de TVA
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.workshop.vatNumber}
+                    onChange={(e) => setSettings(prev => ({
+                      ...prev,
+                      workshop: { ...prev.workshop, vatNumber: e.target.value }
+                    }))}
+                    placeholder="FR12345678901"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '6px', 
+                    fontWeight: '500',
+                    color: '#333',
+                    fontSize: '14px'
+                  }}>
                     Taux de TVA (%)
                   </label>
                   <input
@@ -911,7 +981,9 @@ const Settings: React.FC = () => {
                     }}
                   />
                 </div>
-                
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div>
                   <label style={{ 
                     display: 'block', 

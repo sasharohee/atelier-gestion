@@ -769,15 +769,6 @@ const Administration: React.FC = () => {
           Nouvel utilisateur
         </Button>
         <Button
-          variant="contained"
-          color="secondary"
-          startIcon={<LockIcon />}
-          onClick={() => navigate('/app/administration/user-access')}
-          disabled={loading}
-        >
-          Gestion des Accès
-        </Button>
-        <Button
           variant="outlined"
           startIcon={<RefreshIcon />}
           onClick={loadUsers}

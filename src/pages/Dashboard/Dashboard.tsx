@@ -228,7 +228,7 @@ const Dashboard: React.FC = () => {
   const defaultStats = {
     totalRepairs: safeRepairs.length,
     activeRepairs: safeRepairs.filter(r => r.status === 'in_progress').length,
-    completedRepairs: safeRepairs.filter(r => r.status === 'completed').length,
+    completedRepairs: safeRepairs.filter(r => r.status === 'completed' || r.status === 'returned').length,
     overdueRepairs: 0,
     todayAppointments: todayAppointments.length,
     monthlyRevenue: 0,
@@ -353,7 +353,7 @@ const Dashboard: React.FC = () => {
           <Grid item xs={12} sm={6} md={2}>
             <StatCard
               title="Terminées"
-              value={repairs.filter(r => r.status === 'completed').length}
+              value={repairs.filter(r => r.status === 'completed' || r.status === 'returned').length}
               icon={<CheckCircleIcon />}
               color="#4caf50"
               subtitle="Ce mois"
@@ -939,7 +939,7 @@ const Dashboard: React.FC = () => {
                                 </Typography>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
                                   <Chip
-                                    label={repair.status}
+                                    label={repairStatuses.find(s => s.id === repair.status)?.name || repair.status}
                                     size="small"
                                     sx={{
                                       backgroundColor: getStatusColor(repair.status),

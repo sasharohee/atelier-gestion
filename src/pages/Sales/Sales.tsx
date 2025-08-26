@@ -38,12 +38,22 @@ import {
   Add as AddIcon,
   Receipt as ReceiptIcon,
   Print as PrintIcon,
-  Email as EmailIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
   Info as InfoIcon,
   Inventory as InventoryIcon,
   Payment as PaymentIcon,
+  TrendingUp as TrendingUpIcon,
+  MonetizationOn as MonetizationOnIcon,
+  CalendarToday as CalendarTodayIcon,
+  Assessment as AssessmentIcon,
+  BarChart as BarChartIcon,
+  PieChart as PieChartIcon,
+  History as HistoryIcon,
+  ShoppingCart as ShoppingCartIcon,
+  Build as BuildIcon,
+  Euro as EuroIcon,
+  AttachMoney as AttachMoneyIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -444,9 +454,12 @@ const Sales: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Transactions du jour
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <TrendingUpIcon sx={{ color: '#1976d2', mr: 1 }} />
+                <Typography color="text.secondary">
+                  Transactions du jour
+                </Typography>
+              </Box>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
                 {getTotalTransactionsForDate(new Date(), 'day')}
               </Typography>
@@ -459,9 +472,12 @@ const Sales: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                CA du jour
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <MonetizationOnIcon sx={{ color: '#2e7d32', mr: 1 }} />
+                <Typography color="text.secondary">
+                  CA du jour
+                </Typography>
+              </Box>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
                 {getTotalRevenueForDate(new Date(), 'day').toLocaleString('fr-FR')} €
               </Typography>
@@ -474,9 +490,12 @@ const Sales: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                Transactions du mois
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <CalendarTodayIcon sx={{ color: '#ed6c02', mr: 1 }} />
+                <Typography color="text.secondary">
+                  Transactions du mois
+                </Typography>
+              </Box>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
                 {getTotalTransactionsForDate(new Date(), 'month')}
               </Typography>
@@ -489,9 +508,12 @@ const Sales: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography color="text.secondary" gutterBottom>
-                CA du mois
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <AssessmentIcon sx={{ color: '#9c27b0', mr: 1 }} />
+                <Typography color="text.secondary">
+                  CA du mois
+                </Typography>
+              </Box>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
                 {getTotalRevenueForDate(new Date(), 'month').toLocaleString('fr-FR')} €
               </Typography>
@@ -508,24 +530,39 @@ const Sales: React.FC = () => {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Répartition du jour
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Ventes : {getSalesForDate(new Date(), 'day').length}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Réparations payées : {getRepairsForDate(new Date(), 'day').length}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <BarChartIcon sx={{ color: '#1976d2', mr: 1 }} />
+                <Typography variant="h6">
+                  Répartition du jour
                 </Typography>
               </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ShoppingCartIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Ventes : {getSalesForDate(new Date(), 'day').length}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <BuildIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Réparations payées : {getRepairsForDate(new Date(), 'day').length}
+                  </Typography>
+                </Box>
+              </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">
-                  CA Ventes : {getSalesForDate(new Date(), 'day').reduce((sum, sale) => sum + sale.total, 0).toLocaleString('fr-FR')} €
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  CA Réparations : {getRepairsForDate(new Date(), 'day').reduce((sum, repair) => sum + repair.totalPrice, 0).toLocaleString('fr-FR')} €
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <EuroIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    CA Ventes : {getSalesForDate(new Date(), 'day').reduce((sum, sale) => sum + sale.total, 0).toLocaleString('fr-FR')} €
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <AttachMoneyIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    CA Réparations : {getRepairsForDate(new Date(), 'day').reduce((sum, repair) => sum + repair.totalPrice, 0).toLocaleString('fr-FR')} €
+                  </Typography>
+                </Box>
               </Box>
             </CardContent>
           </Card>
@@ -533,24 +570,39 @@ const Sales: React.FC = () => {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Répartition du mois
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Ventes : {getSalesForDate(new Date(), 'month').length}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Réparations payées : {getRepairsForDate(new Date(), 'month').length}
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <PieChartIcon sx={{ color: '#ed6c02', mr: 1 }} />
+                <Typography variant="h6">
+                  Répartition du mois
                 </Typography>
               </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <ShoppingCartIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Ventes : {getSalesForDate(new Date(), 'month').length}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <BuildIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Réparations payées : {getRepairsForDate(new Date(), 'month').length}
+                  </Typography>
+                </Box>
+              </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">
-                  CA Ventes : {getSalesForDate(new Date(), 'month').reduce((sum, sale) => sum + sale.total, 0).toLocaleString('fr-FR')} €
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  CA Réparations : {getRepairsForDate(new Date(), 'month').reduce((sum, repair) => sum + repair.totalPrice, 0).toLocaleString('fr-FR')} €
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <EuroIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    CA Ventes : {getSalesForDate(new Date(), 'month').reduce((sum, sale) => sum + sale.total, 0).toLocaleString('fr-FR')} €
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <AttachMoneyIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
+                  <Typography variant="body2" color="text.secondary">
+                    CA Réparations : {getRepairsForDate(new Date(), 'month').reduce((sum, repair) => sum + repair.totalPrice, 0).toLocaleString('fr-FR')} €
+                  </Typography>
+                </Box>
               </Box>
             </CardContent>
           </Card>
@@ -560,20 +612,58 @@ const Sales: React.FC = () => {
       {/* Liste des ventes */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Historique des ventes
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <HistoryIcon sx={{ color: '#1976d2', mr: 1 }} />
+            <Typography variant="h6">
+              Historique des ventes
+            </Typography>
+          </Box>
           <TableContainer component={Paper} variant="outlined">
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>N° Vente</TableCell>
-                  <TableCell>Client</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Montant</TableCell>
-                  <TableCell>Méthode</TableCell>
-                  <TableCell>Statut</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <ReceiptIcon sx={{ mr: 0.5, fontSize: '16px' }} />
+                      N° Vente
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <InfoIcon sx={{ mr: 0.5, fontSize: '16px' }} />
+                      Client
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <CalendarTodayIcon sx={{ mr: 0.5, fontSize: '16px' }} />
+                      Date
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <MonetizationOnIcon sx={{ mr: 0.5, fontSize: '16px' }} />
+                      Montant
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <PaymentIcon sx={{ mr: 0.5, fontSize: '16px' }} />
+                      Méthode
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <AssessmentIcon sx={{ mr: 0.5, fontSize: '16px' }} />
+                      Statut
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <InventoryIcon sx={{ mr: 0.5, fontSize: '16px' }} />
+                      Actions
+                    </Box>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -653,9 +743,7 @@ const Sales: React.FC = () => {
                             >
                               <PrintIcon fontSize="small" />
                             </IconButton>
-                            <IconButton size="small" title="Envoyer par email">
-                              <EmailIcon fontSize="small" />
-                            </IconButton>
+
                             <IconButton 
                               size="small" 
                               title={sale.status === 'completed' ? "Marquer comme non payée" : "Marquer comme payée"}

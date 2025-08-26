@@ -244,7 +244,7 @@ export const userService = {
       let { data, error } = await supabase.rpc('get_my_users');
       
       if (error) {
-        console.error('❌ Erreur lors de la récupération des utilisateurs:', error);
+        console.error('❌ Erreur lors de la récupération des utilisateurs via RPC:', error);
         
         // Fallback vers la récupération normale si la fonction RPC n'existe pas
         console.log('⚠️ Fonction RPC non disponible, utilisation de la récupération normale...');
@@ -259,6 +259,38 @@ export const userService = {
         }
         
         data = fallbackData;
+      }
+      
+      // Si la fonction RPC ne retourne aucun utilisateur, essayer la récupération normale
+      if (!data || data.length === 0) {
+        console.log('⚠️ Aucun utilisateur trouvé via RPC, tentative de récupération normale...');
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (fallbackError) {
+          console.error('❌ Erreur lors de la récupération de fallback:', fallbackError);
+          return handleSupabaseError(fallbackError);
+        }
+        
+        data = fallbackData;
+      }
+      
+      // Si toujours aucun utilisateur, essayer de récupérer seulement les techniciens
+      if (!data || data.length === 0) {
+        console.log('⚠️ Aucun utilisateur trouvé, tentative de récupération des techniciens...');
+        const { data: technicianData, error: technicianError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('role', 'technician')
+          .order('created_at', { ascending: false });
+        
+        if (technicianError) {
+          console.error('❌ Erreur lors de la récupération des techniciens:', technicianError);
+        } else {
+          data = technicianData;
+        }
       }
       
       console.log('📊 Données brutes récupérées:', data);
@@ -1774,51 +1806,20 @@ export const serviceService = {
 // Service pour les rendez-vous
 export const appointmentService = {
   async getAll() {
-    // Récupérer l'utilisateur connecté avec son rôle
-    const currentUser = await getCurrentUser();
+    console.log('🔍 getAll() appointments appelé');
     
-    if (!currentUser) {
-      console.log('⚠️ Aucun utilisateur connecté, retourner une liste vide');
-      return handleSupabaseSuccess([]);
-    }
-    
-    // Si l'utilisateur est admin, récupérer tous les rendez-vous
-    if (currentUser.role === 'admin') {
-      console.log('🔧 Utilisateur admin, récupération de tous les rendez-vous');
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('*')
-        .order('start_time', { ascending: true });
-      
-      if (error) return handleSupabaseError(error);
-      
-      const convertedData = data?.map(appointment => ({
-        id: appointment.id,
-        userId: appointment.user_id,
-        clientId: appointment.client_id,
-        repairId: appointment.repair_id,
-        title: appointment.title,
-        description: appointment.description,
-        startDate: new Date(appointment.start_time || appointment.start_date),
-        endDate: new Date(appointment.end_time || appointment.end_date),
-        assignedUserId: appointment.assigned_user_id,
-        status: appointment.status,
-        createdAt: new Date(appointment.created_at),
-        updatedAt: new Date(appointment.updated_at)
-      })) || [];
-      
-      return handleSupabaseSuccess(convertedData);
-    }
-    
-    // Sinon, récupérer les rendez-vous de l'utilisateur connecté ET les rendez-vous système
-    console.log('🔒 Utilisateur normal, récupération de ses rendez-vous et rendez-vous système');
+    // Utiliser les politiques RLS pour l'isolation automatique
     const { data, error } = await supabase
       .from('appointments')
       .select('*')
-      .or(`user_id.eq.${currentUser.id},user_id.eq.00000000-0000-0000-0000-000000000000`)
-      .order('start_time', { ascending: true });
+      .order('start_date', { ascending: true });
     
-    if (error) return handleSupabaseError(error);
+    if (error) {
+      console.error('❌ Erreur lors de la récupération des rendez-vous:', error);
+      return handleSupabaseError(error);
+    }
+    
+    console.log('📊 Rendez-vous récupérés via RLS:', data?.length || 0);
     
     // Convertir les données de snake_case vers camelCase
     const convertedData = data?.map(appointment => ({
@@ -1868,13 +1869,18 @@ export const appointmentService = {
   },
 
   async create(appointment: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>) {
-    // Récupérer l'utilisateur connecté
-    const currentUser = await getCurrentUser();
-    const userId = currentUser?.id || '00000000-0000-0000-0000-000000000000';
+    // Récupérer l'utilisateur connecté depuis auth.users
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const userId = user?.id;
+    
+    if (!userId) {
+      console.error('❌ Aucun utilisateur authentifié');
+      return handleSupabaseError(new Error('Utilisateur non authentifié'));
+    }
     
     // Convertir les noms de propriétés camelCase vers snake_case
     // Gérer les valeurs vides en les convertissant en null
-    const appointmentData = {
+    const appointmentData: any = {
       user_id: userId, // Ajouter l'utilisateur connecté
       client_id: appointment.clientId && appointment.clientId.trim() !== '' ? appointment.clientId : null,
       repair_id: appointment.repairId && appointment.repairId.trim() !== '' ? appointment.repairId : null,
@@ -1882,11 +1888,15 @@ export const appointmentService = {
       description: appointment.description,
       start_date: appointment.startDate.toISOString(),
       end_date: appointment.endDate.toISOString(),
-      assigned_user_id: appointment.assignedUserId && appointment.assignedUserId.trim() !== '' ? appointment.assignedUserId : null,
       status: appointment.status,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
+    
+    // N'ajouter assigned_user_id que s'il a une valeur valide
+    if (appointment.assignedUserId && appointment.assignedUserId.trim() !== '') {
+      appointmentData.assigned_user_id = appointment.assignedUserId;
+    }
 
     const { data, error } = await supabase
       .from('appointments')
@@ -1899,6 +1909,15 @@ export const appointmentService = {
   },
 
   async update(id: string, updates: Partial<Appointment>) {
+    // Récupérer l'utilisateur connecté depuis auth.users
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const userId = user?.id;
+    
+    if (!userId) {
+      console.error('❌ Aucun utilisateur authentifié');
+      return handleSupabaseError(new Error('Utilisateur non authentifié'));
+    }
+    
     // Convertir les noms de propriétés camelCase vers snake_case
     const updateData: any = {
       updated_at: new Date().toISOString()
@@ -1915,7 +1934,12 @@ export const appointmentService = {
     if (updates.startDate !== undefined) updateData.start_date = updates.startDate.toISOString();
     if (updates.endDate !== undefined) updateData.end_date = updates.endDate.toISOString();
     if (updates.assignedUserId !== undefined) {
-      updateData.assigned_user_id = updates.assignedUserId && updates.assignedUserId.trim() !== '' ? updates.assignedUserId : null;
+      if (updates.assignedUserId && updates.assignedUserId.trim() !== '') {
+        updateData.assigned_user_id = updates.assignedUserId;
+      } else {
+        // Si la valeur est vide, on supprime le champ pour éviter les erreurs de contrainte
+        updateData.assigned_user_id = null;
+      }
     }
     if (updates.status !== undefined) updateData.status = updates.status;
 
@@ -1969,7 +1993,7 @@ export const dashboardService = {
 
       // Calculer les statistiques
       const totalRepairs = repairs?.length || 0;
-      const completedRepairs = repairs?.filter(r => r.status === 'completed').length || 0;
+      const completedRepairs = repairs?.filter(r => r.status === 'completed' || r.status === 'returned').length || 0;
       const totalSales = sales?.reduce((sum, sale) => sum + (sale.amount || 0), 0) || 0;
       const lowStockCount = lowStockParts?.length || 0;
 

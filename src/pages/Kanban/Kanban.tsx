@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -56,6 +56,7 @@ import { useAppStore } from '../../store';
 import { deviceTypeColors, repairStatusColors } from '../../theme';
 import { Repair, RepairStatus, Device, Client } from '../../types';
 import Invoice from '../../components/Invoice';
+import { supabase } from '../../lib/supabase';
 
 const Kanban: React.FC = () => {
   const navigate = useNavigate();
@@ -73,6 +74,7 @@ const Kanban: React.FC = () => {
     deleteRepair,
     addDevice,
     addClient,
+    loadUsers,
   } = useAppStore();
 
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
@@ -94,6 +96,7 @@ const Kanban: React.FC = () => {
     isUrgent: false,
     totalPrice: 0,
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 jours par défaut
+    assignedTechnicianId: '' as string,
   });
 
   // États pour le nouvel appareil
@@ -131,6 +134,32 @@ const Kanban: React.FC = () => {
   const getDeviceTypeColor = (type: string) => {
     return deviceTypeColors[type as keyof typeof deviceTypeColors] || '#757575';
   };
+
+  // Charger les utilisateurs au montage du composant
+  useEffect(() => {
+    const loadUsersData = async () => {
+      try {
+        console.log('🔄 Chargement des utilisateurs dans Kanban...');
+        await loadUsers();
+        console.log('✅ Utilisateurs chargés dans Kanban');
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des utilisateurs:', error);
+      }
+    };
+    
+    loadUsersData();
+  }, [loadUsers]); // Retirer 'users' des dépendances pour éviter la boucle infinie
+
+  // Debug: Afficher les informations des utilisateurs quand ils changent (sans recharger)
+  useEffect(() => {
+    if (users.length > 0) {
+      console.log('📊 Utilisateurs dans le store:', users);
+      console.log('🔍 Détail des utilisateurs chargés:');
+      users.forEach((user, index) => {
+        console.log(`${index + 1}. ${user.firstName} ${user.lastName} (${user.role}) - ID: ${user.id}`);
+      });
+    }
+  }, [users]);
 
   // Fonction utilitaire pour sécuriser les dates
   const safeFormatDate = (date: any, formatString: string) => {
@@ -218,6 +247,7 @@ const Kanban: React.FC = () => {
         description: newRepair.description,
         issue: newRepair.issue,
         status: newRepair.status,
+        assignedTechnicianId: newRepair.assignedTechnicianId || undefined,
         estimatedDuration: 0,
         isUrgent: newRepair.isUrgent,
         totalPrice: newRepair.totalPrice,
@@ -257,6 +287,7 @@ const Kanban: React.FC = () => {
       isUrgent: false,
       totalPrice: 0,
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      assignedTechnicianId: '' as string,
     });
   };
 
@@ -442,7 +473,7 @@ const Kanban: React.FC = () => {
                   <DeleteIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              {repair.status === 'completed' && (
+                              {(repair.status === 'completed' || repair.status === 'returned') && (
                 <>
                   <Tooltip title="Voir facture">
                     <IconButton 
@@ -622,6 +653,51 @@ const Kanban: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Suivi des réparations par statut (réparations restituées automatiquement archivées)
         </Typography>
+        {/* Debug: Bouton pour recharger les utilisateurs */}
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={async () => {
+            console.log('🔄 Rechargement manuel des utilisateurs...');
+            await loadUsers();
+            console.log('📊 Utilisateurs après rechargement:', users);
+            console.log('🔍 Détail des utilisateurs:');
+            users.forEach((user, index) => {
+              console.log(`${index + 1}. ${user.firstName} ${user.lastName} (${user.role}) - ID: ${user.id}`);
+            });
+          }}
+          sx={{ mt: 1 }}
+        >
+          Recharger utilisateurs (Debug)
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={async () => {
+            console.log('🧪 Test d\'accès direct à la table users...');
+            try {
+              const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .order('created_at', { ascending: false });
+              
+              if (error) {
+                console.error('❌ Erreur accès direct:', error);
+              } else {
+                console.log('✅ Accès direct réussi:', data);
+                console.log('📊 Nombre d\'utilisateurs trouvés:', data?.length || 0);
+                data?.forEach((user, index) => {
+                  console.log(`${index + 1}. ${user.first_name} ${user.last_name} (${user.role}) - ID: ${user.id}`);
+                });
+              }
+            } catch (err) {
+              console.error('💥 Exception lors du test d\'accès direct:', err);
+            }
+          }}
+          sx={{ mt: 1, ml: 1 }}
+        >
+          Test Accès Direct (Debug)
+        </Button>
       </Box>
 
       {/* Tableau Kanban */}
@@ -844,7 +920,39 @@ const Kanban: React.FC = () => {
                 </FormControl>
               </Grid>
               
-              <Grid item xs={12}>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Technicien assigné</InputLabel>
+                  <Select 
+                    label="Technicien assigné"
+                    value={newRepair.assignedTechnicianId || ''}
+                    onChange={(e) => handleNewRepairChange('assignedTechnicianId', e.target.value)}
+                  >
+                    <MenuItem value="">Aucun technicien</MenuItem>
+                    {users
+                      .filter(user => user.role === 'technician' || user.role === 'admin' || user.role === 'manager')
+                      .map((user) => (
+                        <MenuItem key={user.id} value={user.id}>
+                          {`${user.firstName} ${user.lastName} (${user.role})`}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+                {/* Debug: Afficher le nombre d'utilisateurs et de techniciens */}
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Total utilisateurs: {users.length} | Techniciens: {users.filter(user => user.role === 'technician').length}
+                </Typography>
+                {/* Debug détaillé des utilisateurs */}
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Utilisateurs: {users.map(u => `${u.firstName} ${u.lastName} (${u.role})`).join(', ')}
+                </Typography>
+                {/* Debug: Afficher les utilisateurs avec rôle technician, admin, ou manager */}
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  Utilisateurs éligibles: {users.filter(user => user.role === 'technician' || user.role === 'admin' || user.role === 'manager').map(u => `${u.firstName} ${u.lastName} (${u.role})`).join(', ')}
+                </Typography>
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
                 <FormControlLabel
                   control={
                     <Switch

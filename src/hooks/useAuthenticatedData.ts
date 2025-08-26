@@ -9,6 +9,7 @@ export const useAuthenticatedData = () => {
   const [error, setError] = useState<Error | null>(null);
 
   const {
+    loadUsers,
     loadClients,
     loadDevices,
     loadDeviceModels,
@@ -34,6 +35,7 @@ export const useAuthenticatedData = () => {
     try {
       // Charger toutes les données en parallèle
       await Promise.all([
+        loadUsers(),
         loadClients(),
         loadDevices(),
         loadDeviceModels(),
@@ -53,7 +55,7 @@ export const useAuthenticatedData = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, user, loadClients, loadDevices, loadDeviceModels, loadServices, loadParts, loadProducts, loadRepairs, loadSales, loadAppointments]);
+  }, [isAuthenticated, user, loadUsers, loadClients, loadDevices, loadDeviceModels, loadServices, loadParts, loadProducts, loadRepairs, loadSales, loadAppointments]);
 
   useEffect(() => {
     loadData();
