@@ -170,9 +170,9 @@ const Calendar: React.FC = () => {
           description: formData.description,
           startDate: new Date(formData.startDate),
           endDate: new Date(formData.endDate),
-          clientId: convertEmptyToNull(formData.clientId),
-          repairId: convertEmptyToNull(formData.repairId),
-          assignedUserId: convertEmptyToNull(formData.assignedUserId),
+          clientId: convertEmptyToNull(formData.clientId) || undefined,
+          repairId: convertEmptyToNull(formData.repairId) || undefined,
+          assignedUserId: convertEmptyToNull(formData.assignedUserId) || undefined,
         });
       } else {
         // Créer un nouveau rendez-vous
@@ -181,9 +181,9 @@ const Calendar: React.FC = () => {
           description: formData.description,
           startDate: new Date(formData.startDate),
           endDate: new Date(formData.endDate),
-          clientId: convertEmptyToNull(formData.clientId),
-          repairId: convertEmptyToNull(formData.repairId),
-          assignedUserId: convertEmptyToNull(formData.assignedUserId),
+          clientId: convertEmptyToNull(formData.clientId) || undefined,
+          repairId: convertEmptyToNull(formData.repairId) || undefined,
+          assignedUserId: convertEmptyToNull(formData.assignedUserId) || undefined,
           status: 'scheduled',
           createdAt: new Date(),
           updatedAt: new Date(),
