@@ -63,6 +63,7 @@ interface SaleItemForm {
 const Sales: React.FC = () => {
   const {
     sales,
+    repairs,
     clients,
     products,
     services,
@@ -365,6 +366,54 @@ const Sales: React.FC = () => {
     }
   };
 
+  // Fonctions utilitaires pour les statistiques incluant les réparations
+  const getSalesForDate = (date: Date, period: 'day' | 'month') => {
+    const dateFormat = period === 'day' ? 'yyyy-MM-dd' : 'yyyy-MM';
+    return sales.filter(sale => {
+      try {
+        if (!sale.createdAt) return false;
+        const saleDate = new Date(sale.createdAt);
+        if (isNaN(saleDate.getTime())) return false;
+        return format(saleDate, dateFormat) === format(date, dateFormat);
+      } catch (error) {
+        console.error('Erreur de date dans la vente:', error);
+        return false;
+      }
+    });
+  };
+
+  const getRepairsForDate = (date: Date, period: 'day' | 'month') => {
+    const dateFormat = period === 'day' ? 'yyyy-MM-dd' : 'yyyy-MM';
+    return repairs.filter(repair => {
+      try {
+        if (!repair.updatedAt && !repair.createdAt) return false;
+        const repairDate = new Date(repair.updatedAt || repair.createdAt);
+        if (isNaN(repairDate.getTime())) return false;
+        return format(repairDate, dateFormat) === format(date, dateFormat) && repair.isPaid;
+      } catch (error) {
+        console.error('Erreur de date dans la réparation:', error);
+        return false;
+      }
+    });
+  };
+
+  const getTotalRevenueForDate = (date: Date, period: 'day' | 'month') => {
+    const salesForDate = getSalesForDate(date, period);
+    const repairsForDate = getRepairsForDate(date, period);
+    
+    const salesRevenue = salesForDate.reduce((sum, sale) => sum + sale.total, 0);
+    const repairsRevenue = repairsForDate.reduce((sum, repair) => sum + repair.totalPrice, 0);
+    
+    return salesRevenue + repairsRevenue;
+  };
+
+  const getTotalTransactionsForDate = (date: Date, period: 'day' | 'month') => {
+    const salesForDate = getSalesForDate(date, period);
+    const repairsForDate = getRepairsForDate(date, period);
+    
+    return salesForDate.length + repairsForDate.length;
+  };
+
 
 
   return (
@@ -396,20 +445,13 @@ const Sales: React.FC = () => {
           <Card>
             <CardContent>
               <Typography color="text.secondary" gutterBottom>
-                Ventes du jour
+                Transactions du jour
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {sales.filter(sale => {
-                  try {
-                    if (!sale.createdAt) return false;
-                    const saleDate = new Date(sale.createdAt);
-                    if (isNaN(saleDate.getTime())) return false;
-                    return format(saleDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-                  } catch (error) {
-                    console.error('Erreur de date dans la vente:', error);
-                    return false;
-                  }
-                }).length}
+                {getTotalTransactionsForDate(new Date(), 'day')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Ventes + Réparations payées
               </Typography>
             </CardContent>
           </Card>
@@ -421,20 +463,10 @@ const Sales: React.FC = () => {
                 CA du jour
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {sales
-                  .filter(sale => {
-                    try {
-                      if (!sale.createdAt) return false;
-                      const saleDate = new Date(sale.createdAt);
-                      if (isNaN(saleDate.getTime())) return false;
-                      return format(saleDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-                    } catch (error) {
-                      console.error('Erreur de date dans la vente:', error);
-                      return false;
-                    }
-                  })
-                  .reduce((sum, sale) => sum + sale.total, 0)
-                  .toLocaleString('fr-FR')} €
+                {getTotalRevenueForDate(new Date(), 'day').toLocaleString('fr-FR')} €
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Ventes + Réparations payées
               </Typography>
             </CardContent>
           </Card>
@@ -443,20 +475,13 @@ const Sales: React.FC = () => {
           <Card>
             <CardContent>
               <Typography color="text.secondary" gutterBottom>
-                Ventes du mois
+                Transactions du mois
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {sales.filter(sale => {
-                  try {
-                    if (!sale.createdAt) return false;
-                    const saleDate = new Date(sale.createdAt);
-                    if (isNaN(saleDate.getTime())) return false;
-                    return format(saleDate, 'yyyy-MM') === format(new Date(), 'yyyy-MM');
-                  } catch (error) {
-                    console.error('Erreur de date dans la vente:', error);
-                    return false;
-                  }
-                }).length}
+                {getTotalTransactionsForDate(new Date(), 'month')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Ventes + Réparations payées
               </Typography>
             </CardContent>
           </Card>
@@ -468,21 +493,65 @@ const Sales: React.FC = () => {
                 CA du mois
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {sales
-                  .filter(sale => {
-                    try {
-                      if (!sale.createdAt) return false;
-                      const saleDate = new Date(sale.createdAt);
-                      if (isNaN(saleDate.getTime())) return false;
-                      return format(saleDate, 'yyyy-MM') === format(new Date(), 'yyyy-MM');
-                    } catch (error) {
-                      console.error('Erreur de date dans la vente:', error);
-                      return false;
-                    }
-                  })
-                  .reduce((sum, sale) => sum + sale.total, 0)
-                  .toLocaleString('fr-FR')} €
+                {getTotalRevenueForDate(new Date(), 'month').toLocaleString('fr-FR')} €
               </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Ventes + Réparations payées
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Statistiques détaillées */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Répartition du jour
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Ventes : {getSalesForDate(new Date(), 'day').length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Réparations payées : {getRepairsForDate(new Date(), 'day').length}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">
+                  CA Ventes : {getSalesForDate(new Date(), 'day').reduce((sum, sale) => sum + sale.total, 0).toLocaleString('fr-FR')} €
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  CA Réparations : {getRepairsForDate(new Date(), 'day').reduce((sum, repair) => sum + repair.totalPrice, 0).toLocaleString('fr-FR')} €
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Répartition du mois
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Ventes : {getSalesForDate(new Date(), 'month').length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Réparations payées : {getRepairsForDate(new Date(), 'month').length}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">
+                  CA Ventes : {getSalesForDate(new Date(), 'month').reduce((sum, sale) => sum + sale.total, 0).toLocaleString('fr-FR')} €
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  CA Réparations : {getRepairsForDate(new Date(), 'month').reduce((sum, repair) => sum + repair.totalPrice, 0).toLocaleString('fr-FR')} €
+                </Typography>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
