@@ -240,57 +240,43 @@ export const userService = {
     console.log('🔍 getAllUsers() appelé');
     
     try {
-      // Utiliser la fonction RPC pour récupérer seulement les utilisateurs créés par l'utilisateur actuel
-      let { data, error } = await supabase.rpc('get_my_users');
+      // Récupérer l'utilisateur actuel pour l'isolation
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (!currentUser) {
+        console.error('❌ Aucun utilisateur connecté');
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+      
+      console.log('👤 Utilisateur actuel:', currentUser.id);
+      
+      // Récupérer les utilisateurs créés par l'utilisateur actuel
+      let { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('created_by', currentUser.id)
+        .order('created_at', { ascending: false });
       
       if (error) {
-        console.error('❌ Erreur lors de la récupération des utilisateurs via RPC:', error);
-        
-        // Fallback vers la récupération normale si la fonction RPC n'existe pas
-        console.log('⚠️ Fonction RPC non disponible, utilisation de la récupération normale...');
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('users')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (fallbackError) {
-          console.error('❌ Erreur lors de la récupération de fallback:', fallbackError);
-          return handleSupabaseError(fallbackError);
-        }
-        
-        data = fallbackData;
+        console.error('❌ Erreur lors de la récupération des utilisateurs:', error);
+        return handleSupabaseError(error);
       }
       
-      // Si la fonction RPC ne retourne aucun utilisateur, essayer la récupération normale
+      // Si aucun utilisateur trouvé, inclure l'utilisateur actuel
       if (!data || data.length === 0) {
-        console.log('⚠️ Aucun utilisateur trouvé via RPC, tentative de récupération normale...');
-        const { data: fallbackData, error: fallbackError } = await supabase
+        console.log('⚠️ Aucun utilisateur créé par l\'utilisateur actuel, récupération de l\'utilisateur actuel...');
+        const { data: currentUserData, error: currentUserError } = await supabase
           .from('users')
           .select('*')
-          .order('created_at', { ascending: false });
+          .eq('id', currentUser.id)
+          .single();
         
-        if (fallbackError) {
-          console.error('❌ Erreur lors de la récupération de fallback:', fallbackError);
-          return handleSupabaseError(fallbackError);
+        if (currentUserError) {
+          console.error('❌ Erreur lors de la récupération de l\'utilisateur actuel:', currentUserError);
+          return handleSupabaseError(currentUserError);
         }
         
-        data = fallbackData;
-      }
-      
-      // Si toujours aucun utilisateur, essayer de récupérer seulement les techniciens
-      if (!data || data.length === 0) {
-        console.log('⚠️ Aucun utilisateur trouvé, tentative de récupération des techniciens...');
-        const { data: technicianData, error: technicianError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('role', 'technician')
-          .order('created_at', { ascending: false });
-        
-        if (technicianError) {
-          console.error('❌ Erreur lors de la récupération des techniciens:', technicianError);
-        } else {
-          data = technicianData;
-        }
+        data = currentUserData ? [currentUserData] : [];
       }
       
       console.log('📊 Données brutes récupérées:', data);
