@@ -104,7 +104,7 @@ const Support: React.FC = () => {
                   </ListItemIcon>
                   <ListItemText
                     primary="Email"
-                    secondary="support@atelier-gestion.fr"
+                    secondary="contact.ateliergestion@gmail.com"
                     primaryTypographyProps={{ fontWeight: 600 }}
                     secondaryTypographyProps={{ color: '#6c757d' }}
                   />

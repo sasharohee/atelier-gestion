@@ -29,6 +29,7 @@ import Landing from './pages/Landing/Landing';
 import Auth from './pages/Auth/Auth';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Kanban from './pages/Kanban/Kanban';
+import Archive from './pages/Archive/Archive';
 import Calendar from './pages/Calendar/Calendar';
 
 import Catalog from './pages/Catalog/Catalog';
@@ -174,6 +175,7 @@ function App() {
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
                             <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/kanban" element={<Kanban />} />
+                            <Route path="/archive" element={<Archive />} />
                             <Route path="/calendar" element={<Calendar />} />
 
                             <Route path="/catalog/*" element={<Catalog />} />

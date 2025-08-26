@@ -342,7 +342,7 @@ const TermsOfService: React.FC = () => {
             </Typography>
             <Box sx={{ p: 3, bgcolor: '#f8f9fa', borderRadius: 2 }}>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                <strong>Email :</strong> legal@atelier-gestion.fr
+                <strong>Email :</strong> contact.ateliergestion@gmail.com
               </Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
                 <strong>Téléphone :</strong> +33 1 23 45 67 89

@@ -1192,13 +1192,13 @@ const Landing: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2" sx={{ opacity: 0.8 }}>📧</Typography>
                   <Typography variant="body2" sx={{ opacity: 0.8, fontSize: '0.8rem' }}>
-                    contact@atelier-gestion.fr
+                    contact.ateliergestion@gmail.com
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="body2" sx={{ opacity: 0.8 }}>📞</Typography>
                   <Typography variant="body2" sx={{ opacity: 0.8, fontSize: '0.8rem' }}>
-                    +33 1 23 45 67 89
+                    07 59 23 91 70
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

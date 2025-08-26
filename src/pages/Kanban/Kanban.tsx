@@ -46,16 +46,19 @@ import {
   Email as EmailIcon,
   PersonAdd as PersonAddIcon,
   DeviceHub as DeviceHubIcon,
+  Archive as ArchiveIcon,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store';
 import { deviceTypeColors, repairStatusColors } from '../../theme';
 import { Repair, RepairStatus, Device, Client } from '../../types';
 import Invoice from '../../components/Invoice';
 
 const Kanban: React.FC = () => {
+  const navigate = useNavigate();
   const {
     repairs,
     repairStatuses,
@@ -156,6 +159,16 @@ const Kanban: React.FC = () => {
     const repair = repairs.find(r => r.id === draggableId);
     if (repair) {
       updateRepair(repair.id, { status: destination.droppableId });
+      
+      // Notification spéciale si la réparation est déplacée vers "Restitué"
+      if (destination.droppableId === 'returned') {
+        const client = getClientById(repair.clientId);
+        const clientName = client ? `${client.firstName} ${client.lastName}` : 'Client';
+        const device = getDeviceById(repair.deviceId);
+        const deviceInfo = device ? `${device.brand} ${device.model}` : 'Appareil';
+        
+        alert(`✅ Réparation restituée et archivée !\n\nClient: ${clientName}\nAppareil: ${deviceInfo}\n\nLa réparation a été automatiquement archivée et ne sera plus visible dans le Kanban.\nVous pouvez la consulter dans la page "Archives".`);
+      }
     }
   };
 
@@ -250,10 +263,28 @@ const Kanban: React.FC = () => {
   // Fonctions pour gérer les nouveaux appareils et clients
   const handleCreateNewDevice = async () => {
     try {
+      // Vérifier si le numéro de série existe déjà (seulement si fourni)
+      if (newDevice.serialNumber && newDevice.serialNumber.trim()) {
+        const existingDevice = devices.find(d => 
+          d.serialNumber && 
+          d.serialNumber.trim().toLowerCase() === newDevice.serialNumber.trim().toLowerCase()
+        );
+        if (existingDevice) {
+          alert(`❌ Un appareil avec le numéro de série "${newDevice.serialNumber}" existe déjà.\n\nAppareil: ${existingDevice.brand} ${existingDevice.model}\n\nVeuillez utiliser un numéro de série différent, laisser le champ vide, ou sélectionner l'appareil existant.`);
+          return;
+        }
+      }
+
+      // Validation supplémentaire des champs requis
+      if (!newDevice.brand.trim() || !newDevice.model.trim()) {
+        alert('❌ Veuillez remplir la marque et le modèle de l\'appareil.');
+        return;
+      }
+
       const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
-        brand: newDevice.brand,
-        model: newDevice.model,
-        serialNumber: newDevice.serialNumber,
+        brand: newDevice.brand.trim(),
+        model: newDevice.model.trim(),
+        serialNumber: newDevice.serialNumber.trim() || null, // Numéro de série optionnel
         type: newDevice.type,
         specifications: {},
       };
@@ -262,9 +293,9 @@ const Kanban: React.FC = () => {
       
       // Trouver le nouvel appareil créé dans la liste mise à jour
       const newDeviceCreated = devices.find(d => 
-        d.brand === newDevice.brand && 
-        d.model === newDevice.model && 
-        d.serialNumber === newDevice.serialNumber
+        d.brand === newDevice.brand.trim() && 
+        d.model === newDevice.model.trim() && 
+        (newDevice.serialNumber ? d.serialNumber === newDevice.serialNumber.trim() : !d.serialNumber)
       );
       
       // Sélectionner automatiquement le nouvel appareil
@@ -284,14 +315,29 @@ const Kanban: React.FC = () => {
       setActiveTab(0);
       
       alert('✅ Appareil créé avec succès et sélectionné !');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la création de l\'appareil:', error);
-      alert('❌ Erreur lors de la création de l\'appareil');
+      
+      // Gestion spécifique des erreurs
+      if (error.message && error.message.includes('duplicate key value violates unique constraint "devices_serial_number_key"')) {
+        alert(`❌ Un appareil avec le numéro de série "${newDevice.serialNumber}" existe déjà dans la base de données.\n\nVeuillez utiliser un numéro de série différent.`);
+      } else if (error.message && error.message.includes('duplicate key')) {
+        alert('❌ Un appareil avec ces informations existe déjà.\n\nVeuillez vérifier les données saisies.');
+      } else {
+        alert('❌ Erreur lors de la création de l\'appareil.\n\nVeuillez vérifier les informations saisies et réessayer.');
+      }
     }
   };
 
   const handleCreateNewClient = async () => {
     try {
+      // Vérifier si l'email existe déjà
+      const existingClient = clients.find(c => c.email.toLowerCase() === newClient.email.toLowerCase());
+      if (existingClient) {
+        alert(`❌ Un client avec l'email "${newClient.email}" existe déjà.\n\nNom: ${existingClient.firstName} ${existingClient.lastName}\n\nVeuillez utiliser un email différent ou sélectionner le client existant.`);
+        return;
+      }
+
       const clientData: Omit<Client, 'id' | 'createdAt' | 'updatedAt'> = {
         firstName: newClient.firstName,
         lastName: newClient.lastName,
@@ -328,9 +374,17 @@ const Kanban: React.FC = () => {
       setActiveTab(0);
       
       alert('✅ Client créé avec succès et sélectionné !');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la création du client:', error);
-      alert('❌ Erreur lors de la création du client');
+      
+      // Gestion spécifique des erreurs
+      if (error.message && error.message.includes('duplicate key value violates unique constraint "clients_email_key"')) {
+        alert(`❌ Un client avec l'email "${newClient.email}" existe déjà dans la base de données.\n\nVeuillez utiliser un email différent.`);
+      } else if (error.message && error.message.includes('duplicate key')) {
+        alert('❌ Un client avec ces informations existe déjà.\n\nVeuillez vérifier les données saisies.');
+      } else {
+        alert('❌ Erreur lors de la création du client.\n\nVeuillez vérifier les informations saisies et réessayer.');
+      }
     }
   };
 
@@ -464,7 +518,8 @@ const Kanban: React.FC = () => {
   };
 
   const KanbanColumn: React.FC<{ status: RepairStatus }> = ({ status }) => {
-    const statusRepairs = repairs.filter(repair => repair.status === status.id);
+    // Filtrer les réparations pour exclure celles avec le statut "returned" (archivées)
+    const statusRepairs = repairs.filter(repair => repair.status === status.id && repair.status !== 'returned');
     const isOverdue = statusRepairs.filter(repair => {
       try {
         if (!repair.dueDate) return false;
@@ -546,11 +601,26 @@ const Kanban: React.FC = () => {
     <Box>
       {/* En-tête */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-          Tableau Kanban
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h4" sx={{ fontWeight: 600 }}>
+            Tableau Kanban
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<ArchiveIcon />}
+            onClick={() => navigate('/app/archive')}
+            sx={{ ml: 2 }}
+          >
+            Voir les archives
+            <Badge 
+              badgeContent={repairs.filter(r => r.status === 'returned').length} 
+              color="primary" 
+              sx={{ ml: 1 }}
+            />
+          </Button>
+        </Box>
         <Typography variant="body1" color="text.secondary">
-          Suivi des réparations par statut
+          Suivi des réparations par statut (réparations restituées automatiquement archivées)
         </Typography>
       </Box>
 
@@ -820,7 +890,11 @@ const Kanban: React.FC = () => {
                   label="Email *"
                   type="email"
                   value={newClient.email}
-                  onChange={(e) => setNewClient(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => setNewClient(prev => ({ ...prev, email: e.target.value.trim() }))}
+                  error={Boolean(newClient.email && newClient.email.trim() && clients.some(c => c.email && c.email.trim().toLowerCase() === newClient.email.trim().toLowerCase()))}
+                  helperText={newClient.email && newClient.email.trim() && clients.some(c => c.email && c.email.trim().toLowerCase() === newClient.email.trim().toLowerCase()) ? 
+                    'Cet email existe déjà' : ''}
+                  placeholder="exemple@email.com"
                 />
               </Grid>
               
@@ -849,7 +923,12 @@ const Kanban: React.FC = () => {
                   variant="contained"
                   startIcon={<PersonAddIcon />}
                   onClick={handleCreateNewClient}
-                  disabled={!newClient.firstName || !newClient.lastName || !newClient.email}
+                  disabled={Boolean(
+                    !newClient.firstName || 
+                    !newClient.lastName || 
+                    !newClient.email ||
+                    (newClient.email && newClient.email.trim() && clients.some(c => c.email && c.email.trim().toLowerCase() === newClient.email.trim().toLowerCase()))
+                  )}
                   fullWidth
                 >
                   Créer le client
@@ -887,9 +966,21 @@ const Kanban: React.FC = () => {
               <Grid item xs={12} md={6}>
                 <TextField
                   fullWidth
-                  label="Numéro de série"
+                  label="Numéro de série (optionnel)"
                   value={newDevice.serialNumber}
-                  onChange={(e) => setNewDevice(prev => ({ ...prev, serialNumber: e.target.value }))}
+                  onChange={(e) => setNewDevice(prev => ({ ...prev, serialNumber: e.target.value.trim() }))}
+                  error={Boolean(newDevice.serialNumber && newDevice.serialNumber.trim() && devices.some(d => 
+                    d.serialNumber && 
+                    d.serialNumber.trim().toLowerCase() === newDevice.serialNumber.trim().toLowerCase()
+                  ))}
+                  helperText={
+                    newDevice.serialNumber && newDevice.serialNumber.trim() && devices.some(d => 
+                      d.serialNumber && 
+                      d.serialNumber.trim().toLowerCase() === newDevice.serialNumber.trim().toLowerCase()
+                    ) ? 'Ce numéro de série existe déjà' : 
+                    'Laissez vide si le numéro de série n\'est pas disponible'
+                  }
+                  placeholder="SN123456789 (optionnel)"
                 />
               </Grid>
               
@@ -915,7 +1006,14 @@ const Kanban: React.FC = () => {
                   variant="contained"
                   startIcon={<DeviceHubIcon />}
                   onClick={handleCreateNewDevice}
-                  disabled={!newDevice.brand || !newDevice.model}
+                  disabled={Boolean(
+                    !newDevice.brand || 
+                    !newDevice.model ||
+                    (newDevice.serialNumber && newDevice.serialNumber.trim() && devices.some(d => 
+                      d.serialNumber && 
+                      d.serialNumber.trim().toLowerCase() === newDevice.serialNumber.trim().toLowerCase()
+                    ))
+                  )}
                   fullWidth
                 >
                   Créer l'appareil

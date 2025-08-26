@@ -96,8 +96,8 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, client, open, onClose }) => {
   const workshopSettings = {
     name: getSettingValue('workshop_name', 'Atelier de réparation'),
     address: getSettingValue('workshop_address', '123 Rue de la Paix, 75001 Paris'),
-    phone: getSettingValue('workshop_phone', '01 23 45 67 89'),
-    email: getSettingValue('workshop_email', 'contact@atelier.fr'),
+    phone: getSettingValue('workshop_phone', '07 59 23 91 70'),
+    email: getSettingValue('workshop_email', 'contact.ateliergestion@gmail.com'),
     vatRate: getSettingValue('vat_rate', '20'),
     currency: getSettingValue('currency', 'EUR')
   };

@@ -302,8 +302,8 @@ const RGPD: React.FC = () => {
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
                 Pour exercer ces droits, contactez-nous à l'adresse email : 
-                <Link href="mailto:rgpd@atelier-gestion.fr" sx={{ ml: 1 }}>
-                  rgpd@atelier-gestion.fr
+                <Link href="mailto:contact.ateliergestion@gmail.com" sx={{ ml: 1 }}>
+                  contact.ateliergestion@gmail.com
                 </Link>
               </Typography>
             </Alert>
@@ -437,7 +437,7 @@ const RGPD: React.FC = () => {
             </Typography>
             <Box sx={{ p: 3, bgcolor: '#f8f9fa', borderRadius: 2 }}>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                <strong>Email :</strong> dpo@atelier-gestion.fr
+                <strong>Email :</strong> contact.ateliergestion@gmail.com
               </Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
                 <strong>Adresse :</strong> France
@@ -491,10 +491,10 @@ const RGPD: React.FC = () => {
             </Typography>
             <Box sx={{ p: 3, bgcolor: '#f8f9fa', borderRadius: 2, mb: 2 }}>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                <strong>Email général :</strong> rgpd@atelier-gestion.fr
+                <strong>Email général :</strong> contact.ateliergestion@gmail.com
               </Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                <strong>DPO :</strong> dpo@atelier-gestion.fr
+                <strong>DPO :</strong> contact.ateliergestion@gmail.com
               </Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
                 <strong>Téléphone :</strong> +33 1 23 45 67 89

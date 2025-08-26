@@ -41,7 +41,7 @@ const SubscriptionBlocked: React.FC = () => {
   };
 
   const handleContactSupport = () => {
-    window.open('mailto:support@exemple.com?subject=Activation de mon abonnement', '_blank');
+    window.open('mailto:contact.ateliergestion@gmail.com?subject=Activation de mon abonnement', '_blank');
   };
 
   if (loading) {
@@ -314,7 +314,7 @@ const SubscriptionBlocked: React.FC = () => {
           {/* Informations supplémentaires */}
           <Box sx={{ textAlign: 'center', mt: 4 }}>
             <Typography variant="body2" color="text.secondary" gutterBottom>
-              Support disponible : support@exemple.com
+                              Support disponible : contact.ateliergestion@gmail.com
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Délai de traitement : 24h maximum

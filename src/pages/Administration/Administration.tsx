@@ -1073,13 +1073,13 @@ const Administration: React.FC = () => {
                 <TextField
                   fullWidth
                   label="Téléphone"
-                  value={getSettingValue('workshop_phone', '01 23 45 67 89')}
+                  value={getSettingValue('workshop_phone', '07 59 23 91 70')}
                   onChange={(e) => updateLocalSetting('workshop_phone', e.target.value)}
                 />
                 <TextField
                   fullWidth
                   label="Email"
-                  value={getSettingValue('workshop_email', 'contact@atelier.fr')}
+                  value={getSettingValue('workshop_email', 'contact.ateliergestion@gmail.com')}
                   onChange={(e) => updateLocalSetting('workshop_email', e.target.value)}
                 />
               </Box>

@@ -286,8 +286,8 @@ const PrivacyPolicy: React.FC = () => {
             </List>
             <Typography variant="body1" sx={{ lineHeight: 1.7 }}>
               Pour exercer ces droits, contactez-nous à l'adresse email suivante : 
-              <Link href="mailto:privacy@atelier-gestion.fr" sx={{ ml: 1 }}>
-                privacy@atelier-gestion.fr
+                              <Link href="mailto:contact.ateliergestion@gmail.com" sx={{ ml: 1 }}>
+                  contact.ateliergestion@gmail.com
               </Link>
             </Typography>
           </Box>
@@ -332,7 +332,7 @@ const PrivacyPolicy: React.FC = () => {
             </Typography>
             <Box sx={{ p: 3, bgcolor: '#f8f9fa', borderRadius: 2 }}>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                <strong>Email :</strong> privacy@atelier-gestion.fr
+                <strong>Email :</strong> contact.ateliergestion@gmail.com
               </Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
                 <strong>Téléphone :</strong> +33 1 23 45 67 89

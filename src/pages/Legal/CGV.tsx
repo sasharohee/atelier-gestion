@@ -79,13 +79,13 @@ const CGV: React.FC = () => {
                 <strong>Adresse :</strong> France
               </Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                <strong>Email :</strong> contact@atelier-gestion.fr
+                <strong>Email :</strong> contact.ateliergestion@gmail.com
               </Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
                 <strong>Téléphone :</strong> +33 1 23 45 67 89
               </Typography>
               <Typography variant="body1">
-                <strong>Site web :</strong> https://atelier-gestion.fr
+                <strong>Site web :</strong> https://atelier-gestion.com
               </Typography>
             </Box>
           </Box>
@@ -247,7 +247,7 @@ const CGV: React.FC = () => {
             </Alert>
             <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.7 }}>
               Pour exercer ce droit, le client doit nous notifier sa décision de rétractation 
-              par email à l'adresse : retractation@atelier-gestion.fr
+                              par email à l'adresse : contact.ateliergestion@gmail.com
             </Typography>
             <Typography variant="body1" sx={{ lineHeight: 1.7 }}>
               En cas de rétractation, le remboursement sera effectué dans un délai de 14 jours 
@@ -281,7 +281,7 @@ const CGV: React.FC = () => {
               6.3 Support technique
             </Typography>
             <Typography variant="body1" sx={{ lineHeight: 1.7 }}>
-              Un support technique est disponible par email à support@atelier-gestion.fr 
+                              Un support technique est disponible par email à contact.ateliergestion@gmail.com 
               avec un délai de réponse de 24h ouvrées.
             </Typography>
           </Box>
@@ -401,7 +401,7 @@ const CGV: React.FC = () => {
             </Typography>
             <Box sx={{ p: 3, bgcolor: '#f8f9fa', borderRadius: 2 }}>
               <Typography variant="body1" sx={{ mb: 1 }}>
-                <strong>Email :</strong> cgv@atelier-gestion.fr
+                <strong>Email :</strong> contact.ateliergestion@gmail.com
               </Typography>
               <Typography variant="body1" sx={{ mb: 1 }}>
                 <strong>Téléphone :</strong> +33 1 23 45 67 89

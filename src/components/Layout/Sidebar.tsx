@@ -42,6 +42,7 @@ import {
   Inventory2 as Inventory2Icon,
   Warning as WarningIcon,
   Handyman as HandymanIcon,
+  Archive as ArchiveIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
@@ -63,6 +64,12 @@ const menuItems = [
     icon: <KanbanIcon />,
     path: '/app/kanban',
     color: '#06b6d4',
+  },
+  {
+    text: 'Archives',
+    icon: <ArchiveIcon />,
+    path: '/app/archive',
+    color: '#3b82f6',
   },
   {
     text: 'Calendrier',

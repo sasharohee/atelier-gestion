@@ -42,7 +42,7 @@ const Settings: React.FC = () => {
       firstName: 'Utilisateur',
       lastName: 'Test',
       email: 'user@example.com',
-      phone: '01 23 45 67 89'
+      phone: '07 59 23 91 70'
     },
     preferences: {
       themeDarkMode: false,
@@ -52,8 +52,8 @@ const Settings: React.FC = () => {
     workshop: {
       name: 'Atelier de réparation',
       address: '123 Rue de la Paix, 75001 Paris',
-      phone: '01 23 45 67 89',
-      email: 'contact@atelier.fr',
+      phone: '07 59 23 91 70',
+      email: 'contact.ateliergestion@gmail.com',
       vatRate: '20',
       currency: 'EUR'
     }
