@@ -13,7 +13,8 @@ import {
   useTheme,
   useMediaQuery,
   Fade,
-  Slide
+  Slide,
+  Link
 } from '@mui/material';
 import {
   Build as BuildIcon,
@@ -87,34 +88,46 @@ const Landing: React.FC = () => {
 
   const features = [
     {
-      icon: <BuildIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
+      icon: <BuildIcon sx={{ fontSize: 40, color: '#FF6B6B' }} />,
       title: 'Gestion des Réparations',
-      description: 'Suivez l\'état de vos réparations en temps réel avec notre système Kanban intuitif'
+      description: 'Suivez l\'état de vos réparations en temps réel avec notre système Kanban intuitif',
+      bgColor: '#FFF5F5',
+      borderColor: '#FF6B6B'
     },
     {
-      icon: <ScheduleIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
+      icon: <ScheduleIcon sx={{ fontSize: 40, color: '#4ECDC4' }} />,
       title: 'Calendrier & Rendez-vous',
-      description: 'Planifiez et gérez vos rendez-vous clients avec un calendrier intégré'
+      description: 'Planifiez et gérez vos rendez-vous clients avec un calendrier intégré',
+      bgColor: '#F0FFFD',
+      borderColor: '#4ECDC4'
     },
     {
-      icon: <PeopleIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
+      icon: <PeopleIcon sx={{ fontSize: 40, color: '#45B7D1' }} />,
       title: 'Gestion Clients',
-      description: 'Centralisez les informations de vos clients et leur historique de réparations'
+      description: 'Centralisez les informations de vos clients et leur historique de réparations',
+      bgColor: '#F0F8FF',
+      borderColor: '#45B7D1'
     },
     {
-      icon: <InventoryIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
+      icon: <InventoryIcon sx={{ fontSize: 40, color: '#96CEB4' }} />,
       title: 'Inventaire & Pièces',
-      description: 'Gérez votre stock de pièces détachées et vos produits en vente'
+      description: 'Gérez votre stock de pièces détachées et vos produits en vente',
+      bgColor: '#F0FFF4',
+      borderColor: '#96CEB4'
     },
     {
-      icon: <AssessmentIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
+      icon: <AssessmentIcon sx={{ fontSize: 40, color: '#FFEAA7' }} />,
       title: 'Statistiques & Rapports',
-      description: 'Analysez vos performances avec des tableaux de bord détaillés'
+      description: 'Analysez vos performances avec des tableaux de bord détaillés',
+      bgColor: '#FFFBEB',
+      borderColor: '#FFEAA7'
     },
     {
-      icon: <MessageIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />,
-      title: 'Communication',
-      description: 'Communiquez directement avec vos clients depuis l\'application'
+      icon: <MessageIcon sx={{ fontSize: 40, color: '#DDA0DD' }} />,
+      title: 'Données en temps réel',
+      description: 'Accédez à vos données en temps réel depuis l\'application',
+      bgColor: '#FDF0FF',
+      borderColor: '#DDA0DD'
     }
   ];
 
@@ -488,14 +501,26 @@ const Landing: React.FC = () => {
                       sx={{
                         height: '100%',
                         transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+                        backgroundColor: feature.bgColor,
+                        border: `2px solid ${feature.borderColor}`,
                         '&:hover': {
                           transform: 'translateY(-8px)',
-                          boxShadow: theme.shadows[8]
+                          boxShadow: `0 8px 25px ${feature.borderColor}40`,
+                          borderColor: feature.borderColor
                         }
                       }}
                     >
                       <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                        <Box sx={{ mb: 2 }}>
+                        <Box 
+                          sx={{ 
+                            mb: 2,
+                            display: 'inline-flex',
+                            p: 2,
+                            borderRadius: '50%',
+                            backgroundColor: `${feature.borderColor}20`,
+                            border: `2px solid ${feature.borderColor}40`
+                          }}
+                        >
                           {feature.icon}
                         </Box>
                         <Typography
@@ -607,76 +632,192 @@ const Landing: React.FC = () => {
               </Typography>
               
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Card
-                  sx={{
-                    maxWidth: 400,
-                    width: '100%',
-                    textAlign: 'center',
-                    position: 'relative',
-                    overflow: 'visible',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-8px)',
-                      boxShadow: theme.shadows[8]
-                    }
-                  }}
-                >
+                                    <Card
+                      sx={{
+                        maxWidth: 450,
+                        width: '100%',
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'visible',
+                        transition: 'all 0.4s ease',
+                        background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                        color: '#495057',
+                        borderRadius: '24px',
+                        border: '2px solid #dee2e6',
+                        '&:hover': {
+                          transform: 'translateY(-12px) scale(1.02)',
+                          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+                          borderColor: '#adb5bd'
+                        }
+                      }}
+                    >
                   {/* Popular Badge */}
                   <Box
                     sx={{
                       position: 'absolute',
-                      top: -15,
+                      top: -20,
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      bgcolor: theme.palette.primary.main,
+                      background: 'linear-gradient(45deg, #6c757d, #495057)',
                       color: 'white',
-                      px: 3,
-                      py: 1,
-                      borderRadius: '20px',
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      boxShadow: theme.shadows[2]
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: '25px',
+                      fontSize: '1rem',
+                      fontWeight: 700,
+                      boxShadow: '0 8px 20px rgba(108, 117, 125, 0.3)',
+                      border: '2px solid rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(10px)'
                     }}
                   >
                     ⭐ Plan Recommandé
                   </Box>
                   
-                  <CardContent sx={{ p: 4 }}>
-                    <Typography variant="h4" component="h3" sx={{ mb: 2, fontWeight: 700 }}>
-                      Atelier Pro
-                    </Typography>
+                                     {/* Decorative elements */}
+                   <Box
+                     sx={{
+                       position: 'absolute',
+                       top: 20,
+                       right: 20,
+                       width: 60,
+                       height: 60,
+                       borderRadius: '50%',
+                       background: 'rgba(108, 117, 125, 0.1)',
+                       animation: 'pulse 2s ease-in-out infinite'
+                     }}
+                   />
+                   <Box
+                     sx={{
+                       position: 'absolute',
+                       bottom: 40,
+                       left: 20,
+                       width: 40,
+                       height: 40,
+                       borderRadius: '50%',
+                       background: 'rgba(108, 117, 125, 0.08)',
+                       animation: 'pulse 3s ease-in-out infinite'
+                     }}
+                   />
+                  
+                  <CardContent sx={{ p: 5, position: 'relative', zIndex: 2 }}>
+                                         <Typography 
+                       variant="h4" 
+                       component="h3" 
+                       sx={{ 
+                         mb: 3, 
+                         fontWeight: 800,
+                         color: '#495057'
+                       }}
+                     >
+                       Atelier Pro
+                     </Typography>
                     
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="h2" component="span" sx={{ fontWeight: 800, color: theme.palette.primary.main }}>
-                        15,99€
-                      </Typography>
-                      <Typography variant="h6" component="span" sx={{ color: 'text.secondary' }}>
-                        /mois
-                      </Typography>
+                    <Box sx={{ mb: 4, position: 'relative' }}>
+                                             <Typography 
+                         variant="h1" 
+                         component="span" 
+                         sx={{ 
+                           fontWeight: 900, 
+                           color: '#495057',
+                           fontSize: { xs: '3rem', md: '4rem' }
+                         }}
+                       >
+                         19,99€
+                       </Typography>
+                       <Typography 
+                         variant="h5" 
+                         component="span" 
+                         sx={{ 
+                           color: '#6c757d',
+                           fontWeight: 600,
+                           ml: 1
+                         }}
+                       >
+                         /mois
+                       </Typography>
+                       <Box
+                         sx={{
+                           position: 'absolute',
+                           top: '50%',
+                           right: -20,
+                           transform: 'translateY(-50%)',
+                           width: 4,
+                           height: 60,
+                           background: 'linear-gradient(180deg, #6c757d, transparent)',
+                           borderRadius: '2px'
+                         }}
+                       />
                     </Box>
                     
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-                      Accès complet à toutes les fonctionnalités pour votre atelier
-                    </Typography>
+                                         <Typography 
+                       variant="h6" 
+                       sx={{ 
+                         mb: 4,
+                         color: '#6c757d',
+                         fontWeight: 500,
+                         lineHeight: 1.4
+                       }}
+                     >
+                       Accès complet à toutes les fonctionnalités pour votre atelier
+                     </Typography>
                     
-                    <Box sx={{ mb: 4 }}>
-                      <Stack spacing={2}>
+                    <Box sx={{ mb: 5 }}>
+                      <Stack spacing={2.5}>
                         {[
-                          '✅ Gestion complète des réparations',
-                          '✅ Calendrier et rendez-vous illimités',
-                          '✅ Base de données clients illimitée',
-                          '✅ Inventaire et gestion des pièces',
-                          '✅ Rapports et statistiques détaillés',
-                          '✅ Support technique prioritaire',
-                          '✅ Sauvegarde automatique des données',
-                          '✅ Mises à jour gratuites',
-                          '✅ Accès multi-appareils',
-                          '✅ Formation et support inclus'
+                          'Gestion complète des réparations',
+                          'Calendrier et rendez-vous illimités',
+                          'Base de données clients illimitée',
+                          'Inventaire et gestion des pièces',
+                          'Rapports et statistiques détaillés',
+                          'Support technique prioritaire',
+                          'Sauvegarde automatique des données',
+                          'Mises à jour gratuites',
+                          'Accès multi-appareils'
                         ].map((feature, index) => (
-                          <Box key={index} sx={{ display: 'flex', alignItems: 'center', textAlign: 'left' }}>
-                            <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                              {feature}
-                            </Typography>
+                          <Box 
+                            key={index} 
+                                                         sx={{ 
+                               display: 'flex', 
+                               alignItems: 'center', 
+                               textAlign: 'left',
+                               p: 1.5,
+                               borderRadius: '12px',
+                               background: 'rgba(255, 255, 255, 0.7)',
+                               border: '1px solid #dee2e6',
+                               transition: 'all 0.3s ease',
+                               '&:hover': {
+                                 background: 'rgba(255, 255, 255, 0.9)',
+                                 transform: 'translateX(5px)',
+                                 borderColor: '#adb5bd'
+                               }
+                             }}
+                          >
+                                                         <Box
+                               sx={{
+                                 width: 24,
+                                 height: 24,
+                                 borderRadius: '50%',
+                                 background: 'linear-gradient(45deg, #6c757d, #495057)',
+                                 display: 'flex',
+                                 alignItems: 'center',
+                                 justifyContent: 'center',
+                                 mr: 2,
+                                 flexShrink: 0
+                               }}
+                             >
+                               <Typography variant="body2" sx={{ color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>
+                                 ✓
+                               </Typography>
+                             </Box>
+                                                         <Typography 
+                               variant="body1" 
+                               sx={{ 
+                                 fontWeight: 500,
+                                 color: '#495057'
+                               }}
+                             >
+                               {feature}
+                             </Typography>
                           </Box>
                         ))}
                       </Stack>
@@ -688,24 +829,27 @@ const Landing: React.FC = () => {
                       onClick={handleAccessApp}
                       sx={{
                         width: '100%',
-                        py: 2,
-                        fontSize: '1.1rem',
-                        fontWeight: 600,
+                        py: 3,
+                        fontSize: '1.2rem',
+                        fontWeight: 700,
                         borderRadius: '50px',
-                        boxShadow: theme.shadows[3],
+                        background: 'linear-gradient(45deg, #6c757d, #495057)',
+                        color: 'white',
+                        boxShadow: '0 8px 25px rgba(108, 117, 125, 0.4)',
+                        border: '2px solid rgba(255, 255, 255, 0.3)',
+                        transition: 'all 0.3s ease',
                         '&:hover': {
-                          boxShadow: theme.shadows[6],
-                          transform: 'translateY(-2px)'
+                          background: 'linear-gradient(45deg, #495057, #343a40)',
+                          boxShadow: '0 12px 35px rgba(108, 117, 125, 0.6)',
+                          transform: 'translateY(-3px) scale(1.02)'
                         }
                       }}
                       endIcon={<ArrowForwardIcon />}
                     >
-                      Commencer l'Essai Gratuit
+                      Commencer
                     </Button>
                     
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                      Essai gratuit de 14 jours • Aucune carte de crédit requise
-                    </Typography>
+                    
                   </CardContent>
                 </Card>
               </Box>
@@ -868,19 +1012,252 @@ const Landing: React.FC = () => {
       {/* Footer */}
       <Box
         sx={{
-          bgcolor: theme.palette.grey[900],
+          bgcolor: '#2c3e50',
           color: 'white',
-          py: 4,
-          textAlign: 'center'
+          py: 6,
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '1px',
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)'
+          }
         }}
       >
         <Container maxWidth="lg">
-          <Typography variant="body2" sx={{ opacity: 0.8 }}>
-            © 2024 Atelier Gestion. Tous droits réservés.
-          </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.6, mt: 1 }}>
-            Solution de gestion d'atelier de réparation d'appareils électroniques
-          </Typography>
+          <Grid container spacing={4}>
+            {/* Company Info */}
+            <Grid item xs={12} md={4}>
+              <Box sx={{ mb: 3 }}>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    mb: 2,
+                    background: 'linear-gradient(45deg, #3498db, #2ecc71)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}
+                >
+                  Atelier Gestion
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.8, mb: 3, lineHeight: 1.6 }}>
+                  Solution complète de gestion d'atelier de réparation d'appareils électroniques. 
+                  Simplifiez votre quotidien avec nos outils professionnels.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        background: '#3498db',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    <Typography variant="body2">📧</Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        background: '#3498db',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    <Typography variant="body2">📞</Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        background: '#3498db',
+                        transform: 'translateY(-2px)'
+                      }
+                    }}
+                  >
+                    <Typography variant="body2">💬</Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </Grid>
+
+
+
+            {/* Support */}
+            <Grid item xs={12} md={2}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                Support
+              </Typography>
+              <Stack spacing={1.5}>
+                {[
+                  { name: 'Contact Support', path: '/support' },
+                  { name: 'FAQ', path: '/faq' }
+                ].map((link, index) => (
+                  <Link
+                    key={index}
+                    href={link.path}
+                    sx={{ 
+                      opacity: 0.8, 
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      textDecoration: 'none',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        opacity: 1,
+                        color: '#3498db',
+                        transform: 'translateX(5px)'
+                      }
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {link.name}
+                    </Typography>
+                  </Link>
+                ))}
+              </Stack>
+            </Grid>
+
+            {/* Legal */}
+            <Grid item xs={12} md={2}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                Légal
+              </Typography>
+              <Stack spacing={1.5}>
+                {[
+                  { name: 'Conditions d\'Utilisation', path: '/terms-of-service' },
+                  { name: 'Politique de Confidentialité', path: '/privacy-policy' },
+                  { name: 'CGV', path: '/cgv' },
+                  { name: 'RGPD', path: '/rgpd' }
+                ].map((link, index) => (
+                  <Link
+                    key={index}
+                    href={link.path}
+                    sx={{ 
+                      opacity: 0.8, 
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      textDecoration: 'none',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        opacity: 1,
+                        color: '#3498db',
+                        transform: 'translateX(5px)'
+                      }
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {link.name}
+                    </Typography>
+                  </Link>
+                ))}
+              </Stack>
+            </Grid>
+
+            {/* Contact Info */}
+            <Grid item xs={12} md={2}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+                Contact
+              </Typography>
+              <Stack spacing={1.5}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>📧</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.8, fontSize: '0.8rem' }}>
+                    contact@atelier-gestion.fr
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>📞</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.8, fontSize: '0.8rem' }}>
+                    +33 1 23 45 67 89
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>📍</Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.8, fontSize: '0.8rem' }}>
+                    France
+                  </Typography>
+                </Box>
+              </Stack>
+            </Grid>
+          </Grid>
+
+          {/* Bottom Section */}
+          <Box 
+            sx={{ 
+              mt: 4, 
+              pt: 3, 
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 2
+            }}
+          >
+            <Typography variant="body2" sx={{ opacity: 0.7 }}>
+              © 2025 Atelier Gestion. Tous droits réservés.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 3 }}>
+              <Link
+                href="/privacy-policy"
+                sx={{ 
+                  opacity: 0.7,
+                  cursor: 'pointer',
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  '&:hover': { opacity: 1, color: '#3498db' }
+                }}
+              >
+                <Typography variant="body2">
+                  Politique de Confidentialité
+                </Typography>
+              </Link>
+              <Link
+                href="/terms-of-service"
+                sx={{ 
+                  opacity: 0.7,
+                  cursor: 'pointer',
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  '&:hover': { opacity: 1, color: '#3498db' }
+                }}
+              >
+                <Typography variant="body2">
+                  Conditions d'Utilisation
+                </Typography>
+              </Link>
+            </Box>
+          </Box>
         </Container>
       </Box>
     </Box>

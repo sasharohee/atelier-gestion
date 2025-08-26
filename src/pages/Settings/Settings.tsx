@@ -11,9 +11,6 @@ interface SettingsData {
     phone: string;
   };
   preferences: {
-    notificationsEmail: boolean;
-    notificationsPush: boolean;
-    notificationsSms: boolean;
     themeDarkMode: boolean;
     language: string;
     twoFactorAuth: boolean;
@@ -48,9 +45,6 @@ const Settings: React.FC = () => {
       phone: '01 23 45 67 89'
     },
     preferences: {
-      notificationsEmail: true,
-      notificationsPush: true,
-      notificationsSms: false,
       themeDarkMode: false,
       language: 'fr',
       twoFactorAuth: false
@@ -118,9 +112,7 @@ const Settings: React.FC = () => {
           case 'currency':
             newSettings.workshop.currency = setting.value;
             break;
-          case 'notifications':
-            newSettings.preferences.notificationsEmail = setting.value === 'true';
-            break;
+
           case 'language':
             newSettings.preferences.language = setting.value;
             break;
@@ -175,7 +167,6 @@ const Settings: React.FC = () => {
         { key: 'currency', value: settings.workshop.currency },
         
         // Paramètres des préférences
-        { key: 'notifications', value: settings.preferences.notificationsEmail.toString() },
         { key: 'language', value: settings.preferences.language },
         
         // Paramètres du profil utilisateur
@@ -327,7 +318,7 @@ const Settings: React.FC = () => {
 
   const tabs = [
     { label: 'Profil', content: 'profile' },
-    { label: 'Notifications', content: 'notifications' },
+
     { label: 'Sécurité', content: 'security' },
     { label: 'Atelier', content: 'atelier' }
   ];
@@ -539,241 +530,9 @@ const Settings: React.FC = () => {
             </div>
           )}
 
+
+
           {activeTab === 1 && (
-            <div>
-              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <div style={{ 
-                  fontSize: '60px', 
-                  color: '#ff9800', 
-                  marginBottom: '16px',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}>
-                  🚧
-                </div>
-                <h2 style={{ margin: '0 0 12px 0', fontSize: '24px', fontWeight: 'bold', color: '#333' }}>
-                  Section en Construction
-                </h2>
-                <p style={{ margin: '0', color: '#666', fontSize: '16px' }}>
-                  Les paramètres de notifications sont actuellement en cours de développement
-                </p>
-              </div>
-
-              <div style={{ 
-                backgroundColor: '#fff3cd', 
-                border: '1px solid #ffeaa7', 
-                borderRadius: '8px', 
-                padding: '20px', 
-                marginBottom: '24px' 
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-                  <div style={{ 
-                    fontSize: '32px', 
-                    color: '#007bff', 
-                    marginRight: '12px',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-                    👨‍💻
-                  </div>
-                  <div>
-                    <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
-                      Développement en cours
-                    </h3>
-                    <p style={{ margin: '0', color: '#666', fontSize: '14px' }}>
-                      Notre équipe travaille activement sur cette fonctionnalité
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ 
-                    margin: '0 0 12px 0', 
-                    fontSize: '16px', 
-                    fontWeight: '600', 
-                    color: '#333',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-                    📋 Fonctionnalités prévues
-                  </h4>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    <span style={{
-                      backgroundColor: '#e3f2fd',
-                      color: '#1976d2',
-                      padding: '6px 12px',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      border: '1px solid #bbdefb'
-                    }}>
-                      Notifications par email
-                    </span>
-                    <span style={{
-                      backgroundColor: '#e3f2fd',
-                      color: '#1976d2',
-                      padding: '6px 12px',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      border: '1px solid #bbdefb'
-                    }}>
-                      Notifications push
-                    </span>
-                    <span style={{
-                      backgroundColor: '#e3f2fd',
-                      color: '#1976d2',
-                      padding: '6px 12px',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      border: '1px solid #bbdefb'
-                    }}>
-                      Notifications SMS
-                    </span>
-                    <span style={{
-                      backgroundColor: '#e3f2fd',
-                      color: '#1976d2',
-                      padding: '6px 12px',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      border: '1px solid #bbdefb'
-                    }}>
-                      Personnalisation avancée
-                    </span>
-                    <span style={{
-                      backgroundColor: '#e3f2fd',
-                      color: '#1976d2',
-                      padding: '6px 12px',
-                      borderRadius: '16px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      border: '1px solid #bbdefb'
-                    }}>
-                      Programmation des alertes
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ 
-                  backgroundColor: '#f8f9fa', 
-                  border: '1px solid #e9ecef', 
-                  borderRadius: '6px', 
-                  padding: '16px' 
-                }}>
-                  <h4 style={{ 
-                    margin: '0 0 12px 0', 
-                    fontSize: '16px', 
-                    fontWeight: '600', 
-                    color: '#333',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-                    📊 Progression du développement
-                  </h4>
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px', color: '#666' }}>Interface utilisateur</span>
-                      <span style={{ fontSize: '14px', color: '#666' }}>75%</span>
-                    </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '8px', 
-                      backgroundColor: '#e9ecef', 
-                      borderRadius: '4px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{ 
-                        width: '75%', 
-                        height: '100%', 
-                        backgroundColor: '#007bff', 
-                        borderRadius: '4px' 
-                      }}></div>
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px', color: '#666' }}>Logique de notifications</span>
-                      <span style={{ fontSize: '14px', color: '#666' }}>45%</span>
-                    </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '8px', 
-                      backgroundColor: '#e9ecef', 
-                      borderRadius: '4px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{ 
-                        width: '45%', 
-                        height: '100%', 
-                        backgroundColor: '#007bff', 
-                        borderRadius: '4px' 
-                      }}></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px', color: '#666' }}>Tests et optimisation</span>
-                      <span style={{ fontSize: '14px', color: '#666' }}>20%</span>
-                    </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '8px', 
-                      backgroundColor: '#e9ecef', 
-                      borderRadius: '4px',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{ 
-                        width: '20%', 
-                        height: '100%', 
-                        backgroundColor: '#007bff', 
-                        borderRadius: '4px' 
-                      }}></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ 
-                  backgroundColor: '#d1ecf1', 
-                  border: '1px solid #bee5eb', 
-                  borderRadius: '6px', 
-                  padding: '12px', 
-                  marginTop: '16px' 
-                }}>
-                  <p style={{ 
-                    margin: '0', 
-                    fontSize: '14px', 
-                    color: '#0c5460',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-                    <strong>ℹ️ Information :</strong> La date de disponibilité n'est pas encore fixée, 
-                    mais cette fonctionnalité sera disponible ultérieurement. Nous vous tiendrons informés des avancées.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ 
-                backgroundColor: '#f8f9fa', 
-                border: '1px solid #e9ecef', 
-                borderRadius: '8px', 
-                padding: '20px' 
-              }}>
-                <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600', color: '#333' }}>
-                  En attendant...
-                </h4>
-                <p style={{ margin: '0', color: '#666', fontSize: '14px', lineHeight: '1.5' }}>
-                  Vous pouvez configurer les autres paramètres de votre profil et de votre atelier. 
-                  Les notifications seront bientôt disponibles pour vous permettre de personnaliser 
-                  vos alertes et communications.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 2 && (
             <div>
               <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
                 Sécurité
@@ -1004,7 +763,7 @@ const Settings: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 3 && (
+          {activeTab === 2 && (
             <div>
               <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
                 Informations de l'atelier

@@ -30,7 +30,7 @@ import Auth from './pages/Auth/Auth';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Kanban from './pages/Kanban/Kanban';
 import Calendar from './pages/Calendar/Calendar';
-import Messaging from './pages/Messaging/Messaging';
+
 import Catalog from './pages/Catalog/Catalog';
 import Transaction from './pages/Transaction/Transaction';
 import Sales from './pages/Sales/Sales';
@@ -40,6 +40,12 @@ import SubscriptionManagement from './pages/Administration/SubscriptionManagemen
 import UserAccessManagement from './pages/Administration/UserAccessManagement';
 import AdminAccess from './pages/AdminAccess/AdminAccess';
 import Settings from './pages/Settings/Settings';
+import PrivacyPolicy from './pages/Legal/PrivacyPolicy';
+import TermsOfService from './pages/Legal/TermsOfService';
+import CGV from './pages/Legal/CGV';
+import RGPD from './pages/Legal/RGPD';
+import Support from './pages/Support/Support';
+import FAQ from './pages/Support/FAQ';
 
 // Services
 import { demoDataService } from './services/demoDataService';
@@ -152,6 +158,12 @@ function App() {
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/admin" element={<AdminAccess />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms-of-service" element={<TermsOfService />} />
+                <Route path="/cgv" element={<CGV />} />
+                <Route path="/rgpd" element={<RGPD />} />
+                <Route path="/support" element={<Support />} />
+                <Route path="/faq" element={<FAQ />} />
                 <Route path="/app/*" element={
                   <AuthGuard>
                     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
@@ -163,7 +175,7 @@ function App() {
                             <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/kanban" element={<Kanban />} />
                             <Route path="/calendar" element={<Calendar />} />
-                            <Route path="/messaging" element={<Messaging />} />
+
                             <Route path="/catalog/*" element={<Catalog />} />
                             <Route path="/transaction/*" element={<Transaction />} />
                             <Route path="/sales" element={<Sales />} />

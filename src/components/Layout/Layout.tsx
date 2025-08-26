@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  Search as SearchIcon,
+
   AccountCircle as AccountIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
@@ -66,7 +66,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       '/app/dashboard': 'Dashboard',
       '/app/kanban': 'Tableau Kanban',
       '/app/calendar': 'Calendrier',
-      '/app/messaging': 'Messagerie',
+  
       '/app/catalog': 'Catalogue',
       '/app/catalog/models': 'Modèles',
       '/app/catalog/services': 'Services',
@@ -249,24 +249,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Statut de connexion */}
             <ConnectionStatus />
             
-            {/* Recherche avec design amélioré */}
-            <Tooltip title="Rechercher" arrow>
-              <IconButton 
-                color="inherit" 
-                size="large"
-                sx={{
-                  backgroundColor: 'rgba(0,0,0,0.04)',
-                  color: 'text.primary',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0,0,0,0.08)',
-                    transform: 'scale(1.05)',
-                  },
-                  transition: 'all 0.2s ease-in-out',
-                }}
-              >
-                <SearchIcon />
-              </IconButton>
-            </Tooltip>
+
 
             {/* Profil utilisateur avec redirection vers réglages */}
             <Tooltip title="Réglages" arrow>

@@ -70,12 +70,7 @@ const menuItems = [
     path: '/app/calendar',
     color: '#10b981',
   },
-  {
-    text: 'Messagerie',
-    icon: <MessageIcon />,
-    path: '/app/messaging',
-    color: '#3b82f6',
-  },
+
   {
     text: 'Catalogue',
     icon: <CatalogIcon />,
