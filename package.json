@@ -1,5 +1,5 @@
 {
-  "name": "atelier-gestion-app",
+  "name": "atelier-gestion",
   "version": "1.0.0",
   "description": "Application de gestion d'atelier de réparation d'appareils électroniques",
   "private": true,
