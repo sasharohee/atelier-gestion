@@ -80,7 +80,7 @@ const menuItems = [
     path: '/app/catalog',
     color: '#8b5cf6',
     subItems: [
-      { text: 'Modèles', path: '/app/catalog/models', icon: <DeviceHubIcon /> },
+      { text: 'Gestion des Appareils', path: '/app/catalog/device-management', icon: <DeviceHubIcon /> },
       { text: 'Services', path: '/app/catalog/services', icon: <BuildIcon /> },
       { text: 'Pièces détachées', path: '/app/catalog/parts', icon: <MemoryIcon /> },
       { text: 'Produits', path: '/app/catalog/products', icon: <Inventory2Icon /> },
@@ -94,7 +94,6 @@ const menuItems = [
     color: '#f59e0b',
     subItems: [
       { text: 'Clients', path: '/app/transaction/clients', icon: <PeopleIcon /> },
-      { text: 'Appareils', path: '/app/transaction/devices', icon: <PhoneIcon /> },
       { text: 'Ventes', path: '/app/transaction/sales', icon: <SalesIcon /> },
       { text: 'Devis', path: '/app/transaction/quotes', icon: <DescriptionIcon /> },
     ],

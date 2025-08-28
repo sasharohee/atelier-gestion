@@ -11,7 +11,6 @@ import {
 } from '@mui/material';
 import {
   People as PeopleIcon,
-  Phone as PhoneIcon,
   Receipt as ReceiptIcon,
   Description as DescriptionIcon,
 } from '@mui/icons-material';
@@ -19,13 +18,12 @@ import { useAppStore } from '../../store';
 
 // Sous-pages de transaction
 import Clients from '../Catalog/Clients';
-import Devices from '../Catalog/Devices';
 import Sales from '../Sales/Sales';
 import Quotes from '../Quotes/Quotes';
 
 const Transaction: React.FC = () => {
   const navigate = useNavigate();
-  const { clients, devices, sales } = useAppStore();
+  const { clients, sales } = useAppStore();
 
   const transactionSections = [
     {
@@ -36,14 +34,7 @@ const Transaction: React.FC = () => {
       count: clients.length,
       color: '#607d8b',
     },
-    {
-      title: 'Appareils',
-      description: 'Gestion des appareils clients',
-      icon: <PhoneIcon />,
-      path: '/app/transaction/devices',
-      count: devices.length,
-      color: '#2196f3',
-    },
+
     {
       title: 'Ventes',
       description: 'Gestion des ventes et factures',
@@ -119,7 +110,7 @@ const Transaction: React.FC = () => {
         </Box>
       } />
       <Route path="/clients" element={<Clients />} />
-      <Route path="/devices" element={<Devices />} />
+
       <Route path="/sales" element={<Sales />} />
       <Route path="/quotes" element={<Quotes />} />
     </Routes>

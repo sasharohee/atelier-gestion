@@ -35,10 +35,7 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Phone as PhoneIcon,
-  Laptop as LaptopIcon,
-  Tablet as TabletIcon,
-  Computer as ComputerIcon,
+  Build as BuildIcon,
   Schedule as ScheduleIcon,
   Warning as WarningIcon,
   ExpandMore as ExpandMoreIcon,
@@ -72,6 +69,9 @@ const Kanban: React.FC = () => {
     repairStatuses,
     clients,
     devices,
+    deviceCategories,
+    deviceBrands,
+    deviceModels,
     users,
     systemSettings,
     getClientById,
@@ -81,6 +81,7 @@ const Kanban: React.FC = () => {
     addRepair,
     deleteRepair,
     addDevice,
+    addDeviceModel,
     addClient,
     loadUsers,
     loadSystemSettings,
@@ -128,12 +129,11 @@ const Kanban: React.FC = () => {
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  // États pour le nouvel appareil
+  // États pour le nouveau modèle
   const [newDevice, setNewDevice] = useState({
-    brand: '',
+    categoryId: '',
+    brandId: '',
     model: '',
-    serialNumber: '',
-    type: 'smartphone' as 'smartphone' | 'tablet' | 'laptop' | 'desktop' | 'other',
   });
 
   // États pour le nouveau client
@@ -151,14 +151,8 @@ const Kanban: React.FC = () => {
   };
 
   const getDeviceTypeIcon = (type: string) => {
-    const icons = {
-      smartphone: <PhoneIcon />,
-      tablet: <TabletIcon />,
-      laptop: <LaptopIcon />,
-      desktop: <ComputerIcon />,
-      other: <ComputerIcon />,
-    };
-    return icons[type as keyof typeof icons] || <ComputerIcon />;
+    // Retourner toujours une clé à molette pour toutes les réparations
+    return <BuildIcon />;
   };
 
   const getDeviceTypeColor = (type: string) => {
@@ -167,20 +161,38 @@ const Kanban: React.FC = () => {
 
   // Fonctions utilitaires pour obtenir les marques et catégories uniques
   const getUniqueBrands = () => {
-    const brands = devices.map(device => device.brand);
-    return Array.from(new Set(brands)).sort();
+    // Utiliser les marques du store centralisé (filtrées par catégorie si sélectionnée)
+    let filteredBrands = deviceBrands.filter(brand => brand.isActive);
+    
+    // Si une catégorie est sélectionnée, filtrer les marques par cette catégorie
+    if (selectedCategory) {
+      const category = deviceCategories.find(c => c.name === selectedCategory);
+      if (category) {
+        filteredBrands = filteredBrands.filter(brand => brand.categoryId === category.id);
+      }
+    }
+    
+    const brandNames = filteredBrands.map(brand => brand.name);
+    return Array.from(new Set(brandNames)).sort();
   };
 
   const getUniqueCategories = () => {
-    const categories = devices.map(device => device.type);
-    return Array.from(new Set(categories)).sort();
+    // Utiliser les catégories du store centralisé
+    return deviceCategories
+      .filter(category => category.isActive)
+      .map(category => category.name)
+      .sort();
   };
 
-  const getFilteredDevices = () => {
-    return devices.filter(device => {
-      const brandMatch = !selectedBrand || device.brand === selectedBrand;
-      const categoryMatch = !selectedCategory || device.type === selectedCategory;
-      return brandMatch && categoryMatch;
+  const getFilteredModels = () => {
+    // Utiliser les modèles du store centralisé
+    return deviceModels.filter(model => {
+      const brand = deviceBrands.find(b => b.id === model.brandId);
+      const category = deviceCategories.find(c => c.id === model.categoryId);
+      
+      const brandMatch = !selectedBrand || brand?.name === selectedBrand;
+      const categoryMatch = !selectedCategory || category?.name === selectedCategory;
+      return brandMatch && categoryMatch && model.isActive;
     });
   };
 
@@ -365,6 +377,24 @@ const Kanban: React.FC = () => {
         return;
       }
 
+      // Créer un appareil temporaire dans Supabase basé sur le modèle sélectionné
+      await createDeviceFromModel(newRepair.deviceId);
+      
+      // Trouver l'appareil créé dans la liste
+      const model = deviceModels.find(m => m.id === newRepair.deviceId);
+      const brand = deviceBrands.find(b => b.id === model?.brandId);
+      
+      const createdDevice = devices.find(d => 
+        d.brand === brand?.name && 
+        d.model === model?.name
+      );
+      
+      if (!createdDevice) {
+        throw new Error('Impossible de créer l\'appareil');
+      }
+      
+      const deviceId = createdDevice.id;
+
       // Calculer le prix final après réduction
       const originalPrice = newRepair.totalPrice;
       const discountAmount = (originalPrice * newRepair.discountPercentage) / 100;
@@ -373,7 +403,7 @@ const Kanban: React.FC = () => {
       // Préparer les données pour Supabase (sans id, createdAt, updatedAt)
       const repairData: Omit<Repair, 'id' | 'createdAt' | 'updatedAt'> = {
         clientId: newRepair.clientId,
-        deviceId: newRepair.deviceId,
+        deviceId: deviceId,
         description: newRepair.description,
         issue: newRepair.issue,
         status: newRepair.status,
@@ -409,6 +439,41 @@ const Kanban: React.FC = () => {
     }));
   };
 
+  // Fonction pour créer un appareil temporaire dans Supabase quand on sélectionne un modèle
+  const createDeviceFromModel = async (modelId: string) => {
+    try {
+      const model = deviceModels.find(m => m.id === modelId);
+      if (!model) {
+        throw new Error('Modèle non trouvé');
+      }
+
+      const brand = deviceBrands.find(b => b.id === model.brandId);
+      const category = deviceCategories.find(c => c.id === model.categoryId);
+      
+      if (!brand || !category) {
+        throw new Error('Marque ou catégorie non trouvée');
+      }
+
+      // Créer un appareil temporaire dans Supabase basé sur le modèle
+      const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
+        brand: brand.name,
+        model: model.name,
+        serialNumber: undefined,
+        type: category.name.toLowerCase() as any,
+        specifications: {},
+      };
+
+      await addDevice(deviceData as Device);
+      
+      // Retourner l'ID du modèle pour l'instant
+      // L'appareil sera créé automatiquement dans Supabase
+      return modelId;
+    } catch (error) {
+      console.error('Erreur lors de la création de l\'appareil:', error);
+      throw error;
+    }
+  };
+
   const resetNewRepairForm = () => {
     setNewRepair({
       clientId: '' as string,
@@ -430,69 +495,83 @@ const Kanban: React.FC = () => {
   // Fonctions pour gérer les nouveaux appareils et clients
   const handleCreateNewDevice = async () => {
     try {
-      // Vérifier si le numéro de série existe déjà (seulement si fourni)
-      if (newDevice.serialNumber && newDevice.serialNumber.trim()) {
-        const existingDevice = devices.find(d => 
-          d.serialNumber && 
-          d.serialNumber.trim().toLowerCase() === newDevice.serialNumber.trim().toLowerCase()
-        );
-        if (existingDevice) {
-          alert(`❌ Un appareil avec le numéro de série "${newDevice.serialNumber}" existe déjà.\n\nAppareil: ${existingDevice.brand} ${existingDevice.model}\n\nVeuillez utiliser un numéro de série différent, laisser le champ vide, ou sélectionner l'appareil existant.`);
-          return;
-        }
-      }
-
-      // Validation supplémentaire des champs requis
-      if (!newDevice.brand.trim() || !newDevice.model.trim()) {
-        alert('❌ Veuillez remplir la marque et le modèle de l\'appareil.');
+      // Validation des champs requis
+      if (!newDevice.categoryId || !newDevice.brandId || !newDevice.model.trim()) {
+        alert('❌ Veuillez sélectionner une catégorie, une marque et saisir un modèle.');
         return;
       }
 
+      // Vérifier si le modèle existe déjà pour cette marque
+      const existingModel = deviceModels.find(m => 
+        m.brandId === newDevice.brandId && 
+        m.name.toLowerCase() === newDevice.model.trim().toLowerCase()
+      );
+      
+      if (existingModel) {
+        alert('❌ Un modèle avec ce nom existe déjà pour cette marque.\n\nVeuillez utiliser un nom différent.');
+        return;
+      }
+
+      // Créer le nouveau modèle
+      const brand = deviceBrands.find(b => b.id === newDevice.brandId);
+      const category = deviceCategories.find(c => c.id === newDevice.categoryId);
+      
+      if (!brand || !category) {
+        alert('❌ Erreur : marque ou catégorie introuvable.');
+        return;
+      }
+
+      // Créer le modèle dans le store centralisé
+      const modelData = {
+        name: newDevice.model.trim(),
+        brandId: newDevice.brandId,
+        categoryId: newDevice.categoryId,
+        year: new Date().getFullYear(),
+        commonIssues: [],
+        repairDifficulty: 'medium' as 'easy' | 'medium' | 'hard',
+        partsAvailability: 'medium' as 'high' | 'medium' | 'low',
+        isActive: true,
+      };
+
+      // Utiliser la fonction du store pour ajouter le modèle
+      addDeviceModel(modelData);
+      
+      // Créer aussi un appareil dans l'ancien système pour la compatibilité
       const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
-        brand: newDevice.brand.trim(),
+        brand: brand.name,
         model: newDevice.model.trim(),
-        serialNumber: newDevice.serialNumber.trim() || undefined, // Numéro de série optionnel
-        type: newDevice.type,
+        serialNumber: undefined, // Pas de numéro de série lors de la création d'un modèle
+        type: category.name.toLowerCase() as any,
         specifications: {},
       };
 
       await addDevice(deviceData as Device);
       
-      // Trouver le nouvel appareil créé dans la liste mise à jour
+      // Trouver le nouveau modèle créé
       const newDeviceCreated = devices.find(d => 
-        d.brand === newDevice.brand.trim() && 
-        d.model === newDevice.model.trim() && 
-        (newDevice.serialNumber ? d.serialNumber === newDevice.serialNumber.trim() : !d.serialNumber)
+        d.brand === brand.name && 
+        d.model === newDevice.model.trim()
       );
       
-      // Sélectionner automatiquement le nouvel appareil
+      // Sélectionner automatiquement le nouveau modèle
       if (newDeviceCreated) {
         handleNewRepairChange('deviceId', newDeviceCreated.id);
       }
       
       // Réinitialiser le formulaire
       setNewDevice({
-        brand: '',
+        categoryId: '',
+        brandId: '',
         model: '',
-        serialNumber: '',
-        type: 'smartphone',
       });
       
       // Retourner à l'onglet réparation
       setActiveTab(0);
       
-      alert('✅ Appareil créé avec succès et sélectionné !');
+      alert('✅ Modèle créé avec succès et sélectionné !');
     } catch (error: any) {
-      console.error('Erreur lors de la création de l\'appareil:', error);
-      
-      // Gestion spécifique des erreurs
-      if (error.message && error.message.includes('duplicate key value violates unique constraint "devices_serial_number_key"')) {
-        alert(`❌ Un appareil avec le numéro de série "${newDevice.serialNumber}" existe déjà dans la base de données.\n\nVeuillez utiliser un numéro de série différent.`);
-      } else if (error.message && error.message.includes('duplicate key')) {
-        alert('❌ Un appareil avec ces informations existe déjà.\n\nVeuillez vérifier les données saisies.');
-      } else {
-        alert('❌ Erreur lors de la création de l\'appareil.\n\nVeuillez vérifier les informations saisies et réessayer.');
-      }
+      console.error('Erreur lors de la création du modèle:', error);
+      alert('❌ Erreur lors de la création du modèle.\n\nVeuillez vérifier les informations saisies et réessayer.');
     }
   };
 
@@ -1112,7 +1191,7 @@ const Kanban: React.FC = () => {
             <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
               <Tab label="Réparation" />
               <Tab label="Nouveau client" />
-              <Tab label="Nouvel appareil" />
+                                <Tab label="Nouveau modèle" />
             </Tabs>
           </Box>
         </DialogTitle>
@@ -1122,7 +1201,7 @@ const Kanban: React.FC = () => {
               <Grid item xs={12}>
                 <Alert severity="info" sx={{ mb: 2 }}>
                   Remplissez les informations de base pour créer une nouvelle réparation.
-                  Vous pouvez également créer un nouveau client ou un nouvel appareil si nécessaire.
+                  Vous pouvez également créer un nouveau client ou un nouveau modèle si nécessaire.
                 </Alert>
               </Grid>
               
@@ -1151,7 +1230,7 @@ const Kanban: React.FC = () => {
                     value={selectedBrand}
                     onChange={(e) => {
                       setSelectedBrand(e.target.value);
-                      setNewRepair(prev => ({ ...prev, deviceId: '' })); // Réinitialiser la sélection d'appareil
+                      setNewRepair(prev => ({ ...prev, deviceId: '' })); // Réinitialiser la sélection de modèle
                     }}
                   >
                     <MenuItem value="">Toutes les marques</MenuItem>
@@ -1172,37 +1251,42 @@ const Kanban: React.FC = () => {
                     value={selectedCategory}
                     onChange={(e) => {
                       setSelectedCategory(e.target.value);
-                      setNewRepair(prev => ({ ...prev, deviceId: '' })); // Réinitialiser la sélection d'appareil
+                      setSelectedBrand(''); // Réinitialiser la sélection de marque
+                      setNewRepair(prev => ({ ...prev, deviceId: '' })); // Réinitialiser la sélection de modèle
                     }}
                   >
                     <MenuItem value="">Toutes les catégories</MenuItem>
-                    <MenuItem value="smartphone">Smartphone</MenuItem>
-                    <MenuItem value="tablet">Tablette</MenuItem>
-                    <MenuItem value="laptop">Ordinateur portable</MenuItem>
-                    <MenuItem value="desktop">Ordinateur fixe</MenuItem>
-                    <MenuItem value="other">Autre</MenuItem>
+                    {getUniqueCategories().map((category) => (
+                      <MenuItem key={category} value={category}>
+                        {category}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
               </Grid>
               
               <Grid item xs={12} md={4}>
                 <FormControl fullWidth>
-                  <InputLabel>Appareil *</InputLabel>
+                  <InputLabel>Modèle *</InputLabel>
                   <Select 
-                    label="Appareil *"
+                    label="Modèle *"
                     value={newRepair.deviceId || ''}
                     onChange={(e) => handleNewRepairChange('deviceId', e.target.value)}
-                    disabled={getFilteredDevices().length === 0}
+                    disabled={getFilteredModels().length === 0}
                   >
-                    {getFilteredDevices().map((device) => (
-                      <MenuItem key={device.id} value={device.id}>
-                        {device.brand} {device.model}
-                      </MenuItem>
-                    ))}
+                    {getFilteredModels().map((model) => {
+                      const brand = deviceBrands.find(b => b.id === model.brandId);
+                      const category = deviceCategories.find(c => c.id === model.categoryId);
+                      return (
+                        <MenuItem key={model.id} value={model.id}>
+                          {brand?.name || 'N/A'} {model.name} ({category?.name || 'N/A'})
+                        </MenuItem>
+                      );
+                    })}
                   </Select>
-                  {getFilteredDevices().length === 0 && (
+                  {getFilteredModels().length === 0 && (
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      Aucun appareil trouvé avec les filtres sélectionnés
+                      Aucun modèle trouvé avec les filtres sélectionnés
                     </Typography>
                   )}
                 </FormControl>
@@ -1361,17 +1445,47 @@ const Kanban: React.FC = () => {
             <Grid container spacing={3} sx={{ mt: 1 }}>
               <Grid item xs={12}>
                 <Alert severity="info" sx={{ mb: 2 }}>
-                  Créez un nouvel appareil pour cette réparation.
+                  Créez un nouveau modèle pour cette réparation.
                 </Alert>
               </Grid>
               
               <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Marque *"
-                  value={newDevice.brand}
-                  onChange={(e) => setNewDevice(prev => ({ ...prev, brand: e.target.value }))}
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Catégorie *</InputLabel>
+                  <Select
+                    label="Catégorie *"
+                    value={newDevice.categoryId || ''}
+                    onChange={(e) => setNewDevice(prev => ({ ...prev, categoryId: e.target.value }))}
+                  >
+                    {deviceCategories
+                      .filter(category => category.isActive)
+                      .map((category) => (
+                        <MenuItem key={category.id} value={category.id}>
+                          {category.name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Marque *</InputLabel>
+                  <Select
+                    label="Marque *"
+                    value={newDevice.brandId || ''}
+                    onChange={(e) => setNewDevice(prev => ({ ...prev, brandId: e.target.value }))}
+                    disabled={!newDevice.categoryId}
+                  >
+                    {deviceBrands
+                      .filter(brand => brand.isActive && (!newDevice.categoryId || brand.categoryId === newDevice.categoryId))
+                      .map((brand) => (
+                        <MenuItem key={brand.id} value={brand.id}>
+                          {brand.name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
               </Grid>
               
               <Grid item xs={12} md={6}>
@@ -1380,27 +1494,11 @@ const Kanban: React.FC = () => {
                   label="Modèle *"
                   value={newDevice.model}
                   onChange={(e) => setNewDevice(prev => ({ ...prev, model: e.target.value }))}
+                  disabled={!newDevice.brandId}
                 />
               </Grid>
               
 
-              
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Type d'appareil *</InputLabel>
-                  <Select
-                    label="Type d'appareil *"
-                    value={newDevice.type || ''}
-                    onChange={(e) => setNewDevice(prev => ({ ...prev, type: e.target.value as any }))}
-                  >
-                    <MenuItem value="smartphone">Smartphone</MenuItem>
-                    <MenuItem value="tablet">Tablette</MenuItem>
-                    <MenuItem value="laptop">Ordinateur portable</MenuItem>
-                    <MenuItem value="desktop">Ordinateur fixe</MenuItem>
-                    <MenuItem value="other">Autre</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
               
               <Grid item xs={12}>
                 <Button
@@ -1408,7 +1506,8 @@ const Kanban: React.FC = () => {
                   startIcon={<DeviceHubIcon />}
                   onClick={handleCreateNewDevice}
                   disabled={Boolean(
-                    !newDevice.brand || 
+                    !newDevice.categoryId || 
+                    !newDevice.brandId || 
                     !newDevice.model
                   )}
                   fullWidth

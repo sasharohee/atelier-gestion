@@ -69,7 +69,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       '/app/calendar': 'Calendrier',
   
       '/app/catalog': 'Catalogue',
-      '/app/catalog/models': 'Modèles',
+      '/app/catalog/device-management': 'Gestion des Appareils',
       '/app/catalog/services': 'Services',
       '/app/catalog/parts': 'Pièces détachées',
       '/app/catalog/products': 'Produits',
@@ -142,7 +142,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       
       const subPath = path.replace('/app/catalog/', '');
       const subTitles: Record<string, string> = {
-        'models': 'Modèles',
+        'device-management': 'Gestion des Appareils',
         'services': 'Services',
         'parts': 'Pièces détachées',
         'products': 'Produits',

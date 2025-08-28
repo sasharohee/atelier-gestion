@@ -8,7 +8,6 @@ import {
   UserPreferences,
   Client,
   Device,
-  DeviceModel,
   Service,
   Part,
   Product,
@@ -23,6 +22,7 @@ import {
   DashboardStats,
   RepairFilters
 } from '../types';
+import { DeviceCategory, DeviceBrand, DeviceModel } from '../types/deviceManagement';
 import {
   userService,
   systemSettingsService,
@@ -75,6 +75,11 @@ interface AppState {
   stockAlerts: StockAlert[];
   notifications: Notification[];
   
+  // Données de gestion des appareils (centralisées)
+  deviceCategories: DeviceCategory[];
+  deviceBrands: DeviceBrand[];
+  deviceModels: DeviceModel[];
+  
   // Filtres et recherche
   repairFilters: RepairFilters;
   searchQuery: string;
@@ -98,6 +103,29 @@ interface AppActions {
   signIn: (email: string, password: string) => Promise<{ success: boolean; data?: any; error?: string }>;
   signUp: (email: string, password: string, userData: Partial<User>) => Promise<{ success: boolean; data?: any; error?: string }>;
   signOut: () => Promise<{ success: boolean; data?: any; error?: string }>;
+  
+  // Gestion des appareils (centralisée)
+  // Catégories
+  addDeviceCategory: (category: Omit<DeviceCategory, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateDeviceCategory: (id: string, updates: Partial<DeviceCategory>) => void;
+  deleteDeviceCategory: (id: string) => void;
+  
+  // Marques
+  addDeviceBrand: (brand: Omit<DeviceBrand, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateDeviceBrand: (id: string, updates: Partial<DeviceBrand>) => void;
+  deleteDeviceBrand: (id: string) => void;
+  
+  // Modèles
+  addDeviceModel: (model: Omit<DeviceModel, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateDeviceModel: (id: string, updates: Partial<DeviceModel>) => void;
+  deleteDeviceModel: (id: string) => void;
+  
+  // Getters utilitaires
+  getDeviceCategories: () => DeviceCategory[];
+  getDeviceBrands: (categoryId?: string) => DeviceBrand[];
+  getDeviceModels: (brandId?: string, categoryId?: string) => DeviceModel[];
+  getDeviceBrandsByCategory: (categoryId: string) => DeviceBrand[];
+  getDeviceModelsByBrand: (brandId: string) => DeviceModel[];
   checkAuth: () => Promise<{ success: boolean; data?: any; error?: string }>;
   
   // CRUD Operations avec Supabase
@@ -125,9 +153,7 @@ interface AppActions {
   updateDevice: (id: string, updates: Partial<Device>) => Promise<void>;
   deleteDevice: (id: string) => Promise<void>;
   
-  addDeviceModel: (model: Omit<DeviceModel, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateDeviceModel: (id: string, updates: Partial<DeviceModel>) => Promise<void>;
-  deleteDeviceModel: (id: string) => Promise<void>;
+
   
   addService: (service: Service) => Promise<void>;
   updateService: (id: string, updates: Partial<Service>) => Promise<void>;
@@ -232,6 +258,82 @@ export const useAppStore = create<AppStore>()(
       parts: [],
       products: [],
       repairs: [],
+      
+      // Données de gestion des appareils (initialisées avec les données par défaut)
+      deviceCategories: [
+        {
+          id: '1',
+          name: 'Smartphones',
+          description: 'Téléphones mobiles et smartphones',
+          icon: 'smartphone',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          name: 'Tablettes',
+          description: 'Tablettes tactiles',
+          icon: 'tablet',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '3',
+          name: 'Ordinateurs portables',
+          description: 'Laptops et notebooks',
+          icon: 'laptop',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '4',
+          name: 'Ordinateurs fixes',
+          description: 'PC de bureau et stations de travail',
+          icon: 'desktop',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ],
+      deviceBrands: [
+        // Smartphones
+        { id: '1', name: 'Apple', categoryId: '1', description: 'Fabricant américain de produits électroniques premium', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '2', name: 'Samsung', categoryId: '1', description: 'Fabricant coréen leader en électronique et smartphones', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '3', name: 'Xiaomi', categoryId: '1', description: 'Fabricant chinois de smartphones et IoT', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '4', name: 'Huawei', categoryId: '1', description: 'Fabricant chinois de télécommunications et smartphones', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '5', name: 'OnePlus', categoryId: '1', description: 'Marque de smartphones premium', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '6', name: 'Google', categoryId: '1', description: 'Fabricant des smartphones Pixel', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '7', name: 'Sony', categoryId: '1', description: 'Fabricant japonais d\'électronique', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '8', name: 'LG', categoryId: '1', description: 'Fabricant coréen d\'électronique', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '9', name: 'Nokia', categoryId: '1', description: 'Fabricant finlandais de télécommunications', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '10', name: 'Motorola', categoryId: '1', description: 'Fabricant américain de télécommunications', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        // Tablettes
+        { id: '21', name: 'iPad', categoryId: '2', description: 'Tablettes Apple', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '22', name: 'Samsung Galaxy Tab', categoryId: '2', description: 'Tablettes Samsung', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '23', name: 'Lenovo', categoryId: '2', description: 'Fabricant chinois d\'ordinateurs et tablettes', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        // Ordinateurs portables
+        { id: '28', name: 'Dell', categoryId: '3', description: 'Fabricant américain d\'ordinateurs', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '29', name: 'HP', categoryId: '3', description: 'Fabricant américain d\'imprimantes et ordinateurs', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '30', name: 'Lenovo', categoryId: '3', description: 'Fabricant chinois d\'ordinateurs', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '31', name: 'Acer', categoryId: '3', description: 'Fabricant taïwanais d\'ordinateurs', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '32', name: 'ASUS', categoryId: '3', description: 'Fabricant taïwanais d\'ordinateurs', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '33', name: 'MSI', categoryId: '3', description: 'Fabricant taïwanais d\'ordinateurs gaming', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '34', name: 'Razer', categoryId: '3', description: 'Fabricant américain d\'ordinateurs gaming', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '35', name: 'Alienware', categoryId: '3', description: 'Marque gaming de Dell', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '45', name: 'Apple', categoryId: '3', description: 'Fabricant des MacBook', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        // Ordinateurs fixes
+        { id: '46', name: 'Dell', categoryId: '4', description: 'Ordinateurs de bureau Dell', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '47', name: 'HP', categoryId: '4', description: 'Ordinateurs de bureau HP', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '48', name: 'Lenovo', categoryId: '4', description: 'Ordinateurs de bureau Lenovo', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '49', name: 'Acer', categoryId: '4', description: 'Ordinateurs de bureau Acer', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '50', name: 'ASUS', categoryId: '4', description: 'Ordinateurs de bureau ASUS', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '51', name: 'MSI', categoryId: '4', description: 'Ordinateurs de bureau gaming MSI', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '52', name: 'Alienware', categoryId: '4', description: 'Ordinateurs de bureau gaming Alienware', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        { id: '60', name: 'Apple', categoryId: '4', description: 'Fabricant des iMac et Mac Pro', logo: '', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+      ],
       repairStatuses: [
         {
           id: 'new',
@@ -798,46 +900,7 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
-      addDeviceModel: async (model) => {
-        try {
-          const result = await deviceModelService.create(model);
-          if (result.success && 'data' in result && result.data) {
-            set((state) => ({ deviceModels: [...state.deviceModels, result.data] }));
-          }
-        } catch (error) {
-          console.error('Erreur lors de l\'ajout du modèle:', error);
-          throw error;
-        }
-      },
-      
-      updateDeviceModel: async (id, updates) => {
-        try {
-          const result = await deviceModelService.update(id, updates);
-          if (result.success && 'data' in result && result.data) {
-            set((state) => ({
-              deviceModels: state.deviceModels.map(model => 
-                model.id === id ? result.data : model
-              )
-            }));
-          }
-        } catch (error) {
-          console.error('Erreur lors de la mise à jour du modèle:', error);
-          throw error; // Propager l'erreur pour l'afficher à l'utilisateur
-        }
-      },
-      
-      deleteDeviceModel: async (id) => {
-        try {
-          const result = await deviceModelService.delete(id);
-          if (result.success) {
-            set((state) => ({
-              deviceModels: state.deviceModels.filter(model => model.id !== id)
-            }));
-          }
-        } catch (error) {
-          console.error('Erreur lors de la suppression du modèle:', error);
-        }
-      },
+
       
       addService: async (service) => {
         try {
@@ -1862,6 +1925,117 @@ export const useAppStore = create<AppStore>()(
         } catch (error) {
           console.error('Erreur lors du marquage du message:', error);
         }
+      },
+      
+      // Gestion des appareils (centralisée)
+      // Catégories
+      addDeviceCategory: (category) => {
+        const newCategory = {
+          ...category,
+          id: uuidv4(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        set((state) => ({
+          deviceCategories: [...state.deviceCategories, newCategory]
+        }));
+      },
+      
+      updateDeviceCategory: (id, updates) => {
+        set((state) => ({
+          deviceCategories: state.deviceCategories.map(cat =>
+            cat.id === id ? { ...cat, ...updates, updatedAt: new Date() } : cat
+          )
+        }));
+      },
+      
+      deleteDeviceCategory: (id) => {
+        set((state) => ({
+          deviceCategories: state.deviceCategories.filter(cat => cat.id !== id)
+        }));
+      },
+      
+      // Marques
+      addDeviceBrand: (brand) => {
+        const newBrand = {
+          ...brand,
+          id: uuidv4(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        set((state) => ({
+          deviceBrands: [...state.deviceBrands, newBrand]
+        }));
+      },
+      
+      updateDeviceBrand: (id, updates) => {
+        set((state) => ({
+          deviceBrands: state.deviceBrands.map(brand =>
+            brand.id === id ? { ...brand, ...updates, updatedAt: new Date() } : brand
+          )
+        }));
+      },
+      
+      deleteDeviceBrand: (id) => {
+        set((state) => ({
+          deviceBrands: state.deviceBrands.filter(brand => brand.id !== id)
+        }));
+      },
+      
+      // Modèles
+      addDeviceModel: (model) => {
+        const newModel = {
+          ...model,
+          id: uuidv4(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        set((state) => ({
+          deviceModels: [...state.deviceModels, newModel]
+        }));
+      },
+      
+      updateDeviceModel: (id, updates) => {
+        set((state) => ({
+          deviceModels: state.deviceModels.map(model =>
+            model.id === id ? { ...model, ...updates, updatedAt: new Date() } : model
+          )
+        }));
+      },
+      
+      deleteDeviceModel: (id) => {
+        set((state) => ({
+          deviceModels: state.deviceModels.filter(model => model.id !== id)
+        }));
+      },
+      
+      // Getters utilitaires
+      getDeviceCategories: () => get().deviceCategories,
+      getDeviceBrands: (categoryId) => {
+        const state = get();
+        if (categoryId) {
+          return state.deviceBrands.filter(brand => brand.categoryId === categoryId);
+        }
+        return state.deviceBrands;
+      },
+      getDeviceModels: (brandId, categoryId) => {
+        const state = get();
+        let filtered = state.deviceModels;
+        if (brandId) {
+          filtered = filtered.filter(model => model.brandId === brandId);
+        }
+        if (categoryId) {
+          filtered = filtered.filter(model => model.categoryId === categoryId);
+        }
+        return filtered;
+      },
+      getDeviceBrandsByCategory: (categoryId) => {
+        const state = get();
+        return state.deviceBrands.filter(brand => brand.categoryId === categoryId);
+      },
+      getDeviceModelsByBrand: (brandId) => {
+        const state = get();
+        return state.deviceModels.filter(model => model.brandId === brandId);
       },
       
       markNotificationAsRead: async (id) => {

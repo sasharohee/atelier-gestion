@@ -170,7 +170,7 @@ const Loyalty: React.FC = () => {
         .order('first_name');
       setAllClients(allClientsData || []);
       
-      // Charger les clients avec leurs points
+      // Charger les clients avec leurs points (filtré par utilisateur)
       const { data: clientsData } = await supabase
         .from('client_loyalty_points')
         .select(`
@@ -181,7 +181,7 @@ const Loyalty: React.FC = () => {
         .order('total_points', { ascending: false });
       setClients(clientsData || []);
       
-      // Charger les parrainages
+      // Charger les parrainages (filtré par utilisateur)
       const { data: referralsData } = await supabase
         .from('referrals')
         .select(`
@@ -271,6 +271,36 @@ const Loyalty: React.FC = () => {
     }
   };
 
+  // Supprimer un parrainage
+  const handleDeleteReferral = async (referralId: string) => {
+    try {
+      // Confirmation de suppression
+      const confirmed = window.confirm(
+        'Êtes-vous sûr de vouloir supprimer ce parrainage ? Cette action est irréversible.'
+      );
+      
+      if (!confirmed) return;
+      
+      // Supprimer le parrainage
+      const { error } = await supabase
+        .from('referrals')
+        .delete()
+        .eq('id', referralId);
+      
+      if (error) {
+        console.error('Erreur lors de la suppression du parrainage:', error);
+        toast.error('Erreur lors de la suppression du parrainage');
+        return;
+      }
+      
+      toast.success('Parrainage supprimé avec succès');
+      loadData(); // Recharger les données
+    } catch (error) {
+      console.error('Erreur lors de la suppression du parrainage:', error);
+      toast.error('Erreur lors de la suppression du parrainage');
+    }
+  };
+
   // Créer un nouveau client
   const handleCreateNewClient = async (clientData: any) => {
     try {
@@ -350,6 +380,66 @@ const Loyalty: React.FC = () => {
     } catch (error) {
       console.error('Erreur:', error);
       toast.error('Erreur lors de l\'ajout des points');
+    }
+  };
+
+  // Supprimer un client
+  const handleDeleteClient = async (clientId: string) => {
+    try {
+      // Confirmation de suppression
+      const confirmed = window.confirm(
+        'Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible et supprimera également tous ses points de fidélité.'
+      );
+      
+      if (!confirmed) return;
+      
+      // Supprimer le client
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', clientId);
+      
+      if (error) {
+        console.error('Erreur lors de la suppression du client:', error);
+        toast.error('Erreur lors de la suppression du client');
+        return;
+      }
+      
+      toast.success('Client supprimé avec succès');
+      loadData(); // Recharger les données
+    } catch (error) {
+      console.error('Erreur lors de la suppression du client:', error);
+      toast.error('Erreur lors de la suppression du client');
+    }
+  };
+
+  // Supprimer les points de fidélité d'un client
+  const handleDeleteLoyaltyPoints = async (clientId: string) => {
+    try {
+      // Confirmation de suppression
+      const confirmed = window.confirm(
+        'Êtes-vous sûr de vouloir supprimer tous les points de fidélité de ce client ? Cette action est irréversible.'
+      );
+      
+      if (!confirmed) return;
+      
+      // Supprimer les points de fidélité du client
+      const { error } = await supabase
+        .from('client_loyalty_points')
+        .delete()
+        .eq('client_id', clientId);
+      
+      if (error) {
+        console.error('Erreur lors de la suppression des points de fidélité:', error);
+        toast.error('Erreur lors de la suppression des points de fidélité');
+        return;
+      }
+      
+      toast.success('Points de fidélité supprimés avec succès');
+      loadData(); // Recharger les données
+    } catch (error) {
+      console.error('Erreur lors de la suppression des points de fidélité:', error);
+      toast.error('Erreur lors de la suppression des points de fidélité');
     }
   };
 
@@ -602,6 +692,24 @@ const Loyalty: React.FC = () => {
                             <EditIcon />
                           </IconButton>
                         </Tooltip>
+                        <Tooltip title="Supprimer le client">
+                          <IconButton 
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteClient(client.client_id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Supprimer les points de fidélité">
+                          <IconButton 
+                            size="small"
+                            color="warning"
+                            onClick={() => handleDeleteLoyaltyPoints(client.client_id)}
+                          >
+                            <CancelIcon />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   );
@@ -707,6 +815,15 @@ const Loyalty: React.FC = () => {
                           </Tooltip>
                         </>
                       )}
+                      <Tooltip title="Supprimer le parrainage">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteReferral(referral.id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -776,6 +893,20 @@ const Loyalty: React.FC = () => {
                </Select>
             </FormControl>
             
+            {referralForm.referrer_client_id && (
+              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<DeleteIcon />}
+                  onClick={() => handleDeleteClient(referralForm.referrer_client_id)}
+                >
+                  Supprimer ce client
+                </Button>
+              </Box>
+            )}
+            
                          <FormControl fullWidth sx={{ mb: 2 }}>
                <InputLabel>Client Parrainé</InputLabel>
                <Select
@@ -790,6 +921,20 @@ const Loyalty: React.FC = () => {
                  ))}
                </Select>
              </FormControl>
+             
+             {referralForm.referred_client_id && (
+               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                 <Button
+                   variant="outlined"
+                   color="error"
+                   size="small"
+                   startIcon={<DeleteIcon />}
+                   onClick={() => handleDeleteClient(referralForm.referred_client_id)}
+                 >
+                   Supprimer ce client
+                 </Button>
+               </Box>
+             )}
              
              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
                <Button
@@ -855,6 +1000,20 @@ const Loyalty: React.FC = () => {
                  ))}
                </Select>
              </FormControl>
+             
+             {pointsForm.client_id && (
+               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                 <Button
+                   variant="outlined"
+                   color="error"
+                   size="small"
+                   startIcon={<DeleteIcon />}
+                   onClick={() => handleDeleteClient(pointsForm.client_id)}
+                 >
+                   Supprimer ce client
+                 </Button>
+               </Box>
+             )}
             
             <TextField
               fullWidth

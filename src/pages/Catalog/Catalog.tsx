@@ -20,7 +20,7 @@ import {
 import { useAppStore } from '../../store';
 
 // Sous-pages du catalogue
-import Models from './Models';
+import DeviceManagement from './DeviceManagement';
 import Services from './Services';
 import Parts from './Parts';
 import Products from './Products';
@@ -35,10 +35,10 @@ const Catalog: React.FC = () => {
 
   const catalogSections = [
     {
-      title: 'Modèles',
-      description: 'Gestion des modèles d\'appareils',
+      title: 'Gestion des Appareils',
+      description: 'Gestion centralisée des modèles et appareils',
       icon: <DeviceHubIcon />,
-      path: '/app/catalog/models',
+      path: '/app/catalog/device-management',
       count: devices.length,
       color: '#2196f3',
     },
@@ -140,7 +140,7 @@ const Catalog: React.FC = () => {
           </Grid>
         </Box>
       } />
-      <Route path="/models" element={<Models />} />
+      <Route path="/device-management" element={<DeviceManagement />} />
       <Route path="/services" element={<Services />} />
       <Route path="/parts" element={<Parts />} />
       <Route path="/products" element={<Products />} />
