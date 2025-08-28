@@ -3,108 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirmation de votre inscription</title>
+    <title>Nouveau message de contact - Atelier Gestion</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            line-height: 1.5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
             color: #333;
             margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+            padding: 0;
+            background-color: #f8f9fa;
         }
         .container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         .header {
-            background-color: #2563eb;
+            background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
-            padding: 25px;
+            padding: 30px;
             text-align: center;
-            border-radius: 8px 8px 0 0;
         }
         .header h1 {
             margin: 0;
             font-size: 24px;
-            font-weight: normal;
+            font-weight: 600;
         }
         .content {
-            padding: 30px 25px;
-            text-align: center;
+            padding: 30px;
         }
-        .welcome-text {
-            font-size: 16px;
-            color: #555;
-            margin-bottom: 25px;
-        }
-        .confirmation-button {
-            display: inline-block;
-            background-color: #2563eb;
-            color: white;
-            text-decoration: none;
-            padding: 12px 25px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
+        .message-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 20px;
             margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .info-item {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            color: #212529;
+            font-size: 16px;
+        }
+        .message-content {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            line-height: 1.8;
         }
         .footer {
-            background-color: #f8fafc;
-            padding: 20px 25px;
+            background-color: #f8f9fa;
+            padding: 20px 30px;
             text-align: center;
-            color: #64748b;
+            border-top: 1px solid #dee2e6;
+        }
+        .footer p {
+            margin: 5px 0;
+            color: #6c757d;
             font-size: 14px;
-            border-radius: 0 0 8px 8px;
         }
-        .security-note {
-            background-color: #eff6ff;
-            border: 1px solid #dbeafe;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 20px 0;
-            color: #1e40af;
+        .urgent-badge {
+            display: inline-block;
+            background-color: #dc3545;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 10px;
         }
-        .logo {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 8px;
+        .priority-normal {
+            background-color: #28a745;
+        }
+        .priority-high {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .priority-urgent {
+            background-color: #dc3545;
+        }
+        @media (max-width: 600px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            .header, .content, .footer {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">Atelier Pro</div>
-            <h1>Confirmation de votre inscription</h1>
+            <h1>📧 Nouveau message de contact</h1>
+            <p>Atelier Gestion - Support Client</p>
         </div>
         
         <div class="content">
-            <div class="welcome-text">
-                <p>Bonjour !</p>
-                <p>Nous sommes ravis de vous accueillir dans notre communauté. Pour finaliser votre inscription et accéder à votre compte, veuillez confirmer votre adresse e-mail en cliquant sur le bouton ci-dessous.</p>
+            <div class="message-box">
+                <h3>Un nouveau message a été reçu via le formulaire de contact</h3>
+                <p>Veuillez traiter cette demande dans les plus brefs délais.</p>
             </div>
             
-            <a href="{{ .ConfirmationURL }}" class="confirmation-button">
-                Confirmer mon adresse e-mail
-            </a>
-            
-            <div class="security-note">
-                <strong>Sécurité :</strong> Ce lien de confirmation est valable pendant 24 heures. Si vous n'avez pas créé de compte, vous pouvez ignorer cet e-mail.
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Nom complet</div>
+                    <div class="info-value">{{from_name}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{from_email}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Sujet</div>
+                    <div class="info-value">{{subject}}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Date de réception</div>
+                    <div class="info-value">{{date}}</div>
+                </div>
             </div>
             
-            <p style="color: #666; font-size: 14px;">
-                Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :<br>
-                <a href="{{ .ConfirmationURL }}" style="color: #2563eb; word-break: break-all;">{{ .ConfirmationURL }}</a>
-            </p>
+            <h3>📝 Message :</h3>
+            <div class="message-content">
+                {{message}}
+            </div>
+            
+            <div style="margin-top: 30px; padding: 15px; background-color: #e3f2fd; border-radius: 6px; border-left: 4px solid #2196f3;">
+                <h4 style="margin: 0 0 10px 0; color: #1976d2;">Actions recommandées :</h4>
+                <ul style="margin: 0; padding-left: 20px; color: #1976d2;">
+                    <li>Répondre dans les 24h ouvrées</li>
+                    <li>Classer le type de support (technique, comptable, commercial, RGPD)</li>
+                    <li>Assigner à un membre de l'équipe si nécessaire</li>
+                    <li>Suivre le statut de résolution</li>
+                </ul>
+            </div>
         </div>
         
         <div class="footer">
-            <p>© 2024 Atelier Pro - Tous droits réservés</p>
-            <p>Cet e-mail a été envoyé automatiquement, merci de ne pas y répondre.</p>
+            <p><strong>Atelier Gestion</strong> - Application de gestion d'atelier de réparation</p>
+            <p>📧 contact.ateliergestion@gmail.com | 📞 +33 1 23 45 67 89</p>
+            <p>🌐 France | 🕒 Lun-Ven: 9h-18h</p>
+            <p style="font-size: 12px; color: #adb5bd; margin-top: 15px;">
+                Cet email a été généré automatiquement par le formulaire de contact de l'application Atelier Gestion.
+            </p>
         </div>
     </div>
 </body>

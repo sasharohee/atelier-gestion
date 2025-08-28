@@ -248,6 +248,28 @@ const SubscriptionBlocked: React.FC = () => {
                     />
                   </Box>
 
+                  {/* Option Annuelle */}
+                  <Box sx={{ textAlign: 'center', mb: 4, p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      Ou abonnement annuel
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                      <Typography variant="h3" component="span" fontWeight="bold" color="success.main">
+                        200
+                      </Typography>
+                      <EuroIcon sx={{ fontSize: 28, ml: 1, color: 'success.main' }} />
+                    </Box>
+                    <Typography variant="body1" color="text.secondary" gutterBottom>
+                      par an
+                    </Typography>
+                    <Chip 
+                      label="Économie 40€" 
+                      color="success"
+                      size="small"
+                      sx={{ fontWeight: 'bold' }} 
+                    />
+                  </Box>
+
                   <Divider sx={{ my: 3 }} />
 
                   {/* Fonctionnalités */}

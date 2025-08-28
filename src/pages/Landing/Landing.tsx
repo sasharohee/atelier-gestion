@@ -35,6 +35,7 @@ import LandingNavbar from '../../components/LandingNavbar';
 const Landing: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
 
   // CSS Keyframes for animations
@@ -155,7 +156,9 @@ const Landing: React.FC = () => {
         sx={{
           background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 50%, ${theme.palette.secondary.main} 100%)`,
           color: 'white',
-          minHeight: '100vh',
+          minHeight: { xs: '100vh', md: '100vh' },
+          pt: { xs: 8, md: 0 },
+          pb: { xs: 4, md: 0 },
           position: 'relative',
           overflow: 'hidden',
           display: 'flex',
@@ -166,10 +169,10 @@ const Landing: React.FC = () => {
         <Box
           sx={{
             position: 'absolute',
-            top: '10%',
-            left: '5%',
-            width: 200,
-            height: 200,
+            top: { xs: '5%', md: '10%' },
+            left: { xs: '2%', md: '5%' },
+            width: { xs: 100, md: 200 },
+            height: { xs: 100, md: 200 },
             borderRadius: '50%',
             background: 'rgba(255, 255, 255, 0.1)',
             animation: 'float1 6s ease-in-out infinite'
@@ -178,10 +181,10 @@ const Landing: React.FC = () => {
         <Box
           sx={{
             position: 'absolute',
-            bottom: '20%',
-            right: '10%',
-            width: 150,
-            height: 150,
+            bottom: { xs: '10%', md: '20%' },
+            right: { xs: '5%', md: '10%' },
+            width: { xs: 80, md: 150 },
+            height: { xs: 80, md: 150 },
             borderRadius: '50%',
             background: 'rgba(255, 255, 255, 0.08)',
             animation: 'float2 8s ease-in-out infinite reverse'
@@ -201,21 +204,21 @@ const Landing: React.FC = () => {
           }}
         />
 
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2 }}>
-          <Grid container spacing={4} alignItems="center">
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2, px: { xs: 2, md: 3 } }}>
+          <Grid container spacing={{ xs: 3, md: 4 }} alignItems="center">
             {/* Left side - Content */}
             <Grid item xs={12} md={7}>
               <Fade in timeout={1000}>
                 <Box>
                   {/* Badge */}
-                  <Box sx={{ mb: 3 }}>
+                  <Box sx={{ mb: { xs: 2, md: 3 } }}>
                     <Chip
                       icon={<StarIcon />}
                       label="Solution Professionnelle"
                       sx={{
                         bgcolor: 'rgba(255, 255, 255, 0.2)',
                         color: 'white',
-                        fontSize: '0.9rem',
+                        fontSize: { xs: '0.8rem', md: '0.9rem' },
                         fontWeight: 600,
                         backdropFilter: 'blur(10px)',
                         border: '1px solid rgba(255, 255, 255, 0.3)'
@@ -229,14 +232,15 @@ const Landing: React.FC = () => {
                     component="h1"
                     sx={{
                       fontWeight: 800,
-                      mb: 3,
-                      fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4rem' },
-                      lineHeight: 1.1,
+                      mb: { xs: 2, md: 3 },
+                      fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem', lg: '4rem' },
+                      lineHeight: { xs: 1.2, md: 1.1 },
                       background: 'linear-gradient(45deg, #ffffff 30%, #f0f0f0 90%)',
                       backgroundClip: 'text',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
-                      textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      textAlign: { xs: 'center', md: 'left' }
                     }}
                   >
                     Atelier Gestion
@@ -246,47 +250,50 @@ const Landing: React.FC = () => {
                   <Typography
                     variant="h4"
                     sx={{
-                      mb: 4,
+                      mb: { xs: 3, md: 4 },
                       opacity: 0.95,
                       fontWeight: 400,
-                      fontSize: { xs: '1.2rem', md: '1.5rem' },
+                      fontSize: { xs: '1rem', sm: '1.1rem', md: '1.3rem', lg: '1.5rem' },
                       lineHeight: 1.4,
-                      maxWidth: 500
+                      maxWidth: { xs: '100%', md: 500 },
+                      textAlign: { xs: 'center', md: 'left' }
                     }}
                   >
                     La solution complète pour gérer votre atelier de réparation d'appareils électroniques
                   </Typography>
 
                   {/* Features highlights */}
-                  <Box sx={{ mb: 4 }}>
-                    <Stack direction="row" spacing={3} flexWrap="wrap" useFlexGap>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <CheckCircleIcon sx={{ mr: 1, fontSize: 20, color: '#4CAF50' }} />
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  <Box sx={{ mb: { xs: 3, md: 4 } }}>
+                    <Stack 
+                      direction={{ xs: 'column', sm: 'row' }} 
+                      spacing={{ xs: 1, sm: 3 }} 
+                      flexWrap="wrap" 
+                      useFlexGap
+                      alignItems={{ xs: 'center', sm: 'flex-start' }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
+                        <CheckCircleIcon sx={{ mr: 1, fontSize: { xs: 18, md: 20 }, color: '#4CAF50' }} />
+                        <Typography variant="body1" sx={{ fontWeight: 500, fontSize: { xs: '0.9rem', md: '1rem' } }}>
                           Gestion complète
                         </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <CheckCircleIcon sx={{ mr: 1, fontSize: 20, color: '#4CAF50' }} />
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
+                        <CheckCircleIcon sx={{ mr: 1, fontSize: { xs: 18, md: 20 }, color: '#4CAF50' }} />
+                        <Typography variant="body1" sx={{ fontWeight: 500, fontSize: { xs: '0.9rem', md: '1rem' } }}>
                           Interface intuitive
                         </Typography>
                       </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <CheckCircleIcon sx={{ mr: 1, fontSize: 20, color: '#4CAF50' }} />
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
+                        <CheckCircleIcon sx={{ mr: 1, fontSize: { xs: 18, md: 20 }, color: '#4CAF50' }} />
+                        <Typography variant="body1" sx={{ fontWeight: 500, fontSize: { xs: '0.9rem', md: '1rem' } }}>
                           Temps réel
                         </Typography>
                       </Box>
                     </Stack>
                   </Box>
 
-                  {/* CTA Buttons */}
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={2}
-                    sx={{ mb: 4 }}
-                  >
+                  {/* CTA Button */}
+                  <Box sx={{ mb: { xs: 3, md: 4 }, textAlign: { xs: 'center', md: 'left' } }}>
                     <Button
                       variant="contained"
                       size="large"
@@ -294,13 +301,14 @@ const Landing: React.FC = () => {
                       sx={{
                         bgcolor: 'white',
                         color: theme.palette.primary.main,
-                        px: 4,
-                        py: 2,
-                        fontSize: '1.1rem',
+                        px: { xs: 3, md: 4 },
+                        py: { xs: 1.5, md: 2 },
+                        fontSize: { xs: '1rem', md: '1.1rem' },
                         fontWeight: 700,
                         borderRadius: 3,
                         boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
                         transition: 'all 0.3s ease',
+                        width: { xs: '100%', sm: 'auto' },
                         '&:hover': {
                           bgcolor: 'grey.100',
                           transform: 'translateY(-2px)',
@@ -311,53 +319,62 @@ const Landing: React.FC = () => {
                     >
                       Accéder à l'Atelier
                     </Button>
-                    <Button
-                      variant="outlined"
-                      size="large"
-                      sx={{
-                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                        color: 'white',
-                        px: 4,
-                        py: 2,
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        borderRadius: 3,
-                        backdropFilter: 'blur(10px)',
-                        '&:hover': {
-                          borderColor: 'white',
-                          bgcolor: 'rgba(255, 255, 255, 0.1)'
-                        }
-                      }}
-                      startIcon={<PlayArrowIcon />}
-                    >
-                      Voir la Démo
-                    </Button>
-                  </Stack>
+                  </Box>
 
                   {/* Stats */}
-                  <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: { xs: 2, md: 4 }, 
+                    flexWrap: 'wrap',
+                    justifyContent: { xs: 'center', md: 'flex-start' }
+                  }}>
                     <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" sx={{ fontWeight: 700, color: '#4CAF50' }}>
+                      <Typography variant="h4" sx={{ 
+                        fontWeight: 700, 
+                        color: '#4CAF50',
+                        fontSize: { xs: '1.5rem', md: '2.125rem' }
+                      }}>
                         100%
                       </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                      <Typography variant="body2" sx={{ 
+                        opacity: 0.8,
+                        fontSize: { xs: '0.75rem', md: '0.875rem' }
+                      }}>
                         Satisfaction
                       </Typography>
                     </Box>
                     <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" sx={{ fontWeight: 700, color: '#4CAF50' }}>
-                        <TrendingUpIcon sx={{ fontSize: 32, verticalAlign: 'middle', mr: 0.5 }} />
+                      <Typography variant="h4" sx={{ 
+                        fontWeight: 700, 
+                        color: '#4CAF50',
+                        fontSize: { xs: '1.5rem', md: '2.125rem' }
+                      }}>
+                        <TrendingUpIcon sx={{ 
+                          fontSize: { xs: 24, md: 32 }, 
+                          verticalAlign: 'middle', 
+                          mr: 0.5 
+                        }} />
                         50%
                       </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                      <Typography variant="body2" sx={{ 
+                        opacity: 0.8,
+                        fontSize: { xs: '0.75rem', md: '0.875rem' }
+                      }}>
                         Gain de temps
                       </Typography>
                     </Box>
                     <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="h4" sx={{ fontWeight: 700, color: '#4CAF50' }}>
+                      <Typography variant="h4" sx={{ 
+                        fontWeight: 700, 
+                        color: '#4CAF50',
+                        fontSize: { xs: '1.5rem', md: '2.125rem' }
+                      }}>
                         24/7
                       </Typography>
-                      <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                      <Typography variant="body2" sx={{ 
+                        opacity: 0.8,
+                        fontSize: { xs: '0.75rem', md: '0.875rem' }
+                      }}>
                         Disponible
                       </Typography>
                     </Box>
@@ -369,12 +386,12 @@ const Landing: React.FC = () => {
             {/* Right side - Visual elements */}
             <Grid item xs={12} md={5}>
               <Fade in timeout={1500}>
-                <Box sx={{ textAlign: 'center', position: 'relative' }}>
+                <Box sx={{ textAlign: 'center', position: 'relative', mt: { xs: 4, md: 0 } }}>
                   {/* Main visual element */}
                   <Box
                     sx={{
-                      width: { xs: 280, md: 350 },
-                      height: { xs: 280, md: 350 },
+                      width: { xs: 200, sm: 250, md: 350 },
+                      height: { xs: 200, sm: 250, md: 350 },
                       mx: 'auto',
                       position: 'relative',
                       animation: 'pulse 2s ease-in-out infinite'
@@ -387,8 +404,8 @@ const Landing: React.FC = () => {
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: 120,
-                        height: 120,
+                        width: { xs: 80, sm: 100, md: 120 },
+                        height: { xs: 80, sm: 100, md: 120 },
                         borderRadius: '50%',
                         bgcolor: 'rgba(255, 255, 255, 0.15)',
                         display: 'flex',
@@ -398,7 +415,7 @@ const Landing: React.FC = () => {
                         border: '2px solid rgba(255, 255, 255, 0.3)'
                       }}
                     >
-                      <BuildIcon sx={{ fontSize: 60, color: 'white' }} />
+                      <BuildIcon sx={{ fontSize: { xs: 40, sm: 50, md: 60 }, color: 'white' }} />
                     </Box>
 
                     {/* Orbiting elements */}
@@ -409,21 +426,21 @@ const Landing: React.FC = () => {
                           position: 'absolute',
                           top: '50%',
                           left: '50%',
-                          width: 60,
-                          height: 60,
+                          width: { xs: 40, sm: 50, md: 60 },
+                          height: { xs: 40, sm: 50, md: 60 },
                           borderRadius: '50%',
                           bgcolor: 'rgba(255, 255, 255, 0.1)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          transform: `translate(-50%, -50%) rotate(${index * 60}deg) translateY(-120px)`,
+                          transform: `translate(-50%, -50%) rotate(${index * 60}deg) translateY(${isMobile ? '-80px' : '-120px'})`,
                           animation: `orbit${index} ${8 + index}s linear infinite`
                         }}
                       >
                         <Box
                           sx={{
-                            width: 20,
-                            height: 20,
+                            width: { xs: 15, sm: 18, md: 20 },
+                            height: { xs: 15, sm: 18, md: 20 },
                             borderRadius: '50%',
                             bgcolor: 'rgba(255, 255, 255, 0.8)',
                             animation: `pulse ${2 + index * 0.5}s ease-in-out infinite`
@@ -437,17 +454,21 @@ const Landing: React.FC = () => {
                   <Box
                     sx={{
                       position: 'absolute',
-                      top: '20%',
-                      right: '10%',
+                      top: { xs: '10%', md: '20%' },
+                      right: { xs: '5%', md: '10%' },
                       bgcolor: 'rgba(255, 255, 255, 0.1)',
                       borderRadius: 2,
-                      p: 2,
+                      p: { xs: 1, md: 2 },
                       backdropFilter: 'blur(10px)',
                       border: '1px solid rgba(255, 255, 255, 0.2)',
-                      animation: 'float1 4s ease-in-out infinite'
+                      animation: 'float1 4s ease-in-out infinite',
+                      display: { xs: 'none', sm: 'block' }
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 600,
+                      fontSize: { xs: '0.75rem', md: '0.875rem' }
+                    }}>
                       📊 +25% efficacité
                     </Typography>
                   </Box>
@@ -455,17 +476,21 @@ const Landing: React.FC = () => {
                   <Box
                     sx={{
                       position: 'absolute',
-                      bottom: '30%',
-                      left: '5%',
+                      bottom: { xs: '20%', md: '30%' },
+                      left: { xs: '2%', md: '5%' },
                       bgcolor: 'rgba(255, 255, 255, 0.1)',
                       borderRadius: 2,
-                      p: 2,
+                      p: { xs: 1, md: 2 },
                       backdropFilter: 'blur(10px)',
                       border: '1px solid rgba(255, 255, 255, 0.2)',
-                      animation: 'float2 6s ease-in-out infinite reverse'
+                      animation: 'float2 6s ease-in-out infinite reverse',
+                      display: { xs: 'none', sm: 'block' }
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 600,
+                      fontSize: { xs: '0.75rem', md: '0.875rem' }
+                    }}>
                       ⚡ Temps réel
                     </Typography>
                   </Box>
@@ -477,7 +502,7 @@ const Landing: React.FC = () => {
       </Box>
 
       {/* Features Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }} id="features">
+      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 }, px: { xs: 2, md: 3 } }} id="features">
         <Slide direction="up" in timeout={800}>
           <Box>
             <Typography
@@ -485,15 +510,16 @@ const Landing: React.FC = () => {
               component="h2"
               sx={{
                 textAlign: 'center',
-                mb: 6,
+                mb: { xs: 4, md: 6 },
                 fontWeight: 600,
-                color: theme.palette.text.primary
+                color: theme.palette.text.primary,
+                fontSize: { xs: '2rem', md: '3rem' }
               }}
             >
               Fonctionnalités Principales
             </Typography>
             
-            <Grid container spacing={4}>
+            <Grid container spacing={{ xs: 3, md: 4 }}>
               {features.map((feature, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
                   <Fade in timeout={800 + index * 200}>
@@ -510,30 +536,42 @@ const Landing: React.FC = () => {
                         }
                       }}
                     >
-                      <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                      <CardContent sx={{ textAlign: 'center', p: { xs: 2, md: 3 } }}>
                         <Box 
                           sx={{ 
-                            mb: 2,
+                            mb: { xs: 1.5, md: 2 },
                             display: 'inline-flex',
-                            p: 2,
+                            p: { xs: 1.5, md: 2 },
                             borderRadius: '50%',
                             backgroundColor: `${feature.borderColor}20`,
                             border: `2px solid ${feature.borderColor}40`
                           }}
                         >
-                          {feature.icon}
+                          {React.cloneElement(feature.icon, { 
+                            sx: { 
+                              fontSize: { xs: 30, md: 40 }, 
+                              color: feature.icon.props.sx.color 
+                            } 
+                          })}
                         </Box>
                         <Typography
                           variant="h6"
                           component="h3"
-                          sx={{ mb: 2, fontWeight: 600 }}
+                          sx={{ 
+                            mb: { xs: 1.5, md: 2 }, 
+                            fontWeight: 600,
+                            fontSize: { xs: '1.1rem', md: '1.25rem' }
+                          }}
                         >
                           {feature.title}
                         </Typography>
                         <Typography
                           variant="body2"
                           color="text.secondary"
-                          sx={{ lineHeight: 1.6 }}
+                          sx={{ 
+                            lineHeight: 1.6,
+                            fontSize: { xs: '0.875rem', md: '0.875rem' }
+                          }}
                         >
                           {feature.description}
                         </Typography>
@@ -548,8 +586,8 @@ const Landing: React.FC = () => {
       </Container>
 
       {/* Benefits Section */}
-      <Box sx={{ bgcolor: 'grey.50', py: 8 }} id="benefits">
-        <Container maxWidth="lg">
+      <Box sx={{ bgcolor: 'grey.50', py: { xs: 6, md: 8 } }} id="benefits">
+        <Container maxWidth="lg" sx={{ px: { xs: 2, md: 3 } }}>
           <Slide direction="up" in timeout={1000}>
             <Box>
               <Typography
@@ -557,14 +595,15 @@ const Landing: React.FC = () => {
                 component="h2"
                 sx={{
                   textAlign: 'center',
-                  mb: 6,
-                  fontWeight: 600
+                  mb: { xs: 4, md: 6 },
+                  fontWeight: 600,
+                  fontSize: { xs: '2rem', md: '3rem' }
                 }}
               >
                 Pourquoi Choisir Atelier Gestion ?
               </Typography>
               
-              <Grid container spacing={3} justifyContent="center">
+              <Grid container spacing={{ xs: 2, md: 3 }} justifyContent="center">
                 {benefits.map((benefit, index) => (
                   <Grid item xs={12} sm={6} md={4} key={index}>
                     <Fade in timeout={1000 + index * 150}>
@@ -572,7 +611,7 @@ const Landing: React.FC = () => {
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
-                          p: 2,
+                          p: { xs: 1.5, md: 2 },
                           bgcolor: 'white',
                           borderRadius: 2,
                           boxShadow: theme.shadows[1],
@@ -585,11 +624,14 @@ const Landing: React.FC = () => {
                         <CheckCircleIcon
                           sx={{
                             color: theme.palette.success.main,
-                            mr: 2,
-                            fontSize: 24
+                            mr: { xs: 1.5, md: 2 },
+                            fontSize: { xs: 20, md: 24 }
                           }}
                         />
-                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        <Typography variant="body1" sx={{ 
+                          fontWeight: 500,
+                          fontSize: { xs: '0.9rem', md: '1rem' }
+                        }}>
                           {benefit}
                         </Typography>
                       </Box>
@@ -603,8 +645,8 @@ const Landing: React.FC = () => {
       </Box>
 
       {/* Pricing Section */}
-      <Box sx={{ bgcolor: 'grey.50', py: 8 }} id="pricing">
-        <Container maxWidth="lg">
+      <Box sx={{ bgcolor: 'grey.50', py: { xs: 6, md: 8 } }} id="pricing">
+        <Container maxWidth="lg" sx={{ px: { xs: 2, md: 3 } }}>
           <Slide direction="up" in timeout={1200}>
             <Box>
               <Typography
@@ -612,8 +654,9 @@ const Landing: React.FC = () => {
                 component="h2"
                 sx={{
                   textAlign: 'center',
-                  mb: 2,
-                  fontWeight: 600
+                  mb: { xs: 1.5, md: 2 },
+                  fontWeight: 600,
+                  fontSize: { xs: '2rem', md: '3rem' }
                 }}
               >
                 Tarifs Simples et Transparents
@@ -623,47 +666,48 @@ const Landing: React.FC = () => {
                 color="text.secondary"
                 sx={{
                   textAlign: 'center',
-                  mb: 6,
+                  mb: { xs: 4, md: 6 },
                   maxWidth: 600,
-                  mx: 'auto'
+                  mx: 'auto',
+                  fontSize: { xs: '1rem', md: '1.25rem' }
                 }}
               >
                 Un seul plan, toutes les fonctionnalités incluses. Pas de surprise, pas de frais cachés.
               </Typography>
               
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                                    <Card
-                      sx={{
-                        maxWidth: 450,
-                        width: '100%',
-                        textAlign: 'center',
-                        position: 'relative',
-                        overflow: 'visible',
-                        transition: 'all 0.4s ease',
-                        background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-                        color: '#495057',
-                        borderRadius: '24px',
-                        border: '2px solid #dee2e6',
-                        '&:hover': {
-                          transform: 'translateY(-12px) scale(1.02)',
-                          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
-                          borderColor: '#adb5bd'
-                        }
-                      }}
-                    >
+                <Card
+                  sx={{
+                    maxWidth: { xs: '100%', md: 450 },
+                    width: '100%',
+                    textAlign: 'center',
+                    position: 'relative',
+                    overflow: 'visible',
+                    transition: 'all 0.4s ease',
+                    background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                    color: '#495057',
+                    borderRadius: { xs: '16px', md: '24px' },
+                    border: '2px solid #dee2e6',
+                    '&:hover': {
+                      transform: { xs: 'none', md: 'translateY(-12px) scale(1.02)' },
+                      boxShadow: { xs: theme.shadows[2], md: '0 20px 40px rgba(0, 0, 0, 0.15)' },
+                      borderColor: '#adb5bd'
+                    }
+                  }}
+                >
                   {/* Popular Badge */}
                   <Box
                     sx={{
                       position: 'absolute',
-                      top: -20,
+                      top: { xs: -15, md: -20 },
                       left: '50%',
                       transform: 'translateX(-50%)',
                       background: 'linear-gradient(45deg, #6c757d, #495057)',
                       color: 'white',
-                      px: 4,
-                      py: 1.5,
+                      px: { xs: 3, md: 4 },
+                      py: { xs: 1, md: 1.5 },
                       borderRadius: '25px',
-                      fontSize: '1rem',
+                      fontSize: { xs: '0.875rem', md: '1rem' },
                       fontWeight: 700,
                       boxShadow: '0 8px 20px rgba(108, 117, 125, 0.3)',
                       border: '2px solid rgba(255, 255, 255, 0.2)',
@@ -699,42 +743,44 @@ const Landing: React.FC = () => {
                      }}
                    />
                   
-                  <CardContent sx={{ p: 5, position: 'relative', zIndex: 2 }}>
-                                         <Typography 
-                       variant="h4" 
-                       component="h3" 
-                       sx={{ 
-                         mb: 3, 
-                         fontWeight: 800,
-                         color: '#495057'
-                       }}
-                     >
-                       Atelier Pro
-                     </Typography>
+                  <CardContent sx={{ p: { xs: 3, md: 5 }, position: 'relative', zIndex: 2 }}>
+                    <Typography 
+                      variant="h4" 
+                      component="h3" 
+                      sx={{ 
+                        mb: { xs: 2, md: 3 }, 
+                        fontWeight: 800,
+                        color: '#495057',
+                        fontSize: { xs: '1.5rem', md: '2.125rem' }
+                      }}
+                    >
+                      Atelier Pro
+                    </Typography>
                     
-                    <Box sx={{ mb: 4, position: 'relative' }}>
-                                             <Typography 
-                         variant="h1" 
-                         component="span" 
-                         sx={{ 
-                           fontWeight: 900, 
-                           color: '#495057',
-                           fontSize: { xs: '3rem', md: '4rem' }
-                         }}
-                       >
-                         19,99€
-                       </Typography>
-                       <Typography 
-                         variant="h5" 
-                         component="span" 
-                         sx={{ 
-                           color: '#6c757d',
-                           fontWeight: 600,
-                           ml: 1
-                         }}
-                       >
-                         /mois
-                       </Typography>
+                    <Box sx={{ mb: { xs: 3, md: 4 }, position: 'relative' }}>
+                      <Typography 
+                        variant="h1" 
+                        component="span" 
+                        sx={{ 
+                          fontWeight: 900, 
+                          color: '#495057',
+                          fontSize: { xs: '2.5rem', sm: '3rem', md: '4rem' }
+                        }}
+                      >
+                        19,99€
+                      </Typography>
+                      <Typography 
+                        variant="h5" 
+                        component="span" 
+                        sx={{ 
+                          color: '#6c757d',
+                          fontWeight: 600,
+                          ml: 1,
+                          fontSize: { xs: '1.25rem', md: '1.5rem' }
+                        }}
+                      >
+                        /mois
+                      </Typography>
                        <Box
                          sx={{
                            position: 'absolute',
@@ -747,6 +793,61 @@ const Landing: React.FC = () => {
                            borderRadius: '2px'
                          }}
                        />
+                    </Box>
+
+                    {/* Option Annuelle */}
+                    <Box sx={{ 
+                      mb: 4, 
+                      p: 2, 
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+                      borderRadius: '16px',
+                      border: '2px solid #28a745',
+                      position: 'relative'
+                    }}>
+                      <Chip 
+                        label="Économie 40€" 
+                        color="success"
+                        size="small"
+                        sx={{ 
+                          position: 'absolute',
+                          top: -10,
+                          right: 10,
+                          fontWeight: 'bold',
+                          fontSize: '0.75rem'
+                        }} 
+                      />
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h6" color="text.secondary" gutterBottom>
+                          Ou abonnement annuel
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                          <Typography 
+                            variant="h2" 
+                            component="span" 
+                            sx={{ 
+                              fontWeight: 900, 
+                              color: '#28a745',
+                              fontSize: { xs: '2.5rem', md: '3rem' }
+                            }}
+                          >
+                            200€
+                          </Typography>
+                          <Typography 
+                            variant="h6" 
+                            component="span" 
+                            sx={{ 
+                              color: '#28a745',
+                              fontWeight: 600,
+                              ml: 1
+                            }}
+                          >
+                            /an
+                          </Typography>
+                        </Box>
+                        <Typography variant="body1" color="success.main" fontWeight="bold">
+                          Soit 16,67€/mois
+                        </Typography>
+                      </Box>
                     </Box>
                     
                                          <Typography 
@@ -829,8 +930,8 @@ const Landing: React.FC = () => {
                       onClick={handleAccessApp}
                       sx={{
                         width: '100%',
-                        py: 3,
-                        fontSize: '1.2rem',
+                        py: { xs: 2, md: 3 },
+                        fontSize: { xs: '1rem', md: '1.2rem' },
                         fontWeight: 700,
                         borderRadius: '50px',
                         background: 'linear-gradient(45deg, #6c757d, #495057)',
@@ -841,7 +942,7 @@ const Landing: React.FC = () => {
                         '&:hover': {
                           background: 'linear-gradient(45deg, #495057, #343a40)',
                           boxShadow: '0 12px 35px rgba(108, 117, 125, 0.6)',
-                          transform: 'translateY(-3px) scale(1.02)'
+                          transform: { xs: 'none', md: 'translateY(-3px) scale(1.02)' }
                         }
                       }}
                       endIcon={<ArrowForwardIcon />}
@@ -899,7 +1000,7 @@ const Landing: React.FC = () => {
       </Box>
 
       {/* About Section */}
-      <Container maxWidth="lg" sx={{ py: 8 }} id="about">
+      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 }, px: { xs: 2, md: 3 } }} id="about">
         <Slide direction="up" in timeout={1200}>
           <Box>
             <Typography
@@ -907,14 +1008,15 @@ const Landing: React.FC = () => {
               component="h2"
               sx={{
                 textAlign: 'center',
-                mb: 6,
-                fontWeight: 600
+                mb: { xs: 4, md: 6 },
+                fontWeight: 600,
+                fontSize: { xs: '2rem', md: '3rem' }
               }}
             >
               À Propos d'Atelier Gestion
             </Typography>
             
-            <Grid container spacing={4} alignItems="center">
+            <Grid container spacing={{ xs: 3, md: 4 }} alignItems="center">
               <Grid item xs={12} md={6}>
                 <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
                   Notre Mission
@@ -936,8 +1038,8 @@ const Landing: React.FC = () => {
                 <Box sx={{ textAlign: 'center' }}>
                   <Box
                     sx={{
-                      width: 300,
-                      height: 300,
+                      width: { xs: 200, sm: 250, md: 300 },
+                      height: { xs: 200, sm: 250, md: 300 },
                       mx: 'auto',
                       borderRadius: '50%',
                       background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.light} 100%)`,
@@ -960,7 +1062,7 @@ const Landing: React.FC = () => {
                       }
                     }}
                   >
-                    <BuildIcon sx={{ fontSize: 120, color: 'white' }} />
+                    <BuildIcon sx={{ fontSize: { xs: 80, sm: 100, md: 120 }, color: 'white' }} />
                   </Box>
                 </Box>
               </Grid>
@@ -970,15 +1072,16 @@ const Landing: React.FC = () => {
       </Container>
 
       {/* CTA Section */}
-      <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
+      <Container maxWidth="md" sx={{ py: { xs: 6, md: 8 }, px: { xs: 2, md: 3 }, textAlign: 'center' }}>
         <Fade in timeout={1200}>
           <Box>
             <Typography
               variant="h4"
               component="h2"
               sx={{
-                mb: 3,
-                fontWeight: 600
+                mb: { xs: 2, md: 3 },
+                fontWeight: 600,
+                fontSize: { xs: '1.75rem', md: '2.125rem' }
               }}
             >
               Prêt à Optimiser Votre Atelier ?
@@ -986,7 +1089,12 @@ const Landing: React.FC = () => {
             <Typography
               variant="h6"
               color="text.secondary"
-              sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}
+              sx={{ 
+                mb: { xs: 3, md: 4 }, 
+                maxWidth: 600, 
+                mx: 'auto',
+                fontSize: { xs: '1rem', md: '1.25rem' }
+              }}
             >
               Rejoignez les ateliers qui ont déjà transformé leur gestion quotidienne avec notre solution complète.
             </Typography>
@@ -995,11 +1103,12 @@ const Landing: React.FC = () => {
               size="large"
               onClick={handleAccessApp}
               sx={{
-                px: 6,
-                py: 2,
-                fontSize: '1.2rem',
+                px: { xs: 4, md: 6 },
+                py: { xs: 1.5, md: 2 },
+                fontSize: { xs: '1rem', md: '1.2rem' },
                 fontWeight: 600,
-                borderRadius: 3
+                borderRadius: 3,
+                width: { xs: '100%', sm: 'auto' }
               }}
               endIcon={<ArrowForwardIcon />}
             >
@@ -1014,7 +1123,7 @@ const Landing: React.FC = () => {
         sx={{
           bgcolor: '#2c3e50',
           color: 'white',
-          py: 6,
+          py: { xs: 4, md: 6 },
           position: 'relative',
           '&::before': {
             content: '""',
@@ -1027,8 +1136,8 @@ const Landing: React.FC = () => {
           }
         }}
       >
-        <Container maxWidth="lg">
-          <Grid container spacing={4}>
+        <Container maxWidth="lg" sx={{ px: { xs: 2, md: 3 } }}>
+          <Grid container spacing={{ xs: 3, md: 4 }}>
             {/* Company Info */}
             <Grid item xs={12} md={4}>
               <Box sx={{ mb: 3 }}>

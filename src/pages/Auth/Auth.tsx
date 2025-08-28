@@ -26,7 +26,8 @@ import {
   Phone,
   Business,
   CheckCircle,
-  Error
+  Error,
+  Home
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
@@ -266,7 +267,31 @@ const Auth: React.FC = () => {
           }}
         >
           {/* Header */}
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Box sx={{ textAlign: 'center', mb: 4, position: 'relative' }}>
+            {/* Bouton retour à l'accueil */}
+            <Button
+              variant="outlined"
+              startIcon={<Home />}
+              onClick={() => navigate('/')}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
+                borderColor: theme.palette.primary.main,
+                color: theme.palette.primary.main,
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.main,
+                  color: 'white',
+                  borderColor: theme.palette.primary.main,
+                }
+              }}
+            >
+              Accueil
+            </Button>
+            
             <Typography
               variant="h4"
               component="h1"

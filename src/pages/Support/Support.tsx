@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -17,7 +17,8 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  CircularProgress
 } from '@mui/material';
 import { 
   NavigateNext as NavigateNextIcon,
@@ -30,6 +31,15 @@ import {
   CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import emailjs from '@emailjs/browser';
+import { 
+  EMAILJS_CONFIG, 
+  prepareEmailJSParams, 
+  validateEmailJSParams,
+  getMessagePriority,
+  getSupportType,
+  type EmailJSParams 
+} from '../../config/emailjs';
 
 const Support: React.FC = () => {
   const navigate = useNavigate();
@@ -40,6 +50,13 @@ const Support: React.FC = () => {
     message: ''
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Initialiser EmailJS
+    emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
+  }, []);
 
   const handleBreadcrumbClick = () => {
     navigate('/');
@@ -51,14 +68,55 @@ const Support: React.FC = () => {
       ...prev,
       [name]: value
     }));
+    // Effacer les erreurs quand l'utilisateur modifie le formulaire
+    if (error) setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulation d'envoi
-    console.log('Formulaire soumis:', formData);
-    setIsSubmitted(true);
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Préparer les paramètres pour EmailJS
+      const templateParams = prepareEmailJSParams({
+        from_name: formData.name,
+        from_email: formData.email,
+        subject: formData.subject,
+        message: formData.message
+      });
+
+      // Valider les paramètres
+      const validation = validateEmailJSParams(templateParams);
+      if (!validation.isValid) {
+        setError(`Erreur de validation: ${validation.errors.join(', ')}`);
+        return;
+      }
+
+      // Analyser la priorité et le type de support
+      const priority = getMessagePriority(formData.subject, formData.message);
+      const supportType = getSupportType(formData.subject, formData.message);
+      
+      console.log('Priorité du message:', priority);
+      console.log('Type de support:', supportType);
+
+      // Envoyer l'email via EmailJS
+      const response = await emailjs.send(
+        EMAILJS_CONFIG.SERVICE_ID,
+        EMAILJS_CONFIG.TEMPLATE_ID,
+        templateParams as unknown as Record<string, unknown>,
+        EMAILJS_CONFIG.PUBLIC_KEY
+      );
+
+      console.log('Email envoyé avec succès:', response);
+      setIsSubmitted(true);
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'email:', error);
+      setError('Une erreur est survenue lors de l\'envoi de votre message. Veuillez réessayer.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -116,7 +174,7 @@ const Support: React.FC = () => {
                   </ListItemIcon>
                   <ListItemText
                     primary="Téléphone"
-                    secondary="+33 1 23 45 67 89"
+                    secondary="+33 7 59 23 91 70"
                     primaryTypographyProps={{ fontWeight: 600 }}
                     secondaryTypographyProps={{ color: '#6c757d' }}
                   />
@@ -127,7 +185,7 @@ const Support: React.FC = () => {
                     <LocationIcon sx={{ color: '#3498db' }} />
                   </ListItemIcon>
                   <ListItemText
-                    primary="Adresse"
+                    primary="Localisation"
                     secondary="France"
                     primaryTypographyProps={{ fontWeight: 600 }}
                     secondaryTypographyProps={{ color: '#6c757d' }}
@@ -186,6 +244,12 @@ const Support: React.FC = () => {
               {isSubmitted && (
                 <Alert severity="success" sx={{ mb: 3 }}>
                   Votre message a été envoyé avec succès ! Nous vous répondrons dans les plus brefs délais.
+                </Alert>
+              )}
+
+              {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
                 </Alert>
               )}
 
@@ -248,7 +312,7 @@ const Support: React.FC = () => {
                       type="submit"
                       variant="contained"
                       size="large"
-                      startIcon={<SendIcon />}
+                      startIcon={isLoading ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
                       sx={{
                         background: 'linear-gradient(45deg, #3498db, #2980b9)',
                         color: 'white',
@@ -260,8 +324,9 @@ const Support: React.FC = () => {
                           background: 'linear-gradient(45deg, #2980b9, #1f5f8b)'
                         }
                       }}
+                      disabled={isLoading}
                     >
-                      Envoyer le Message
+                      {isLoading ? 'Envoi en cours...' : 'Envoyer le Message'}
                     </Button>
                   </Grid>
                 </Grid>
@@ -360,7 +425,7 @@ const Support: React.FC = () => {
                   Comment exporter mes données ?
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Utilisez la fonction d'export dans la section "Réglages" pour télécharger vos données.
+                  Contacter l'équipe support pour exporter vos données.
                 </Typography>
                 <Chip label="Données" size="small" color="secondary" />
               </Card>
@@ -372,7 +437,7 @@ const Support: React.FC = () => {
                   Comment résilier mon abonnement ?
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Contactez notre équipe support ou utilisez l'option de résiliation dans vos paramètres.
+                  Contactez notre équipe support.
                 </Typography>
                 <Chip label="Abonnement" size="small" color="error" />
               </Card>
