@@ -182,11 +182,20 @@ const Archive: React.FC = () => {
 
   const handleOpenInvoice = async (repair: Repair) => {
     try {
-      // Utiliser directement les données de la réparation
-      setSelectedRepairForInvoice(repair);
-      setInvoiceOpen(true);
+      // Récupérer les données fraîches de la réparation depuis la base de données
+      const result = await repairService.getById(repair.id);
+      if (result.success && result.data) {
+        setSelectedRepairForInvoice(result.data);
+        setInvoiceOpen(true);
+      } else {
+        console.error('Erreur lors de la récupération de la réparation:', result.error);
+        // Fallback : utiliser les données locales
+        setSelectedRepairForInvoice(repair);
+        setInvoiceOpen(true);
+      }
     } catch (error) {
       console.error('Erreur lors de l\'ouverture de la facture:', error);
+      // Fallback : utiliser les données locales
       setSelectedRepairForInvoice(repair);
       setInvoiceOpen(true);
     }

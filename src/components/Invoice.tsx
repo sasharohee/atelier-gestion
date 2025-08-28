@@ -430,7 +430,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                 }}>
                   <Typography sx={{ fontSize: '16px', mb: 1 }}>
                     <strong>Prix de la réparation (TTC) :</strong> {(data as Repair).totalPrice.toLocaleString('fr-FR')} €
-                    {(data as Repair).discountPercentage && (data as Repair).discountPercentage! > 0 && (
+                    {(data as Repair).discountPercentage && (data as Repair).discountPercentage > 0 && (
                       <span style={{ color: 'success.main', marginLeft: '8px' }}>
                         (Prix original: {((data as Repair).totalPrice + ((data as Repair).discountAmount || 0)).toLocaleString('fr-FR')} €)
                       </span>
@@ -483,7 +483,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         {((data as Repair).totalPrice - ((data as Repair).totalPrice / (1 + parseFloat(workshopSettings.vatRate) / 100))).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                       </Typography>
                     </Box>
-                    {(data as Repair).discountPercentage && (data as Repair).discountPercentage! > 0 && (
+                    {(data as Repair).discountPercentage && (data as Repair).discountPercentage > 0 && (
                       <Box sx={{ 
                         display: 'flex', 
                         justifyContent: 'space-between', 
@@ -694,7 +694,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         {(data as Sale).tax.toLocaleString('fr-FR')} €
                       </Typography>
                     </Box>
-                    {(data as Sale).discountPercentage && (data as Sale).discountPercentage! > 0 && (
+                    {(data as Sale).discountPercentage && (data as Sale).discountPercentage > 0 && (
                       <Box sx={{ 
                         display: 'flex', 
                         justifyContent: 'space-between', 
