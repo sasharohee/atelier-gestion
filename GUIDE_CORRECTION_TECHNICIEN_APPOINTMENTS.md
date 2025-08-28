@@ -164,3 +164,5 @@ SELECT id, first_name, last_name FROM public.users WHERE role = 'technician';
 **Date de correction :** 2025-01-23  
 **Statut :** ✅ Résolu  
 **Impact :** Fonctionnalité d'assignation de techniciens opérationnelle
+
+

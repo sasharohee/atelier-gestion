@@ -92,7 +92,7 @@ const Archive: React.FC = () => {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(repair => {
         const client = getClientById(repair.clientId);
-        const device = getDeviceById(repair.deviceId);
+        const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
         
         return (
           client?.firstName?.toLowerCase().includes(query) ||
@@ -109,7 +109,7 @@ const Archive: React.FC = () => {
     // Filtre par type d'appareil
     if (deviceTypeFilter !== 'all') {
       filtered = filtered.filter(repair => {
-        const device = getDeviceById(repair.deviceId);
+        const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
         return device?.type === deviceTypeFilter;
       });
     }
@@ -180,15 +180,31 @@ const Archive: React.FC = () => {
     }
   };
 
-  const handleOpenInvoice = (repair: Repair) => {
-    setSelectedRepairForInvoice(repair);
-    setInvoiceOpen(true);
+  const handleOpenInvoice = async (repair: Repair) => {
+    try {
+      // Récupérer les données fraîches de la réparation depuis la base de données
+      const result = await repairService.getById(repair.id);
+      if (result.success && result.data) {
+        setSelectedRepairForInvoice(result.data);
+        setInvoiceOpen(true);
+      } else {
+        console.error('Erreur lors de la récupération de la réparation:', result.error);
+        // Fallback : utiliser les données locales
+        setSelectedRepairForInvoice(repair);
+        setInvoiceOpen(true);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ouverture de la facture:', error);
+      // Fallback : utiliser les données locales
+      setSelectedRepairForInvoice(repair);
+      setInvoiceOpen(true);
+    }
   };
 
 
 
   const handleRestoreRepair = async (repair: Repair) => {
-    // Remettre la réparation en statut "completed" pour qu'elle réapparaisse dans le Kanban
+            // Remettre la réparation en statut "completed" pour qu'elle réapparaisse dans le suivi des réparations
     await updateRepair(repair.id, { status: 'completed' });
   };
 
@@ -299,7 +315,7 @@ const Archive: React.FC = () => {
           <TableBody>
             {paginatedRepairs.map((repair) => {
               const client = getClientById(repair.clientId);
-              const device = getDeviceById(repair.deviceId);
+              const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
               
               return (
                 <TableRow key={repair.id} hover>
@@ -359,7 +375,7 @@ const Archive: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
-                      {repair.totalPrice ? `${repair.totalPrice.toFixed(2)} €` : '0.00 €'}
+                      {repair.totalPrice ? `${repair.totalPrice.toFixed(2)} € TTC` : '0.00 € TTC'}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -428,7 +444,7 @@ const Archive: React.FC = () => {
                 <strong>Aucune réparation archivée</strong>
               </Typography>
               <Typography variant="body2">
-                Les réparations apparaîtront ici automatiquement quand elles seront déplacées vers "Restitué" dans le Kanban.
+                Les réparations apparaîtront ici automatiquement quand elles seront déplacées vers "Restitué" dans le suivi des réparations.
               </Typography>
             </>
           ) : (

@@ -262,21 +262,24 @@ export const userService = {
         return handleSupabaseError(error);
       }
       
-      // Si aucun utilisateur trouvé, inclure l'utilisateur actuel
+      // Si aucun utilisateur trouvé, essayer de récupérer l'utilisateur actuel
       if (!data || data.length === 0) {
-        console.log('⚠️ Aucun utilisateur créé par l\'utilisateur actuel, récupération de l\'utilisateur actuel...');
+        console.log('⚠️ Aucun utilisateur créé par l\'utilisateur actuel, tentative de récupération de l\'utilisateur actuel...');
+        
+        // Essayer d'abord avec .maybeSingle() pour éviter l'erreur si aucun résultat
         const { data: currentUserData, error: currentUserError } = await supabase
           .from('users')
           .select('*')
           .eq('id', currentUser.id)
-          .single();
+          .maybeSingle();
         
         if (currentUserError) {
           console.error('❌ Erreur lors de la récupération de l\'utilisateur actuel:', currentUserError);
-          return handleSupabaseError(currentUserError);
+          // Au lieu de retourner une erreur, on continue avec un tableau vide
+          data = [];
+        } else {
+          data = currentUserData ? [currentUserData] : [];
         }
-        
-        data = currentUserData ? [currentUserData] : [];
       }
       
       console.log('📊 Données brutes récupérées:', data);
@@ -805,7 +808,7 @@ export const clientService = {
     
     console.log('🔒 Récupération des clients pour l\'utilisateur:', user.id);
     
-    // La politique RLS va automatiquement filtrer les données
+    // Récupérer les clients de l'utilisateur connecté (RLS activé)
     const { data, error } = await supabase
       .from('clients')
       .select('*')
@@ -822,11 +825,68 @@ export const clientService = {
       phone: client.phone,
       address: client.address,
       notes: client.notes,
+      
+      // Nouveaux champs pour les informations personnelles et entreprise
+      category: client.category,
+      title: client.title,
+      companyName: client.company_name,
+      vatNumber: client.vat_number,
+      sirenNumber: client.siren_number,
+      countryCode: client.country_code,
+      
+      // Nouveaux champs pour l'adresse détaillée
+      addressComplement: client.address_complement,
+      region: client.region,
+      postalCode: client.postal_code,
+      city: client.city,
+      
+      // Nouveaux champs pour l'adresse de facturation
+      billingAddressSame: client.billing_address_same,
+      billingAddress: client.billing_address,
+      billingAddressComplement: client.billing_address_complement,
+      billingRegion: client.billing_region,
+      billingPostalCode: client.billing_postal_code,
+      billingCity: client.billing_city,
+      
+      // Nouveaux champs pour les informations complémentaires
+      accountingCode: client.accounting_code,
+      cniIdentifier: client.cni_identifier,
+      attachedFilePath: client.attached_file_path,
+      internalNote: client.internal_note,
+      
+      // Nouveaux champs pour les préférences
+      status: client.status,
+      smsNotification: client.sms_notification,
+      emailNotification: client.email_notification,
+      smsMarketing: client.sms_marketing,
+      emailMarketing: client.email_marketing,
+      
       createdAt: client.created_at,
       updatedAt: client.updated_at
     })) || [];
     
     console.log('✅ Clients récupérés:', convertedData.length, 'pour l\'utilisateur:', user.id);
+    console.log('📋 Détails des clients récupérés:');
+    convertedData.forEach((client, index) => {
+      console.log(`  Client ${index + 1}: ${client.firstName} ${client.lastName} (${client.email})`);
+      console.log(`    📍 Adresse: ${client.address}`);
+      console.log(`    🏢 Entreprise: ${client.companyName}`);
+      console.log(`    📧 Email: ${client.email}`);
+      console.log(`    📱 Téléphone: ${client.phone}`);
+      console.log(`    🏠 Complément: ${client.addressComplement}`);
+      console.log(`    🌍 Région: ${client.region}`);
+      console.log(`    📮 Code postal: ${client.postalCode}`);
+      console.log(`    🏙️ Ville: ${client.city}`);
+      console.log(`    📊 Code comptable: ${client.accountingCode}`);
+      console.log(`    🆔 CNI: ${client.cniIdentifier}`);
+      console.log(`    📝 Note interne: ${client.internalNote}`);
+    });
+    
+    // Ajouter des logs pour voir les données brutes de Supabase
+    console.log('🔍 DONNÉES BRUTES DE SUPABASE:');
+    data?.forEach((client, index) => {
+      console.log(`  Client ${index + 1} brut:`, client);
+    });
     return handleSupabaseSuccess(convertedData);
   },
 
@@ -843,7 +903,57 @@ export const clientService = {
         .single();
       
       if (error) return handleSupabaseError(error);
-      return handleSupabaseSuccess(data);
+      
+      // Convertir les données de snake_case vers camelCase
+      const convertedData = {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        notes: data.notes,
+        
+        // Nouveaux champs pour les informations personnelles et entreprise
+        category: data.category,
+        title: data.title,
+        companyName: data.company_name,
+        vatNumber: data.vat_number,
+        sirenNumber: data.siren_number,
+        countryCode: data.country_code,
+        
+        // Nouveaux champs pour l'adresse détaillée
+        addressComplement: data.address_complement,
+        region: data.region,
+        postalCode: data.postal_code,
+        city: data.city,
+        
+        // Nouveaux champs pour l'adresse de facturation
+        billingAddressSame: data.billing_address_same,
+        billingAddress: data.billing_address,
+        billingAddressComplement: data.billing_address_complement,
+        billingRegion: data.billing_region,
+        billingPostalCode: data.billing_postal_code,
+        billingCity: data.billing_city,
+        
+        // Nouveaux champs pour les informations complémentaires
+        accountingCode: data.accounting_code,
+        cniIdentifier: data.cni_identifier,
+        attachedFilePath: data.attached_file_path,
+        internalNote: data.internal_note,
+        
+        // Nouveaux champs pour les préférences
+        status: data.status,
+        smsNotification: data.sms_notification,
+        emailNotification: data.email_notification,
+        smsMarketing: data.sms_marketing,
+        emailMarketing: data.email_marketing,
+        
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+      
+      return handleSupabaseSuccess(convertedData);
     }
     
     // Récupérer le client de l'utilisateur connecté
@@ -855,64 +965,361 @@ export const clientService = {
       .single();
     
     if (error) return handleSupabaseError(error);
-    return handleSupabaseSuccess(data);
+    
+    // Convertir les données de snake_case vers camelCase
+    const convertedData = {
+      id: data.id,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      email: data.email,
+      phone: data.phone,
+      address: data.address,
+      notes: data.notes,
+      
+      // Nouveaux champs pour les informations personnelles et entreprise
+      category: data.category,
+      title: data.title,
+      companyName: data.company_name,
+      vatNumber: data.vat_number,
+      sirenNumber: data.siren_number,
+      countryCode: data.country_code,
+      
+      // Nouveaux champs pour l'adresse détaillée
+      addressComplement: data.address_complement,
+      region: data.region,
+      postalCode: data.postal_code,
+      city: data.city,
+      
+      // Nouveaux champs pour l'adresse de facturation
+      billingAddressSame: data.billing_address_same,
+      billingAddress: data.billing_address,
+      billingAddressComplement: data.billing_address_complement,
+      billingRegion: data.billing_region,
+      billingPostalCode: data.billing_postal_code,
+      billingCity: data.billing_city,
+      
+      // Nouveaux champs pour les informations complémentaires
+      accountingCode: data.accounting_code,
+      cniIdentifier: data.cni_identifier,
+      attachedFilePath: data.attached_file_path,
+      internalNote: data.internal_note,
+      
+      // Nouveaux champs pour les préférences
+      status: data.status,
+      smsNotification: data.sms_notification,
+      emailNotification: data.email_notification,
+      smsMarketing: data.sms_marketing,
+      emailMarketing: data.email_marketing,
+      
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+    
+    return handleSupabaseSuccess(convertedData);
   },
 
   async create(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>) {
-    // Récupérer l'utilisateur connecté
-    const currentUserId = await getCurrentUserId();
-    
-    // Convertir les noms de propriétés camelCase vers snake_case
-    const clientData = {
-      first_name: client.firstName,
-      last_name: client.lastName,
-      email: client.email,
-      phone: client.phone,
-      address: client.address,
-      notes: client.notes,
-      user_id: currentUserId || '00000000-0000-0000-0000-000000000000', // Utiliser l'utilisateur système par défaut si non connecté
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    try {
+      // Récupérer l'utilisateur connecté
+      const currentUserId = await getCurrentUserId();
+      
+      console.log('🔍 CLIENT SERVICE - DONNÉES REÇUES:', client);
+      
+      // Convertir les noms de propriétés camelCase vers snake_case
+      const clientData = {
+        first_name: client.firstName || '',
+        last_name: client.lastName || '',
+        email: client.email || '',
+        phone: client.phone || '',
+        address: client.address || '',
+        notes: client.notes || '',
+        
+        // Nouveaux champs pour les informations personnelles et entreprise
+        category: client.category || 'particulier',
+        title: client.title || 'mr',
+        company_name: client.companyName || '',
+        vat_number: client.vatNumber || '',
+        siren_number: client.sirenNumber || '',
+        country_code: client.countryCode || '33',
+        
+        // Nouveaux champs pour l'adresse détaillée
+        address_complement: client.addressComplement || '',
+        region: client.region || '',
+        postal_code: client.postalCode || '',
+        city: client.city || '',
+        
+        // Nouveaux champs pour l'adresse de facturation
+        billing_address_same: client.billingAddressSame !== undefined ? client.billingAddressSame : true,
+        billing_address: client.billingAddress || '',
+        billing_address_complement: client.billingAddressComplement || '',
+        billing_region: client.billingRegion || '',
+        billing_postal_code: client.billingPostalCode || '',
+        billing_city: client.billingCity || '',
+        
+        // Nouveaux champs pour les informations complémentaires
+        accounting_code: client.accountingCode || '',
+        cni_identifier: client.cniIdentifier || '',
+        attached_file_path: client.attachedFilePath || '',
+        internal_note: client.internalNote || '',
+        
+        // Nouveaux champs pour les préférences
+        status: client.status || 'displayed',
+        sms_notification: client.smsNotification !== undefined ? client.smsNotification : true,
+        email_notification: client.emailNotification !== undefined ? client.emailNotification : true,
+        sms_marketing: client.smsMarketing !== undefined ? client.smsMarketing : true,
+        email_marketing: client.emailMarketing !== undefined ? client.emailMarketing : true,
+        
+        user_id: currentUserId, // Utiliser l'utilisateur connecté
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-    const { data, error } = await supabase
-      .from('clients')
-      .insert([clientData])
-      .select()
-      .single();
-    
-    if (error) return handleSupabaseError(error);
-    return handleSupabaseSuccess(data);
+      console.log('📤 CLIENT SERVICE - DONNÉES À ENVOYER À SUPABASE:', clientData);
+
+      const { data, error } = await supabase
+        .from('clients')
+        .insert([clientData])
+        .select()
+        .single();
+      
+      console.log('📥 CLIENT SERVICE - RÉPONSE DE SUPABASE:', { data, error });
+      
+      if (error) {
+        console.error('❌ ERREUR SUPABASE:', error);
+        return handleSupabaseError(error);
+      }
+      
+      console.log('✅ CLIENT CRÉÉ AVEC SUCCÈS:', data);
+      
+      // Convertir les données de snake_case vers camelCase
+      const convertedData = {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        notes: data.notes,
+        
+        // Nouveaux champs pour les informations personnelles et entreprise
+        category: data.category,
+        title: data.title,
+        companyName: data.company_name,
+        vatNumber: data.vat_number,
+        sirenNumber: data.siren_number,
+        countryCode: data.country_code,
+        
+        // Nouveaux champs pour l'adresse détaillée
+        addressComplement: data.address_complement,
+        region: data.region,
+        postalCode: data.postal_code,
+        city: data.city,
+        
+        // Nouveaux champs pour l'adresse de facturation
+        billingAddressSame: data.billing_address_same,
+        billingAddress: data.billing_address,
+        billingAddressComplement: data.billing_address_complement,
+        billingRegion: data.billing_region,
+        billingPostalCode: data.billing_postal_code,
+        billingCity: data.billing_city,
+        
+        // Nouveaux champs pour les informations complémentaires
+        accountingCode: data.accounting_code,
+        cniIdentifier: data.cni_identifier,
+        attachedFilePath: data.attached_file_path,
+        internalNote: data.internal_note,
+        
+        // Nouveaux champs pour les préférences
+        status: data.status,
+        smsNotification: data.sms_notification,
+        emailNotification: data.email_notification,
+        smsMarketing: data.sms_marketing,
+        emailMarketing: data.email_marketing,
+        
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+      
+    } catch (error) {
+      console.error('💥 ERREUR CRÉATION CLIENT:', error);
+      return handleSupabaseError(error);
+    }
   },
 
   async update(id: string, updates: Partial<Client>) {
     // Récupérer l'utilisateur connecté
     const currentUserId = await getCurrentUserId();
     
+    // Convertir les noms de propriétés camelCase vers snake_case
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    // Mapper les champs de base
+    if (updates.firstName !== undefined) updateData.first_name = updates.firstName;
+    if (updates.lastName !== undefined) updateData.last_name = updates.lastName;
+    if (updates.email !== undefined) updateData.email = updates.email;
+    if (updates.phone !== undefined) updateData.phone = updates.phone;
+    if (updates.address !== undefined) updateData.address = updates.address;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
+    
+    // Mapper les nouveaux champs
+    if (updates.category !== undefined) updateData.category = updates.category;
+    if (updates.title !== undefined) updateData.title = updates.title;
+    if (updates.companyName !== undefined) updateData.company_name = updates.companyName;
+    if (updates.vatNumber !== undefined) updateData.vat_number = updates.vatNumber;
+    if (updates.sirenNumber !== undefined) updateData.siren_number = updates.sirenNumber;
+    if (updates.countryCode !== undefined) updateData.country_code = updates.countryCode;
+    
+    if (updates.addressComplement !== undefined) updateData.address_complement = updates.addressComplement;
+    if (updates.region !== undefined) updateData.region = updates.region;
+    if (updates.postalCode !== undefined) updateData.postal_code = updates.postalCode;
+    if (updates.city !== undefined) updateData.city = updates.city;
+    
+    if (updates.billingAddressSame !== undefined) updateData.billing_address_same = updates.billingAddressSame;
+    if (updates.billingAddress !== undefined) updateData.billing_address = updates.billingAddress;
+    if (updates.billingAddressComplement !== undefined) updateData.billing_address_complement = updates.billingAddressComplement;
+    if (updates.billingRegion !== undefined) updateData.billing_region = updates.billingRegion;
+    if (updates.billingPostalCode !== undefined) updateData.billing_postal_code = updates.billingPostalCode;
+    if (updates.billingCity !== undefined) updateData.billing_city = updates.billingCity;
+    
+    if (updates.accountingCode !== undefined) updateData.accounting_code = updates.accountingCode;
+    if (updates.cniIdentifier !== undefined) updateData.cni_identifier = updates.cniIdentifier;
+    if (updates.attachedFilePath !== undefined) updateData.attached_file_path = updates.attachedFilePath;
+    if (updates.internalNote !== undefined) updateData.internal_note = updates.internalNote;
+    
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.smsNotification !== undefined) updateData.sms_notification = updates.smsNotification;
+    if (updates.emailNotification !== undefined) updateData.email_notification = updates.emailNotification;
+    if (updates.smsMarketing !== undefined) updateData.sms_marketing = updates.smsMarketing;
+    if (updates.emailMarketing !== undefined) updateData.email_marketing = updates.emailMarketing;
+    
     if (!currentUserId) {
       console.log('⚠️ Aucun utilisateur connecté, mise à jour sans filtrage');
       const { data, error } = await supabase
         .from('clients')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
       
       if (error) return handleSupabaseError(error);
-      return handleSupabaseSuccess(data);
+      
+      // Convertir les données de snake_case vers camelCase
+      const convertedData = {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+        notes: data.notes,
+        
+        // Nouveaux champs pour les informations personnelles et entreprise
+        category: data.category,
+        title: data.title,
+        companyName: data.company_name,
+        vatNumber: data.vat_number,
+        sirenNumber: data.siren_number,
+        countryCode: data.country_code,
+        
+        // Nouveaux champs pour l'adresse détaillée
+        addressComplement: data.address_complement,
+        region: data.region,
+        postalCode: data.postal_code,
+        city: data.city,
+        
+        // Nouveaux champs pour l'adresse de facturation
+        billingAddressSame: data.billing_address_same,
+        billingAddress: data.billing_address,
+        billingAddressComplement: data.billing_address_complement,
+        billingRegion: data.billing_region,
+        billingPostalCode: data.billing_postal_code,
+        billingCity: data.billing_city,
+        
+        // Nouveaux champs pour les informations complémentaires
+        accountingCode: data.accounting_code,
+        cniIdentifier: data.cni_identifier,
+        attachedFilePath: data.attached_file_path,
+        internalNote: data.internal_note,
+        
+        // Nouveaux champs pour les préférences
+        status: data.status,
+        smsNotification: data.sms_notification,
+        emailNotification: data.email_notification,
+        smsMarketing: data.sms_marketing,
+        emailMarketing: data.email_marketing,
+        
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+      
+      return handleSupabaseSuccess(convertedData);
     }
     
     // Mettre à jour le client de l'utilisateur connecté
     const { data, error } = await supabase
       .from('clients')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', id)
       .eq('user_id', currentUserId)
       .select()
       .single();
     
     if (error) return handleSupabaseError(error);
-    return handleSupabaseSuccess(data);
+    
+    // Convertir les données de snake_case vers camelCase
+    const convertedData = {
+      id: data.id,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      email: data.email,
+      phone: data.phone,
+      address: data.address,
+      notes: data.notes,
+      
+      // Nouveaux champs pour les informations personnelles et entreprise
+      category: data.category,
+      title: data.title,
+      companyName: data.company_name,
+      vatNumber: data.vat_number,
+      sirenNumber: data.siren_number,
+      countryCode: data.country_code,
+      
+      // Nouveaux champs pour l'adresse détaillée
+      addressComplement: data.address_complement,
+      region: data.region,
+      postalCode: data.postal_code,
+      city: data.city,
+      
+      // Nouveaux champs pour l'adresse de facturation
+      billingAddressSame: data.billing_address_same,
+      billingAddress: data.billing_address,
+      billingAddressComplement: data.billing_address_complement,
+      billingRegion: data.billing_region,
+      billingPostalCode: data.billing_postal_code,
+      billingCity: data.billing_city,
+      
+      // Nouveaux champs pour les informations complémentaires
+      accountingCode: data.accounting_code,
+      cniIdentifier: data.cni_identifier,
+      attachedFilePath: data.attached_file_path,
+      internalNote: data.internal_note,
+      
+      // Nouveaux champs pour les préférences
+      status: data.status,
+      smsNotification: data.sms_notification,
+      emailNotification: data.email_notification,
+      smsMarketing: data.sms_marketing,
+      emailMarketing: data.email_marketing,
+      
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+    
+    return handleSupabaseSuccess(convertedData);
   },
 
   async delete(id: string) {
@@ -1113,7 +1520,10 @@ export const repairService = {
       notes: repair.notes,
       services: [], // Tableau vide par défaut
       parts: [], // Tableau vide par défaut
-      totalPrice: repair.total_price,
+              totalPrice: repair.total_price,
+        discountPercentage: repair.discount_percentage,
+        discountAmount: repair.discount_amount,
+        originalPrice: repair.original_price,
       isPaid: repair.is_paid,
       createdAt: repair.created_at,
       updatedAt: repair.updated_at
@@ -1137,7 +1547,37 @@ export const repairService = {
       .single();
     
     if (error) return handleSupabaseError(error);
-    return handleSupabaseSuccess(data);
+    
+    // Convertir les données de snake_case vers camelCase
+    const convertedData = data ? {
+      id: data.id,
+      clientId: data.client_id,
+      deviceId: data.device_id,
+      status: data.status,
+      assignedTechnicianId: data.assigned_technician_id,
+      description: data.description,
+      issue: data.issue,
+      estimatedDuration: data.estimated_duration,
+      actualDuration: data.actual_duration,
+      estimatedStartDate: data.estimated_start_date,
+      estimatedEndDate: data.estimated_end_date,
+      startDate: data.start_date,
+      endDate: data.end_date,
+      dueDate: data.due_date,
+      isUrgent: data.is_urgent,
+      notes: data.notes,
+      services: [], // Tableau vide par défaut
+      parts: [], // Tableau vide par défaut
+      totalPrice: data.total_price,
+      discountPercentage: data.discount_percentage,
+      discountAmount: data.discount_amount,
+      originalPrice: data.original_price,
+      isPaid: data.is_paid,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    } : null;
+    
+    return handleSupabaseSuccess(convertedData);
   },
 
   async create(repair: Omit<Repair, 'id' | 'createdAt' | 'updatedAt'>) {
@@ -1176,28 +1616,33 @@ export const repairService = {
     }
 
     // Convertir les noms de propriétés camelCase vers snake_case
-    const repairData = {
+    const repairData: any = {
       client_id: repair.clientId,
-      device_id: repair.deviceId,
       status: repair.status,
-      assigned_technician_id: repair.assignedTechnicianId,
       description: repair.description,
       issue: repair.issue,
       estimated_duration: repair.estimatedDuration,
-      actual_duration: repair.actualDuration,
-      estimated_start_date: repair.estimatedStartDate,
-      estimated_end_date: repair.estimatedEndDate,
-      start_date: repair.startDate,
-      end_date: repair.endDate,
       due_date: repair.dueDate,
       is_urgent: repair.isUrgent,
-      notes: repair.notes,
-      total_price: repair.totalPrice,
+              total_price: repair.totalPrice,
+        discount_percentage: repair.discountPercentage || 0,
+        discount_amount: repair.discountAmount || 0,
+        original_price: repair.originalPrice || repair.totalPrice,
       is_paid: repair.isPaid,
       user_id: user.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
+
+    // Ajouter les champs optionnels seulement s'ils ont une valeur
+    if (repair.deviceId) repairData.device_id = repair.deviceId;
+    if (repair.assignedTechnicianId) repairData.assigned_technician_id = repair.assignedTechnicianId;
+    if (repair.actualDuration) repairData.actual_duration = repair.actualDuration;
+    if (repair.estimatedStartDate) repairData.estimated_start_date = repair.estimatedStartDate;
+    if (repair.estimatedEndDate) repairData.estimated_end_date = repair.estimatedEndDate;
+    if (repair.startDate) repairData.start_date = repair.startDate;
+    if (repair.endDate) repairData.end_date = repair.endDate;
+    if (repair.notes) repairData.notes = repair.notes;
 
     const { data, error } = await supabase
       .from('repairs')
@@ -1210,11 +1655,16 @@ export const repairService = {
   },
 
   async update(id: string, updates: Partial<Repair>) {
+    console.log('🔧 repairService.update appelé avec:', { id, updates });
+    
     // Obtenir l'utilisateur connecté
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
+      console.error('❌ Erreur d\'authentification:', userError);
       return handleSupabaseError(new Error('Utilisateur non connecté'));
     }
+    
+    console.log('👤 Utilisateur connecté:', user.id);
 
     // Convertir les noms de propriétés camelCase vers snake_case
     const updateData: any = { updated_at: new Date().toISOString() };
@@ -1235,7 +1685,12 @@ export const repairService = {
     if (updates.isUrgent !== undefined) updateData.is_urgent = updates.isUrgent;
     if (updates.notes !== undefined) updateData.notes = updates.notes;
     if (updates.totalPrice !== undefined) updateData.total_price = updates.totalPrice;
+            if (updates.discountPercentage !== undefined) updateData.discount_percentage = updates.discountPercentage;
+        if (updates.discountAmount !== undefined) updateData.discount_amount = updates.discountAmount;
+        if (updates.originalPrice !== undefined) updateData.original_price = updates.originalPrice;
     if (updates.isPaid !== undefined) updateData.is_paid = updates.isPaid;
+
+    console.log('📤 Données à envoyer à Supabase:', updateData);
 
     const { data, error } = await supabase
       .from('repairs')
@@ -1245,7 +1700,14 @@ export const repairService = {
       .select()
       .single();
     
-    if (error) return handleSupabaseError(error);
+    console.log('📥 Réponse de Supabase:', { data, error });
+    
+    if (error) {
+      console.error('❌ Erreur Supabase:', error);
+      return handleSupabaseError(error);
+    }
+    
+    console.log('✅ Mise à jour réussie:', data);
     return handleSupabaseSuccess(data);
   },
 
@@ -1564,6 +2026,9 @@ export const saleService = {
       subtotal: sale.subtotal,
       tax: sale.tax,
       total: sale.total,
+      discountPercentage: sale.discount_percentage,
+      discountAmount: sale.discount_amount,
+      originalTotal: sale.original_total,
       paymentMethod: sale.payment_method,
       status: sale.status,
       createdAt: sale.created_at,
@@ -1594,6 +2059,9 @@ export const saleService = {
       subtotal: data.subtotal,
       tax: data.tax,
       total: data.total,
+      discountPercentage: data.discount_percentage,
+      discountAmount: data.discount_amount,
+      originalTotal: data.original_total,
       paymentMethod: data.payment_method,
       status: data.status,
       createdAt: data.created_at,
@@ -1633,6 +2101,9 @@ export const saleService = {
       subtotal: sale.subtotal,
       tax: sale.tax,
       total: sale.total,
+      discount_percentage: sale.discountPercentage || 0,
+      discount_amount: sale.discountAmount || 0,
+      original_total: sale.originalTotal || (sale.subtotal + sale.tax),
       payment_method: sale.paymentMethod,
       status: sale.status,
       user_id: user.id,
@@ -1659,6 +2130,9 @@ export const saleService = {
     if (updates.subtotal !== undefined) updateData.subtotal = updates.subtotal;
     if (updates.tax !== undefined) updateData.tax = updates.tax;
     if (updates.total !== undefined) updateData.total = updates.total;
+    if (updates.discountPercentage !== undefined) updateData.discount_percentage = updates.discountPercentage;
+    if (updates.discountAmount !== undefined) updateData.discount_amount = updates.discountAmount;
+    if (updates.originalTotal !== undefined) updateData.original_total = updates.originalTotal;
     if (updates.paymentMethod !== undefined) updateData.payment_method = updates.paymentMethod;
     if (updates.status !== undefined) updateData.status = updates.status;
 

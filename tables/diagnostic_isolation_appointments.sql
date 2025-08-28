@@ -240,3 +240,5 @@ SELECT
     'Testez en créant un rendez-vous et en changeant de compte' as test_instruction;
 
 SELECT 'DIAGNOSTIC ISOLATION APPOINTMENTS TERMINÉ' as status;
+
+

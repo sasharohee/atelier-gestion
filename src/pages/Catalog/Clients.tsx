@@ -12,21 +12,10 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
   IconButton,
   Avatar,
   Alert,
   CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -35,75 +24,117 @@ import {
   Email as EmailIcon,
   Phone as PhoneIcon,
   Refresh as RefreshIcon,
-  Close as CloseIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import ClientForm from '../../components/ClientForm';
+import { clientService } from '../../services/supabaseService';
 
 const Clients: React.FC = () => {
   const { clients, loadClients, addClient, deleteClient } = useAppStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [openDialog, setOpenDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    notes: '',
-  });
+  const [clientFormOpen, setClientFormOpen] = useState(false);
+  const [editClientFormOpen, setEditClientFormOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<any>(null);
 
   useEffect(() => {
     const loadClientsData = async () => {
-      if (clients.length === 0) {
-        setIsLoading(true);
-        setError(null);
-        try {
-          await loadClients();
-        } catch (err) {
-          setError('Erreur lors du chargement des clients');
-          console.error('Erreur lors du chargement des clients:', err);
-        } finally {
-          setIsLoading(false);
-        }
+      setIsLoading(true);
+      setError(null);
+      try {
+        await loadClients();
+      } catch (err) {
+        setError('Erreur lors du chargement des clients');
+        console.error('Erreur lors du chargement des clients:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
+    // Charger seulement au montage du composant
     loadClientsData();
-  }, [clients.length, loadClients]);
+  }, []); // Dépendances vides pour éviter les boucles
 
   const handleOpenDialog = () => {
-    setOpenDialog(true);
+    setClientFormOpen(true);
     setError(null);
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      address: '',
-      notes: '',
-    });
   };
 
   const handleCloseDialog = () => {
-    setOpenDialog(false);
+    setClientFormOpen(false);
     setError(null);
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      address: '',
-      notes: '',
-    });
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+
+
+  const handleEditClient = async (client: any) => {
+    console.log('🔍 CLIENTS PAGE - Données du client reçues:', client);
+    console.log('🔍 CLIENTS PAGE - Détails des champs:');
+    console.log('  - companyName:', client.companyName);
+    console.log('  - vatNumber:', client.vatNumber);
+    console.log('  - sirenNumber:', client.sirenNumber);
+    console.log('  - addressComplement:', client.addressComplement);
+    console.log('  - region:', client.region);
+    console.log('  - postalCode:', client.postalCode);
+    console.log('  - city:', client.city);
+    console.log('  - accountingCode:', client.accountingCode);
+    console.log('  - cniIdentifier:', client.cniIdentifier);
+    console.log('  - internalNote:', client.internalNote);
+    
+    try {
+      // Récupérer le client complet depuis la base de données
+      const result = await clientService.getById(client.id);
+      
+      if (result.success && 'data' in result && result.data) {
+        console.log('🔍 CLIENTS PAGE - Client complet depuis la DB:', result.data);
+        
+        // Préparer les données du client pour le formulaire d'édition
+        const clientFormData = {
+          category: result.data.category || 'particulier',
+          title: result.data.title || 'mr',
+          firstName: result.data.firstName,
+          lastName: result.data.lastName,
+          companyName: result.data.companyName || '',
+          vatNumber: result.data.vatNumber || '',
+          sirenNumber: result.data.sirenNumber || '',
+          email: result.data.email,
+          countryCode: result.data.countryCode || '33',
+          mobile: result.data.phone ? result.data.phone.replace(result.data.countryCode || '33', '') : '',
+          address: result.data.address || '',
+          addressComplement: result.data.addressComplement || '',
+          region: result.data.region || '',
+          postalCode: result.data.postalCode || '',
+          city: result.data.city || '',
+          billingAddressSame: result.data.billingAddressSame !== false,
+          billingAddress: result.data.billingAddress || '',
+          billingAddressComplement: result.data.billingAddressComplement || '',
+          billingRegion: result.data.billingRegion || '',
+          billingPostalCode: result.data.billingPostalCode || '',
+          billingCity: result.data.billingCity || '',
+          accountingCode: result.data.accountingCode || '',
+          cniIdentifier: result.data.cniIdentifier || '',
+          attachedFile: null,
+          internalNote: result.data.internalNote || result.data.notes || '',
+          status: result.data.status || 'displayed',
+          smsNotification: result.data.smsNotification !== false,
+          emailNotification: result.data.emailNotification !== false,
+          smsMarketing: result.data.smsMarketing !== false,
+          emailMarketing: result.data.emailMarketing !== false,
+        };
+
+        console.log('📋 CLIENTS PAGE - Données préparées pour le formulaire:', clientFormData);
+        
+        setEditingClient(result.data);
+        setEditClientFormOpen(true);
+      } else {
+        console.error('❌ CLIENTS PAGE - Erreur lors de la récupération du client:', result);
+        alert('Erreur lors de la récupération des données du client');
+      }
+    } catch (error) {
+      console.error('💥 CLIENTS PAGE - Erreur lors de la récupération du client:', error);
+      alert('Erreur lors de la récupération des données du client');
+    }
   };
 
   const handleDeleteClient = async (clientId: string) => {
@@ -117,51 +148,156 @@ const Clients: React.FC = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    // Validation des champs obligatoires
-    if (!formData.firstName.trim()) {
-      setError('Le prénom est obligatoire');
-      return;
-    }
-
-    if (!formData.lastName.trim()) {
-      setError('Le nom de famille est obligatoire');
-      return;
-    }
-
-    if (!formData.email.trim()) {
-      setError('L\'email est obligatoire');
-      return;
-    }
-
-    // Validation basique de l'email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Format d\'email invalide');
-      return;
-    }
-
+  const handleCreateNewClient = async (clientFormData: any) => {
     setIsSubmitting(true);
     setError(null);
 
     try {
-      await addClient({
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        address: formData.address.trim(),
-        notes: formData.notes.trim(),
-      });
-
-      handleCloseDialog();
+      console.log('🚀 CLIENTS PAGE - Début de la création:', clientFormData);
       
-      // Recharger les clients pour afficher le nouveau
-      await loadClients();
+      // Vérifier si l'email existe déjà
+      const existingClient = clients.find(c => c.email.toLowerCase() === clientFormData.email.toLowerCase());
+      if (existingClient) {
+        setError(`Un client avec l'email "${clientFormData.email}" existe déjà.`);
+        return;
+      }
+
+      const clientData = {
+        firstName: clientFormData.firstName || '',
+        lastName: clientFormData.lastName || '',
+        email: clientFormData.email || '',
+        phone: (clientFormData.countryCode || '33') + (clientFormData.mobile || ''),
+        address: clientFormData.address || '',
+        notes: clientFormData.internalNote || '',
+        
+        // Nouveaux champs pour les informations personnelles et entreprise
+        category: clientFormData.category || 'particulier',
+        title: clientFormData.title || 'mr',
+        companyName: clientFormData.companyName || '',
+        vatNumber: clientFormData.vatNumber || '',
+        sirenNumber: clientFormData.sirenNumber || '',
+        countryCode: clientFormData.countryCode || '33',
+        
+        // Nouveaux champs pour l'adresse détaillée
+        addressComplement: clientFormData.addressComplement || '',
+        region: clientFormData.region || '',
+        postalCode: clientFormData.postalCode || '',
+        city: clientFormData.city || '',
+        
+        // Nouveaux champs pour l'adresse de facturation
+        billingAddressSame: clientFormData.billingAddressSame !== undefined ? clientFormData.billingAddressSame : true,
+        billingAddress: clientFormData.billingAddress || '',
+        billingAddressComplement: clientFormData.billingAddressComplement || '',
+        billingRegion: clientFormData.billingRegion || '',
+        billingPostalCode: clientFormData.billingPostalCode || '',
+        billingCity: clientFormData.billingCity || '',
+        
+        // Nouveaux champs pour les informations complémentaires
+        accountingCode: clientFormData.accountingCode || '',
+        cniIdentifier: clientFormData.cniIdentifier || '',
+        attachedFilePath: clientFormData.attachedFile ? clientFormData.attachedFile.name : '',
+        internalNote: clientFormData.internalNote || '',
+        
+        // Nouveaux champs pour les préférences
+        status: clientFormData.status || 'displayed',
+        smsNotification: clientFormData.smsNotification !== undefined ? clientFormData.smsNotification : true,
+        emailNotification: clientFormData.emailNotification !== undefined ? clientFormData.emailNotification : true,
+        smsMarketing: clientFormData.smsMarketing !== undefined ? clientFormData.smsMarketing : true,
+        emailMarketing: clientFormData.emailMarketing !== undefined ? clientFormData.emailMarketing : true,
+      };
+
+      console.log('📋 CLIENTS PAGE - Données préparées:', clientData);
+
+      await addClient(clientData);
+
+      setClientFormOpen(false);
+      
+      console.log('✅ CLIENTS PAGE - Client créé avec succès!');
+      alert('✅ Client créé avec succès !');
       
     } catch (err) {
-      console.error('Erreur lors de la création du client:', err);
+      console.error('💥 CLIENTS PAGE - Erreur lors de la création du client:', err);
       setError('Erreur lors de la création du client. Veuillez réessayer.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateClient = async (clientFormData: any) => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Vérifier si l'email existe déjà (sauf pour le client en cours d'édition)
+      const existingClient = clients.find(c => 
+        c.email.toLowerCase() === clientFormData.email.toLowerCase() && 
+        c.id !== editingClient.id
+      );
+      if (existingClient) {
+        setError(`Un client avec l'email "${clientFormData.email}" existe déjà.`);
+        return;
+      }
+
+      const clientData = {
+        firstName: clientFormData.firstName,
+        lastName: clientFormData.lastName,
+        email: clientFormData.email,
+        phone: clientFormData.countryCode + clientFormData.mobile,
+        address: clientFormData.address,
+        notes: clientFormData.internalNote || '',
+        
+        // Nouveaux champs pour les informations personnelles et entreprise
+        category: clientFormData.category,
+        title: clientFormData.title,
+        companyName: clientFormData.companyName,
+        vatNumber: clientFormData.vatNumber,
+        sirenNumber: clientFormData.sirenNumber,
+        countryCode: clientFormData.countryCode,
+        
+        // Nouveaux champs pour l'adresse détaillée
+        addressComplement: clientFormData.addressComplement,
+        region: clientFormData.region,
+        postalCode: clientFormData.postalCode,
+        city: clientFormData.city,
+        
+        // Nouveaux champs pour l'adresse de facturation
+        billingAddressSame: clientFormData.billingAddressSame,
+        billingAddress: clientFormData.billingAddress,
+        billingAddressComplement: clientFormData.billingAddressComplement,
+        billingRegion: clientFormData.billingRegion,
+        billingPostalCode: clientFormData.billingPostalCode,
+        billingCity: clientFormData.billingCity,
+        
+        // Nouveaux champs pour les informations complémentaires
+        accountingCode: clientFormData.accountingCode,
+        cniIdentifier: clientFormData.cniIdentifier,
+        attachedFilePath: clientFormData.attachedFile ? clientFormData.attachedFile.name : null,
+        internalNote: clientFormData.internalNote,
+        
+        // Nouveaux champs pour les préférences
+        status: clientFormData.status,
+        smsNotification: clientFormData.smsNotification,
+        emailNotification: clientFormData.emailNotification,
+        smsMarketing: clientFormData.smsMarketing,
+        emailMarketing: clientFormData.emailMarketing,
+      };
+
+      // Utiliser la fonction updateClient du store (à implémenter si nécessaire)
+      // Pour l'instant, on va supprimer et recréer le client
+      await deleteClient(editingClient.id);
+      await addClient(clientData);
+
+      setEditClientFormOpen(false);
+      setEditingClient(null);
+      
+      // Recharger les clients pour afficher les modifications
+      await loadClients();
+      
+      alert('✅ Client modifié avec succès !');
+      
+    } catch (err) {
+      console.error('Erreur lors de la modification du client:', err);
+      setError('Erreur lors de la modification du client. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }
@@ -179,13 +315,21 @@ const Clients: React.FC = () => {
       </Box>
 
       <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
-        <Button 
-          variant="contained" 
+                <Button
+          variant="contained"
           startIcon={<AddIcon />}
           onClick={handleOpenDialog}
+          sx={{
+            background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
+            }
+          }}
         >
           Nouveau client
         </Button>
+        
+
         <Button 
           variant="outlined" 
           startIcon={<RefreshIcon />}
@@ -227,8 +371,9 @@ const Clients: React.FC = () => {
                   <TableRow>
                     <TableCell>Client</TableCell>
                     <TableCell>Contact</TableCell>
+                    <TableCell>Entreprise</TableCell>
                     <TableCell>Adresse</TableCell>
-                    <TableCell>Notes</TableCell>
+                    <TableCell>Informations</TableCell>
                     <TableCell>Date d'inscription</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
@@ -236,7 +381,7 @@ const Clients: React.FC = () => {
                 <TableBody>
                   {clients.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body2" color="text.secondary">
                           Aucun client trouvé
                         </Typography>
@@ -274,21 +419,63 @@ const Clients: React.FC = () => {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            {client.address || '-'}
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                              {client.companyName || '-'}
+                            </Typography>
+                            {client.vatNumber && (
+                              <Typography variant="caption" color="text.secondary">
+                                TVA: {client.vatNumber}
+                              </Typography>
+                            )}
+                            {client.sirenNumber && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                SIREN: {client.sirenNumber}
+                              </Typography>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            {client.notes || '-'}
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {client.address || '-'}
+                            </Typography>
+                            {client.postalCode && client.city && (
+                              <Typography variant="caption" color="text.secondary">
+                                {client.postalCode} {client.city}
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            {client.accountingCode && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                Code: {client.accountingCode}
+                              </Typography>
+                            )}
+                            {client.cniIdentifier && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                CNI: {client.cniIdentifier}
+                              </Typography>
+                            )}
+                            {client.notes && (
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                Note: {client.notes}
+                              </Typography>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell>
                           {new Date(client.createdAt).toLocaleDateString('fr-FR')}
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton size="small" title="Modifier">
+                            <IconButton 
+                              size="small" 
+                              title="Modifier"
+                              onClick={() => handleEditClient(client)}
+                            >
                               <EditIcon fontSize="small" />
                             </IconButton>
                             <IconButton 
@@ -311,109 +498,57 @@ const Clients: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Dialogue de création de client */}
-      <Dialog 
-        open={openDialog} 
+      {/* Formulaire de création de client */}
+      <ClientForm
+        open={clientFormOpen}
         onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Nouveau client</Typography>
-            <IconButton onClick={handleCloseDialog} size="small">
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Prénom *"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Nom de famille *"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Email *"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
-                  disabled={isSubmitting}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Téléphone"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  disabled={isSubmitting}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Adresse"
-                  multiline
-                  rows={2}
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  disabled={isSubmitting}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Notes"
-                  multiline
-                  rows={3}
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  disabled={isSubmitting}
-                  placeholder="Informations supplémentaires sur le client..."
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        
-        <DialogActions sx={{ p: 3 }}>
-          <Button 
-            onClick={handleCloseDialog}
-            disabled={isSubmitting}
-          >
-            Annuler
-          </Button>
-          <Button 
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            startIcon={isSubmitting ? <CircularProgress size={16} /> : null}
-          >
-            {isSubmitting ? 'Création...' : 'Créer le client'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSubmit={handleCreateNewClient}
+        existingEmails={clients.map(c => c.email).filter(Boolean)}
+      />
+
+      {/* Formulaire d'édition de client */}
+      <ClientForm
+        open={editClientFormOpen}
+        onClose={() => {
+          setEditClientFormOpen(false);
+          setEditingClient(null);
+        }}
+        onSubmit={handleUpdateClient}
+        existingEmails={clients.map(c => c.email).filter(Boolean)}
+        initialData={editingClient ? {
+          category: editingClient.category || 'particulier',
+          title: editingClient.title || 'mr',
+          firstName: editingClient.firstName,
+          lastName: editingClient.lastName,
+          companyName: editingClient.companyName || '',
+          vatNumber: editingClient.vatNumber || '',
+          sirenNumber: editingClient.sirenNumber || '',
+          email: editingClient.email,
+          countryCode: editingClient.countryCode || '33',
+          mobile: editingClient.phone ? editingClient.phone.replace(editingClient.countryCode || '33', '') : '',
+          address: editingClient.address || '',
+          addressComplement: editingClient.addressComplement || '',
+          region: editingClient.region || '',
+          postalCode: editingClient.postalCode || '',
+          city: editingClient.city || '',
+          billingAddressSame: editingClient.billingAddressSame !== false,
+          billingAddress: editingClient.billingAddress || '',
+          billingAddressComplement: editingClient.billingAddressComplement || '',
+          billingRegion: editingClient.billingRegion || '',
+          billingPostalCode: editingClient.billingPostalCode || '',
+          billingCity: editingClient.billingCity || '',
+          accountingCode: editingClient.accountingCode || '',
+          cniIdentifier: editingClient.cniIdentifier || '',
+          attachedFile: null,
+          internalNote: editingClient.internalNote || editingClient.notes || '',
+          status: editingClient.status || 'displayed',
+          smsNotification: editingClient.smsNotification !== false,
+          emailNotification: editingClient.emailNotification !== false,
+          smsMarketing: editingClient.smsMarketing !== false,
+          emailMarketing: editingClient.emailMarketing !== false,
+        } : undefined}
+        isEditing={true}
+      />
     </Box>
   );
 };

@@ -199,3 +199,5 @@ NOTIFY pgrst, 'reload schema';
 SELECT pg_sleep(3);
 
 SELECT 'CORRECTION CONTRAINTE ASSIGNED_USER_ID APPOINTMENTS TERMINÉE' as status;
+
+

@@ -41,6 +41,7 @@ import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../store';
 import { Appointment, Repair, Client, User } from '../../types';
+import { getRepairEligibleUsers, getRepairUserDisplayName } from '../../utils/userUtils';
 
 const Calendar: React.FC = () => {
   const {
@@ -92,19 +93,55 @@ const Calendar: React.FC = () => {
       });
     });
 
-    // Ajouter les réparations avec dates estimées
+    // Ajouter les réparations avec dates estimées (exclure seulement les réparations restituées)
+    console.log('🔍 Debug calendrier - Réparations disponibles:', repairs.length);
     repairs.forEach(repair => {
-      if (repair.estimatedStartDate && repair.estimatedEndDate) {
+      console.log('🔍 Debug calendrier - Réparation:', {
+        id: repair.id,
+        status: repair.status,
+        estimatedStartDate: repair.estimatedStartDate,
+        estimatedEndDate: repair.estimatedEndDate,
+        hasDates: !!(repair.estimatedStartDate && repair.estimatedEndDate),
+        isExcluded: repair.status === 'returned',
+        willBeAdded: repair.status !== 'returned'
+      });
+      
+      // Exclure seulement les réparations restituées (returned)
+      if (repair.status !== 'returned') {
         const device = devices.find(d => d.id === repair.deviceId);
+        const client = clients.find(c => c.id === repair.clientId);
+        
+        // Utiliser les dates estimées ou d'autres dates disponibles et s'assurer qu'elles sont des objets Date
+        const getDate = (dateValue: any) => {
+          if (!dateValue) return null;
+          return dateValue instanceof Date ? dateValue : new Date(dateValue);
+        };
+        
+        // Utiliser la date limite (dueDate) comme date de fin, ou les dates estimées en fallback
+        const startDate = getDate(repair.estimatedStartDate) || getDate(repair.startDate) || getDate(repair.createdAt);
+        const endDate = getDate(repair.dueDate) || getDate(repair.estimatedEndDate) || getDate(repair.endDate) || (() => {
+          // Utiliser createdAt + 1 jour par défaut si aucune date de fin n'est disponible
+          const createdAt = getDate(repair.createdAt);
+          return createdAt ? new Date(createdAt.getTime() + 24 * 60 * 60 * 1000) : new Date();
+        })();
+        
+        console.log('✅ Ajout de la réparation au calendrier:', {
+          id: repair.id,
+          title: `Réparation: ${client?.firstName || ''} ${client?.lastName || ''} - ${device?.brand || ''} ${device?.model || ''}`,
+          status: repair.status,
+          startDate: startDate?.toISOString(),
+          endDate: endDate?.toISOString(),
+          dueDate: repair.dueDate,
+          estimatedEndDate: repair.estimatedEndDate
+        });
+        
         events.push({
           id: `repair-${repair.id}`,
-          title: `Réparation: ${device?.brand} ${device?.model}`,
-          start: repair.estimatedStartDate,
-          end: repair.estimatedEndDate,
-          backgroundColor: repair.status === 'completed' ? '#4caf50' : 
-                          repair.status === 'in_progress' ? '#ff9800' : '#f44336',
-          borderColor: repair.status === 'completed' ? '#4caf50' : 
-                      repair.status === 'in_progress' ? '#ff9800' : '#f44336',
+          title: `Réparation: ${client?.firstName || ''} ${client?.lastName || ''} - ${device?.brand || ''} ${device?.model || ''}`,
+          start: startDate,
+          end: endDate,
+          backgroundColor: repair.status === 'in_progress' ? '#ff9800' : repair.status === 'completed' ? '#4caf50' : '#f44336',
+          borderColor: repair.status === 'in_progress' ? '#ff9800' : repair.status === 'completed' ? '#4caf50' : '#f44336',
           textColor: '#ffffff',
           extendedProps: {
             type: 'repair',
@@ -113,9 +150,10 @@ const Calendar: React.FC = () => {
         });
       }
     });
+    console.log('🔍 Debug calendrier - Événements totaux:', events.length);
 
     return events;
-  }, [appointments, repairs, devices]);
+  }, [appointments, repairs, devices, clients]);
 
   const handleDateSelect = (selectInfo: DateSelectArg) => {
     setSelectedDate(new Date(selectInfo.start));
@@ -491,9 +529,9 @@ const Calendar: React.FC = () => {
                   <MenuItem value="">
                     <em>Non assigné</em>
                   </MenuItem>
-                  {users.filter(user => user.role === 'technician').map((user) => (
+                  {getRepairEligibleUsers(users).map((user) => (
                     <MenuItem key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName}
+                      {getRepairUserDisplayName(user)}
                     </MenuItem>
                   ))}
                 </Select>

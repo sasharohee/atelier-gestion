@@ -43,6 +43,8 @@ import {
   Warning as WarningIcon,
   Handyman as HandymanIcon,
   Archive as ArchiveIcon,
+  Description as DescriptionIcon,
+  Star as StarIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
@@ -60,16 +62,10 @@ const menuItems = [
     color: '#6366f1',
   },
   {
-    text: 'Kanban',
+    text: 'Suivi des Réparations',
     icon: <KanbanIcon />,
     path: '/app/kanban',
     color: '#06b6d4',
-  },
-  {
-    text: 'Archives',
-    icon: <ArchiveIcon />,
-    path: '/app/archive',
-    color: '#3b82f6',
   },
   {
     text: 'Calendrier',
@@ -100,6 +96,7 @@ const menuItems = [
       { text: 'Clients', path: '/app/transaction/clients', icon: <PeopleIcon /> },
       { text: 'Appareils', path: '/app/transaction/devices', icon: <PhoneIcon /> },
       { text: 'Ventes', path: '/app/transaction/sales', icon: <SalesIcon /> },
+      { text: 'Devis', path: '/app/transaction/quotes', icon: <DescriptionIcon /> },
     ],
   },
   {
@@ -107,6 +104,18 @@ const menuItems = [
     icon: <StatisticsIcon />,
     path: '/app/statistics',
     color: '#ef4444',
+  },
+  {
+    text: 'Archives',
+    icon: <ArchiveIcon />,
+    path: '/app/archive',
+    color: '#3b82f6',
+  },
+  {
+    text: 'Points de Fidélité',
+    icon: <StarIcon />,
+    path: '/app/loyalty',
+    color: '#f59e0b',
   },
   {
     text: 'Administration',

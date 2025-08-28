@@ -48,13 +48,6 @@ const Devices: React.FC = () => {
     brand: '',
     model: '',
     type: 'smartphone',
-    serialNumber: '',
-    specifications: {
-      processor: '',
-      ram: '',
-      storage: '',
-      screen: '',
-    },
   });
 
   const deviceTypes = [
@@ -72,13 +65,6 @@ const Devices: React.FC = () => {
       brand: '',
       model: '',
       type: 'smartphone',
-      serialNumber: '',
-      specifications: {
-        processor: '',
-        ram: '',
-        storage: '',
-        screen: '',
-      },
     });
   };
 
@@ -88,21 +74,10 @@ const Devices: React.FC = () => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    if (field.startsWith('specifications.')) {
-      const specField = field.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        specifications: {
-          ...prev.specifications,
-          [specField]: value,
-        },
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value,
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const handleDeleteDevice = async (deviceId: string) => {
@@ -130,8 +105,6 @@ const Devices: React.FC = () => {
         brand: formData.brand,
         model: formData.model,
         type: formData.type as 'smartphone' | 'tablet' | 'laptop' | 'desktop' | 'other',
-        serialNumber: formData.serialNumber || undefined,
-        specifications: formData.specifications,
       };
 
       await addDevice(newDevice as any);
@@ -316,53 +289,7 @@ const Devices: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Numéro de série"
-                value={formData.serialNumber}
-                onChange={(e) => handleInputChange('serialNumber', e.target.value)}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-                Spécifications
-              </Typography>
-            </Grid>
-            
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Processeur"
-                value={formData.specifications.processor}
-                onChange={(e) => handleInputChange('specifications.processor', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="RAM"
-                value={formData.specifications.ram}
-                onChange={(e) => handleInputChange('specifications.ram', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Stockage"
-                value={formData.specifications.storage}
-                onChange={(e) => handleInputChange('specifications.storage', e.target.value)}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Écran"
-                value={formData.specifications.screen}
-                onChange={(e) => handleInputChange('specifications.screen', e.target.value)}
-              />
-            </Grid>
+
           </Grid>
         </DialogContent>
         <DialogActions>

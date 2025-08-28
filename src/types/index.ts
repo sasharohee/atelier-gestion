@@ -27,6 +27,42 @@ export interface Client {
   phone: string;
   address?: string;
   notes?: string;
+  
+  // Nouveaux champs pour les informations personnelles et entreprise
+  category?: string;
+  title?: string;
+  companyName?: string;
+  vatNumber?: string;
+  sirenNumber?: string;
+  countryCode?: string;
+  
+  // Nouveaux champs pour l'adresse détaillée
+  addressComplement?: string;
+  region?: string;
+  postalCode?: string;
+  city?: string;
+  
+  // Nouveaux champs pour l'adresse de facturation
+  billingAddressSame?: boolean;
+  billingAddress?: string;
+  billingAddressComplement?: string;
+  billingRegion?: string;
+  billingPostalCode?: string;
+  billingCity?: string;
+  
+  // Nouveaux champs pour les informations complémentaires
+  accountingCode?: string;
+  cniIdentifier?: string;
+  attachedFilePath?: string;
+  internalNote?: string;
+  
+  // Nouveaux champs pour les préférences
+  status?: string;
+  smsNotification?: boolean;
+  emailNotification?: boolean;
+  smsMarketing?: boolean;
+  emailMarketing?: boolean;
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -117,7 +153,7 @@ export interface RepairStatus {
 export interface Repair {
   id: string;
   clientId: string;
-  deviceId: string;
+  deviceId: string | null; // Peut être null si aucun appareil n'est sélectionné
   status: string; // ID du statut
   assignedTechnicianId?: string;
   description: string;
@@ -134,6 +170,9 @@ export interface Repair {
   services: RepairService[];
   parts: RepairPart[];
   totalPrice: number;
+  discountPercentage?: number;
+  discountAmount?: number;
+  originalPrice?: number;
   isPaid: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -186,9 +225,12 @@ export interface Sale {
   clientId?: string;
   items: SaleItem[];
   subtotal: number;
+  discountPercentage?: number;
+  discountAmount?: number;
+  originalTotal?: number;
   tax: number;
   total: number;
-  paymentMethod: 'cash' | 'card' | 'transfer';
+  paymentMethod: 'cash' | 'card' | 'transfer' | 'check' | 'payment_link';
   status: 'pending' | 'completed' | 'cancelled' | 'returned';
   createdAt: Date;
   updatedAt: Date;
@@ -330,4 +372,43 @@ export interface SubscriptionPlan {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Types pour les devis
+export interface Quote {
+  id: string;
+  quoteNumber: string; // Numéro de devis unique généré aléatoirement
+  clientId?: string;
+  items: QuoteItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+  validUntil: Date;
+  notes?: string;
+  terms?: string;
+  // Nouveaux champs pour les devis de réparation
+  isRepairQuote?: boolean;
+  repairDetails?: {
+    deviceId?: string;
+    description: string;
+    issue?: string;
+    estimatedDuration?: number;
+    estimatedStartDate?: Date;
+    estimatedEndDate?: Date;
+    isUrgent?: boolean;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface QuoteItem {
+  id: string;
+  type: 'product' | 'service' | 'part' | 'repair';
+  itemId: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
 }

@@ -19,16 +19,17 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
     );
   }
 
-  // Vérifier si l'utilisateur est connecté et a le rôle d'administrateur
-  const isAdmin = user && (user as any).user_metadata?.role === 'admin';
+  // Vérifier si l'utilisateur est connecté et a le rôle d'administrateur OU technicien
+  const userRole = user && (user as any).user_metadata?.role;
+  const hasAdminAccess = userRole === 'admin' || userRole === 'technician';
 
   if (!user) {
     // Rediriger vers la page d'authentification si non connecté
     return <Navigate to="/auth" replace />;
   }
 
-  if (!isAdmin) {
-    // Afficher une page d'accès refusé si l'utilisateur n'est pas administrateur
+  if (!hasAdminAccess) {
+    // Afficher une page d'accès refusé si l'utilisateur n'a pas les droits d'administration
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
         <Card>
@@ -38,7 +39,7 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
               Accès Refusé
             </Typography>
             <Typography variant="body1" color="text.secondary" gutterBottom>
-              Cette page est réservée aux administrateurs uniquement.
+              Cette page est réservée aux administrateurs et techniciens uniquement.
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Veuillez contacter un administrateur si vous pensez que c'est une erreur.
@@ -49,7 +50,7 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
     );
   }
 
-  // Si l'utilisateur est administrateur, afficher le contenu
+  // Si l'utilisateur a les droits d'administration, afficher le contenu
   return <>{children}</>;
 };
 

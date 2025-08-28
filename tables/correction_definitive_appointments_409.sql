@@ -225,3 +225,5 @@ SELECT
     '3. Les erreurs sont capturées avec try-catch' as step3;
 
 SELECT 'CORRECTION DÉFINITIVE ERREUR 409 APPOINTMENTS TERMINÉE' as status;
+
+

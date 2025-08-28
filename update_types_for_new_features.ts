@@ -9,7 +9,7 @@ export type AlertSeverity = 'info' | 'warning' | 'error' | 'critical';
 export type ReportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type TransactionType = 'repair' | 'sale' | 'refund' | 'deposit' | 'withdrawal';
 export type TransactionStatus = 'pending' | 'completed' | 'cancelled' | 'refunded';
-export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'check' | 'other';
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'check' | 'payment_link';
 
 // Interface pour les modèles d'appareils
 export interface DeviceModel {

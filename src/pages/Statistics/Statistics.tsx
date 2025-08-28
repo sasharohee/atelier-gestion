@@ -340,7 +340,7 @@ const Statistics: React.FC = () => {
     const deviceRepairs = new Map<string, { device: any; repairs: number; revenue: number }>();
     
     repairs.forEach(repair => {
-      const device = getDeviceById(repair.deviceId);
+      const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
       if (device) {
         // Si un type d'appareil spécifique est sélectionné, filtrer par type
         if (deviceType !== 'all' && device.type !== deviceType) {

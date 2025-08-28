@@ -17,6 +17,7 @@ import {
   Message,
   Appointment,
   Sale,
+  Quote,
   StockAlert,
   Notification,
   DashboardStats,
@@ -70,6 +71,7 @@ interface AppState {
   messages: Message[];
   appointments: Appointment[];
   sales: Sale[];
+  quotes: Quote[];
   stockAlerts: StockAlert[];
   notifications: Notification[];
   
@@ -154,6 +156,10 @@ interface AppActions {
   addSale: (sale: Sale) => Promise<void>;
   updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
+  
+  addQuote: (quote: Quote) => Promise<void>;
+  updateQuote: (id: string, updates: Partial<Quote>) => Promise<void>;
+  deleteQuote: (id: string) => Promise<void>;
   
   // Gestion des alertes de stock
   addStockAlert: (alert: Omit<StockAlert, 'id' | 'createdAt'>) => Promise<void>;
@@ -266,9 +272,10 @@ export const useAppStore = create<AppStore>()(
       ],
       messages: [],
       appointments: [],
-      sales: [],
-      stockAlerts: [],
-      notifications: [],
+          sales: [],
+    quotes: [],
+    stockAlerts: [],
+    notifications: [],
       
       repairFilters: {},
       searchQuery: '',
@@ -577,42 +584,153 @@ export const useAppStore = create<AppStore>()(
       
       addClient: async (client) => {
         try {
+          console.log('🚀 STORE - Début de l\'ajout du client:', client);
+          
           const result = await clientService.create(client);
+          console.log('📥 STORE - Résultat du service:', result);
+          
           if (result.success && 'data' in result && result.data) {
             // Transformer les données de Supabase vers le format de l'application
             const transformedClient: Client = {
               id: result.data.id,
-              firstName: result.data.first_name || result.data.firstName,
-              lastName: result.data.last_name || result.data.lastName,
-              email: result.data.email,
-              phone: result.data.phone,
-              address: result.data.address,
-              notes: result.data.notes,
-              createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
-              updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
+              firstName: result.data.firstName || '',
+              lastName: result.data.lastName || '',
+              email: result.data.email || '',
+              phone: result.data.phone || '',
+              address: result.data.address || '',
+              notes: result.data.notes || '',
+              
+              // Nouveaux champs pour les informations personnelles et entreprise
+              category: result.data.category || 'particulier',
+              title: result.data.title || 'mr',
+              companyName: result.data.companyName || '',
+              vatNumber: result.data.vatNumber || '',
+              sirenNumber: result.data.sirenNumber || '',
+              countryCode: result.data.countryCode || '33',
+              
+              // Nouveaux champs pour l'adresse détaillée
+              addressComplement: result.data.addressComplement || '',
+              region: result.data.region || '',
+              postalCode: result.data.postalCode || '',
+              city: result.data.city || '',
+              
+              // Nouveaux champs pour l'adresse de facturation
+              billingAddressSame: result.data.billingAddressSame !== undefined ? result.data.billingAddressSame : true,
+              billingAddress: result.data.billingAddress || '',
+              billingAddressComplement: result.data.billingAddressComplement || '',
+              billingRegion: result.data.billingRegion || '',
+              billingPostalCode: result.data.billingPostalCode || '',
+              billingCity: result.data.billingCity || '',
+              
+              // Nouveaux champs pour les informations complémentaires
+              accountingCode: result.data.accountingCode || '',
+              cniIdentifier: result.data.cniIdentifier || '',
+              attachedFilePath: result.data.attachedFilePath || '',
+              internalNote: result.data.internalNote || '',
+              
+              // Nouveaux champs pour les préférences
+              status: result.data.status || 'displayed',
+              smsNotification: result.data.smsNotification !== undefined ? result.data.smsNotification : true,
+              emailNotification: result.data.emailNotification !== undefined ? result.data.emailNotification : true,
+              smsMarketing: result.data.smsMarketing !== undefined ? result.data.smsMarketing : true,
+              emailMarketing: result.data.emailMarketing !== undefined ? result.data.emailMarketing : true,
+              
+              createdAt: result.data.createdAt ? new Date(result.data.createdAt) : new Date(),
+              updatedAt: result.data.updatedAt ? new Date(result.data.updatedAt) : new Date(),
             };
-            set((state) => ({ clients: [...state.clients, transformedClient] }));
+            
+            console.log('🔍 STORE - Client transformé:', transformedClient);
+            
+            set((state) => { 
+              const newClients = [...state.clients, transformedClient];
+              console.log('✅ STORE - Client ajouté au store:', transformedClient);
+              console.log('📊 STORE - Total clients après ajout:', newClients.length);
+              return { clients: newClients };
+            });
+            
+            console.log('🎉 STORE - Client ajouté avec succès!');
           } else {
+            console.error('❌ STORE - Échec de la création du client:', result);
             throw new Error('Échec de la création du client');
           }
         } catch (error) {
-          console.error('Erreur lors de l\'ajout du client:', error);
+          console.error('💥 STORE - Erreur lors de l\'ajout du client:', error);
           throw error;
         }
       },
       
       updateClient: async (id, updates) => {
         try {
+          console.log('🔄 STORE - Mise à jour du client:', id, updates);
+          
           const result = await clientService.update(id, updates);
-          if (result.success) {
+          
+          if (result.success && 'data' in result && result.data) {
+            // Convertir les données de snake_case vers camelCase
+            const updatedClient: Client = {
+              id: result.data.id,
+              firstName: result.data.firstName,
+              lastName: result.data.lastName,
+              email: result.data.email,
+              phone: result.data.phone,
+              address: result.data.address,
+              notes: result.data.notes,
+              
+              // Nouveaux champs pour les informations personnelles et entreprise
+              category: result.data.category || 'particulier',
+              title: result.data.title || 'mr',
+              companyName: result.data.companyName || '',
+              vatNumber: result.data.vatNumber || '',
+              sirenNumber: result.data.sirenNumber || '',
+              countryCode: result.data.countryCode || '33',
+              
+              // Nouveaux champs pour l'adresse détaillée
+              addressComplement: result.data.addressComplement || '',
+              region: result.data.region || '',
+              postalCode: result.data.postalCode || '',
+              city: result.data.city || '',
+              
+              // Nouveaux champs pour l'adresse de facturation
+              billingAddressSame: result.data.billingAddressSame !== undefined ? result.data.billingAddressSame : true,
+              billingAddress: result.data.billingAddress || '',
+              billingAddressComplement: result.data.billingAddressComplement || '',
+              billingRegion: result.data.billingRegion || '',
+              billingPostalCode: result.data.billingPostalCode || '',
+              billingCity: result.data.billingCity || '',
+              
+              // Nouveaux champs pour les informations complémentaires
+              accountingCode: result.data.accountingCode || '',
+              cniIdentifier: result.data.cniIdentifier || '',
+              attachedFilePath: result.data.attachedFilePath || '',
+              internalNote: result.data.internalNote || '',
+              
+              // Nouveaux champs pour les préférences
+              status: result.data.status || 'displayed',
+              smsNotification: result.data.smsNotification !== undefined ? result.data.smsNotification : true,
+              emailNotification: result.data.emailNotification !== undefined ? result.data.emailNotification : true,
+              smsMarketing: result.data.smsMarketing !== undefined ? result.data.smsMarketing : true,
+              emailMarketing: result.data.emailMarketing !== undefined ? result.data.emailMarketing : true,
+              
+              createdAt: result.data.createdAt ? new Date(result.data.createdAt) : new Date(),
+              updatedAt: result.data.updatedAt ? new Date(result.data.updatedAt) : new Date(),
+            };
+            
+            console.log('🔍 STORE - Client mis à jour:', updatedClient);
+            
             set((state) => ({
               clients: state.clients.map(client => 
-                client.id === id ? { ...client, ...updates, updatedAt: new Date() } : client
+                client.id === id ? updatedClient : client
               )
             }));
+            
+            console.log('✅ STORE - Client mis à jour avec succès!');
+          } else {
+            console.error('❌ STORE - Échec de la mise à jour du client:', result);
+            throw new Error('Échec de la mise à jour du client');
           }
         } catch (error) {
-          console.error('Erreur lors de la mise à jour du client:', error);
+          console.error('💥 STORE - Erreur lors de la mise à jour du client:', error);
+          throw error;
         }
       },
       
@@ -1007,16 +1125,57 @@ export const useAppStore = create<AppStore>()(
       
       updateRepair: async (id, updates) => {
         try {
+          console.log('🔄 updateRepair appelé avec:', { id, updates });
+          
           const result = await repairService.update(id, updates);
-          if (result.success) {
-            set((state) => ({
-              repairs: state.repairs.map(repair => 
-                repair.id === id ? { ...repair, ...updates, updatedAt: new Date() } : repair
-              )
-            }));
+          console.log('📥 Résultat du service:', result);
+          
+          if (result.success && 'data' in result && result.data) {
+            console.log('✅ Données reçues du service:', result.data);
+            
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedRepair: Repair = {
+              id: result.data.id,
+              clientId: result.data.client_id,
+              deviceId: result.data.device_id,
+              status: result.data.status,
+              assignedTechnicianId: result.data.assigned_technician_id,
+              description: result.data.description,
+              issue: result.data.issue,
+              estimatedDuration: result.data.estimated_duration,
+              actualDuration: result.data.actual_duration,
+              estimatedStartDate: result.data.estimated_start_date,
+              estimatedEndDate: result.data.estimated_end_date,
+              startDate: result.data.start_date,
+              endDate: result.data.end_date,
+              dueDate: result.data.due_date,
+              isUrgent: result.data.is_urgent,
+              notes: result.data.notes,
+              services: [], // Tableau vide par défaut
+              parts: [], // Tableau vide par défaut
+              totalPrice: result.data.total_price,
+              isPaid: result.data.is_paid,
+              createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
+              updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
+            };
+            
+            console.log('🔄 Réparation transformée:', transformedRepair);
+            
+            set((state) => {
+              console.log('📊 État actuel des réparations:', state.repairs.length);
+              const updatedRepairs = state.repairs.map(repair => 
+                repair.id === id ? transformedRepair : repair
+              );
+              console.log('📊 Nouvelles réparations:', updatedRepairs.length);
+              return { repairs: updatedRepairs };
+            });
+            
+            console.log('✅ Mise à jour du store terminée');
+          } else {
+            console.error('❌ Échec de la mise à jour:', result);
           }
         } catch (error) {
-          console.error('Erreur lors de la mise à jour de la réparation:', error);
+          console.error('❌ Erreur lors de la mise à jour de la réparation:', error);
         }
       },
       
@@ -1223,6 +1382,66 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
+      addQuote: async (quote) => {
+        try {
+          // Générer un ID temporaire pour l'affichage immédiat
+          const quoteWithId = { ...quote, id: quote.id || uuidv4() };
+          
+          // Ajouter immédiatement au store local pour l'affichage
+          set((state) => ({ quotes: [quoteWithId, ...state.quotes] }));
+          
+          // TODO: Envoyer au backend quand le service sera implémenté
+          // const result = await quoteService.create(quoteWithId);
+          // if (result.success && 'data' in result && result.data) {
+          //   set((state) => ({
+          //     quotes: state.quotes.map(q => 
+          //       q.id === quoteWithId.id 
+          //         ? { ...q, id: result.data.id || q.id }
+          //         : q
+          //     )
+          //   }));
+          // }
+        } catch (error) {
+          console.error('Erreur lors de l\'ajout du devis:', error);
+        }
+      },
+      
+      updateQuote: async (id, updates) => {
+        try {
+          // Mettre à jour immédiatement dans le store local
+          set((state) => ({
+            quotes: state.quotes.map(quote => 
+              quote.id === id ? { ...quote, ...updates, updatedAt: new Date() } : quote
+            )
+          }));
+          
+          // TODO: Envoyer au backend quand le service sera implémenté
+          // const result = await quoteService.update(id, updates);
+          // if (!result.success) {
+          //   throw new Error('Erreur lors de la mise à jour du devis');
+          // }
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour du devis:', error);
+        }
+      },
+      
+      deleteQuote: async (id) => {
+        try {
+          // Supprimer immédiatement du store local
+          set((state) => ({
+            quotes: state.quotes.filter(quote => quote.id !== id)
+          }));
+          
+          // TODO: Envoyer au backend quand le service sera implémenté
+          // const result = await quoteService.delete(id);
+          // if (!result.success) {
+          //   throw new Error('Erreur lors de la suppression du devis');
+          // }
+        } catch (error) {
+          console.error('Erreur lors de la suppression du devis:', error);
+        }
+      },
+      
       updateSale: async (id, updates) => {
         try {
           const result = await saleService.update(id, updates);
@@ -1349,9 +1568,46 @@ export const useAppStore = create<AppStore>()(
               phone: client.phone,
               address: client.address,
               notes: client.notes,
+              
+              // Nouveaux champs pour les informations personnelles et entreprise
+              category: client.category,
+              title: client.title,
+              companyName: client.company_name,
+              vatNumber: client.vat_number,
+              sirenNumber: client.siren_number,
+              countryCode: client.country_code,
+              
+              // Nouveaux champs pour l'adresse détaillée
+              addressComplement: client.address_complement,
+              region: client.region,
+              postalCode: client.postal_code,
+              city: client.city,
+              
+              // Nouveaux champs pour l'adresse de facturation
+              billingAddressSame: client.billing_address_same,
+              billingAddress: client.billing_address,
+              billingAddressComplement: client.billing_address_complement,
+              billingRegion: client.billing_region,
+              billingPostalCode: client.billing_postal_code,
+              billingCity: client.billing_city,
+              
+              // Nouveaux champs pour les informations complémentaires
+              accountingCode: client.accounting_code,
+              cniIdentifier: client.cni_identifier,
+              attachedFilePath: client.attached_file_path,
+              internalNote: client.internal_note,
+              
+              // Nouveaux champs pour les préférences
+              status: client.status,
+              smsNotification: client.sms_notification,
+              emailNotification: client.email_notification,
+              smsMarketing: client.sms_marketing,
+              emailMarketing: client.email_marketing,
+              
               createdAt: client.created_at ? new Date(client.created_at) : new Date(),
               updatedAt: client.updated_at ? new Date(client.updated_at) : new Date(),
             }));
+            console.log('🔍 STORE - loadClients - Clients transformés:', transformedClients.length);
             set({ clients: transformedClients });
           }
         } catch (error) {

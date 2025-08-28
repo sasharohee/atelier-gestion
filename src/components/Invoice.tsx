@@ -50,6 +50,17 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
   const isRepair = !!repair;
   const data = repair || sale;
 
+  // Debug pour vérifier les données de réduction
+  if (isRepair && data) {
+    console.log('🔍 Données de réparation pour facture:', {
+      id: data.id,
+      totalPrice: (data as Repair).totalPrice,
+      discountPercentage: (data as Repair).discountPercentage,
+      discountAmount: (data as Repair).discountAmount,
+      originalPrice: (data as Repair).originalPrice
+    });
+  }
+
   if (!data) {
     return null;
   }
@@ -88,7 +99,9 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
     const labels: { [key: string]: string } = {
       'cash': 'Espèces',
       'card': 'Carte bancaire',
-      'transfer': 'Virement'
+      'transfer': 'Virement',
+      'check': 'Chèque',
+      'payment_link': 'Liens paiement'
     };
     return labels[method] || method;
   };
@@ -175,7 +188,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                 ${isRepair ? `
                   <div class="repair-details">
                     <h3>Détails de la réparation</h3>
-                    <p><strong>Prix de la réparation :</strong> ${(data as Repair).totalPrice.toLocaleString('fr-FR')} €</p>
+                    <p><strong>Prix de la réparation (TTC) :</strong> ${(data as Repair).totalPrice.toLocaleString('fr-FR')} €</p>
                     ${(data as Repair).notes ? `<p><strong>Notes :</strong> ${(data as Repair).notes}</p>` : ''}
                   </div>
                 ` : `
@@ -415,14 +428,98 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                   borderRadius: 1,
                   border: '1px solid #e0e0e0'
                 }}>
-                                     <Typography sx={{ fontSize: '16px', mb: 1 }}>
-                     <strong>Prix de la réparation :</strong> {(data as Repair).totalPrice.toLocaleString('fr-FR')} €
-                   </Typography>
+                  <Typography sx={{ fontSize: '16px', mb: 1 }}>
+                    <strong>Prix de la réparation (TTC) :</strong> {(data as Repair).totalPrice.toLocaleString('fr-FR')} €
+                    {(data as Repair).discountPercentage && (data as Repair).discountPercentage > 0 && (
+                      <span style={{ color: 'success.main', marginLeft: '8px' }}>
+                        (Prix original: {((data as Repair).totalPrice + ((data as Repair).discountAmount || 0)).toLocaleString('fr-FR')} €)
+                      </span>
+                    )}
+                  </Typography>
                   {(data as Repair).notes && (
                     <Typography sx={{ fontSize: '14px', color: '#666' }}>
                       <strong>Notes :</strong> {(data as Repair).notes}
                     </Typography>
                   )}
+                </Box>
+                
+                {/* Totaux pour les réparations */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'flex-end', 
+                  mb: 5 
+                }}>
+                  <Box sx={{ 
+                    width: '300px',
+                    p: 2,
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: 1,
+                    border: '1px solid #e0e0e0'
+                  }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      mb: 1 
+                    }}>
+                      <Typography sx={{ fontWeight: 600, fontSize: '16px' }}>
+                        Sous-total HT :
+                      </Typography>
+                      <Typography sx={{ fontWeight: 600, fontSize: '16px' }}>
+                        {((data as Repair).totalPrice / (1 + parseFloat(workshopSettings.vatRate) / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                      </Typography>
+                    </Box>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      mb: 1 
+                    }}>
+                      <Typography sx={{ fontSize: '16px' }}>
+                        TVA ({workshopSettings.vatRate}%) :
+                      </Typography>
+                      <Typography sx={{ fontSize: '16px' }}>
+                        {((data as Repair).totalPrice - ((data as Repair).totalPrice / (1 + parseFloat(workshopSettings.vatRate) / 100))).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                      </Typography>
+                    </Box>
+                    {(data as Repair).discountPercentage && (data as Repair).discountPercentage > 0 && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        mb: 1 
+                      }}>
+                        <Typography sx={{ fontSize: '16px', color: 'success.main' }}>
+                          Réduction fidélité ({(data as Repair).discountPercentage}%) :
+                        </Typography>
+                        <Typography sx={{ fontSize: '16px', color: 'success.main', fontWeight: 600 }}>
+                          -{(data as Repair).discountAmount?.toLocaleString('fr-FR') || '0'} €
+                        </Typography>
+                      </Box>
+                    )}
+                    <Divider sx={{ my: 1.5, borderColor: '#eee' }} />
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center' 
+                    }}>
+                      <Typography sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '16px',
+                        color: '#1976d2'
+                      }}>
+                        TOTAL TTC :
+                      </Typography>
+                      <Typography sx={{ 
+                        fontWeight: 600, 
+                        fontSize: '16px',
+                        color: '#1976d2'
+                      }}>
+                        {(data as Repair).totalPrice.toLocaleString('fr-FR')} €
+                      </Typography>
+                    </Box>
+                  </Box>
                 </Box>
               </Box>
             ) : (
@@ -597,6 +694,21 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         {(data as Sale).tax.toLocaleString('fr-FR')} €
                       </Typography>
                     </Box>
+                    {(data as Sale).discountPercentage && (data as Sale).discountPercentage > 0 && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        mb: 1 
+                      }}>
+                        <Typography sx={{ fontSize: '16px', color: 'success.main' }}>
+                          Réduction fidélité ({(data as Sale).discountPercentage}%) :
+                        </Typography>
+                        <Typography sx={{ fontSize: '16px', color: 'success.main', fontWeight: 600 }}>
+                          -{(data as Sale).discountAmount?.toLocaleString('fr-FR') || '0'} €
+                        </Typography>
+                      </Box>
+                    )}
                     <Divider sx={{ my: 1.5, borderColor: '#eee' }} />
                     <Box sx={{ 
                       display: 'flex', 

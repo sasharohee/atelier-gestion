@@ -106,7 +106,7 @@ const FAQ: React.FC = () => {
       questions: [
         {
           question: "Comment créer un nouveau projet de réparation ?",
-          answer: "Accédez à la section 'Kanban' et cliquez sur 'Nouveau projet'. Remplissez les informations du client et de l'appareil à réparer."
+          answer: "Accédez à la section 'Suivi des Réparations' et cliquez sur 'Nouvelle réparation'. Remplissez les informations du client et de l'appareil à réparer."
         },
         {
           question: "Comment gérer mon inventaire ?",

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Debug Réparations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .log-container {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #007bff;
+            background: white;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test Debug Réparations</h1>
+    
+    <div>
+        <h2>Instructions de test :</h2>
+        <ol>
+            <li>Ouvrez la console du navigateur (F12)</li>
+            <li>Allez sur la page "Suivi des réparations"</li>
+            <li>Essayez de déplacer une réparation d'une colonne à l'autre</li>
+            <li>Regardez les logs dans la console</li>
+            <li>Vérifiez si la réparation se met à jour visuellement</li>
+        </ol>
+    </div>
+
+    <div>
+        <h2>Logs de débogage :</h2>
+        <div id="logContainer" class="log-container">
+            <div class="log-entry">🚀 Page de test chargée. Ouvrez la console pour voir les logs en temps réel.</div>
+        </div>
+    </div>
+
+    <div>
+        <h2>Actions de test :</h2>
+        <button onclick="clearLogs()">🧹 Effacer les logs</button>
+        <button onclick="testConsole()">🧪 Tester la console</button>
+    </div>
+
+    <div>
+        <h2>Points à vérifier :</h2>
+        <ul>
+            <li>✅ La fonction <code>handleDragEnd</code> est-elle appelée ?</li>
+            <li>✅ La réparation est-elle trouvée dans le store ?</li>
+            <li>✅ La fonction <code>updateRepair</code> est-elle appelée ?</li>
+            <li>✅ Le service <code>repairService.update</code> est-il appelé ?</li>
+            <li>✅ Supabase retourne-t-il des données ?</li>
+            <li>✅ Le store est-il mis à jour avec les nouvelles données ?</li>
+            <li>✅ L'interface se met-elle à jour visuellement ?</li>
+        </ul>
+    </div>
+
+    <script>
+        function addLog(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            addLog('🧹 Logs effacés');
+        }
+
+        function testConsole() {
+            addLog('🧪 Test de la console');
+            console.log('🧪 Test de la console - Si vous voyez ce message, la console fonctionne');
+        }
+
+        // Intercepter les logs de la console
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog('📝 ' + args.join(' '), 'info');
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog('❌ ' + args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog('⚠️ ' + args.join(' '), 'warning');
+        };
+
+        addLog('🚀 Page de test initialisée');
+    </script>
+</body>
+</html>

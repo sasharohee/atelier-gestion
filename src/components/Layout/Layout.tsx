@@ -28,6 +28,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
 import ConnectionStatus from '../ConnectionStatus';
+import Sidebar from './Sidebar';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -64,7 +65,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       '/': 'Dashboard',
       '/app': 'Dashboard',
       '/app/dashboard': 'Dashboard',
-      '/app/kanban': 'Tableau Kanban',
+      '/app/kanban': 'Suivi des Réparations',
       '/app/calendar': 'Calendrier',
   
       '/app/catalog': 'Catalogue',
@@ -183,6 +184,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         'clients': 'Clients',
         'devices': 'Appareils',
         'sales': 'Ventes',
+        'quotes': 'Devis',
       };
       
       if (subTitles[subPath]) {
@@ -204,99 +206,103 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Barre de navigation supérieure avec design moderne */}
-      <AppBar
-        position="static"
-        elevation={0}
-        sx={{
-          background: 'white',
-          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
-          color: 'text.primary',
-          position: 'relative',
-        }}
-      >
-        <Toolbar sx={{ minHeight: 70, position: 'relative', zIndex: 1 }}>
-          {/* Titre et breadcrumbs avec design amélioré */}
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
-                fontWeight: 700,
-                color: 'text.primary',
-                fontSize: '1.25rem',
-                letterSpacing: '0.5px',
-              }}
-            >
-              {getPageTitle()}
-            </Typography>
-            <Breadcrumbs 
-              aria-label="breadcrumb" 
-              sx={{ 
-                mt: 0.5,
-                '& .MuiBreadcrumbs-separator': {
-                  color: 'text.secondary',
-                },
-              }}
-            >
-              {getBreadcrumbs()}
-            </Breadcrumbs>
-          </Box>
-
-          {/* Actions de droite avec design amélioré */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {/* Statut de connexion */}
-            <ConnectionStatus />
-            
-
-
-            {/* Profil utilisateur avec redirection vers réglages */}
-            <Tooltip title="Réglages" arrow>
-              <IconButton
-                color="inherit"
-                size="large"
-                onClick={() => navigate('/app/settings')}
-                sx={{
-                  backgroundColor: 'rgba(0,0,0,0.04)',
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Sidebar */}
+      <Sidebar />
+      
+      {/* Contenu principal */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+        {/* Barre de navigation supérieure avec design moderne */}
+        <AppBar
+          position="static"
+          elevation={0}
+          sx={{
+            background: 'white',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+            color: 'text.primary',
+            position: 'relative',
+          }}
+        >
+          <Toolbar sx={{ minHeight: 70, position: 'relative', zIndex: 1 }}>
+            {/* Titre et breadcrumbs avec design amélioré */}
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography 
+                variant="h6" 
+                component="div" 
+                sx={{ 
+                  fontWeight: 700,
                   color: 'text.primary',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0,0,0,0.08)',
-                    transform: 'scale(1.05)',
-                  },
-                  transition: 'all 0.2s ease-in-out',
+                  fontSize: '1.25rem',
+                  letterSpacing: '0.5px',
                 }}
               >
-                <Avatar
-                  src={currentUser?.avatar}
-                  sx={{ 
-                    width: 32, 
-                    height: 32,
-                    border: '2px solid rgba(0,0,0,0.1)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                {getPageTitle()}
+              </Typography>
+              <Breadcrumbs 
+                aria-label="breadcrumb" 
+                sx={{ 
+                  mt: 0.5,
+                  '& .MuiBreadcrumbs-separator': {
+                    color: 'text.secondary',
+                  },
+                }}
+              >
+                {getBreadcrumbs()}
+              </Breadcrumbs>
+            </Box>
+
+            {/* Actions de droite avec design amélioré */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {/* Statut de connexion */}
+              <ConnectionStatus />
+              
+              {/* Profil utilisateur avec redirection vers réglages */}
+              <Tooltip title="Réglages" arrow>
+                <IconButton
+                  color="inherit"
+                  size="large"
+                  onClick={() => navigate('/app/settings')}
+                  sx={{
+                    backgroundColor: 'rgba(0,0,0,0.04)',
+                    color: 'text.primary',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.08)',
+                      transform: 'scale(1.05)',
+                    },
+                    transition: 'all 0.2s ease-in-out',
                   }}
                 >
-                  {currentUser?.firstName?.charAt(0)}
-                </Avatar>
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Toolbar>
-      </AppBar>
+                  <Avatar
+                    src={currentUser?.avatar}
+                    sx={{ 
+                      width: 32, 
+                      height: 32,
+                      border: '2px solid rgba(0,0,0,0.1)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    }}
+                  >
+                    {currentUser?.firstName?.charAt(0)}
+                  </Avatar>
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Toolbar>
+        </AppBar>
 
-      {/* Contenu principal avec padding ajusté */}
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          overflow: 'auto',
-          backgroundColor: 'background.default',
-          p: 3,
-          background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
-          minHeight: 'calc(100vh - 70px)',
-        }}
-      >
-        {children}
+        {/* Contenu principal avec padding ajusté */}
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            overflow: 'auto',
+            backgroundColor: 'background.default',
+            p: 3,
+            background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
+            minHeight: 'calc(100vh - 70px)',
+          }}
+        >
+          {children}
+        </Box>
       </Box>
 
       {/* Menu profil avec design amélioré */}

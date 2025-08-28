@@ -85,22 +85,25 @@ const Sales: React.FC = () => {
 
   const [newSaleDialogOpen, setNewSaleDialogOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer' | 'check' | 'payment_link'>('card');
   const [saleItems, setSaleItems] = useState<SaleItemForm[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItemType, setSelectedItemType] = useState<'product' | 'service' | 'part'>('product');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSaleForInvoice, setSelectedSaleForInvoice] = useState<Sale | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [discountPercentage, setDiscountPercentage] = useState<number>(0);
 
   // Calcul des totaux
   const totals = useMemo(() => {
     const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
     const tax = subtotal * 0.20; // TVA 20%
-    const total = subtotal + tax;
+    const totalBeforeDiscount = subtotal + tax;
+    const discountAmount = (totalBeforeDiscount * discountPercentage) / 100;
+    const total = totalBeforeDiscount - discountAmount;
     
-    return { subtotal, tax, total };
-  }, [saleItems]);
+    return { subtotal, tax, totalBeforeDiscount, discountAmount, total };
+  }, [saleItems, discountPercentage]);
 
   // Filtrage des articles selon le type et la recherche
   const filteredItems = useMemo(() => {
@@ -237,6 +240,8 @@ const Sales: React.FC = () => {
       cash: 'Espèces',
       card: 'Carte',
       transfer: 'Virement',
+      check: 'Chèque',
+      payment_link: 'Liens paiement',
     };
     return labels[method as keyof typeof labels] || method;
   };
@@ -320,6 +325,8 @@ const Sales: React.FC = () => {
       clientId: selectedClientId || undefined,
       items: saleItemsFormatted,
       subtotal: totals.subtotal,
+      discountPercentage: discountPercentage,
+      discountAmount: totals.discountAmount,
       tax: totals.tax,
       total: totals.total,
       paymentMethod,
@@ -350,6 +357,7 @@ const Sales: React.FC = () => {
     setSearchQuery('');
     setSelectedItemType('product');
     setSelectedCategory('all');
+    setDiscountPercentage(0);
   };
 
   // Ouvrir la facture
@@ -792,12 +800,14 @@ const Sales: React.FC = () => {
                 <InputLabel>Méthode de paiement</InputLabel>
                 <Select 
                   value={paymentMethod} 
-                  onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'transfer')}
+                  onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link')}
                   label="Méthode de paiement"
                 >
                   <MenuItem value="cash">Espèces</MenuItem>
                   <MenuItem value="card">Carte</MenuItem>
                   <MenuItem value="transfer">Virement</MenuItem>
+                  <MenuItem value="check">Chèque</MenuItem>
+                  <MenuItem value="payment_link">Liens paiement</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -1146,6 +1156,41 @@ const Sales: React.FC = () => {
                 )}
               </Box>
 
+              {/* Réduction */}
+              {saleItems.length > 0 && (
+                <Box sx={{ 
+                  mt: 2, 
+                  p: 2, 
+                  bgcolor: 'grey.50', 
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'grey.200'
+                }}>
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
+                    🎫 Réduction
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Réduction (%)"
+                    value={discountPercentage}
+                    onChange={(e) => setDiscountPercentage(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                    inputProps={{ 
+                      min: 0,
+                      max: 100,
+                      step: 0.1
+                    }}
+                    size="small"
+                    sx={{ mb: 1 }}
+                  />
+                  {discountPercentage > 0 && (
+                    <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
+                      Réduction de {discountPercentage}% sur le total TTC = {totals.discountAmount.toLocaleString('fr-FR')} €
+                    </Alert>
+                  )}
+                </Box>
+              )}
+
               {/* Totaux */}
               {saleItems.length > 0 && (
                 <Box sx={{ 
@@ -1171,6 +1216,20 @@ const Sales: React.FC = () => {
                       {totals.tax.toLocaleString('fr-FR')} €
                     </span>
                   </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <span style={{ fontSize: '0.875rem' }}>Total TTC:</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                      {totals.totalBeforeDiscount.toLocaleString('fr-FR')} €
+                    </span>
+                  </Box>
+                  {discountPercentage > 0 && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <span style={{ fontSize: '0.875rem', color: 'success.main' }}>Réduction ({discountPercentage}%):</span>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'success.main' }}>
+                        -{totals.discountAmount.toLocaleString('fr-FR')} €
+                      </span>
+                    </Box>
+                  )}
                   <Divider sx={{ my: 1 }} />
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontWeight: 600, fontSize: '1.25rem' }}>Total:</span>

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { useAppStore } from '../store';
+import { systemSettingsService } from '../services/supabaseService';
 
 export interface WorkshopSettings {
   name: string;
@@ -13,8 +13,8 @@ export interface WorkshopSettings {
 const defaultSettings: WorkshopSettings = {
   name: 'Atelier de réparation',
   address: '123 Rue de la Paix, 75001 Paris',
-      phone: '07 59 23 91 70',
-    email: 'contact.ateliergestion@gmail.com',
+  phone: '07 59 23 91 70',
+  email: 'contact.ateliergestion@gmail.com',
   vatRate: '20',
   currency: 'EUR'
 };
@@ -44,56 +44,47 @@ export const WorkshopSettingsProvider: React.FC<WorkshopSettingsProviderProps> =
   const [workshopSettings, setWorkshopSettings] = useState<WorkshopSettings>(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { 
-    systemSettings, 
-    loadSystemSettings, 
-    updateMultipleSystemSettings 
-  } = useAppStore();
-
   // Charger les paramètres depuis la base de données
   const loadSettings = useCallback(async () => {
     try {
       setIsLoading(true);
-      await loadSystemSettings();
+      const result = await systemSettingsService.getAll();
+      
+      if (result.success && 'data' in result && result.data) {
+        const newSettings = { ...defaultSettings };
+        
+        // Mettre à jour les paramètres de l'atelier depuis la base de données
+        result.data.forEach(setting => {
+          switch (setting.key) {
+            case 'workshop_name':
+              newSettings.name = setting.value;
+              break;
+            case 'workshop_address':
+              newSettings.address = setting.value;
+              break;
+            case 'workshop_phone':
+              newSettings.phone = setting.value;
+              break;
+            case 'workshop_email':
+              newSettings.email = setting.value;
+              break;
+            case 'vat_rate':
+              newSettings.vatRate = setting.value;
+              break;
+            case 'currency':
+              newSettings.currency = setting.value;
+              break;
+          }
+        });
+        
+        setWorkshopSettings(newSettings);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des paramètres de l\'atelier:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [loadSystemSettings]);
-
-  // Mettre à jour les paramètres quand systemSettings change
-  useEffect(() => {
-    if (systemSettings.length > 0) {
-      const newSettings = { ...defaultSettings };
-      
-      // Mettre à jour les paramètres de l'atelier depuis la base de données
-      systemSettings.forEach(setting => {
-        switch (setting.key) {
-          case 'workshop_name':
-            newSettings.name = setting.value;
-            break;
-          case 'workshop_address':
-            newSettings.address = setting.value;
-            break;
-          case 'workshop_phone':
-            newSettings.phone = setting.value;
-            break;
-          case 'workshop_email':
-            newSettings.email = setting.value;
-            break;
-          case 'vat_rate':
-            newSettings.vatRate = setting.value;
-            break;
-          case 'currency':
-            newSettings.currency = setting.value;
-            break;
-        }
-      });
-      
-      setWorkshopSettings(newSettings);
-    }
-  }, [systemSettings]);
+  }, []);
 
   // Sauvegarder les paramètres dans la base de données
   const saveSettings = useCallback(async (newSettings: Partial<WorkshopSettings>) => {
@@ -124,7 +115,10 @@ export const WorkshopSettingsProvider: React.FC<WorkshopSettingsProviderProps> =
 
       // Sauvegarder dans la base de données
       if (settingsToUpdate.length > 0) {
-        await updateMultipleSystemSettings(settingsToUpdate);
+        const result = await systemSettingsService.updateMultiple(settingsToUpdate);
+        if (!result.success) {
+          throw new Error('Erreur lors de la sauvegarde');
+        }
       }
       
       // Mettre à jour l'état local
@@ -145,7 +139,7 @@ export const WorkshopSettingsProvider: React.FC<WorkshopSettingsProviderProps> =
     } finally {
       setIsLoading(false);
     }
-  }, [updateMultipleSystemSettings, workshopSettings]);
+  }, [workshopSettings]);
 
   // Charger les paramètres au montage
   useEffect(() => {

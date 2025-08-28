@@ -90,7 +90,7 @@ const Landing: React.FC = () => {
     {
       icon: <BuildIcon sx={{ fontSize: 40, color: '#FF6B6B' }} />,
       title: 'Gestion des Réparations',
-      description: 'Suivez l\'état de vos réparations en temps réel avec notre système Kanban intuitif',
+              description: 'Suivez l\'état de vos réparations en temps réel avec notre système de suivi intuitif',
       bgColor: '#FFF5F5',
       borderColor: '#FF6B6B'
     },

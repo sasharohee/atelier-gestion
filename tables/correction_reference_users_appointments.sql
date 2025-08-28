@@ -254,3 +254,5 @@ WHERE role = 'technician'
 ORDER BY created_at DESC;
 
 SELECT 'CORRECTION RÉFÉRENCE USERS APPOINTMENTS TERMINÉE' as status;
+
+

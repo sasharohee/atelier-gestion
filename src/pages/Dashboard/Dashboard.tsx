@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Grid,
   Card,
@@ -38,10 +38,39 @@ import { deviceTypeColors, repairStatusColors } from '../../theme';
 // import SupabaseTest from '../../components/SupabaseTest'; // MASQUÉ
 import { demoDataService } from '../../services/demoDataService';
 
+// Styles CSS pour les animations
+const pulseAnimation = `
+  @keyframes pulse {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.1);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+`;
+
 const Dashboard: React.FC = () => {
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
+  // Ajouter les styles CSS pour l'animation
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = pulseAnimation;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   const {
     dashboardStats,
     repairs,
@@ -62,6 +91,21 @@ const Dashboard: React.FC = () => {
     loadAppointments,
   } = useAppStore();
 
+  // Charger les données au montage du composant
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        console.log('🔄 Chargement des données du dashboard...');
+        await loadRepairs();
+        console.log('✅ Données des réparations chargées dans le dashboard');
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des données du dashboard:', error);
+      }
+    };
+    
+    loadDashboardData();
+  }, [loadRepairs]);
+
   // Gestion d'erreur pour éviter les crashes
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -80,6 +124,14 @@ const Dashboard: React.FC = () => {
   const safeClients = clients || [];
   const safeDevices = devices || [];
   const safeRepairStatuses = repairStatuses || [];
+
+  // Surveiller les changements dans les réparations
+  useEffect(() => {
+    console.log('📊 Dashboard - État des réparations mis à jour:', {
+      totalRepairs: safeRepairs.length,
+      repairsStatuses: safeRepairs.map(r => ({ id: r.id, status: r.status, dueDate: r.dueDate }))
+    });
+  }, [safeRepairs]);
 
   const recentRepairs = safeRepairs
     .filter((repair) => {
@@ -224,17 +276,74 @@ const Dashboard: React.FC = () => {
     );
   };
 
-  // Statistiques par défaut pour un atelier vide
-  const defaultStats = {
-    totalRepairs: safeRepairs.length,
-    activeRepairs: safeRepairs.filter(r => r.status === 'in_progress').length,
-    completedRepairs: safeRepairs.filter(r => r.status === 'completed' || r.status === 'returned').length,
-    overdueRepairs: 0,
-    todayAppointments: todayAppointments.length,
-    monthlyRevenue: 0,
-    lowStockItems: 0,
-    pendingMessages: 0,
-  };
+  // Statistiques par défaut pour un atelier vide - recalculées à chaque changement
+  const defaultStats = useMemo(() => {
+    // Analyser chaque réparation individuellement
+    const repairsAnalysis = safeRepairs.map(repair => {
+      const isCompleted = repair.status === 'completed' || repair.status === 'returned';
+      const hasDueDate = repair.dueDate && !isNaN(new Date(repair.dueDate).getTime());
+      const isOverdue = !isCompleted && hasDueDate && new Date(repair.dueDate) < new Date();
+      
+      return {
+        id: repair.id,
+        status: repair.status,
+        dueDate: repair.dueDate,
+        isCompleted,
+        hasDueDate,
+        isOverdue,
+        shouldBeCounted: isOverdue
+      };
+    });
+
+    const overdueCount = repairsAnalysis.filter(repair => repair.shouldBeCounted).length;
+
+    // Log de débogage détaillé
+    console.log('🔍 Dashboard - Analyse détaillée des réparations:', {
+      totalRepairs: safeRepairs.length,
+      completedRepairs: repairsAnalysis.filter(r => r.isCompleted).length,
+      overdueCount,
+      repairsAnalysis,
+      summary: {
+        completed: repairsAnalysis.filter(r => r.isCompleted).length,
+        overdue: overdueCount,
+        noDueDate: repairsAnalysis.filter(r => !r.hasDueDate).length,
+        futureDueDate: repairsAnalysis.filter(r => r.hasDueDate && !r.isCompleted && new Date(r.dueDate) >= new Date()).length
+      }
+    });
+
+    // Log spécifique pour les réparations archivées
+    const archivedRepairs = repairsAnalysis.filter(r => r.status === 'returned');
+    if (archivedRepairs.length > 0) {
+      console.log('📦 Réparations archivées (ne doivent pas être en retard):', archivedRepairs.map(r => ({
+        id: r.id,
+        status: r.status,
+        dueDate: r.dueDate,
+        isOverdue: r.isOverdue,
+        shouldBeCounted: r.shouldBeCounted
+      })));
+    }
+
+    // Log de vérification de cohérence
+    console.log('🔍 Vérification cohérence - defaultStats.overdueRepairs:', overdueCount);
+    console.log('🔍 Vérification cohérence - Toutes les réparations:', safeRepairs.map(r => ({
+      id: r.id,
+      status: r.status,
+      dueDate: r.dueDate,
+      isCompleted: r.status === 'completed' || r.status === 'returned',
+      isOverdue: (r.status !== 'completed' && r.status !== 'returned') && r.dueDate && new Date(r.dueDate) < new Date()
+    })));
+
+    return {
+      totalRepairs: safeRepairs.length,
+      activeRepairs: safeRepairs.filter(r => r.status === 'in_progress').length,
+      completedRepairs: safeRepairs.filter(r => r.status === 'completed' || r.status === 'returned').length,
+      overdueRepairs: overdueCount,
+      todayAppointments: todayAppointments.length,
+      monthlyRevenue: 0,
+      lowStockItems: 0,
+      pendingMessages: 0,
+    };
+  }, [safeRepairs, todayAppointments]);
 
   if (hasError) {
     return (
@@ -269,6 +378,18 @@ const Dashboard: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Vue d'ensemble de votre atelier - {format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}
         </Typography>
+        <Button 
+          variant="outlined" 
+          size="small"
+          onClick={async () => {
+            console.log('🔄 Rechargement forcé des données...');
+            await loadRepairs();
+            console.log('✅ Données rechargées');
+          }}
+          sx={{ mt: 1 }}
+        >
+          🔄 Recharger les données
+        </Button>
       </Box>
 
       {/* Statistiques principales */}
@@ -311,7 +432,7 @@ const Dashboard: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* Statistiques Kanban rapides */}
+              {/* Statistiques de suivi des réparations rapides */}
       {safeRepairStatuses.length > 0 ? (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={2}>
@@ -376,7 +497,7 @@ const Dashboard: React.FC = () => {
               <CardContent>
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
-                    Chargement des statistiques Kanban...
+                    Chargement des statistiques de suivi des réparations...
                   </Typography>
                 </Box>
               </CardContent>
@@ -429,7 +550,7 @@ const Dashboard: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* État du Kanban - Vue d'ensemble des étapes */}
+              {/* État du suivi des réparations - Vue d'ensemble des étapes */}
       {safeRepairStatuses.length > 0 ? (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12}>
@@ -437,14 +558,14 @@ const Dashboard: React.FC = () => {
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    État du Kanban - Vue d'ensemble
+                    État du suivi des réparations - Vue d'ensemble
                   </Typography>
                   <Button 
                     variant="outlined" 
                     size="small"
                     onClick={() => window.location.href = '/kanban'}
                   >
-                    Voir le Kanban
+                                          Voir le suivi des réparations
                   </Button>
                 </Box>
               
@@ -453,15 +574,12 @@ const Dashboard: React.FC = () => {
                   .sort((a, b) => a.order - b.order)
                   .map((status) => {
                     const statusRepairs = repairs.filter(repair => repair.status === status.id);
+                    // Utiliser la même logique que dans defaultStats pour la cohérence
                     const overdueRepairs = statusRepairs.filter(repair => {
-                      try {
-                        if (!repair.dueDate) return false;
-                        const dueDate = new Date(repair.dueDate);
-                        if (isNaN(dueDate.getTime())) return false;
-                        return dueDate < new Date();
-                      } catch (error) {
-                        return false;
-                      }
+                      const isCompleted = repair.status === 'completed' || repair.status === 'returned';
+                      const hasDueDate = repair.dueDate && !isNaN(new Date(repair.dueDate).getTime());
+                      const isOverdue = !isCompleted && hasDueDate && new Date(repair.dueDate) < new Date();
+                      return isOverdue;
                     }).length;
                     
                     return (
@@ -479,7 +597,7 @@ const Dashboard: React.FC = () => {
                               cursor: 'pointer',
                             },
                           }}
-                          onClick={() => window.location.href = '/kanban'}
+                          onClick={() => window.location.href = '/app/kanban'}
                         >
                           {/* Indicateur de retard */}
                           {overdueRepairs > 0 && (
@@ -578,105 +696,343 @@ const Dashboard: React.FC = () => {
                 </Box>
               </Box>
               
-              {/* Réparations urgentes et en retard */}
-              <Box sx={{ mt: 2 }}>
-                <Grid container spacing={2}>
-                  {/* Réparations urgentes */}
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ p: 2, backgroundColor: 'error.light', borderRadius: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'error.dark' }}>
-                        🔥 Réparations urgentes
-                      </Typography>
-                      {(() => {
-                        const urgentRepairs = repairs.filter(r => r.isUrgent);
-                        if (urgentRepairs.length === 0) {
-                          return (
-                            <Typography variant="caption" color="text.secondary">
-                              Aucune réparation urgente
-                            </Typography>
-                          );
+              {/* Réparations urgentes et en retard - Section améliorée */}
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <WarningIcon sx={{ fontSize: 28 }} />
+                  Priorités critiques
+                </Typography>
+                
+                <Grid container spacing={3}>
+                  {/* Réparations urgentes - Design amélioré */}
+                  <Grid item xs={12} lg={6}>
+                    <Card 
+                      sx={{ 
+                        background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)',
+                        color: 'white',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                          opacity: 0.3,
+                        },
+                        boxShadow: '0 8px 32px rgba(255, 107, 107, 0.3)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 12px 40px rgba(255, 107, 107, 0.4)',
                         }
-                        return (
-                          <Box>
-                            {urgentRepairs.slice(0, 3).map((repair) => {
-                              const client = getClientById(repair.clientId);
-                              const device = getDeviceById(repair.deviceId);
-                              return (
-                                <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
-                                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                    {client?.firstName} {client?.lastName} - {device?.brand} {device?.model}
-                                  </Typography>
-                                  <Typography variant="caption" display="block" color="text.secondary">
-                                    {repair.description}
-                                  </Typography>
-                                </Box>
-                              );
-                            })}
-                            {urgentRepairs.length > 3 && (
-                              <Typography variant="caption" color="text.secondary">
-                                +{urgentRepairs.length - 3} autres urgentes
+                      }}
+                    >
+                      <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ 
+                              width: 48, 
+                              height: 48, 
+                              borderRadius: '50%', 
+                              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <WarningIcon sx={{ fontSize: 24, color: 'white' }} />
+                            </Box>
+                            <Box>
+                              <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
+                                🔥 Réparations urgentes
                               </Typography>
-                            )}
+                              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                                Priorité maximale
+                              </Typography>
+                            </Box>
                           </Box>
-                        );
-                      })()}
-                    </Box>
+                          <Chip 
+                            label={repairs.filter(r => r.isUrgent).length} 
+                            sx={{ 
+                              backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+                              color: 'white', 
+                              fontWeight: 700,
+                              fontSize: '1.1rem',
+                              height: 32
+                            }} 
+                          />
+                        </Box>
+                        
+                        {(() => {
+                          const urgentRepairs = repairs.filter(r => r.isUrgent);
+                          if (urgentRepairs.length === 0) {
+                            return (
+                              <Box sx={{ 
+                                p: 2, 
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                                borderRadius: 2,
+                                textAlign: 'center'
+                              }}>
+                                <Box sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.875rem' }}>
+                                  ✅ Aucune réparation urgente
+                                </Box>
+                              </Box>
+                            );
+                          }
+                          return (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                              {urgentRepairs.slice(0, 3).map((repair) => {
+                                const client = getClientById(repair.clientId);
+                                const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
+                                return (
+                                  <Box 
+                                    key={repair.id} 
+                                    sx={{ 
+                                      p: 2, 
+                                      backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+                                      borderRadius: 2,
+                                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                                      backdropFilter: 'blur(10px)',
+                                      transition: 'all 0.2s ease',
+                                      '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                                        transform: 'scale(1.02)',
+                                      }
+                                    }}
+                                  >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                      <Box sx={{ 
+                                        width: 8, 
+                                        height: 8, 
+                                        borderRadius: '50%', 
+                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                        animation: 'pulse 2s infinite'
+                                      }} />
+                                      <Box sx={{ fontWeight: 600, color: 'white', fontSize: '0.875rem' }}>
+                                        {client?.firstName} {client?.lastName}
+                                      </Box>
+                                    </Box>
+                                    <Box sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 0.5, fontSize: '0.875rem' }}>
+                                      {device?.brand} {device?.model}
+                                    </Box>
+                                    <Box sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.75rem' }}>
+                                      {repair.description}
+                                    </Box>
+                                  </Box>
+                                );
+                              })}
+                              {urgentRepairs.length > 3 && (
+                                                              <Box sx={{ 
+                                p: 1.5, 
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                                borderRadius: 2,
+                                textAlign: 'center'
+                              }}>
+                                <Box sx={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 600, fontSize: '0.875rem' }}>
+                                  +{urgentRepairs.length - 3} autres réparations urgentes
+                                </Box>
+                              </Box>
+                              )}
+                            </Box>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
                   </Grid>
                   
-                  {/* Réparations en retard */}
-                  <Grid item xs={12} md={6}>
-                    <Box sx={{ p: 2, backgroundColor: 'warning.light', borderRadius: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'warning.dark' }}>
-                        ⏰ Réparations en retard
-                      </Typography>
-                      {(() => {
-                        const overdueRepairs = repairs.filter(repair => {
-                          try {
-                            if (!repair.dueDate) return false;
-                            const dueDate = new Date(repair.dueDate);
-                            if (isNaN(dueDate.getTime())) return false;
-                            return dueDate < new Date();
-                          } catch (error) {
-                            return false;
-                          }
-                        });
-                        
-                        if (overdueRepairs.length === 0) {
-                          return (
-                            <Typography variant="caption" color="text.secondary">
-                              Aucune réparation en retard
-                            </Typography>
-                          );
+                  {/* Réparations en retard - Design amélioré */}
+                  <Grid item xs={12} lg={6}>
+                    <Card 
+                      sx={{ 
+                        background: 'linear-gradient(135deg, #ffa726 0%, #ff9800 100%)',
+                        color: 'white',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                          opacity: 0.3,
+                        },
+                        boxShadow: '0 8px 32px rgba(255, 167, 38, 0.3)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: '0 12px 40px rgba(255, 167, 38, 0.4)',
                         }
-                        
-                        return (
-                          <Box>
-                            {overdueRepairs.slice(0, 3).map((repair) => {
-                              const client = getClientById(repair.clientId);
-                              const device = getDeviceById(repair.deviceId);
-                              const daysLate = Math.floor((new Date().getTime() - new Date(repair.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-                              return (
-                                <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
-                                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                    {client?.firstName} {client?.lastName} - {device?.brand} {device?.model}
-                                  </Typography>
-                                  <Typography variant="caption" display="block" color="text.secondary">
-                                    {repair.description} ({daysLate} jour{daysLate > 1 ? 's' : ''} de retard)
-                                  </Typography>
-                                </Box>
-                              );
-                            })}
-                            {overdueRepairs.length > 3 && (
-                              <Typography variant="caption" color="text.secondary">
-                                +{overdueRepairs.length - 3} autres en retard
+                      }}
+                    >
+                      <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ 
+                              width: 48, 
+                              height: 48, 
+                              borderRadius: '50%', 
+                              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <ScheduleIcon sx={{ fontSize: 24, color: 'white' }} />
+                            </Box>
+                            <Box>
+                              <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
+                                ⏰ Réparations en retard
                               </Typography>
-                            )}
+                              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                                Délais dépassés
+                              </Typography>
+                            </Box>
                           </Box>
-                        );
-                      })()}
-                    </Box>
+                          <Chip 
+                            label={repairs.filter(repair => {
+                              const isCompleted = repair.status === 'completed' || repair.status === 'returned';
+                              const hasDueDate = repair.dueDate && !isNaN(new Date(repair.dueDate).getTime());
+                              const isOverdue = !isCompleted && hasDueDate && new Date(repair.dueDate) < new Date();
+                              return isOverdue;
+                            }).length} 
+                            sx={{ 
+                              backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+                              color: 'white', 
+                              fontWeight: 700,
+                              fontSize: '1.1rem',
+                              height: 32
+                            }} 
+                          />
+                        </Box>
+                        
+                        {(() => {
+                          // Utiliser la même logique que dans defaultStats pour la cohérence
+                          const overdueRepairs = repairs.filter(repair => {
+                            const isCompleted = repair.status === 'completed' || repair.status === 'returned';
+                            const hasDueDate = repair.dueDate && !isNaN(new Date(repair.dueDate).getTime());
+                            const isOverdue = !isCompleted && hasDueDate && new Date(repair.dueDate) < new Date();
+                            return isOverdue;
+                          });
+                          
+                          if (overdueRepairs.length === 0) {
+                            return (
+                              <Box sx={{ 
+                                p: 2, 
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                                borderRadius: 2,
+                                textAlign: 'center'
+                              }}>
+                                <Box sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.875rem' }}>
+                                  ✅ Aucune réparation en retard
+                                </Box>
+                              </Box>
+                            );
+                          }
+                          
+                          return (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                              {overdueRepairs.slice(0, 3).map((repair) => {
+                                const client = getClientById(repair.clientId);
+                                const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
+                                const daysLate = Math.floor((new Date().getTime() - new Date(repair.dueDate).getTime()) / (1000 * 60 * 60 * 24));
+                                return (
+                                  <Box 
+                                    key={repair.id} 
+                                    sx={{ 
+                                      p: 2, 
+                                      backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+                                      borderRadius: 2,
+                                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                                      backdropFilter: 'blur(10px)',
+                                      transition: 'all 0.2s ease',
+                                      '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                                        transform: 'scale(1.02)',
+                                      }
+                                    }}
+                                  >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box sx={{ 
+                                          width: 8, 
+                                          height: 8, 
+                                          borderRadius: '50%', 
+                                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                                          animation: 'pulse 2s infinite'
+                                        }} />
+                                        <Box sx={{ fontWeight: 600, color: 'white', fontSize: '0.875rem' }}>
+                                          {client?.firstName} {client?.lastName}
+                                        </Box>
+                                      </Box>
+                                      <Chip 
+                                        label={`${daysLate}j`} 
+                                        size="small"
+                                        sx={{ 
+                                          backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+                                          color: 'white', 
+                                          fontWeight: 700,
+                                          fontSize: '0.7rem',
+                                          height: 20
+                                        }} 
+                                      />
+                                    </Box>
+                                    <Box sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 0.5, fontSize: '0.875rem' }}>
+                                      {device?.brand} {device?.model}
+                                    </Box>
+                                    <Box sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.75rem' }}>
+                                      {repair.description}
+                                    </Box>
+                                  </Box>
+                                );
+                              })}
+                              {overdueRepairs.length > 3 && (
+                                                              <Box sx={{ 
+                                p: 1.5, 
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+                                borderRadius: 2,
+                                textAlign: 'center'
+                              }}>
+                                <Box sx={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 600, fontSize: '0.875rem' }}>
+                                  +{overdueRepairs.length - 3} autres réparations en retard
+                                </Box>
+                              </Box>
+                              )}
+                            </Box>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
                   </Grid>
                 </Grid>
+                
+                {/* Bouton d'action rapide */}
+                <Box sx={{ mt: 3, textAlign: 'center' }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<BuildIcon />}
+                    onClick={() => window.location.href = '/app/kanban'}
+                    sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      fontWeight: 700,
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 3,
+                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
+                      }
+                    }}
+                  >
+                    Gérer toutes les priorités
+                  </Button>
+                </Box>
               </Box>
             </CardContent>
           </Card>
@@ -689,7 +1045,7 @@ const Dashboard: React.FC = () => {
               <CardContent>
                 <Box sx={{ textAlign: 'center', py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
-                    Chargement des données Kanban...
+                    Chargement des données de suivi des réparations...
                   </Typography>
                 </Box>
               </CardContent>
@@ -698,7 +1054,7 @@ const Dashboard: React.FC = () => {
         </Grid>
       )}
 
-      {/* Tâches à faire - Basé sur le Kanban */}
+              {/* Tâches à faire - Basé sur le suivi des réparations */}
       {safeRepairStatuses.length > 0 ? (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12}>
@@ -711,7 +1067,7 @@ const Dashboard: React.FC = () => {
                 <Button 
                   variant="outlined" 
                   size="small"
-                  onClick={() => window.location.href = '/kanban'}
+                  onClick={() => window.location.href = '/app/kanban'}
                 >
                   Voir toutes les tâches
                 </Button>
@@ -731,7 +1087,7 @@ const Dashboard: React.FC = () => {
                         </Typography>
                         {newRepairs.slice(0, 3).map((repair) => {
                           const client = getClientById(repair.clientId);
-                          const device = getDeviceById(repair.deviceId);
+                          const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
                           return (
                             <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
                               <Typography variant="caption" sx={{ fontWeight: 600 }}>
@@ -766,7 +1122,7 @@ const Dashboard: React.FC = () => {
                         </Typography>
                         {waitingParts.slice(0, 3).map((repair) => {
                           const client = getClientById(repair.clientId);
-                          const device = getDeviceById(repair.deviceId);
+                          const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
                           return (
                             <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
                               <Typography variant="caption" sx={{ fontWeight: 600 }}>
@@ -801,7 +1157,7 @@ const Dashboard: React.FC = () => {
                         </Typography>
                         {readyToDeliver.slice(0, 3).map((repair) => {
                           const client = getClientById(repair.clientId);
-                          const device = getDeviceById(repair.deviceId);
+                          const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
                           return (
                             <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
                               <Typography variant="caption" sx={{ fontWeight: 600 }}>
@@ -836,7 +1192,7 @@ const Dashboard: React.FC = () => {
                         </Typography>
                         {inProgress.slice(0, 3).map((repair) => {
                           const client = getClientById(repair.clientId);
-                          const device = getDeviceById(repair.deviceId);
+                          const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
                           return (
                             <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
                               <Typography variant="caption" sx={{ fontWeight: 600 }}>
@@ -906,7 +1262,7 @@ const Dashboard: React.FC = () => {
                 <List>
                   {recentRepairs.map((repair, index) => {
                     const client = getClientById(repair.clientId);
-                    const device = getDeviceById(repair.deviceId);
+                    const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
                     return (
                       <React.Fragment key={repair.id}>
                         <ListItem alignItems="flex-start">
@@ -954,7 +1310,7 @@ const Dashboard: React.FC = () => {
                             }
                           />
                           <Typography variant="h6" color="primary">
-                            {repair.totalPrice} €
+                            {repair.totalPrice} € TTC
                           </Typography>
                         </ListItem>
                         {index < recentRepairs.length - 1 && <Divider variant="inset" component="li" />}

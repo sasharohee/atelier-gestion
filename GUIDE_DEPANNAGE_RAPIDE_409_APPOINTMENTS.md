@@ -154,3 +154,5 @@ Si le problème persiste après ces étapes :
 **Priorité :** 🔴 URGENT  
 **Impact :** Fonctionnalité calendrier bloquée  
 **Solution :** Script SQL + Corrections frontend
+
+

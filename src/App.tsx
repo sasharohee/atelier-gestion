@@ -12,11 +12,11 @@ import { useAuthenticatedData } from './hooks/useAuthenticatedData';
 import { useAppStore } from './store';
 import { WorkshopSettingsProvider } from './contexts/WorkshopSettingsContext';
 import { AuthErrorHandler } from './components/AuthErrorHandler';
+import { repairService } from './services/supabaseService';
 import './styles/print.css';
 
 // Composants de layout
 import Layout from './components/Layout/Layout';
-import Sidebar from './components/Layout/Sidebar';
 
 // Composants de guide et d'authentification
 // import { OnboardingGuide } from './components/OnboardingGuide'; // MASQUÉ
@@ -41,6 +41,7 @@ import SubscriptionManagement from './pages/Administration/SubscriptionManagemen
 import UserAccessManagement from './pages/Administration/UserAccessManagement';
 import AdminAccess from './pages/AdminAccess/AdminAccess';
 import Settings from './pages/Settings/Settings';
+import Loyalty from './pages/Loyalty/Loyalty';
 import PrivacyPolicy from './pages/Legal/PrivacyPolicy';
 import TermsOfService from './pages/Legal/TermsOfService';
 import CGV from './pages/Legal/CGV';
@@ -95,6 +96,13 @@ function App() {
       try {
         // S'assurer que les données de démonstration sont chargées
         await demoDataService.ensureDemoData();
+        
+        // Exposer les objets globaux pour le débogage
+        if (typeof window !== 'undefined') {
+          window.useAppStore = useAppStore;
+          window.repairService = repairService;
+          console.log('🔧 Objets de débogage exposés globalement');
+        }
         
         setIsLoading(false);
         
@@ -167,36 +175,32 @@ function App() {
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/app/*" element={
                   <AuthGuard>
-                    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-                      <Sidebar />
-                      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                        <Layout>
-                          <Routes>
-                            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                            <Route path="/dashboard" element={<Dashboard />} />
-                            <Route path="/kanban" element={<Kanban />} />
-                            <Route path="/archive" element={<Archive />} />
-                            <Route path="/calendar" element={<Calendar />} />
+                    <Layout>
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/kanban" element={<Kanban />} />
+                        <Route path="/archive" element={<Archive />} />
+                        <Route path="/calendar" element={<Calendar />} />
 
-                            <Route path="/catalog/*" element={<Catalog />} />
-                            <Route path="/transaction/*" element={<Transaction />} />
-                            <Route path="/sales" element={<Sales />} />
-                            <Route path="/statistics" element={<Statistics />} />
-                            <Route path="/administration" element={<Administration />} />
-                            <Route path="/administration/subscriptions" element={<SubscriptionManagement />} />
-                            <Route path="/administration/user-access" element={<UserAccessManagement />} />
-                            <Route path="/settings" element={<Settings />} />
-                          </Routes>
-                          
-                          {/* Guide d'intégration - MASQUÉ */}
-                          {/* {showOnboarding && (
-                            <OnboardingGuide 
-                              onComplete={() => setShowOnboarding(false)}
-                            />
-                          )} */}
-                        </Layout>
-                      </Box>
-                    </Box>
+                        <Route path="/catalog/*" element={<Catalog />} />
+                        <Route path="/transaction/*" element={<Transaction />} />
+                        <Route path="/sales" element={<Sales />} />
+                        <Route path="/statistics" element={<Statistics />} />
+                        <Route path="/administration" element={<Administration />} />
+                        <Route path="/administration/subscriptions" element={<SubscriptionManagement />} />
+                        <Route path="/administration/user-access" element={<UserAccessManagement />} />
+                        <Route path="/loyalty" element={<Loyalty />} />
+                        <Route path="/settings" element={<Settings />} />
+                      </Routes>
+                      
+                      {/* Guide d'intégration - MASQUÉ */}
+                      {/* {showOnboarding && (
+                        <OnboardingGuide 
+                          onComplete={() => setShowOnboarding(false)}
+                        />
+                      )} */}
+                    </Layout>
                   </AuthGuard>
                 } />
               </Routes>

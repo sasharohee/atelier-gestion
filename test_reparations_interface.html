@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Mise à Jour Réparations</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button.danger {
+            background: #dc3545;
+        }
+        .button.danger:hover {
+            background: #c82333;
+        }
+        .button.success {
+            background: #28a745;
+        }
+        .button.success:hover {
+            background: #218838;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.en_attente { background: #fff3cd; color: #856404; }
+        .status.en_cours { background: #d1ecf1; color: #0c5460; }
+        .status.termine { background: #d4edda; color: #155724; }
+        .status.annule { background: #f8d7da; color: #721c24; }
+        .repair-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        .repair-item:hover {
+            background: #f0f0f0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group textarea {
+            height: 80px;
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Mise à Jour Réparations</h1>
+    
+    <div class="container">
+        <div class="section">
+            <h3>📊 État du Store</h3>
+            <button class="button" onclick="checkStore()">Vérifier le Store</button>
+            <button class="button" onclick="loadRepairs()">Charger les Réparations</button>
+            <div id="storeStatus" class="log"></div>
+        </div>
+        
+        <div class="section">
+            <h3>🔧 Test du Service</h3>
+            <button class="button" onclick="testService()">Tester le Service</button>
+            <button class="button" onclick="testUpdate()">Test Mise à Jour</button>
+            <div id="serviceStatus" class="log"></div>
+        </div>
+        
+        <div class="section">
+            <h3>📋 Réparations Disponibles</h3>
+            <div id="repairsList"></div>
+        </div>
+        
+        <div class="section">
+            <h3>✏️ Mise à Jour Manuelle</h3>
+            <div class="form-group">
+                <label>ID de la réparation:</label>
+                <input type="text" id="repairId" placeholder="Entrez l'ID de la réparation">
+            </div>
+            <div class="form-group">
+                <label>Nouveau statut:</label>
+                <select id="newStatus">
+                    <option value="en_attente">En attente</option>
+                    <option value="en_cours">En cours</option>
+                    <option value="termine">Terminé</option>
+                    <option value="annule">Annulé</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Notes:</label>
+                <textarea id="newNotes" placeholder="Ajoutez des notes..."></textarea>
+            </div>
+            <button class="button success" onclick="updateRepair()">Mettre à Jour</button>
+            <div id="updateStatus" class="log"></div>
+        </div>
+        
+        <div class="section">
+            <h3>🔄 Logs en Temps Réel</h3>
+            <button class="button danger" onclick="clearLogs()">Effacer les Logs</button>
+            <div id="realtimeLogs" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour ajouter des logs
+        function addLog(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${message}`;
+            
+            if (type === 'error') {
+                logEntry.style.color = '#dc3545';
+            } else if (type === 'success') {
+                logEntry.style.color = '#28a745';
+            } else if (type === 'warning') {
+                logEntry.style.color = '#ffc107';
+            }
+            
+            container.appendChild(logEntry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Fonction pour vérifier le store
+        function checkStore() {
+            addLog('storeStatus', '🔍 Vérification du store...');
+            
+            if (typeof window !== 'undefined' && window.useAppStore) {
+                const store = window.useAppStore.getState();
+                addLog('storeStatus', `✅ Store accessible - ${store.repairs.length} réparations`, 'success');
+                addLog('storeStatus', `📊 État: ${JSON.stringify(store, null, 2)}`);
+            } else {
+                addLog('storeStatus', '❌ Store non accessible', 'error');
+            }
+        }
+
+        // Fonction pour charger les réparations
+        function loadRepairs() {
+            addLog('storeStatus', '📥 Chargement des réparations...');
+            
+            if (typeof window !== 'undefined' && window.useAppStore) {
+                const store = window.useAppStore.getState();
+                store.loadRepairs().then(() => {
+                    addLog('storeStatus', '✅ Réparations chargées', 'success');
+                    displayRepairs();
+                }).catch(error => {
+                    addLog('storeStatus', `❌ Erreur: ${error.message}`, 'error');
+                });
+            } else {
+                addLog('storeStatus', '❌ Store non accessible', 'error');
+            }
+        }
+
+        // Fonction pour afficher les réparations
+        function displayRepairs() {
+            const container = document.getElementById('repairsList');
+            container.innerHTML = '';
+            
+            if (typeof window !== 'undefined' && window.useAppStore) {
+                const store = window.useAppStore.getState();
+                
+                if (store.repairs.length === 0) {
+                    container.innerHTML = '<p>Aucune réparation trouvée</p>';
+                    return;
+                }
+                
+                store.repairs.forEach(repair => {
+                    const repairDiv = document.createElement('div');
+                    repairDiv.className = 'repair-item';
+                    repairDiv.innerHTML = `
+                        <strong>ID:</strong> ${repair.id}<br>
+                        <strong>Client:</strong> ${repair.clientId || 'N/A'}<br>
+                        <strong>Statut:</strong> <span class="status ${repair.status}">${repair.status}</span><br>
+                        <strong>Notes:</strong> ${repair.notes || 'Aucune'}<br>
+                        <strong>Créé:</strong> ${new Date(repair.createdAt).toLocaleString()}<br>
+                        <button class="button" onclick="selectRepair('${repair.id}')">Sélectionner</button>
+                    `;
+                    container.appendChild(repairDiv);
+                });
+            }
+        }
+
+        // Fonction pour sélectionner une réparation
+        function selectRepair(id) {
+            document.getElementById('repairId').value = id;
+            addLog('updateStatus', `✅ Réparation ${id} sélectionnée`, 'success');
+        }
+
+        // Fonction pour tester le service
+        function testService() {
+            addLog('serviceStatus', '🔧 Test du service...');
+            
+            if (typeof window !== 'undefined' && window.repairService) {
+                window.repairService.getAll().then(result => {
+                    if (result.success) {
+                        addLog('serviceStatus', `✅ Service fonctionnel - ${result.data.length} réparations`, 'success');
+                    } else {
+                        addLog('serviceStatus', `❌ Erreur service: ${result.error}`, 'error');
+                    }
+                }).catch(error => {
+                    addLog('serviceStatus', `❌ Exception: ${error.message}`, 'error');
+                });
+            } else {
+                addLog('serviceStatus', '❌ Service non accessible', 'error');
+            }
+        }
+
+        // Fonction pour tester la mise à jour
+        function testUpdate() {
+            addLog('serviceStatus', '🔄 Test de mise à jour...');
+            
+            if (typeof window !== 'undefined' && window.useAppStore) {
+                const store = window.useAppStore.getState();
+                
+                if (store.repairs.length > 0) {
+                    const repair = store.repairs[0];
+                    store.updateRepair(repair.id, {
+                        status: 'en_cours',
+                        notes: 'Test automatique - ' + new Date().toISOString()
+                    }).then(() => {
+                        addLog('serviceStatus', '✅ Mise à jour réussie', 'success');
+                        displayRepairs();
+                    }).catch(error => {
+                        addLog('serviceStatus', `❌ Erreur mise à jour: ${error.message}`, 'error');
+                    });
+                } else {
+                    addLog('serviceStatus', '⚠️ Aucune réparation à tester', 'warning');
+                }
+            } else {
+                addLog('serviceStatus', '❌ Store non accessible', 'error');
+            }
+        }
+
+        // Fonction pour mettre à jour une réparation
+        function updateRepair() {
+            const id = document.getElementById('repairId').value;
+            const status = document.getElementById('newStatus').value;
+            const notes = document.getElementById('newNotes').value;
+            
+            if (!id) {
+                addLog('updateStatus', '❌ Veuillez entrer un ID de réparation', 'error');
+                return;
+            }
+            
+            addLog('updateStatus', `🔄 Mise à jour de la réparation ${id}...`);
+            
+            if (typeof window !== 'undefined' && window.useAppStore) {
+                const store = window.useAppStore.getState();
+                const updates = { status };
+                
+                if (notes) {
+                    updates.notes = notes;
+                }
+                
+                store.updateRepair(id, updates).then(() => {
+                    addLog('updateStatus', '✅ Mise à jour réussie', 'success');
+                    displayRepairs();
+                }).catch(error => {
+                    addLog('updateStatus', `❌ Erreur: ${error.message}`, 'error');
+                });
+            } else {
+                addLog('updateStatus', '❌ Store non accessible', 'error');
+            }
+        }
+
+        // Fonction pour effacer les logs
+        function clearLogs() {
+            document.getElementById('realtimeLogs').innerHTML = '';
+        }
+
+        // Intercepter les logs de la console
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog('realtimeLogs', args.join(' '));
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog('realtimeLogs', '❌ ' + args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog('realtimeLogs', '⚠️ ' + args.join(' '), 'warning');
+        };
+
+        // Initialisation
+        window.addEventListener('load', () => {
+            addLog('realtimeLogs', '🚀 Interface de test chargée');
+            addLog('realtimeLogs', '📝 Utilisez les boutons ci-dessus pour tester les fonctionnalités');
+        });
+    </script>
+</body>
+</html>

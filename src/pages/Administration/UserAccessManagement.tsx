@@ -87,8 +87,9 @@ const UserAccessManagement: React.FC = () => {
   
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  // Vérifier si l'utilisateur est administrateur
-  const isAdmin = authUser && (authUser as any).user_metadata?.role === 'admin';
+  // Vérifier si l'utilisateur est administrateur ou technicien
+  const userRole = authUser && (authUser as any).user_metadata?.role;
+  const isAdmin = userRole === 'admin' || userRole === 'technician';
 
   const loadSubscriptions = async (forceRefresh = false) => {
     try {

@@ -13,6 +13,7 @@ import {
   People as PeopleIcon,
   Phone as PhoneIcon,
   Receipt as ReceiptIcon,
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 
@@ -20,6 +21,7 @@ import { useAppStore } from '../../store';
 import Clients from '../Catalog/Clients';
 import Devices from '../Catalog/Devices';
 import Sales from '../Sales/Sales';
+import Quotes from '../Quotes/Quotes';
 
 const Transaction: React.FC = () => {
   const navigate = useNavigate();
@@ -49,6 +51,14 @@ const Transaction: React.FC = () => {
       path: '/app/transaction/sales',
       count: sales.length,
       color: '#4caf50',
+    },
+    {
+      title: 'Devis',
+      description: 'Gestion des devis et estimations',
+      icon: <DescriptionIcon />,
+      path: '/app/transaction/quotes',
+      count: 0, // À remplacer par quotes.length quand le store sera mis à jour
+      color: '#ff9800',
     },
   ];
 
@@ -111,6 +121,7 @@ const Transaction: React.FC = () => {
       <Route path="/clients" element={<Clients />} />
       <Route path="/devices" element={<Devices />} />
       <Route path="/sales" element={<Sales />} />
+      <Route path="/quotes" element={<Quotes />} />
     </Routes>
   );
 };

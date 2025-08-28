@@ -218,3 +218,5 @@ SELECT COUNT(*) FROM public.appointments WHERE user_id IS NULL;
 **Date de correction :** 2025-01-23  
 **Statut :** ✅ Résolu  
 **Impact :** Isolation complète des données entre utilisateurs
+
+

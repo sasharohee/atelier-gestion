@@ -170,3 +170,5 @@ CREATE POLICY "appointments_select_strict" ON public.appointments
 **Priorité :** 🔴 URGENT  
 **Impact :** Sécurité des données utilisateur  
 **Solution :** Script de diagnostic + corrections automatiques
+
+
