@@ -55,6 +55,7 @@ import { useAppStore } from '../../store';
 import { deviceTypeColors } from '../../theme';
 import { Repair, Device, Client } from '../../types';
 import Invoice from '../../components/Invoice';
+import { repairService } from '../../services/supabaseService';
 
 const Archive: React.FC = () => {
   const {
@@ -184,11 +185,11 @@ const Archive: React.FC = () => {
     try {
       // Récupérer les données fraîches de la réparation depuis la base de données
       const result = await repairService.getById(repair.id);
-      if (result.success && result.data) {
+      if (result.success && 'data' in result && result.data) {
         setSelectedRepairForInvoice(result.data);
         setInvoiceOpen(true);
       } else {
-        console.error('Erreur lors de la récupération de la réparation:', result.error);
+        console.error('Erreur lors de la récupération de la réparation:', 'error' in result ? result.error : 'Erreur inconnue');
         // Fallback : utiliser les données locales
         setSelectedRepairForInvoice(repair);
         setInvoiceOpen(true);

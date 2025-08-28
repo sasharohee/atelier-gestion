@@ -63,6 +63,7 @@ import InterventionForm from '../../components/InterventionForm';
 import { getRepairEligibleUsers, getRepairUserDisplayName } from '../../utils/userUtils';
 import ClientForm from '../../components/ClientForm';
 import { supabase } from '../../lib/supabase';
+import { repairService } from '../../services/supabaseService';
 
 const Kanban: React.FC = () => {
   const navigate = useNavigate();
@@ -167,12 +168,12 @@ const Kanban: React.FC = () => {
   // Fonctions utilitaires pour obtenir les marques et catégories uniques
   const getUniqueBrands = () => {
     const brands = devices.map(device => device.brand);
-    return [...new Set(brands)].sort();
+    return Array.from(new Set(brands)).sort();
   };
 
   const getUniqueCategories = () => {
     const categories = devices.map(device => device.type);
-    return [...new Set(categories)].sort();
+    return Array.from(new Set(categories)).sort();
   };
 
   const getFilteredDevices = () => {
@@ -550,11 +551,11 @@ const Kanban: React.FC = () => {
     try {
       // Récupérer les données fraîches de la réparation depuis la base de données
       const result = await repairService.getById(repair.id);
-      if (result.success && result.data) {
+      if (result.success && 'data' in result && result.data) {
         setSelectedRepairForInvoice(result.data);
         setInvoiceOpen(true);
       } else {
-        console.error('Erreur lors de la récupération de la réparation:', result.error);
+        console.error('Erreur lors de la récupération de la réparation:', 'error' in result ? result.error : 'Erreur inconnue');
         // Fallback : utiliser les données locales
         setSelectedRepairForInvoice(repair);
         setInvoiceOpen(true);

@@ -430,11 +430,14 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                 }}>
                   <Typography sx={{ fontSize: '16px', mb: 1 }}>
                     <strong>Prix de la réparation (TTC) :</strong> {(data as Repair).totalPrice.toLocaleString('fr-FR')} €
-                    {(data as Repair).discountPercentage && (data as Repair).discountPercentage > 0 && (
-                      <span style={{ color: 'success.main', marginLeft: '8px' }}>
-                        (Prix original: {((data as Repair).totalPrice + ((data as Repair).discountAmount || 0)).toLocaleString('fr-FR')} €)
-                      </span>
-                    )}
+                    {(() => {
+                      const repair = data as Repair;
+                      return repair.discountPercentage && repair.discountPercentage > 0 ? (
+                        <span style={{ color: 'success.main', marginLeft: '8px' }}>
+                          (Prix original: {(repair.totalPrice + (repair.discountAmount || 0)).toLocaleString('fr-FR')} €)
+                        </span>
+                      ) : null;
+                    })()}
                   </Typography>
                   {(data as Repair).notes && (
                     <Typography sx={{ fontSize: '14px', color: '#666' }}>
@@ -483,21 +486,24 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         {((data as Repair).totalPrice - ((data as Repair).totalPrice / (1 + parseFloat(workshopSettings.vatRate) / 100))).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                       </Typography>
                     </Box>
-                    {(data as Repair).discountPercentage && (data as Repair).discountPercentage > 0 && (
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        mb: 1 
-                      }}>
-                        <Typography sx={{ fontSize: '16px', color: 'success.main' }}>
-                          Réduction fidélité ({(data as Repair).discountPercentage}%) :
-                        </Typography>
-                        <Typography sx={{ fontSize: '16px', color: 'success.main', fontWeight: 600 }}>
-                          -{(data as Repair).discountAmount?.toLocaleString('fr-FR') || '0'} €
-                        </Typography>
-                      </Box>
-                    )}
+                    {(() => {
+                      const repair = data as Repair;
+                      return repair.discountPercentage && repair.discountPercentage > 0 ? (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          mb: 1 
+                        }}>
+                          <Typography sx={{ fontSize: '16px', color: 'success.main' }}>
+                            Réduction fidélité ({repair.discountPercentage}%) :
+                          </Typography>
+                          <Typography sx={{ fontSize: '16px', color: 'success.main', fontWeight: 600 }}>
+                            -{(repair.discountAmount || 0).toLocaleString('fr-FR')} €
+                          </Typography>
+                        </Box>
+                      ) : null;
+                    })()}
                     <Divider sx={{ my: 1.5, borderColor: '#eee' }} />
                     <Box sx={{ 
                       display: 'flex', 
@@ -694,21 +700,24 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         {(data as Sale).tax.toLocaleString('fr-FR')} €
                       </Typography>
                     </Box>
-                    {(data as Sale).discountPercentage && (data as Sale).discountPercentage > 0 && (
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        mb: 1 
-                      }}>
-                        <Typography sx={{ fontSize: '16px', color: 'success.main' }}>
-                          Réduction fidélité ({(data as Sale).discountPercentage}%) :
-                        </Typography>
-                        <Typography sx={{ fontSize: '16px', color: 'success.main', fontWeight: 600 }}>
-                          -{(data as Sale).discountAmount?.toLocaleString('fr-FR') || '0'} €
-                        </Typography>
-                      </Box>
-                    )}
+                    {(() => {
+                      const sale = data as Sale;
+                      return sale.discountPercentage && sale.discountPercentage > 0 ? (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          mb: 1 
+                        }}>
+                          <Typography sx={{ fontSize: '16px', color: 'success.main' }}>
+                            Réduction fidélité ({sale.discountPercentage}%) :
+                          </Typography>
+                          <Typography sx={{ fontSize: '16px', color: 'success.main', fontWeight: 600 }}>
+                            -{(sale.discountAmount || 0).toLocaleString('fr-FR')} €
+                          </Typography>
+                        </Box>
+                      ) : null;
+                    })()}
                     <Divider sx={{ my: 1.5, borderColor: '#eee' }} />
                     <Box sx={{ 
                       display: 'flex', 
