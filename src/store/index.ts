@@ -62,7 +62,6 @@ interface AppState {
   userPreferences: UserPreferences | null;
   clients: Client[];
   devices: Device[];
-  deviceModels: DeviceModel[];
   services: Service[];
   parts: Part[];
   products: Product[];
@@ -1706,7 +1705,21 @@ export const useAppStore = create<AppStore>()(
         try {
           const result = await deviceModelService.getAll();
           if (result.success && 'data' in result && result.data) {
-            set({ deviceModels: result.data });
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedModels = result.data.map((model: any) => ({
+              id: model.id,
+              name: model.name,
+              brandId: model.brand_id || model.brandId,
+              categoryId: model.category_id || model.categoryId,
+              year: model.year || new Date().getFullYear(),
+              commonIssues: model.common_issues || model.commonIssues || [],
+              repairDifficulty: model.repair_difficulty || model.repairDifficulty || 'medium',
+              partsAvailability: model.parts_availability || model.partsAvailability || 'medium',
+              isActive: model.is_active !== undefined ? model.is_active : model.isActive,
+              createdAt: model.created_at ? new Date(model.created_at) : new Date(),
+              updatedAt: model.updated_at ? new Date(model.updated_at) : new Date(),
+            }));
+            set({ deviceModels: transformedModels });
           }
         } catch (error) {
           console.error('Erreur lors du chargement des modèles:', error);

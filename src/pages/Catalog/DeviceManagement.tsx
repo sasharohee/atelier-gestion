@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store';
+import { DeviceCategory, DeviceBrand, DeviceModel } from '../../types/deviceManagement';
 import {
   Box,
   Typography,
@@ -128,7 +129,6 @@ import {
   VideoLabel as VideoLabelIcon,
 } from '@mui/icons-material';
 import { Device, DeviceType } from '../../types';
-import { DeviceCategory, DeviceBrand, DeviceModel } from '../../types/deviceManagement';
 import SpecificationsDisplay from '../../components/SpecificationsDisplay';
 
 
@@ -200,7 +200,7 @@ const DeviceManagement: React.FC = () => {
   const [selectedCategoryForBrands, setSelectedCategoryForBrands] = useState<string>('all');
 
   // Données de test pour les catégories
-  const defaultCategories: Category[] = [
+  const defaultCategories: DeviceCategory[] = [
     {
       id: '1',
       name: 'Smartphones',
@@ -240,7 +240,7 @@ const DeviceManagement: React.FC = () => {
   ];
 
   // Données de test pour les marques
-  const defaultBrands: Brand[] = [
+  const defaultBrands: DeviceBrand[] = [
     // Smartphones
     {
       id: '1',
