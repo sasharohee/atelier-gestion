@@ -32,3 +32,4 @@ export interface DeviceModel {
   createdAt: Date;
   updatedAt: Date;
 }
+

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate Favicon</title></head>
+<body>
+<canvas id="canvas" width="32" height="32"></canvas>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Fond blanc
+ctx.fillStyle = 'white';
+ctx.fillRect(0, 0, 32, 32);
+
+// Carré orange
+ctx.fillStyle = '#FF6B35';
+ctx.fillRect(2, 2, 14, 14);
+
+// Clé blanche
+ctx.fillStyle = 'white';
+ctx.fillRect(6, 8, 4, 2);
+ctx.fillRect(10, 6, 2, 6);
+ctx.fillRect(12, 8, 2, 2);
+
+// Barres bleues
+ctx.fillStyle = '#1E3A8A';
+ctx.fillRect(18, 20, 2, 6);
+ctx.fillRect(22, 18, 2, 8);
+ctx.fillRect(26, 14, 2, 12);
+
+// Flèche
+ctx.strokeStyle = '#1E3A8A';
+ctx.lineWidth = 1.5;
+ctx.beginPath();
+ctx.moveTo(18, 26);
+ctx.quadraticCurveTo(20, 24, 22, 26);
+ctx.quadraticCurveTo(24, 28, 26, 26);
+ctx.stroke();
+
+// Télécharger
+const link = document.createElement('a');
+link.download = 'favicon.png';
+link.href = canvas.toDataURL();
+link.click();
+</script>
+</body>
+</html>
+
