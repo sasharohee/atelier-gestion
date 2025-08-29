@@ -855,79 +855,146 @@ const DeviceManagement: React.FC = () => {
 
   // Liste des icônes disponibles pour les catégories (icônes sûres et testées)
   const availableIcons = [
-    { value: 'smartphone', label: 'Smartphone', icon: <PhoneIcon />, color: '#2196f3' },
-    { value: 'tablet', label: 'Tablette', icon: <TabletIcon />, color: '#9c27b0' },
-    { value: 'laptop', label: 'Ordinateur portable', icon: <LaptopIcon />, color: '#ff9800' },
-    { value: 'desktop', label: 'Ordinateur fixe', icon: <ComputerIcon />, color: '#4caf50' },
-    { value: 'watch', label: 'Montre connectée', icon: <WatchIcon />, color: '#e91e63' },
-    { value: 'headphones', label: 'Casque audio', icon: <HeadphonesIcon />, color: '#795548' },
-    { value: 'camera', label: 'Appareil photo', icon: <CameraIcon />, color: '#607d8b' },
-    { value: 'tv', label: 'Télévision', icon: <TvIcon />, color: '#3f51b5' },
-    { value: 'speaker', label: 'Haut-parleur', icon: <SpeakerIcon />, color: '#8bc34a' },
-    { value: 'keyboard', label: 'Clavier', icon: <KeyboardIcon />, color: '#ff5722' },
-    { value: 'mouse', label: 'Souris', icon: <MouseIcon />, color: '#9e9e9e' },
-    { value: 'router', label: 'Routeur', icon: <RouterIcon />, color: '#00bcd4' },
-    { value: 'memory', label: 'Mémoire', icon: <MemoryIcon />, color: '#673ab7' },
-    { value: 'storage', label: 'Stockage', icon: <StorageIcon />, color: '#ffc107' },
-    { value: 'battery', label: 'Batterie', icon: <BatteryIcon />, color: '#4caf50' },
-    { value: 'wifi', label: 'Wi-Fi', icon: <WifiIcon />, color: '#2196f3' },
-    { value: 'bluetooth', label: 'Bluetooth', icon: <BluetoothIcon />, color: '#3f51b5' },
-    { value: 'usb', label: 'USB', icon: <UsbIcon />, color: '#ff9800' },
-    { value: 'power', label: 'Alimentation', icon: <PowerIcon />, color: '#f44336' },
-    { value: 'security', label: 'Sécurité', icon: <SecurityIcon />, color: '#e91e63' },
-    { value: 'speed', label: 'Performance', icon: <SpeedIcon />, color: '#00bcd4' },
-    { value: 'sdcard', label: 'Carte SD', icon: <SdCardIcon />, color: '#795548' },
-    { value: 'simcard', label: 'Carte SIM', icon: <SimCardIcon />, color: '#607d8b' },
-    { value: 'network', label: 'Réseau', icon: <NetworkIcon />, color: '#3f51b5' },
-    { value: 'signal', label: 'Signal', icon: <SignalIcon />, color: '#4caf50' },
-    { value: 'gps', label: 'GPS', icon: <GpsIcon />, color: '#2196f3' },
-    { value: 'sensors', label: 'Capteurs', icon: <SensorsIcon />, color: '#9c27b0' },
-    { value: 'flash', label: 'Flash', icon: <FlashIcon />, color: '#ffc107' },
-    { value: 'volume', label: 'Volume', icon: <VolumeIcon />, color: '#ff9800' },
-    { value: 'mic', label: 'Microphone', icon: <MicIcon />, color: '#795548' },
-    { value: 'videocam', label: 'Caméra vidéo', icon: <VideocamIcon />, color: '#e91e63' },
-    { value: 'photocamera', label: 'Appareil photo', icon: <PhotoCameraIcon />, color: '#607d8b' },
-    { value: 'print', label: 'Imprimante', icon: <PrintIcon />, color: '#9e9e9e' },
-    { value: 'scanner', label: 'Scanner', icon: <ScannerIcon />, color: '#795548' },
-    { value: 'fax', label: 'Fax', icon: <FaxIcon />, color: '#607d8b' },
-    { value: 'monitor', label: 'Écran', icon: <MonitorIcon />, color: '#3f51b5' },
-    { value: 'display', label: 'Affichage', icon: <DisplayIcon />, color: '#2196f3' },
-    { value: 'brightness', label: 'Luminosité', icon: <BrightnessIcon />, color: '#ffc107' },
-    { value: 'contrast', label: 'Contraste', icon: <ContrastIcon />, color: '#9e9e9e' },
-    { value: 'color', label: 'Couleur', icon: <ColorIcon />, color: '#e91e63' },
-    { value: 'hdr', label: 'HDR', icon: <HdrIcon />, color: '#ff9800' },
-    { value: 'autoawesome', label: 'Auto', icon: <AutoAwesomeIcon />, color: '#4caf50' },
-    { value: 'quality', label: 'Qualité', icon: <QualityIcon />, color: '#2196f3' },
-    { value: 'surround', label: 'Surround', icon: <SurroundIcon />, color: '#3f51b5' },
-    { value: 'subscriptions', label: 'Abonnements', icon: <SubscriptionsIcon />, color: '#e91e63' },
-    { value: 'livetv', label: 'TV en direct', icon: <LiveTvIcon />, color: '#f44336' },
-    { value: 'music', label: 'Musique', icon: <MusicIcon />, color: '#9c27b0' },
-    { value: 'radio', label: 'Radio', icon: <RadioIcon />, color: '#ff9800' },
-    { value: 'podcasts', label: 'Podcasts', icon: <PodcastsIcon />, color: '#795548' },
-    { value: 'audiotrack', label: 'Piste audio', icon: <AudiotrackIcon />, color: '#607d8b' },
-    { value: 'equalizer', label: 'Égaliseur', icon: <EqualizerIcon />, color: '#3f51b5' },
-    { value: 'graphiceq', label: 'Graphic EQ', icon: <GraphicEqIcon />, color: '#2196f3' },
-    { value: 'volumeoff', label: 'Volume off', icon: <VolumeOffIcon />, color: '#9e9e9e' },
-    { value: 'volumedown', label: 'Volume bas', icon: <VolumeDownIcon />, color: '#ff9800' },
-    { value: 'bluetoothaudio', label: 'Audio Bluetooth', icon: <BluetoothAudioIcon />, color: '#3f51b5' },
-    { value: 'airplay', label: 'AirPlay', icon: <AirplayIcon />, color: '#2196f3' },
-    { value: 'cast', label: 'Cast', icon: <CastIcon />, color: '#ff5722' },
-    { value: 'screenshare', label: 'Partage écran', icon: <ScreenShareIcon />, color: '#00bcd4' },
-    { value: 'connectedtv', label: 'TV connectée', icon: <ConnectedTvIcon />, color: '#673ab7' },
-    { value: 'smartdisplay', label: 'Écran intelligent', icon: <SmartDisplayIcon />, color: '#4caf50' },
-    { value: 'videocall', label: 'Appel vidéo', icon: <VideoCallIcon />, color: '#e91e63' },
-    { value: 'videochat', label: 'Chat vidéo', icon: <VideoChatIcon />, color: '#2196f3' },
-    { value: 'videosettings', label: 'Paramètres vidéo', icon: <VideoSettingsIcon />, color: '#3f51b5' },
-    { value: 'videostable', label: 'Stabilisation vidéo', icon: <VideoStableIcon />, color: '#ff9800' },
-    { value: 'videofile', label: 'Fichier vidéo', icon: <VideoFileIcon />, color: '#795548' },
-    { value: 'videolabel', label: 'Label vidéo', icon: <VideoLabelIcon />, color: '#607d8b' },
-    { value: 'other', label: 'Autre', icon: <DeviceHubIcon />, color: '#757575' },
+    { value: 'smartphone', label: 'Smartphone', color: '#2196f3' },
+    { value: 'tablet', label: 'Tablette', color: '#9c27b0' },
+    { value: 'laptop', label: 'Ordinateur portable', color: '#ff9800' },
+    { value: 'desktop', label: 'Ordinateur fixe', color: '#4caf50' },
+    { value: 'watch', label: 'Montre connectée', color: '#e91e63' },
+    { value: 'headphones', label: 'Casque audio', color: '#795548' },
+    { value: 'camera', label: 'Appareil photo', color: '#607d8b' },
+    { value: 'tv', label: 'Télévision', color: '#3f51b5' },
+    { value: 'speaker', label: 'Haut-parleur', color: '#8bc34a' },
+    { value: 'keyboard', label: 'Clavier', color: '#ff5722' },
+    { value: 'mouse', label: 'Souris', color: '#9e9e9e' },
+    { value: 'router', label: 'Routeur', color: '#00bcd4' },
+    { value: 'memory', label: 'Mémoire', color: '#673ab7' },
+    { value: 'storage', label: 'Stockage', color: '#ffc107' },
+    { value: 'battery', label: 'Batterie', color: '#4caf50' },
+    { value: 'wifi', label: 'Wi-Fi', color: '#2196f3' },
+    { value: 'bluetooth', label: 'Bluetooth', color: '#3f51b5' },
+    { value: 'usb', label: 'USB', color: '#ff9800' },
+    { value: 'power', label: 'Alimentation', color: '#f44336' },
+    { value: 'security', label: 'Sécurité', color: '#e91e63' },
+    { value: 'speed', label: 'Performance', color: '#00bcd4' },
+    { value: 'sdcard', label: 'Carte SD', color: '#795548' },
+    { value: 'simcard', label: 'Carte SIM', color: '#607d8b' },
+    { value: 'network', label: 'Réseau', color: '#3f51b5' },
+    { value: 'signal', label: 'Signal', color: '#4caf50' },
+    { value: 'gps', label: 'GPS', color: '#2196f3' },
+    { value: 'sensors', label: 'Capteurs', color: '#9c27b0' },
+    { value: 'flash', label: 'Flash', color: '#ffc107' },
+    { value: 'volume', label: 'Volume', color: '#ff9800' },
+    { value: 'mic', label: 'Microphone', color: '#795548' },
+    { value: 'videocam', label: 'Caméra vidéo', color: '#e91e63' },
+    { value: 'photocamera', label: 'Appareil photo', color: '#607d8b' },
+    { value: 'print', label: 'Imprimante', color: '#9e9e9e' },
+    { value: 'scanner', label: 'Scanner', color: '#795548' },
+    { value: 'fax', label: 'Fax', color: '#607d8b' },
+    { value: 'monitor', label: 'Écran', color: '#3f51b5' },
+    { value: 'display', label: 'Affichage', color: '#2196f3' },
+    { value: 'brightness', label: 'Luminosité', color: '#ffc107' },
+    { value: 'contrast', label: 'Contraste', color: '#9e9e9e' },
+    { value: 'color', label: 'Couleur', color: '#e91e63' },
+    { value: 'hdr', label: 'HDR', color: '#ff9800' },
+    { value: 'autoawesome', label: 'Auto', color: '#4caf50' },
+    { value: 'quality', label: 'Qualité', color: '#2196f3' },
+    { value: 'surround', label: 'Surround', color: '#3f51b5' },
+    { value: 'subscriptions', label: 'Abonnements', color: '#e91e63' },
+    { value: 'livetv', label: 'TV en direct', color: '#f44336' },
+    { value: 'music', label: 'Musique', color: '#9c27b0' },
+    { value: 'radio', label: 'Radio', color: '#ff9800' },
+    { value: 'podcasts', label: 'Podcasts', color: '#795548' },
+    { value: 'audiotrack', label: 'Piste audio', color: '#607d8b' },
+    { value: 'equalizer', label: 'Égaliseur', color: '#3f51b5' },
+    { value: 'graphiceq', label: 'Graphic EQ', color: '#2196f3' },
+    { value: 'volumeoff', label: 'Volume off', color: '#9e9e9e' },
+    { value: 'volumedown', label: 'Volume bas', color: '#ff9800' },
+    { value: 'bluetoothaudio', label: 'Audio Bluetooth', color: '#3f51b5' },
+    { value: 'airplay', label: 'AirPlay', color: '#2196f3' },
+    { value: 'cast', label: 'Cast', color: '#ff5722' },
+    { value: 'screenshare', label: 'Partage écran', color: '#00bcd4' },
+    { value: 'connectedtv', label: 'TV connectée', color: '#673ab7' },
+    { value: 'smartdisplay', label: 'Écran intelligent', color: '#4caf50' },
+    { value: 'videocall', label: 'Appel vidéo', color: '#e91e63' },
+    { value: 'videochat', label: 'Chat vidéo', color: '#2196f3' },
+    { value: 'videosettings', label: 'Paramètres vidéo', color: '#3f51b5' },
+    { value: 'videostable', label: 'Stabilisation vidéo', color: '#ff9800' },
+    { value: 'videofile', label: 'Fichier vidéo', color: '#795548' },
+    { value: 'videolabel', label: 'Label vidéo', color: '#607d8b' },
+    { value: 'other', label: 'Autre', color: '#757575' },
   ];
 
   // Fonctions utilitaires
   const getDeviceTypeIcon = (icon: string) => {
-    const iconData = availableIcons.find(i => i.value === icon);
-    return iconData ? iconData.icon : <DeviceHubIcon />;
+    switch (icon) {
+      case 'smartphone': return <PhoneIcon />;
+      case 'tablet': return <TabletIcon />;
+      case 'laptop': return <LaptopIcon />;
+      case 'desktop': return <ComputerIcon />;
+      case 'watch': return <WatchIcon />;
+      case 'headphones': return <HeadphonesIcon />;
+      case 'camera': return <CameraIcon />;
+      case 'tv': return <TvIcon />;
+      case 'speaker': return <SpeakerIcon />;
+      case 'keyboard': return <KeyboardIcon />;
+      case 'mouse': return <MouseIcon />;
+      case 'router': return <RouterIcon />;
+      case 'memory': return <MemoryIcon />;
+      case 'storage': return <StorageIcon />;
+      case 'battery': return <BatteryIcon />;
+      case 'wifi': return <WifiIcon />;
+      case 'bluetooth': return <BluetoothIcon />;
+      case 'usb': return <UsbIcon />;
+      case 'power': return <PowerIcon />;
+      case 'security': return <SecurityIcon />;
+      case 'speed': return <SpeedIcon />;
+      case 'sdcard': return <SdCardIcon />;
+      case 'simcard': return <SimCardIcon />;
+      case 'network': return <NetworkIcon />;
+      case 'signal': return <SignalIcon />;
+      case 'gps': return <GpsIcon />;
+      case 'sensors': return <SensorsIcon />;
+      case 'flash': return <FlashIcon />;
+      case 'volume': return <VolumeIcon />;
+      case 'mic': return <MicIcon />;
+      case 'videocam': return <VideocamIcon />;
+      case 'photocamera': return <PhotoCameraIcon />;
+      case 'print': return <PrintIcon />;
+      case 'scanner': return <ScannerIcon />;
+      case 'fax': return <FaxIcon />;
+      case 'monitor': return <MonitorIcon />;
+      case 'display': return <DisplayIcon />;
+      case 'brightness': return <BrightnessIcon />;
+      case 'contrast': return <ContrastIcon />;
+      case 'color': return <ColorIcon />;
+      case 'hdr': return <HdrIcon />;
+      case 'autoawesome': return <AutoAwesomeIcon />;
+      case 'quality': return <QualityIcon />;
+      case 'surround': return <SurroundIcon />;
+      case 'subscriptions': return <SubscriptionsIcon />;
+      case 'livetv': return <LiveTvIcon />;
+      case 'music': return <MusicIcon />;
+      case 'radio': return <RadioIcon />;
+      case 'podcasts': return <PodcastsIcon />;
+      case 'audiotrack': return <AudiotrackIcon />;
+      case 'equalizer': return <EqualizerIcon />;
+      case 'graphiceq': return <GraphicEqIcon />;
+      case 'volumeoff': return <VolumeOffIcon />;
+      case 'volumedown': return <VolumeDownIcon />;
+      case 'bluetoothaudio': return <BluetoothAudioIcon />;
+      case 'airplay': return <AirplayIcon />;
+      case 'cast': return <CastIcon />;
+      case 'screenshare': return <ScreenShareIcon />;
+      case 'connectedtv': return <ConnectedTvIcon />;
+      case 'smartdisplay': return <SmartDisplayIcon />;
+      case 'videocall': return <VideoCallIcon />;
+      case 'videochat': return <VideoChatIcon />;
+      case 'videosettings': return <VideoSettingsIcon />;
+      case 'videostable': return <VideoStableIcon />;
+      case 'videofile': return <VideoFileIcon />;
+      case 'videolabel': return <VideoLabelIcon />;
+      default: return <DeviceHubIcon />;
+    }
   };
 
   const getDeviceTypeColor = (icon: string) => {
@@ -1570,7 +1637,7 @@ const DeviceManagement: React.FC = () => {
                     }}
                   >
                     <Avatar sx={{ bgcolor: iconData.color, width: 40, height: 40, mb: 1 }}>
-                      {iconData.icon}
+                      {getDeviceTypeIcon(iconData.value)}
                     </Avatar>
                     <Typography variant="caption" textAlign="center" sx={{ fontSize: '0.7rem' }}>
                       {iconData.label}
