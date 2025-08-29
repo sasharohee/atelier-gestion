@@ -138,6 +138,7 @@ export interface Product {
   category: string;
   price: number;
   stockQuantity: number;
+  minStockLevel: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
