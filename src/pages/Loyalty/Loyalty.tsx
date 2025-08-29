@@ -157,10 +157,19 @@ const Loyalty: React.FC = () => {
       }
       
       // Charger les niveaux de fidélité
-      const { data: tiersData } = await supabase
+      console.log('🔍 Chargement des niveaux de fidélité...');
+      const { data: tiersData, error: tiersError } = await supabase
         .from('loyalty_tiers')
         .select('*')
         .order('min_points');
+      
+      if (tiersError) {
+        console.error('❌ Erreur lors du chargement des niveaux:', tiersError);
+      } else {
+        console.log('✅ Niveaux chargés:', tiersData?.length || 0);
+        console.log('📊 Détail des niveaux:', tiersData);
+      }
+      
       setTiers(tiersData || []);
       
       // Charger tous les clients pour les formulaires
@@ -171,7 +180,8 @@ const Loyalty: React.FC = () => {
       setAllClients(allClientsData || []);
       
       // Charger les clients avec leurs points (filtré par utilisateur)
-      const { data: clientsData } = await supabase
+      console.log('🔍 Chargement des clients avec points...');
+      const { data: clientsData, error: clientsError } = await supabase
         .from('client_loyalty_points')
         .select(`
           *,
@@ -179,6 +189,14 @@ const Loyalty: React.FC = () => {
           tier:loyalty_tiers(*)
         `)
         .order('total_points', { ascending: false });
+      
+      if (clientsError) {
+        console.error('❌ Erreur lors du chargement des clients:', clientsError);
+      } else {
+        console.log('✅ Clients chargés:', clientsData?.length || 0);
+        console.log('📊 Détail des clients:', clientsData);
+      }
+      
       setClients(clientsData || []);
       
       // Charger les parrainages (filtré par utilisateur)

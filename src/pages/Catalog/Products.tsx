@@ -46,6 +46,7 @@ const Products: React.FC = () => {
     category: 'accessoire',
     price: 0,
     stockQuantity: 0,
+    minStockLevel: 5,
     isActive: true,
   });
 
@@ -68,6 +69,7 @@ const Products: React.FC = () => {
         category: product.category || 'accessoire',
         price: product.price || 0,
         stockQuantity: product.stockQuantity || 0,
+        minStockLevel: product.minStockLevel || 5,
         isActive: product.isActive !== undefined ? product.isActive : true,
       });
     } else {
@@ -78,6 +80,7 @@ const Products: React.FC = () => {
         category: 'accessoire',
         price: 0,
         stockQuantity: 0,
+        minStockLevel: 5,
         isActive: true,
       });
     }
@@ -135,6 +138,7 @@ const Products: React.FC = () => {
           category: formData.category,
           price: formData.price,
           stockQuantity: formData.stockQuantity,
+          minStockLevel: formData.minStockLevel,
           isActive: formData.isActive,
         });
       } else {
@@ -145,6 +149,7 @@ const Products: React.FC = () => {
           category: formData.category,
           price: formData.price,
           stockQuantity: formData.stockQuantity,
+          minStockLevel: formData.minStockLevel,
           isActive: formData.isActive,
         } as any);
       }
@@ -188,6 +193,7 @@ const Products: React.FC = () => {
                   <TableCell>Produit</TableCell>
                   <TableCell>Catégorie</TableCell>
                   <TableCell>Stock</TableCell>
+                  <TableCell>Stock Min.</TableCell>
                   <TableCell>Prix</TableCell>
                   <TableCell>Statut</TableCell>
                   <TableCell>Actions</TableCell>
@@ -210,11 +216,24 @@ const Products: React.FC = () => {
                       <Chip label={product.category} size="small" />
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={`${product.stockQuantity} en stock`}
-                        color={product.stockQuantity === 0 ? 'error' : 'success'}
-                        size="small"
-                      />
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                        <Chip
+                          label={`${product.stockQuantity} en stock`}
+                          color={product.stockQuantity === 0 ? 'error' : 
+                                 product.stockQuantity <= (product.minStockLevel || 5) ? 'warning' : 'success'}
+                          size="small"
+                        />
+                        {product.stockQuantity <= (product.minStockLevel || 5) && product.stockQuantity > 0 && (
+                          <Typography variant="caption" color="warning.main" sx={{ fontSize: '0.7rem' }}>
+                            Seuil: {product.minStockLevel || 5}
+                          </Typography>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {product.minStockLevel || 5}
+                      </Typography>
                     </TableCell>
                     <TableCell>{product.price} €</TableCell>
                     <TableCell>
@@ -313,6 +332,16 @@ const Products: React.FC = () => {
                 inputProps={{ min: 0 }}
               />
             </Box>
+            
+            <TextField
+              fullWidth
+              label="Stock minimum (alerte)"
+              type="number"
+              value={formData.minStockLevel}
+              onChange={(e) => handleInputChange('minStockLevel', parseInt(e.target.value) || 0)}
+              inputProps={{ min: 0 }}
+              helperText="Seuil d'alerte quand le stock devient faible"
+            />
             
             <FormControlLabel
               control={
