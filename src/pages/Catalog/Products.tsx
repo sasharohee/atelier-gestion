@@ -46,7 +46,7 @@ const Products: React.FC = () => {
     category: 'accessoire',
     price: 0,
     stockQuantity: 0,
-    minStockLevel: 5,
+    minStockLevel: 1,
     isActive: true,
   });
 
@@ -69,7 +69,7 @@ const Products: React.FC = () => {
         category: product.category || 'accessoire',
         price: product.price || 0,
         stockQuantity: product.stockQuantity || 0,
-        minStockLevel: product.minStockLevel || 5,
+        minStockLevel: product.minStockLevel || 1,
         isActive: product.isActive !== undefined ? product.isActive : true,
       });
     } else {
@@ -80,7 +80,7 @@ const Products: React.FC = () => {
         category: 'accessoire',
         price: 0,
         stockQuantity: 0,
-        minStockLevel: 5,
+        minStockLevel: 1,
         isActive: true,
       });
     }
@@ -220,19 +220,19 @@ const Products: React.FC = () => {
                         <Chip
                           label={`${product.stockQuantity} en stock`}
                           color={product.stockQuantity === 0 ? 'error' : 
-                                 product.stockQuantity <= (product.minStockLevel || 5) ? 'warning' : 'success'}
+                                 product.stockQuantity <= (product.minStockLevel || 1) ? 'warning' : 'success'}
                           size="small"
                         />
-                        {product.stockQuantity <= (product.minStockLevel || 5) && product.stockQuantity > 0 && (
+                        {product.stockQuantity <= (product.minStockLevel || 1) && product.stockQuantity > 0 && (
                           <Typography variant="caption" color="warning.main" sx={{ fontSize: '0.7rem' }}>
-                            Seuil: {product.minStockLevel || 5}
+                            Seuil: {product.minStockLevel || 1}
                           </Typography>
                         )}
                       </Box>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" color="text.secondary">
-                        {product.minStockLevel || 5}
+                        {product.minStockLevel || 1}
                       </Typography>
                     </TableCell>
                     <TableCell>{product.price} €</TableCell>

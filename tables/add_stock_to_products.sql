@@ -46,7 +46,7 @@ BEGIN
             AND table_name = 'products' 
             AND column_name = 'min_stock_level'
     ) THEN
-        ALTER TABLE public.products ADD COLUMN min_stock_level INTEGER DEFAULT 5;
+        ALTER TABLE public.products ADD COLUMN min_stock_level INTEGER DEFAULT 1;
         RAISE NOTICE '✅ Colonne min_stock_level ajoutée à la table products';
     ELSE
         RAISE NOTICE 'ℹ️ Colonne min_stock_level existe déjà';
@@ -86,7 +86,7 @@ CREATE INDEX IF NOT EXISTS idx_products_is_active ON public.products(is_active);
 UPDATE public.products 
 SET 
     stock_quantity = COALESCE(stock_quantity, 10),
-    min_stock_level = COALESCE(min_stock_level, 5),
+    min_stock_level = COALESCE(min_stock_level, 1),
     is_active = COALESCE(is_active, TRUE)
 WHERE stock_quantity IS NULL OR min_stock_level IS NULL OR is_active IS NULL;
 

@@ -1938,6 +1938,7 @@ export const productService = {
       category: product.category,
       price: product.price,
       stock_quantity: product.stockQuantity,
+      min_stock_level: product.minStockLevel,
       is_active: product.isActive,
       user_id: user.id,
       created_at: new Date().toISOString(),
@@ -1969,6 +1970,7 @@ export const productService = {
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.price !== undefined) dbUpdates.price = updates.price;
     if (updates.stockQuantity !== undefined) dbUpdates.stock_quantity = updates.stockQuantity;
+    if (updates.minStockLevel !== undefined) dbUpdates.min_stock_level = updates.minStockLevel;
     if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
 
     const { data, error } = await supabase

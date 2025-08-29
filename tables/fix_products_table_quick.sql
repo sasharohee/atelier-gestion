@@ -30,7 +30,7 @@ BEGIN
             AND table_name = 'products' 
             AND column_name = 'min_stock_level'
     ) THEN
-        ALTER TABLE public.products ADD COLUMN min_stock_level INTEGER DEFAULT 5;
+        ALTER TABLE public.products ADD COLUMN min_stock_level INTEGER DEFAULT 1;
         RAISE NOTICE '✅ Colonne min_stock_level ajoutée';
     ELSE
         RAISE NOTICE 'ℹ️ Colonne min_stock_level existe déjà';

@@ -37,6 +37,7 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
+  Remove as RemoveIcon,
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
   Star as StarIcon,
@@ -121,6 +122,7 @@ const Loyalty: React.FC = () => {
   // États pour les dialogues
   const [referralDialog, setReferralDialog] = useState(false);
   const [pointsDialog, setPointsDialog] = useState(false);
+  const [usePointsDialog, setUsePointsDialog] = useState(false);
   const [settingsDialog, setSettingsDialog] = useState(false);
   const [historyDialog, setHistoryDialog] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientLoyalty | null>(null);
@@ -133,6 +135,11 @@ const Loyalty: React.FC = () => {
     notes: ''
   });
   const [pointsForm, setPointsForm] = useState({
+    client_id: '',
+    points: 0,
+    description: ''
+  });
+  const [usePointsForm, setUsePointsForm] = useState({
     client_id: '',
     points: 0,
     description: ''
@@ -414,6 +421,44 @@ const Loyalty: React.FC = () => {
     }
   };
 
+  // Utiliser des points
+  const usePoints = async () => {
+    try {
+      console.log('🔍 Appel use_loyalty_points avec:', {
+        p_client_id: usePointsForm.client_id,
+        p_points: usePointsForm.points,
+        p_description: usePointsForm.description
+      });
+
+      const { data, error } = await supabase.rpc('use_loyalty_points', {
+        p_client_id: usePointsForm.client_id,
+        p_points: usePointsForm.points,
+        p_description: usePointsForm.description
+      });
+      
+      console.log('📊 Réponse Supabase:', { data, error });
+      
+      if (error) {
+        console.error('❌ Erreur Supabase:', error);
+        throw error;
+      }
+      
+      if (data?.success) {
+        console.log('✅ Points utilisés avec succès:', data);
+        toast.success('Points utilisés avec succès');
+        setUsePointsDialog(false);
+        setUsePointsForm({ client_id: '', points: 0, description: '' });
+        loadData();
+      } else {
+        console.error('❌ Erreur dans la réponse:', data?.error);
+        toast.error(data?.error || 'Erreur lors de l\'utilisation des points');
+      }
+    } catch (error) {
+      console.error('💥 Exception dans usePoints:', error);
+      toast.error('Erreur lors de l\'utilisation des points');
+    }
+  };
+
   // Supprimer un client
   const handleDeleteClient = async (clientId: string) => {
     try {
@@ -611,14 +656,25 @@ const Loyalty: React.FC = () => {
         <Box>
                      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
              <Typography variant="h6">Clients avec Points de Fidélité</Typography>
-             <Button
-               variant="contained"
-               startIcon={<AddIcon />}
-               onClick={() => setPointsDialog(true)}
-               disabled={allClients.length === 0}
-             >
-               Ajouter des Points
-             </Button>
+             <Box sx={{ display: 'flex', gap: 1 }}>
+               <Button
+                 variant="contained"
+                 startIcon={<AddIcon />}
+                 onClick={() => setPointsDialog(true)}
+                 disabled={allClients.length === 0}
+               >
+                 Ajouter des Points
+               </Button>
+               <Button
+                 variant="outlined"
+                 color="warning"
+                 startIcon={<RemoveIcon />}
+                 onClick={() => setUsePointsDialog(true)}
+                 disabled={allClients.length === 0}
+               >
+                 Utiliser des Points
+               </Button>
+             </Box>
            </Box>
            
            {allClients.length === 0 && (
@@ -1071,6 +1127,75 @@ const Loyalty: React.FC = () => {
           <Button onClick={() => setPointsDialog(false)}>Annuler</Button>
           <Button onClick={addPoints} variant="contained">
             Ajouter les Points
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialogue d'utilisation de points */}
+      <Dialog open={usePointsDialog} onClose={() => setUsePointsDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Utiliser des Points</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            {allClients.length === 0 ? (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Aucun client trouvé. Veuillez d'abord créer des clients dans la section Transaction.
+              </Alert>
+            ) : (
+              <>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Client</InputLabel>
+                  <Select
+                    value={usePointsForm.client_id}
+                    onChange={(e) => setUsePointsForm({ ...usePointsForm, client_id: e.target.value })}
+                    label="Client"
+                  >
+                    {allClients.map((client) => (
+                      <MenuItem key={client.id} value={client.id}>
+                        {client.first_name} {client.last_name} ({client.email})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {usePointsForm.client_id && (
+                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => handleDeleteClient(usePointsForm.client_id)}
+                    >
+                      Supprimer ce client
+                    </Button>
+                  </Box>
+                )}
+                
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Points à utiliser"
+                  value={usePointsForm.points}
+                  onChange={(e) => setUsePointsForm({ ...usePointsForm, points: parseInt(e.target.value) || 0 })}
+                  sx={{ mb: 2 }}
+                />
+                
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Description"
+                  value={usePointsForm.description}
+                  onChange={(e) => setUsePointsForm({ ...usePointsForm, description: e.target.value })}
+                />
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUsePointsDialog(false)}>Annuler</Button>
+          <Button onClick={usePoints} variant="contained" color="warning">
+            Utiliser les Points
           </Button>
         </DialogActions>
       </Dialog>

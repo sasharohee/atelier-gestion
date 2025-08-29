@@ -208,7 +208,7 @@ const OutOfStock: React.FC = () => {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          {part ? part.minStockLevel : product ? 5 : 0}
+                          {part ? part.minStockLevel : product ? product.minStockLevel : 0}
                         </TableCell>
                         <TableCell>
                           {new Date(alert.createdAt).toLocaleDateString('fr-FR')}
