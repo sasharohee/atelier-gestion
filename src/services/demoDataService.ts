@@ -509,6 +509,7 @@ class DemoDataService {
         category: 'Accessoires',
         price: 29,
         stockQuantity: 20,
+        minStockLevel: 5,
         isActive: true,
         createdAt: this.getPastDate(30),
         updatedAt: this.getCurrentDate()
@@ -520,6 +521,7 @@ class DemoDataService {
         category: 'Accessoires',
         price: 39,
         stockQuantity: 15,
+        minStockLevel: 3,
         isActive: true,
         createdAt: this.getPastDate(30),
         updatedAt: this.getCurrentDate()
@@ -531,6 +533,7 @@ class DemoDataService {
         category: 'Audio',
         price: 49,
         stockQuantity: 12,
+        minStockLevel: 2,
         isActive: true,
         createdAt: this.getPastDate(30),
         updatedAt: this.getCurrentDate()
@@ -542,6 +545,7 @@ class DemoDataService {
         category: 'Accessoires',
         price: 19,
         stockQuantity: 25,
+        minStockLevel: 8,
         isActive: true,
         createdAt: this.getPastDate(30),
         updatedAt: this.getCurrentDate()
@@ -553,6 +557,7 @@ class DemoDataService {
         category: 'Accessoires',
         price: 15,
         stockQuantity: 30,
+        minStockLevel: 10,
         isActive: true,
         createdAt: this.getPastDate(30),
         updatedAt: this.getCurrentDate()

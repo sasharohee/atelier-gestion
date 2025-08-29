@@ -1095,6 +1095,7 @@ export const useAppStore = create<AppStore>()(
               category: result.data.category || 'accessoire',
               price: result.data.price || 0,
               stockQuantity: result.data.stock_quantity || result.data.stockQuantity || 0,
+              minStockLevel: result.data.min_stock_level || result.data.minStockLevel || 5,
               isActive: result.data.is_active !== undefined ? result.data.is_active : (result.data.isActive !== undefined ? result.data.isActive : true),
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
               updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
@@ -1119,6 +1120,7 @@ export const useAppStore = create<AppStore>()(
               category: result.data.category || 'accessoire',
               price: result.data.price || 0,
               stockQuantity: result.data.stock_quantity || result.data.stockQuantity || 0,
+              minStockLevel: result.data.min_stock_level || result.data.minStockLevel || 5,
               isActive: result.data.is_active !== undefined ? result.data.is_active : (result.data.isActive !== undefined ? result.data.isActive : true),
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
               updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
@@ -1806,6 +1808,7 @@ export const useAppStore = create<AppStore>()(
                 stockQuantity: product.stock_quantity !== null && product.stock_quantity !== undefined 
                   ? product.stock_quantity 
                   : (product.stockQuantity || 0),
+                minStockLevel: product.min_stock_level || product.minStockLevel || 5,
                 isActive: product.is_active !== undefined ? product.is_active : (product.isActive !== undefined ? product.isActive : true),
                 createdAt: product.created_at ? new Date(product.created_at) : new Date(),
                 updatedAt: product.updated_at ? new Date(product.updated_at) : new Date(),
@@ -1896,7 +1899,7 @@ export const useAppStore = create<AppStore>()(
                 isResolved: false,
                 createdAt: new Date()
               });
-            } else if (product.stockQuantity <= 5) {
+            } else if (product.stockQuantity <= (product.minStockLevel || 5)) {
               alerts.push({
                 id: uuidv4(),
                 partId: product.id, // Utiliser partId même pour les produits
