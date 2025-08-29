@@ -114,6 +114,56 @@ const QuoteView: React.FC<QuoteViewProps> = ({
     onStatusChange(quote.id, newStatus);
   };
 
+  const handleValidateQuote = async () => {
+    // Validation directe d'un devis sans envoi d'email
+    const confirmed = window.confirm(
+      `Êtes-vous sûr de vouloir valider ce devis ?\n\n` +
+      `✅ Le devis passera en statut "Accepté"\n` +
+      `🔧 Une nouvelle réparation sera créée automatiquement\n` +
+      `📋 La réparation apparaîtra dans le suivi avec le statut "Nouvelle"\n` +
+      `📧 Aucun email ne sera envoyé\n\n` +
+      `Continuer ?`
+    );
+    
+    if (!confirmed) {
+      return;
+    }
+    
+    try {
+      await convertQuoteToRepair();
+      // Mettre à jour le statut du devis
+      onStatusChange(quote.id, 'accepted');
+      alert('✅ Devis validé avec succès ! Une réparation a été créée automatiquement.');
+    } catch (error) {
+      console.error('Erreur lors de la validation du devis:', error);
+      alert('❌ Erreur lors de la validation du devis. Veuillez réessayer.');
+    }
+  };
+
+  const handleRejectQuote = async () => {
+    // Refus direct d'un devis sans envoi d'email
+    const confirmed = window.confirm(
+      `Êtes-vous sûr de vouloir refuser ce devis ?\n\n` +
+      `❌ Le devis passera en statut "Refusé"\n` +
+      `📋 Aucune réparation ne sera créée\n` +
+      `📧 Aucun email ne sera envoyé\n\n` +
+      `Continuer ?`
+    );
+    
+    if (!confirmed) {
+      return;
+    }
+    
+    try {
+      // Mettre à jour le statut du devis
+      onStatusChange(quote.id, 'rejected');
+      alert('❌ Devis refusé avec succès !');
+    } catch (error) {
+      console.error('Erreur lors du refus du devis:', error);
+      alert('❌ Erreur lors du refus du devis. Veuillez réessayer.');
+    }
+  };
+
   const convertQuoteToRepair = async () => {
     if (!client) {
       alert('❌ Impossible de créer la réparation : client non trouvé.');
@@ -629,6 +679,22 @@ L'équipe Mon Atelier
           {quote.status === 'draft' && (
             <>
               <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={handleValidateQuote}
+              >
+                Valider le devis
+              </Button>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<CancelIcon />}
+                onClick={handleRejectQuote}
+              >
+                Refuser le devis
+              </Button>
+              <Button
                 variant="outlined"
                 startIcon={<EmailIcon />}
                 onClick={handleSendEmail}
@@ -645,17 +711,17 @@ L'équipe Mon Atelier
                 variant="contained"
                 color="success"
                 startIcon={<CheckCircleIcon />}
-                onClick={() => handleStatusChange('accepted')}
+                onClick={handleValidateQuote}
               >
-                Accepter
+                Valider le devis
               </Button>
               <Button
                 variant="contained"
                 color="error"
                 startIcon={<CancelIcon />}
-                onClick={() => handleStatusChange('rejected')}
+                onClick={handleRejectQuote}
               >
-                Refuser
+                Refuser le devis
               </Button>
               <Button
                 variant="outlined"
