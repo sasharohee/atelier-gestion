@@ -59,23 +59,27 @@ import ClientForm from '../../components/ClientForm';
 interface LoyaltyTier {
   id: string;
   name: string;
-  min_points: number;
-  discount_percentage: number;
   description: string;
+  min_points: number;
+  points_required: number;
+  discount_percentage: number;
   color: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ClientLoyalty {
   id: string;
-  client_id: string;
-  total_points: number;
-  used_points: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  loyalty_points: number;
   current_tier_id: string;
-  client?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
+  created_at: string;
+  updated_at: string;
+  used_points?: number;
   tier?: LoyaltyTier;
 }
 
@@ -117,7 +121,7 @@ const Loyalty: React.FC = () => {
   const [clients, setClients] = useState<ClientLoyalty[]>([]);
   const [allClients, setAllClients] = useState<any[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [tiers, setTiers] = useState<LoyaltyTier[]>([]);
+  const [loyaltyTiers, setLoyaltyTiers] = useState<LoyaltyTier[]>([]);
   
   // États pour les dialogues
   const [referralDialog, setReferralDialog] = useState(false);
@@ -163,22 +167,6 @@ const Loyalty: React.FC = () => {
         setStatistics(statsData.data);
       }
       
-      // Charger les niveaux de fidélité
-      console.log('🔍 Chargement des niveaux de fidélité...');
-      const { data: tiersData, error: tiersError } = await supabase
-        .from('loyalty_tiers')
-        .select('*')
-        .order('min_points');
-      
-      if (tiersError) {
-        console.error('❌ Erreur lors du chargement des niveaux:', tiersError);
-      } else {
-        console.log('✅ Niveaux chargés:', tiersData?.length || 0);
-        console.log('📊 Détail des niveaux:', tiersData);
-      }
-      
-      setTiers(tiersData || []);
-      
       // Charger tous les clients pour les formulaires
       const { data: allClientsData } = await supabase
         .from('clients')
@@ -186,16 +174,22 @@ const Loyalty: React.FC = () => {
         .order('first_name');
       setAllClients(allClientsData || []);
       
-      // Charger les clients avec leurs points (filtré par utilisateur)
+      // Charger les clients avec leurs points directement depuis la table clients
       console.log('🔍 Chargement des clients avec points...');
       const { data: clientsData, error: clientsError } = await supabase
-        .from('client_loyalty_points')
+        .from('clients')
         .select(`
-          *,
-          client:clients(first_name, last_name, email),
-          tier:loyalty_tiers(*)
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          loyalty_points,
+          current_tier_id,
+          created_at,
+          updated_at
         `)
-        .order('total_points', { ascending: false });
+        .order('loyalty_points', { ascending: false });
       
       if (clientsError) {
         console.error('❌ Erreur lors du chargement des clients:', clientsError);
@@ -204,7 +198,52 @@ const Loyalty: React.FC = () => {
         console.log('📊 Détail des clients:', clientsData);
       }
       
-      setClients(clientsData || []);
+      // Charger les niveaux de fidélité séparément
+      console.log('🔍 Chargement des niveaux de fidélité...');
+      const { data: tiersData, error: tiersError } = await supabase
+        .from('loyalty_tiers')
+        .select('*')
+        .order('points_required', { ascending: true });
+
+      if (tiersError) {
+        console.error('❌ Erreur lors du chargement des niveaux:', tiersError);
+      } else {
+        console.log('✅ Niveaux chargés:', tiersData?.length || 0);
+        setLoyaltyTiers(tiersData || []);
+      }
+
+      // Charger l'historique des points pour calculer les points utilisés
+      console.log('🔍 Chargement de l\'historique des points...');
+      const { data: historyData, error: historyError } = await supabase
+        .from('loyalty_points_history')
+        .select('client_id, points_change')
+        .lt('points_change', 0); // Seulement les utilisations (points négatifs)
+
+      if (historyError) {
+        console.error('❌ Erreur lors du chargement de l\'historique:', historyError);
+      } else {
+        console.log('✅ Historique chargé:', historyData?.length || 0);
+      }
+
+      // Calculer les points utilisés par client
+      const usedPointsByClient: Record<string, number> = {};
+      (historyData || []).forEach(record => {
+        const clientId = record.client_id;
+        usedPointsByClient[clientId] = (usedPointsByClient[clientId] || 0) + Math.abs(record.points_change);
+      });
+
+      // Associer les niveaux aux clients et calculer les points utilisés
+      const clientsWithTiers = (clientsData || []).map(client => {
+        const tier = (tiersData || []).find(t => t.id === client.current_tier_id);
+        const usedPoints = usedPointsByClient[client.id] || 0;
+        return {
+          ...client,
+          tier: tier || null,
+          used_points: usedPoints
+        };
+      });
+
+      setClients(clientsWithTiers);
       
       // Charger les parrainages (filtré par utilisateur)
       const { data: referralsData } = await supabase
@@ -644,7 +683,13 @@ const Loyalty: React.FC = () => {
 
       {/* Onglets */}
       <Paper sx={{ mb: 3 }}>
-        <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
+        <Tabs value={activeTab} onChange={(_, newValue) => {
+          setActiveTab(newValue);
+          // Recharger les données quand on change d'onglet pour s'assurer que les niveaux sont à jour
+          if (newValue === 0) {
+            loadData();
+          }
+        }}>
           <Tab label="Clients Fidèles" />
           <Tab label="Parrainages" />
           <Tab label="Niveaux de Fidélité" />
@@ -674,6 +719,13 @@ const Loyalty: React.FC = () => {
                >
                  Utiliser des Points
                </Button>
+               <Button
+                 variant="outlined"
+                 startIcon={<RefreshIcon />}
+                 onClick={loadData}
+               >
+                 Actualiser
+               </Button>
              </Box>
            </Box>
            
@@ -698,10 +750,10 @@ const Loyalty: React.FC = () => {
               </TableHead>
               <TableBody>
                 {clients.map((client) => {
-                  const availablePoints = client.total_points - client.used_points;
-                  const nextTier = tiers.find(t => t.min_points > availablePoints);
+                  const availablePoints = (client.loyalty_points || 0) - (client.used_points || 0);
+                  const nextTier = loyaltyTiers.find(t => t.points_required > availablePoints);
                   const progress = nextTier 
-                    ? ((availablePoints - (client.tier?.min_points || 0)) / (nextTier.min_points - (client.tier?.min_points || 0))) * 100
+                    ? ((availablePoints - (client.tier?.points_required || 0)) / (nextTier.points_required - (client.tier?.points_required || 0))) * 100
                     : 100;
                   
                   return (
@@ -709,19 +761,19 @@ const Loyalty: React.FC = () => {
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Avatar sx={{ bgcolor: client.tier?.color || 'grey.500' }}>
-                            {client.client?.first_name?.[0]}{client.client?.last_name?.[0]}
+                            {client.first_name?.[0]}{client.last_name?.[0]}
                           </Avatar>
                           <Box>
                             <Typography variant="body2">
-                              {client.client?.first_name} {client.client?.last_name}
+                              {client.first_name} {client.last_name}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {client.client?.email}
+                              {client.email}
                             </Typography>
                           </Box>
                         </Box>
                       </TableCell>
-                      <TableCell>{client.total_points}</TableCell>
+                      <TableCell>{client.loyalty_points || 0}</TableCell>
                       <TableCell>{client.used_points}</TableCell>
                       <TableCell>
                         <Typography variant="body2" color="primary" fontWeight="bold">
@@ -769,7 +821,7 @@ const Loyalty: React.FC = () => {
                             onClick={() => {
                               setSelectedClient(client);
                               setPointsForm({
-                                client_id: client.client_id,
+                                client_id: client.id,
                                 points: 0,
                                 description: ''
                               });
@@ -783,7 +835,7 @@ const Loyalty: React.FC = () => {
                           <IconButton 
                             size="small"
                             color="error"
-                            onClick={() => handleDeleteClient(client.client_id)}
+                            onClick={() => handleDeleteClient(client.id)}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -792,7 +844,7 @@ const Loyalty: React.FC = () => {
                           <IconButton 
                             size="small"
                             color="warning"
-                            onClick={() => handleDeleteLoyaltyPoints(client.client_id)}
+                            onClick={() => handleDeleteLoyaltyPoints(client.id)}
                           >
                             <CancelIcon />
                           </IconButton>
@@ -925,7 +977,7 @@ const Loyalty: React.FC = () => {
           <Typography variant="h6" sx={{ mb: 2 }}>Niveaux de Fidélité</Typography>
           
           <Grid container spacing={3}>
-            {tiers.map((tier) => (
+                            {loyaltyTiers.map((tier) => (
               <Grid item xs={12} sm={6} md={4} key={tier.id}>
                 <Card>
                   <CardContent>
@@ -936,7 +988,7 @@ const Loyalty: React.FC = () => {
                       <Box>
                         <Typography variant="h6">{tier.name}</Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {tier.min_points} points requis
+                          {tier.points_required} points requis
                         </Typography>
                       </Box>
                     </Box>
@@ -1232,8 +1284,8 @@ const Loyalty: React.FC = () => {
        <LoyaltyHistory
          open={historyDialog}
          onClose={() => setHistoryDialog(false)}
-         clientId={selectedClient?.client_id || ''}
-         clientName={selectedClient ? `${selectedClient.client?.first_name} ${selectedClient.client?.last_name}` : ''}
+                   clientId={selectedClient?.id || ''}
+          clientName={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : ''}
        />
      </Box>
    );

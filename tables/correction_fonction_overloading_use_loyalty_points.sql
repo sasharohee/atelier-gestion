@@ -121,6 +121,7 @@ BEGIN
         points_before,
         points_after,
         description,
+        points_type,
         created_at
     ) VALUES (
         p_client_id,
@@ -128,6 +129,7 @@ BEGIN
         v_current_points,
         v_new_points,
         p_description,
+        'usage',
         NOW()
     );
     
