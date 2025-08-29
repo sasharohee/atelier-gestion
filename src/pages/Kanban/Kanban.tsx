@@ -986,51 +986,6 @@ const Kanban: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Suivi des réparations par statut - Réparations restituées automatiquement archivées
         </Typography>
-        {/* Debug: Bouton pour recharger les utilisateurs */}
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={async () => {
-            console.log('🔄 Rechargement manuel des utilisateurs...');
-            await loadUsers();
-            console.log('📊 Utilisateurs après rechargement:', users);
-            console.log('🔍 Détail des utilisateurs:');
-            users.forEach((user, index) => {
-              console.log(`${index + 1}. ${user.firstName} ${user.lastName} (${user.role}) - ID: ${user.id}`);
-            });
-          }}
-          sx={{ mt: 1 }}
-        >
-          Recharger utilisateurs (Debug)
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={async () => {
-            console.log('🧪 Test d\'accès direct à la table users...');
-            try {
-              const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .order('created_at', { ascending: false });
-              
-              if (error) {
-                console.error('❌ Erreur accès direct:', error);
-              } else {
-                console.log('✅ Accès direct réussi:', data);
-                console.log('📊 Nombre d\'utilisateurs trouvés:', data?.length || 0);
-                data?.forEach((user, index) => {
-                  console.log(`${index + 1}. ${user.first_name} ${user.last_name} (${user.role}) - ID: ${user.id}`);
-                });
-              }
-            } catch (err) {
-              console.error('💥 Exception lors du test d\'accès direct:', err);
-            }
-          }}
-          sx={{ mt: 1, ml: 1 }}
-        >
-          Test Accès Direct (Debug)
-        </Button>
       </Box>
 
       {/* Tableau de suivi des réparations */}

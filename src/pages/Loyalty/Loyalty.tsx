@@ -361,24 +361,37 @@ const Loyalty: React.FC = () => {
   // Ajouter des points manuellement
   const addPoints = async () => {
     try {
+      console.log('🔍 Appel add_loyalty_points avec:', {
+        p_client_id: pointsForm.client_id,
+        p_points: pointsForm.points,
+        p_description: pointsForm.description
+      });
+
       const { data, error } = await supabase.rpc('add_loyalty_points', {
         p_client_id: pointsForm.client_id,
         p_points: pointsForm.points,
         p_description: pointsForm.description
       });
       
-      if (error) throw error;
+      console.log('📊 Réponse Supabase:', { data, error });
+      
+      if (error) {
+        console.error('❌ Erreur Supabase:', error);
+        throw error;
+      }
       
       if (data?.success) {
+        console.log('✅ Points ajoutés avec succès:', data);
         toast.success('Points ajoutés avec succès');
         setPointsDialog(false);
         setPointsForm({ client_id: '', points: 0, description: '' });
         loadData();
       } else {
+        console.error('❌ Erreur dans la réponse:', data?.error);
         toast.error(data?.error || 'Erreur lors de l\'ajout des points');
       }
     } catch (error) {
-      console.error('Erreur:', error);
+      console.error('💥 Exception dans addPoints:', error);
       toast.error('Erreur lors de l\'ajout des points');
     }
   };

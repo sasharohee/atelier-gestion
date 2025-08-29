@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Box,
   Paper,
@@ -61,6 +61,7 @@ const Calendar: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Appointment | null>(null);
   const [view, setView] = useState<'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek'>('dayGridMonth');
+  const calendarRef = useRef<any>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -195,6 +196,8 @@ const Calendar: React.FC = () => {
     setOpenDialog(true);
   };
 
+
+
   const handleSubmit = async () => {
     try {
       // Convertir les chaînes vides en null pour l'envoi à Supabase
@@ -272,6 +275,30 @@ const Calendar: React.FC = () => {
     return device ? `${device.brand} ${device.model}` : 'Appareil inconnu';
   };
 
+  // Fonction pour changer la vue du calendrier
+  const handleViewChange = (newView: 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek') => {
+    console.log(`🔄 Changement de vue demandé: ${newView}`);
+    setView(newView);
+    console.log(`✅ État view mis à jour vers: ${newView}`);
+    
+    // Utiliser l'API FullCalendar directement
+    setTimeout(() => {
+      if (calendarRef.current) {
+        try {
+          const api = calendarRef.current.getApi();
+          if (api && api.changeView) {
+            api.changeView(newView);
+            console.log(`✅ Vue FullCalendar changée vers: ${newView}`);
+          } else {
+            console.warn('⚠️ API FullCalendar non disponible');
+          }
+        } catch (error) {
+          console.error('❌ Erreur lors du changement de vue FullCalendar:', error);
+        }
+      }
+    }, 100);
+  };
+
   // Rendez-vous du jour
   const todayAppointments = appointments.filter(appointment => {
     const today = new Date();
@@ -316,34 +343,35 @@ const Calendar: React.FC = () => {
             <Box sx={{ mb: 2 }}>
               <Button
                 variant={view === 'dayGridMonth' ? 'contained' : 'outlined'}
-                onClick={() => setView('dayGridMonth')}
+                onClick={() => handleViewChange('dayGridMonth')}
                 sx={{ mr: 1 }}
               >
                 Mois
               </Button>
               <Button
                 variant={view === 'timeGridWeek' ? 'contained' : 'outlined'}
-                onClick={() => setView('timeGridWeek')}
+                onClick={() => handleViewChange('timeGridWeek')}
                 sx={{ mr: 1 }}
               >
                 Semaine
               </Button>
               <Button
                 variant={view === 'timeGridDay' ? 'contained' : 'outlined'}
-                onClick={() => setView('timeGridDay')}
+                onClick={() => handleViewChange('timeGridDay')}
                 sx={{ mr: 1 }}
               >
                 Jour
               </Button>
               <Button
                 variant={view === 'listWeek' ? 'contained' : 'outlined'}
-                onClick={() => setView('listWeek')}
+                onClick={() => handleViewChange('listWeek')}
               >
                 Liste
               </Button>
             </Box>
             
             <FullCalendar
+              ref={calendarRef}
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
               headerToolbar={false}
               initialView={view}
