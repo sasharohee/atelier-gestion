@@ -186,14 +186,21 @@ const LandingNavbar: React.FC<NavbarProps> = ({ transparent = true }) => {
         ))}
         <ListItem sx={{ pt: 2 }}>
           <Button
-            variant="outlined"
+            variant="contained"
             fullWidth
             onClick={handleRepairTracking}
             sx={{
               py: 1.5,
               fontWeight: 600,
               borderRadius: 2,
-              mb: 1
+              mb: 1,
+              bgcolor: '#FF6B6B',
+              color: 'white',
+              boxShadow: '0 4px 15px rgba(255, 107, 107, 0.3)',
+              '&:hover': {
+                bgcolor: '#FF5252',
+                boxShadow: '0 6px 20px rgba(255, 107, 107, 0.4)'
+              }
             }}
           >
             Suivre ma Réparation
@@ -288,22 +295,27 @@ const LandingNavbar: React.FC<NavbarProps> = ({ transparent = true }) => {
                     </Button>
                   ))}
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     onClick={handleRepairTracking}
                     sx={{
-                      borderColor: transparent && !scrolled ? 'white' : theme.palette.primary.main,
-                      color: transparent && !scrolled ? 'white' : theme.palette.primary.main,
+                      bgcolor: transparent && !scrolled ? 'rgba(255, 255, 255, 0.9)' : '#FF6B6B',
+                      color: transparent && !scrolled ? '#1976D2' : 'white',
                       px: 3,
                       py: 1.5,
                       fontWeight: 600,
                       borderRadius: '50px',
                       fontSize: '0.9rem',
-                      borderWidth: 2,
+                      border: transparent && !scrolled ? '2px solid rgba(255, 255, 255, 0.3)' : 'none',
                       transition: 'all 0.3s ease',
+                      boxShadow: transparent && !scrolled 
+                        ? '0 4px 15px rgba(0, 0, 0, 0.15)' 
+                        : '0 4px 15px rgba(255, 107, 107, 0.3)',
                       '&:hover': {
-                        bgcolor: transparent && !scrolled ? 'rgba(255, 255, 255, 0.1)' : 'rgba(25, 118, 210, 0.1)',
+                        bgcolor: transparent && !scrolled ? 'rgba(255, 255, 255, 1)' : '#FF5252',
                         transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+                        boxShadow: transparent && !scrolled 
+                          ? '0 6px 20px rgba(0, 0, 0, 0.2)' 
+                          : '0 6px 20px rgba(255, 107, 107, 0.4)'
                       }
                     }}
                   >
