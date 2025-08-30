@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store';
 import { DeviceCategory, DeviceBrand, DeviceModel } from '../../types/deviceManagement';
+import { categoryService, ProductCategory } from '../../services/categoryService';
 import {
   Box,
   Typography,
@@ -42,6 +43,7 @@ import {
   ListItemSecondaryAction,
   Switch,
   FormControlLabel,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -199,9 +201,53 @@ const DeviceManagement: React.FC = () => {
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [deleteType, setDeleteType] = useState<'category' | 'brand' | 'model'>('category');
   const [selectedCategoryForBrands, setSelectedCategoryForBrands] = useState<string>('all');
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
-  // Données de test pour les catégories
-  const defaultCategories: DeviceCategory[] = [
+  // État pour les catégories depuis la base de données
+  const [dbCategories, setDbCategories] = useState<ProductCategory[]>([]);
+
+  // Charger les catégories depuis la base de données avec isolation
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        setCategoriesError(null);
+        
+        const result = await categoryService.getAll();
+        if (result.success && result.data) {
+          setDbCategories(result.data);
+          console.log('✅ Catégories chargées depuis la base de données:', result.data.length);
+        } else {
+          setCategoriesError(result.error || 'Erreur lors du chargement des catégories');
+          console.error('❌ Erreur lors du chargement des catégories:', result.error);
+        }
+      } catch (error) {
+        setCategoriesError('Erreur lors du chargement des catégories');
+        console.error('❌ Erreur lors du chargement des catégories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  // Convertir les catégories de la base de données au format DeviceCategory
+  const convertDbCategoryToDeviceCategory = (dbCategory: ProductCategory): DeviceCategory => ({
+    id: dbCategory.id,
+    name: dbCategory.name,
+    description: dbCategory.description,
+    icon: dbCategory.icon,
+    isActive: dbCategory.is_active,
+    createdAt: new Date(dbCategory.created_at),
+    updatedAt: new Date(dbCategory.updated_at),
+  });
+
+  // Utiliser les catégories de la base de données ou les catégories par défaut en fallback
+  const defaultCategories: DeviceCategory[] = dbCategories.length > 0 
+    ? dbCategories.map(convertDbCategoryToDeviceCategory)
+    : [
     {
       id: '1',
       name: 'Smartphones',
@@ -1029,28 +1075,71 @@ const DeviceManagement: React.FC = () => {
 
 
   // Fonctions pour les catégories
-  const handleCreateCategory = () => {
-    addDeviceCategory({
-      name: newCategory.name,
-      description: newCategory.description,
-      icon: newCategory.icon,
-      isActive: newCategory.isActive,
-    });
-    setCategoryDialogOpen(false);
-    resetCategoryForm();
-  };
-
-  const handleUpdateCategory = () => {
-    if (selectedCategory) {
-      updateDeviceCategory(selectedCategory.id, {
+  const handleCreateCategory = async () => {
+    try {
+      const result = await categoryService.create({
         name: newCategory.name,
         description: newCategory.description,
         icon: newCategory.icon,
-        isActive: newCategory.isActive,
+        is_active: newCategory.isActive,
       });
-      setCategoryDialogOpen(false);
-      setSelectedCategory(null);
-      resetCategoryForm();
+
+      if (result.success && result.data) {
+        console.log('✅ Catégorie créée avec succès:', result.data);
+        
+        // Recharger les catégories depuis la base de données
+        const categoriesResult = await categoryService.getAll();
+        if (categoriesResult.success && categoriesResult.data) {
+          setDbCategories(categoriesResult.data);
+          console.log('✅ Catégories rechargées:', categoriesResult.data.length);
+        } else {
+          console.error('❌ Erreur lors du rechargement des catégories:', categoriesResult.error);
+        }
+        
+        setCategoryDialogOpen(false);
+        resetCategoryForm();
+      } else {
+        console.error('❌ Erreur lors de la création de la catégorie:', result.error);
+        setCategoriesError(result.error || 'Erreur lors de la création de la catégorie');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de la catégorie:', error);
+      setCategoriesError('Erreur lors de la création de la catégorie');
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (selectedCategory) {
+      try {
+        const result = await categoryService.update(selectedCategory.id, {
+          name: newCategory.name,
+          description: newCategory.description,
+          icon: newCategory.icon,
+          color: '#1976d2',
+          is_active: newCategory.isActive,
+        });
+
+        if (result.success && result.data) {
+          console.log('✅ Catégorie mise à jour avec succès:', result.data);
+          
+          // Recharger les catégories depuis la base de données
+          const categoriesResult = await categoryService.getAll();
+          if (categoriesResult.success && categoriesResult.data) {
+            setDbCategories(categoriesResult.data);
+            console.log('✅ Catégories rechargées après mise à jour:', categoriesResult.data.length);
+          }
+          
+          setCategoryDialogOpen(false);
+          setSelectedCategory(null);
+          resetCategoryForm();
+        } else {
+          console.error('❌ Erreur lors de la mise à jour de la catégorie:', result.error);
+          setCategoriesError(result.error || 'Erreur lors de la mise à jour de la catégorie');
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors de la mise à jour de la catégorie:', error);
+        setCategoriesError('Erreur lors de la mise à jour de la catégorie');
+      }
     }
   };
 
@@ -1193,21 +1282,39 @@ const DeviceManagement: React.FC = () => {
 
 
   // Fonction de suppression générique
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (itemToDelete) {
-      switch (deleteType) {
-        case 'category':
-          deleteDeviceCategory(itemToDelete.id);
-          break;
-        case 'brand':
-          deleteDeviceBrand(itemToDelete.id);
-          break;
-        case 'model':
-          deleteDeviceModel(itemToDelete.id);
-          break;
+      try {
+        switch (deleteType) {
+          case 'category':
+            const result = await categoryService.delete(itemToDelete.id);
+            if (result.success) {
+              console.log('✅ Catégorie supprimée avec succès');
+              
+              // Recharger les catégories depuis la base de données
+              const categoriesResult = await categoryService.getAll();
+              if (categoriesResult.success && categoriesResult.data) {
+                setDbCategories(categoriesResult.data);
+                console.log('✅ Catégories rechargées après suppression:', categoriesResult.data.length);
+              }
+            } else {
+              console.error('❌ Erreur lors de la suppression de la catégorie:', result.error);
+              setCategoriesError(result.error || 'Erreur lors de la suppression de la catégorie');
+            }
+            break;
+          case 'brand':
+            deleteDeviceBrand(itemToDelete.id);
+            break;
+          case 'model':
+            deleteDeviceModel(itemToDelete.id);
+            break;
+        }
+        setDeleteDialogOpen(false);
+        setItemToDelete(null);
+      } catch (error) {
+        console.error('❌ Erreur lors de la suppression:', error);
+        setCategoriesError('Erreur lors de la suppression');
       }
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
     }
   };
 
@@ -1218,7 +1325,7 @@ const DeviceManagement: React.FC = () => {
   };
 
   // Filtrage des données
-  const filteredCategories = deviceCategories.filter(cat =>
+  const filteredCategories = defaultCategories.filter(cat =>
     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -1417,7 +1524,7 @@ const DeviceManagement: React.FC = () => {
                 Marques ({filteredBrands.length})
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                {deviceCategories.map((category) => {
+                {defaultCategories.map((category) => {
                   const brandCount = deviceBrands.filter(brand => brand.categoryId === category.id).length;
                   return (
                     <Chip
@@ -1447,7 +1554,7 @@ const DeviceManagement: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {filteredBrands.map((brand) => {
-                    const category = deviceCategories.find(cat => cat.id === brand.categoryId);
+                    const category = defaultCategories.find(cat => cat.id === brand.categoryId);
                     const modelCount = deviceModels.filter(model => (model as any).brand === brand.name).length;
                     return (
                       <TableRow key={brand.id} hover>
@@ -1609,6 +1716,7 @@ const DeviceManagement: React.FC = () => {
                 onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
               />
             </Grid>
+
             <Grid item xs={12}>
               <Typography variant="subtitle2" gutterBottom>
                 Sélectionner une icône pour la catégorie
@@ -1698,7 +1806,7 @@ const DeviceManagement: React.FC = () => {
                   onChange={(e) => setNewBrand(prev => ({ ...prev, categoryId: e.target.value }))}
                   required
                 >
-                  {deviceCategories.map((category) => (
+                  {defaultCategories.map((category) => (
                     <MenuItem key={category.id} value={category.id}>
                       {category.name}
                     </MenuItem>
@@ -1766,7 +1874,7 @@ const DeviceManagement: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
+                              <FormControl fullWidth>
                 <InputLabel>Catégorie *</InputLabel>
                 <Select
                   value={newModel.categoryId}
@@ -1774,7 +1882,7 @@ const DeviceManagement: React.FC = () => {
                   onChange={(e) => setNewModel(prev => ({ ...prev, categoryId: e.target.value }))}
                   required
                 >
-                  {deviceCategories.map((category) => (
+                  {defaultCategories.map((category) => (
                     <MenuItem key={category.id} value={category.id}>
                       {category.name}
                     </MenuItem>
