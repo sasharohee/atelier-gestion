@@ -261,11 +261,12 @@ const Services: React.FC = () => {
               
               <TextField
                 fullWidth
-                label="Prix (€)"
+                label="Prix TTC (€)"
                 type="number"
                 value={formData.price}
                 onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
                 inputProps={{ min: 0, step: 0.01 }}
+                helperText="Prix toutes taxes comprises"
               />
             </Box>
             

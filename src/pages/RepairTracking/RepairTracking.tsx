@@ -51,12 +51,13 @@ interface RepairData {
   device: {
     brand: string;
     model: string;
+    serialNumber?: string | null;
     type: string;
-  };
+  } | null;
   technician?: {
     firstName: string;
     lastName: string;
-  };
+  } | null;
 }
 
 const RepairTracking: React.FC = () => {
@@ -270,15 +271,23 @@ const RepairTracking: React.FC = () => {
                   📱 Appareil
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Typography variant="body2">
-                    <strong>Marque:</strong> {repair.device.brand}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Modèle:</strong> {repair.device.model}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Type:</strong> {repair.device.type}
-                  </Typography>
+                  {repair.device ? (
+                    <>
+                      <Typography variant="body2">
+                        <strong>Marque:</strong> {repair.device.brand}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Modèle:</strong> {repair.device.model}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Type:</strong> {repair.device.type}
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Aucune information d'appareil disponible
+                    </Typography>
+                  )}
                 </Box>
               </Grid>
 
@@ -313,7 +322,7 @@ const RepairTracking: React.FC = () => {
               <Chip
                 label={getStatusLabel(repair.status)}
                 color={getStatusColor(repair.status)}
-                size="large"
+                size="medium"
                 sx={{ 
                   fontSize: '1.1rem', 
                   fontWeight: 'bold',

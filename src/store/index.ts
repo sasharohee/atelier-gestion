@@ -2089,10 +2089,10 @@ export const useAppStore = create<AppStore>()(
         const state = get();
         let filtered = state.deviceModels;
         if (brandId) {
-          filtered = filtered.filter(model => model.brandId === brandId);
+          filtered = filtered.filter(model => model.brand === brandId);
         }
         if (categoryId) {
-          filtered = filtered.filter(model => model.categoryId === categoryId);
+          filtered = filtered.filter(model => model.type === categoryId);
         }
         return filtered;
       },
@@ -2102,7 +2102,7 @@ export const useAppStore = create<AppStore>()(
       },
       getDeviceModelsByBrand: (brandId) => {
         const state = get();
-        return state.deviceModels.filter(model => model.brandId === brandId);
+        return state.deviceModels.filter(model => model.brand === brandId);
       },
       
       markNotificationAsRead: async (id) => {

@@ -539,7 +539,6 @@ const Clients: React.FC = () => {
           billingCity: editingClient.billingCity || '',
           accountingCode: editingClient.accountingCode || '',
           cniIdentifier: editingClient.cniIdentifier || '',
-          attachedFile: null,
           internalNote: editingClient.internalNote || editingClient.notes || '',
           status: editingClient.status || 'displayed',
           smsNotification: editingClient.smsNotification !== false,

@@ -179,14 +179,15 @@ const DeviceManagement: React.FC = () => {
   // États pour les modèles
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<DeviceModel | null>(null);
-  const [newModel, setNewModel] = useState({
-    name: '',
-    brandId: '',
-    categoryId: '',
+  const [newModel, setNewModel] = useState<any>({
+    brand: '',
+    model: '',
+    type: 'smartphone',
     year: new Date().getFullYear(),
+    specifications: {},
     commonIssues: [''],
-    repairDifficulty: 'medium' as 'easy' | 'medium' | 'hard',
-    partsAvailability: 'medium' as 'high' | 'medium' | 'low',
+    repairDifficulty: 'medium',
+    partsAvailability: 'medium',
     isActive: true,
   });
 
@@ -1126,10 +1127,11 @@ const DeviceManagement: React.FC = () => {
   // Fonctions pour les modèles
   const handleCreateModel = () => {
     addDeviceModel({
-      name: newModel.name,
-      brandId: newModel.brandId,
-      categoryId: newModel.categoryId,
+      brand: newModel.brand,
+      model: newModel.model,
+      type: newModel.type,
       year: newModel.year,
+      specifications: newModel.specifications,
       commonIssues: newModel.commonIssues.filter(issue => issue.trim() !== ''),
       repairDifficulty: newModel.repairDifficulty,
       partsAvailability: newModel.partsAvailability,
@@ -1142,10 +1144,11 @@ const DeviceManagement: React.FC = () => {
   const handleUpdateModel = () => {
     if (selectedModel) {
       updateDeviceModel(selectedModel.id, {
-        name: newModel.name,
-        brandId: newModel.brandId,
-        categoryId: newModel.categoryId,
+        brand: newModel.brand,
+        model: newModel.model,
+        type: newModel.type,
         year: newModel.year,
+        specifications: newModel.specifications,
         commonIssues: newModel.commonIssues.filter(issue => issue.trim() !== ''),
         repairDifficulty: newModel.repairDifficulty,
         partsAvailability: newModel.partsAvailability,
@@ -1159,10 +1162,11 @@ const DeviceManagement: React.FC = () => {
 
   const resetModelForm = () => {
     setNewModel({
-      name: '',
-      brandId: '',
-      categoryId: '',
+      brand: '',
+      model: '',
+      type: 'smartphone',
       year: new Date().getFullYear(),
+      specifications: {},
       commonIssues: [''],
       repairDifficulty: 'medium',
       partsAvailability: 'medium',
@@ -1173,10 +1177,11 @@ const DeviceManagement: React.FC = () => {
   const openModelEditDialog = (model: DeviceModel) => {
     setSelectedModel(model);
     setNewModel({
-      name: model.name,
-      brandId: model.brandId,
-      categoryId: model.categoryId,
+      brand: model.brand,
+      model: model.model,
+      type: model.type,
       year: model.year,
+      specifications: model.specifications,
       commonIssues: [...model.commonIssues],
       repairDifficulty: model.repairDifficulty,
       partsAvailability: model.partsAvailability,

@@ -614,7 +614,7 @@ const LoyaltySettings: React.FC<LoyaltySettingsProps> = () => {
               </Typography>
               
               <Grid container spacing={2}>
-                {previewData.previewResults.map((result, index) => (
+                {previewData.previewResults.map((result: any, index: number) => (
                   <Grid item xs={12} sm={6} key={index}>
                     <Paper elevation={1} sx={{ p: 2 }}>
                       <Typography variant="subtitle1" gutterBottom>

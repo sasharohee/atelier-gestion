@@ -63,6 +63,7 @@ interface ClientFormData {
   // Autres informations
   accountingCode: string;
   cniIdentifier: string;
+  attachedFile?: File | null;
   internalNote: string;
   status: 'displayed' | 'hidden';
   smsNotification: boolean;

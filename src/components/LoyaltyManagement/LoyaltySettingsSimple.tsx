@@ -152,8 +152,8 @@ const LoyaltySettingsSimple: React.FC<LoyaltySettingsProps> = ({ onDataChanged }
       }
       
       // Filtrer les doublons côté client si nécessaire
-      const uniqueTiers = tiersData ? tiersData.filter((tier, index, self) => 
-        index === self.findIndex(t => t.name === tier.name)
+      const uniqueTiers = tiersData ? tiersData.filter((tier: any, index: number, self: any[]) => 
+        index === self.findIndex((t: any) => t.name === tier.name)
       ) : [];
 
       console.log('✅ Niveaux chargés:', uniqueTiers);

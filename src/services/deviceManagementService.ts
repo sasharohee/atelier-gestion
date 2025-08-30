@@ -24,10 +24,18 @@ export interface DeviceBrand {
 
 export interface DeviceModel {
   id: string;
-  name: string;
-  brandId: string;
-  categoryId: string;
+  brand: string;
+  model: string;
+  type: 'smartphone' | 'tablet' | 'laptop' | 'desktop' | 'other';
   year: number;
+  specifications: {
+    screen?: string;
+    processor?: string;
+    ram?: string;
+    storage?: string;
+    battery?: string;
+    os?: string;
+  };
   commonIssues: string[];
   repairDifficulty: 'easy' | 'medium' | 'hard';
   partsAvailability: 'high' | 'medium' | 'low';
@@ -279,10 +287,11 @@ export const modelService = {
     
     const models = data.map((model: any) => ({
       id: model.id,
-      name: model.name,
-      brandId: model.brand_id,
-      categoryId: model.category_id,
+      brand: model.brand,
+      model: model.model,
+      type: model.type,
       year: model.year,
+      specifications: model.specifications || {},
       commonIssues: model.common_issues || [],
       repairDifficulty: model.repair_difficulty,
       partsAvailability: model.parts_availability,
@@ -296,10 +305,11 @@ export const modelService = {
 
   async create(model: Omit<DeviceModel, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; data: DeviceModel }> {
     const modelData = {
-      name: model.name,
-      brand_id: model.brandId,
-      category_id: model.categoryId,
+      brand: model.brand,
+      model: model.model,
+      type: model.type,
       year: model.year,
+      specifications: model.specifications,
       common_issues: model.commonIssues,
       repair_difficulty: model.repairDifficulty,
       parts_availability: model.partsAvailability,
@@ -316,10 +326,11 @@ export const modelService = {
     
     const newModel: DeviceModel = {
       id: data.id,
-      name: data.name,
-      brandId: data.brand_id,
-      categoryId: data.category_id,
+      brand: data.brand,
+      model: data.model,
+      type: data.type,
       year: data.year,
+      specifications: data.specifications || {},
       commonIssues: data.common_issues || [],
       repairDifficulty: data.repair_difficulty,
       partsAvailability: data.parts_availability,
@@ -334,10 +345,11 @@ export const modelService = {
   async update(id: string, updates: Partial<DeviceModel>): Promise<{ success: boolean; data: DeviceModel }> {
     const updateData: any = {};
     
-    if (updates.name !== undefined) updateData.name = updates.name;
-    if (updates.brandId !== undefined) updateData.brand_id = updates.brandId;
-    if (updates.categoryId !== undefined) updateData.category_id = updates.categoryId;
+    if (updates.brand !== undefined) updateData.brand = updates.brand;
+    if (updates.model !== undefined) updateData.model = updates.model;
+    if (updates.type !== undefined) updateData.type = updates.type;
     if (updates.year !== undefined) updateData.year = updates.year;
+    if (updates.specifications !== undefined) updateData.specifications = updates.specifications;
     if (updates.commonIssues !== undefined) updateData.common_issues = updates.commonIssues;
     if (updates.repairDifficulty !== undefined) updateData.repair_difficulty = updates.repairDifficulty;
     if (updates.partsAvailability !== undefined) updateData.parts_availability = updates.partsAvailability;
@@ -354,10 +366,11 @@ export const modelService = {
     
     const updatedModel: DeviceModel = {
       id: data.id,
-      name: data.name,
-      brandId: data.brand_id,
-      categoryId: data.category_id,
+      brand: data.brand,
+      model: data.model,
+      type: data.type,
       year: data.year,
+      specifications: data.specifications || {},
       commonIssues: data.common_issues || [],
       repairDifficulty: data.repair_difficulty,
       partsAvailability: data.parts_availability,

@@ -585,8 +585,8 @@ const Kanban: React.FC = () => {
 
       // Vérifier si le modèle existe déjà pour cette marque
       const existingModel = deviceModels.find(m => 
-        m.brandId === newDevice.brandId && 
-        m.name.toLowerCase() === newDevice.model.trim().toLowerCase()
+                m.brand === newDevice.brandId &&
+        m.model.toLowerCase() === newDevice.model.trim().toLowerCase()
       );
       
       if (existingModel) {
@@ -1432,7 +1432,7 @@ const Kanban: React.FC = () => {
                     {getFilteredModels().map((model) => {
                       // Utiliser directement brand et type du modèle
                       const brandName = (model as any).brand || 'N/A';
-                      const modelName = (model as any).model || model.name || 'N/A';
+                      const modelName = model.model || 'N/A';
                       const categoryName = (model as any).type || 'N/A';
                       
                       return (

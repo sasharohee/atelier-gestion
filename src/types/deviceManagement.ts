@@ -21,10 +21,18 @@ export interface DeviceBrand {
 
 export interface DeviceModel {
   id: string;
-  name: string;
-  brandId: string;
-  categoryId: string;
+  brand: string;
+  model: string;
+  type: 'smartphone' | 'tablet' | 'laptop' | 'desktop' | 'other';
   year: number;
+  specifications: {
+    screen?: string;
+    processor?: string;
+    ram?: string;
+    storage?: string;
+    battery?: string;
+    os?: string;
+  };
   commonIssues: string[];
   repairDifficulty: 'easy' | 'medium' | 'hard';
   partsAvailability: 'high' | 'medium' | 'low';

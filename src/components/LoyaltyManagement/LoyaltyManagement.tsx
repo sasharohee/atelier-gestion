@@ -44,7 +44,7 @@ import {
   Cancel as CancelIcon,
   Refresh as RefreshIcon,
   Euro as EuroIcon,
-  Points as PointsIcon
+  CardGiftcard as PointsIcon
 } from '@mui/icons-material';
 import { supabase } from '../../lib/supabase';
 
