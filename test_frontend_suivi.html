@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Suivi Réparations</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test Diagnostic - Suivi des Réparations</h1>
+    
+    <div class="container">
+        <h2>Configuration Supabase</h2>
+        <div class="form-group">
+            <label>URL Supabase:</label>
+            <input type="text" id="supabaseUrl" placeholder="https://votre-projet.supabase.co">
+        </div>
+        <div class="form-group">
+            <label>Clé Anon Supabase:</label>
+            <input type="text" id="supabaseKey" placeholder="votre_cle_anon">
+        </div>
+        <button onclick="testConnection()">Tester la connexion</button>
+        <div id="connectionResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>Test de Recherche de Réparation</h2>
+        <div class="form-group">
+            <label>Email du client:</label>
+            <input type="email" id="clientEmail" value="test@gmail.com">
+        </div>
+        <div class="form-group">
+            <label>Numéro de réparation:</label>
+            <input type="text" id="repairNumber" value="REP-20250829-1296">
+        </div>
+        <button onclick="testRepairTracking()">Tester le suivi</button>
+        <button onclick="testRepairHistory()">Tester l'historique</button>
+        <div id="trackingResult" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>Test Direct de la Base de Données</h2>
+        <button onclick="testDirectQuery()">Tester requête directe</button>
+        <button onclick="testRPCFunction()">Tester fonction RPC</button>
+        <div id="directResult" class="result"></div>
+    </div>
+
+    <script>
+        let supabase;
+
+        function initSupabase() {
+            const url = document.getElementById('supabaseUrl').value;
+            const key = document.getElementById('supabaseKey').value;
+            
+            if (!url || !key) {
+                showResult('connectionResult', '❌ Veuillez remplir l\'URL et la clé Supabase', 'error');
+                return false;
+            }
+            
+            supabase = window.supabase.createClient(url, key);
+            return true;
+        }
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${type}`;
+        }
+
+        async function testConnection() {
+            if (!initSupabase()) return;
+            
+            try {
+                const { data, error } = await supabase.from('repairs').select('count').limit(1);
+                
+                if (error) {
+                    showResult('connectionResult', `❌ Erreur de connexion: ${error.message}`, 'error');
+                } else {
+                    showResult('connectionResult', '✅ Connexion à Supabase réussie !', 'success');
+                }
+            } catch (err) {
+                showResult('connectionResult', `❌ Erreur: ${err.message}`, 'error');
+            }
+        }
+
+        async function testRepairTracking() {
+            if (!initSupabase()) return;
+            
+            const email = document.getElementById('clientEmail').value;
+            const repairNumber = document.getElementById('repairNumber').value;
+            
+            try {
+                // Test avec la fonction RPC
+                const { data, error } = await supabase.rpc('get_repair_tracking_info', {
+                    p_repair_id_or_number: repairNumber,
+                    p_client_email: email
+                });
+                
+                if (error) {
+                    showResult('trackingResult', `❌ Erreur RPC: ${error.message}`, 'error');
+                } else if (!data || data.length === 0) {
+                    showResult('trackingResult', '❌ Aucune réparation trouvée avec ces informations', 'error');
+                } else {
+                    showResult('trackingResult', `✅ Réparation trouvée !\n\n${JSON.stringify(data[0], null, 2)}`, 'success');
+                }
+            } catch (err) {
+                showResult('trackingResult', `❌ Erreur: ${err.message}`, 'error');
+            }
+        }
+
+        async function testRepairHistory() {
+            if (!initSupabase()) return;
+            
+            const email = document.getElementById('clientEmail').value;
+            
+            try {
+                const { data, error } = await supabase.rpc('get_client_repair_history', {
+                    p_client_email: email
+                });
+                
+                if (error) {
+                    showResult('trackingResult', `❌ Erreur historique: ${error.message}`, 'error');
+                } else if (!data || data.length === 0) {
+                    showResult('trackingResult', '❌ Aucun historique trouvé pour cet email', 'error');
+                } else {
+                    showResult('trackingResult', `✅ Historique trouvé !\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                }
+            } catch (err) {
+                showResult('trackingResult', `❌ Erreur: ${err.message}`, 'error');
+            }
+        }
+
+        async function testDirectQuery() {
+            if (!initSupabase()) return;
+            
+            const email = document.getElementById('clientEmail').value;
+            const repairNumber = document.getElementById('repairNumber').value;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('repairs')
+                    .select(`
+                        *,
+                        client:clients(first_name, last_name, email, phone),
+                        device:devices(brand, model, serial_number, type)
+                    `)
+                    .eq('repair_number', repairNumber)
+                    .eq('clients.email', email);
+                
+                if (error) {
+                    showResult('directResult', `❌ Erreur requête directe: ${error.message}`, 'error');
+                } else if (!data || data.length === 0) {
+                    showResult('directResult', '❌ Aucune réparation trouvée avec requête directe', 'error');
+                } else {
+                    showResult('directResult', `✅ Réparation trouvée avec requête directe !\n\n${JSON.stringify(data[0], null, 2)}`, 'success');
+                }
+            } catch (err) {
+                showResult('directResult', `❌ Erreur: ${err.message}`, 'error');
+            }
+        }
+
+        async function testRPCFunction() {
+            if (!initSupabase()) return;
+            
+            try {
+                // Test simple de la fonction RPC
+                const { data, error } = await supabase.rpc('generate_repair_number');
+                
+                if (error) {
+                    showResult('directResult', `❌ Erreur fonction RPC: ${error.message}`, 'error');
+                } else {
+                    showResult('directResult', `✅ Fonction RPC fonctionne ! Numéro généré: ${data}`, 'success');
+                }
+            } catch (err) {
+                showResult('directResult', `❌ Erreur: ${err.message}`, 'error');
+            }
+        }
+
+        // Charger les variables d'environnement si disponibles
+        window.addEventListener('load', function() {
+            // Essayer de récupérer les variables depuis localStorage ou autre
+            const url = localStorage.getItem('supabaseUrl') || '';
+            const key = localStorage.getItem('supabaseKey') || '';
+            
+            if (url) document.getElementById('supabaseUrl').value = url;
+            if (key) document.getElementById('supabaseKey').value = key;
+        });
+    </script>
+</body>
+</html>

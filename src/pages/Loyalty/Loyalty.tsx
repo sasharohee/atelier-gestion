@@ -54,6 +54,12 @@ import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import LoyaltyHistory from '../../components/LoyaltyHistory/LoyaltyHistory';
 import ClientForm from '../../components/ClientForm';
+import LoyaltySettings from '../../components/LoyaltyManagement/LoyaltySettings';
+import LoyaltySettingsTest from '../../components/LoyaltyManagement/LoyaltySettingsTest';
+import LoyaltySettingsSimple from '../../components/LoyaltyManagement/LoyaltySettingsSimple';
+import LoyaltySettingsDebug from '../../components/LoyaltyManagement/LoyaltySettingsDebug';
+import LoyaltySettingsTestUpdate from '../../components/LoyaltyManagement/LoyaltySettingsTestUpdate';
+import LoyaltySettingsTestPoints from '../../components/LoyaltyManagement/LoyaltySettingsTestPoints';
 
 // Types pour les données de fidélité
 interface LoyaltyTier {
@@ -157,6 +163,12 @@ const Loyalty: React.FC = () => {
     loadData();
   }, []);
 
+  // Fonction pour rafraîchir les données après modification des paramètres
+  const handleSettingsDataChanged = () => {
+    console.log('🔄 Rafraîchissement des données après modification des paramètres...');
+    loadData();
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -174,9 +186,20 @@ const Loyalty: React.FC = () => {
         .order('first_name');
       setAllClients(allClientsData || []);
       
-      // Charger les clients avec leurs points directement depuis la table clients
+      // Récupérer l'utilisateur actuel
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('❌ Aucun utilisateur connecté');
+        toast.error('Erreur d\'authentification');
+        return;
+      }
+
+      // Charger les clients avec leurs points (temporairement sans filtre pour diagnostiquer)
       console.log('🔍 Chargement des clients avec points...');
-      const { data: clientsData, error: clientsError } = await supabase
+      console.log('🔍 User ID:', user.id);
+      
+      // Essayer d'abord avec le filtre workshop_id
+      let { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select(`
           id,
@@ -186,23 +209,63 @@ const Loyalty: React.FC = () => {
           phone,
           loyalty_points,
           current_tier_id,
+          workshop_id,
           created_at,
           updated_at
         `)
+        .eq('workshop_id', user.id)
         .order('loyalty_points', { ascending: false });
+      
+      // Si aucun client trouvé, essayer sans filtre pour diagnostiquer
+      if (!clientsData || clientsData.length === 0) {
+        console.log('⚠️ Aucun client trouvé avec workshop_id, essai sans filtre...');
+        const { data: allClientsData, error: allClientsError } = await supabase
+          .from('clients')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            email,
+            phone,
+            loyalty_points,
+            current_tier_id,
+            workshop_id,
+            created_at,
+            updated_at
+          `)
+          .order('loyalty_points', { ascending: false });
+        
+        if (allClientsError) {
+          console.error('❌ Erreur lors du chargement de tous les clients:', allClientsError);
+        } else {
+          console.log('📊 Tous les clients (sans filtre):', allClientsData);
+          // Utiliser tous les clients temporairement
+          clientsData = allClientsData;
+          clientsError = null;
+        }
+      }
       
       if (clientsError) {
         console.error('❌ Erreur lors du chargement des clients:', clientsError);
       } else {
         console.log('✅ Clients chargés:', clientsData?.length || 0);
         console.log('📊 Détail des clients:', clientsData);
+        
+        // Diagnostic supplémentaire
+        if (clientsData && clientsData.length > 0) {
+          console.log('🔍 Premier client:', clientsData[0]);
+          console.log('🔍 Workshop ID du premier client:', clientsData[0].workshop_id);
+        } else {
+          console.log('⚠️ Aucun client trouvé pour workshop_id:', user.id);
+        }
       }
       
-      // Charger les niveaux de fidélité séparément
+      // Charger les niveaux de fidélité pour cet atelier uniquement
       console.log('🔍 Chargement des niveaux de fidélité...');
       const { data: tiersData, error: tiersError } = await supabase
-        .from('loyalty_tiers')
+        .from('loyalty_tiers_advanced')
         .select('*')
+        .eq('workshop_id', user.id)
         .order('points_required', { ascending: true });
 
       if (tiersError) {
@@ -212,11 +275,12 @@ const Loyalty: React.FC = () => {
         setLoyaltyTiers(tiersData || []);
       }
 
-      // Charger l'historique des points pour calculer les points utilisés
+      // Charger l'historique des points pour cet atelier uniquement
       console.log('🔍 Chargement de l\'historique des points...');
       const { data: historyData, error: historyError } = await supabase
         .from('loyalty_points_history')
         .select('client_id, points_change')
+        .eq('workshop_id', user.id)
         .lt('points_change', 0); // Seulement les utilisations (points négatifs)
 
       if (historyError) {
@@ -234,26 +298,99 @@ const Loyalty: React.FC = () => {
 
       // Associer les niveaux aux clients et calculer les points utilisés
       const clientsWithTiers = (clientsData || []).map(client => {
-        const tier = (tiersData || []).find(t => t.id === client.current_tier_id);
+        // Essayer plusieurs méthodes de correspondance
+        let tier = null;
+        
+        // Méthode 1: Correspondance exacte
+        tier = (tiersData || []).find(t => t.id === client.current_tier_id);
+        
+        // Méthode 2: Correspondance avec conversion string
+        if (!tier && client.current_tier_id) {
+          tier = (tiersData || []).find(t => String(t.id) === String(client.current_tier_id));
+        }
+        
+        // Méthode 3: Correspondance par nom si current_tier_id est null
+        if (!tier && !client.current_tier_id) {
+          // Assigner le niveau selon les points
+          if (client.loyalty_points >= 2000) {
+            tier = (tiersData || []).find(t => t.name === 'Diamant');
+          } else if (client.loyalty_points >= 1000) {
+            tier = (tiersData || []).find(t => t.name === 'Platine');
+          } else if (client.loyalty_points >= 500) {
+            tier = (tiersData || []).find(t => t.name === 'Or');
+          } else if (client.loyalty_points >= 100) {
+            tier = (tiersData || []).find(t => t.name === 'Argent');
+          } else {
+            tier = (tiersData || []).find(t => t.name === 'Bronze');
+          }
+        }
+        
         const usedPoints = usedPointsByClient[client.id] || 0;
+        
+        // Log d'erreur si aucun tier trouvé
+        if (!tier && client.current_tier_id) {
+          console.log(`⚠️ Client ${client.first_name} a un current_tier_id (${client.current_tier_id}) mais aucun tier trouvé`);
+        }
+        
+        // Si aucun tier trouvé, créer un tier virtuel selon les points
+        let finalTier = tier;
+        if (!finalTier) {
+          // Créer un tier virtuel selon les points
+          if (client.loyalty_points >= 2000) {
+            finalTier = { name: 'Diamant', color: '#B9F2FF', discount_percentage: 20 };
+          } else if (client.loyalty_points >= 1000) {
+            finalTier = { name: 'Platine', color: '#E5E4E2', discount_percentage: 15 };
+          } else if (client.loyalty_points >= 500) {
+            finalTier = { name: 'Or', color: '#FFD700', discount_percentage: 10 };
+          } else if (client.loyalty_points >= 100) {
+            finalTier = { name: 'Argent', color: '#C0C0C0', discount_percentage: 5 };
+          } else {
+            finalTier = { name: 'Bronze', color: '#CD7F32', discount_percentage: 0 };
+          }
+        }
+        
+        // Log final (après la déclaration de finalTier)
+        console.log(`🔍 Client ${client.first_name} ${client.last_name}:`, {
+          points: client.loyalty_points,
+          current_tier_id: client.current_tier_id,
+          tier_trouve: tier ? tier.name : 'Aucun',
+          tier_id_trouve: tier ? tier.id : null,
+          tier_object: tier,
+          final_tier: finalTier ? finalTier.name : 'Aucun'
+        });
+        
         return {
           ...client,
-          tier: tier || null,
+          tier: finalTier,
           used_points: usedPoints
         };
       });
 
       setClients(clientsWithTiers);
       
-      // Charger les parrainages (filtré par utilisateur)
-      const { data: referralsData } = await supabase
-        .from('referrals')
-        .select(`
-          *,
-          referrer_client:clients!referrals_referrer_client_id_fkey(first_name, last_name, email),
-          referred_client:clients!referrals_referred_client_id_fkey(first_name, last_name, email)
-        `)
-        .order('created_at', { ascending: false });
+      // Charger les parrainages pour cet atelier uniquement (avec gestion d'erreur)
+      let referralsData = [];
+      try {
+        const { data: referralsResult, error: referralsError } = await supabase
+          .from('referrals')
+          .select(`
+            *,
+            referrer_client:clients!referrals_referrer_client_id_fkey(first_name, last_name, email),
+            referred_client:clients!referrals_referred_client_id_fkey(first_name, last_name, email)
+          `)
+          .eq('workshop_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (referralsError) {
+          console.warn('⚠️ Erreur lors du chargement des parrainages:', referralsError);
+          referralsData = [];
+        } else {
+          referralsData = referralsResult || [];
+        }
+      } catch (error) {
+        console.warn('⚠️ Erreur lors du chargement des parrainages:', error);
+        referralsData = [];
+      }
       setReferrals(referralsData || []);
       
           } catch (error) {
@@ -446,6 +583,19 @@ const Loyalty: React.FC = () => {
       
       if (data?.success) {
         console.log('✅ Points ajoutés avec succès:', data);
+        
+        // Mettre à jour les niveaux après l'ajout de points (temporairement sans isolation)
+        try {
+          const { data: tierData, error: tierError } = await supabase.rpc('update_client_tiers');
+          if (tierError) {
+            console.warn('⚠️ Erreur lors de la mise à jour des niveaux:', tierError);
+          } else {
+            console.log('✅ Niveaux mis à jour:', tierData);
+          }
+        } catch (tierError) {
+          console.warn('⚠️ Exception lors de la mise à jour des niveaux:', tierError);
+        }
+        
         toast.success('Points ajoutés avec succès');
         setPointsDialog(false);
         setPointsForm({ client_id: '', points: 0, description: '' });
@@ -781,10 +931,16 @@ const Loyalty: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {client.tier && (
+                        {client.tier ? (
                           <Chip
                             label={client.tier.name}
                             sx={{ bgcolor: client.tier.color, color: 'white' }}
+                            size="small"
+                          />
+                        ) : (
+                          <Chip
+                            label="Sans niveau"
+                            sx={{ bgcolor: '#ccc', color: 'white' }}
                             size="small"
                           />
                         )}
@@ -1252,33 +1408,16 @@ const Loyalty: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Dialogue des paramètres */}
-      <Dialog open={settingsDialog} onClose={() => setSettingsDialog(false)} maxWidth="md" fullWidth>
+      {/* Dialogue des paramètres - Composant simple */}
+      <Dialog open={settingsDialog} onClose={() => setSettingsDialog(false)} maxWidth="xl" fullWidth>
         <DialogTitle>Paramètres de Fidélité</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Configurez les règles de votre programme de fidélité
-          </Typography>
-          
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Les paramètres avancés peuvent être modifiés directement dans la base de données.
-          </Alert>
-          
-          <Typography variant="h6" sx={{ mb: 1 }}>Règles actuelles :</Typography>
-          <Typography variant="body2">
-            • 100 points par parrainage confirmé
-          </Typography>
-          <Typography variant="body2">
-            • 1 point par euro dépensé
-          </Typography>
-          <Typography variant="body2">
-            • Expiration des points après 12 mois
-          </Typography>
+          <LoyaltySettingsSimple onDataChanged={handleSettingsDataChanged} />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSettingsDialog(false)}>Fermer</Button>
-                 </DialogActions>
-       </Dialog>
+        </DialogActions>
+      </Dialog>
 
        {/* Dialogue d'historique des points */}
        <LoyaltyHistory

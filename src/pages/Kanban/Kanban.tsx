@@ -85,6 +85,7 @@ const Kanban: React.FC = () => {
     addClient,
     loadUsers,
     loadSystemSettings,
+    loadRepairs,
   } = useAppStore();
 
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
@@ -98,6 +99,40 @@ const Kanban: React.FC = () => {
   const [repairToDelete, setRepairToDelete] = useState<Repair | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   
+  // États pour le bon d'intervention
+  const [interventionData, setInterventionData] = useState({
+    technicianName: '',
+    deviceCondition: '',
+    visibleDamages: '',
+    missingParts: '',
+    passwordProvided: false,
+    dataBackup: false,
+    initialDiagnosis: '',
+    proposedSolution: '',
+    estimatedDuration: '',
+    dataLossRisk: false,
+    dataLossRiskDetails: '',
+    cosmeticChanges: false,
+    cosmeticChangesDetails: '',
+    warrantyVoid: false,
+    warrantyVoidDetails: '',
+    clientAuthorizesRepair: false,
+    clientAuthorizesDataAccess: false,
+    clientAuthorizesReplacement: false,
+    additionalNotes: '',
+    specialInstructions: '',
+    termsAccepted: true, // Coché par défaut
+    liabilityAccepted: true, // Coché par défaut
+    // Nouveaux champs pour le système de schéma et mots de passe
+    authType: '',
+    accessCode: '',
+    patternPoints: [] as number[],
+    patternDescription: '',
+    securityInfo: '',
+    accessConfirmed: false,
+    backupBeforeAccess: false,
+  });
+
   // Charger les paramètres système au montage du composant
   useEffect(() => {
     if (systemSettings.length === 0) {
@@ -186,14 +221,66 @@ const Kanban: React.FC = () => {
 
   const getFilteredModels = () => {
     // Utiliser les modèles du store centralisé
-    return deviceModels.filter(model => {
-      const brand = deviceBrands.find(b => b.id === model.brandId);
-      const category = deviceCategories.find(c => c.id === model.categoryId);
+    console.log('🔍 getFilteredModels appelé avec:', { selectedCategory, selectedBrand, totalModels: deviceModels.length });
+    
+    const filtered = deviceModels.filter(model => {
+      const brandMatch = !selectedBrand || (model as any).brand === selectedBrand;
       
-      const brandMatch = !selectedBrand || brand?.name === selectedBrand;
-      const categoryMatch = !selectedCategory || category?.name === selectedCategory;
-      return brandMatch && categoryMatch && model.isActive;
+      // Pour la catégorie, utiliser une approche plus flexible
+      let categoryMatch = true;
+      if (selectedCategory) {
+        const modelType = (model as any).type;
+        
+        // Approche 1: Mapping direct
+        const typeToCategoryMap: { [key: string]: string } = {
+          'smartphone': 'Smartphones',
+          'smartphones': 'Smartphones',
+          'phone': 'Smartphones',
+          'mobile': 'Smartphones',
+          'tablet': 'Tablettes',
+          'tablets': 'Tablettes',
+          'laptop': 'Ordinateurs portables',
+          'laptops': 'Ordinateurs portables',
+          'notebook': 'Ordinateurs portables',
+          'desktop': 'Ordinateurs fixes',
+          'desktops': 'Ordinateurs fixes',
+          'pc': 'Ordinateurs fixes',
+          'computer': 'Ordinateurs fixes',
+          'other': 'Autres',
+          'others': 'Autres'
+        };
+        
+        // Approche 2: Recherche par nom de catégorie dans deviceCategories
+        const category = deviceCategories.find(cat => cat.name === selectedCategory);
+        let categoryMatchByType = false;
+        
+        if (category) {
+          // Si on trouve la catégorie, vérifier si le type correspond
+          const categoryNameLower = category.name.toLowerCase();
+          const modelTypeLower = modelType.toLowerCase();
+          
+          categoryMatchByType = categoryNameLower.includes(modelTypeLower) || 
+                               modelTypeLower.includes(categoryNameLower) ||
+                               typeToCategoryMap[modelType] === selectedCategory;
+        }
+        
+        categoryMatch = categoryMatchByType;
+        
+        console.log(`📱 Modèle ${(model as any).brand} ${(model as any).model}: type=${modelType}, selectedCategory=${selectedCategory}, categoryMatch=${categoryMatch}`);
+      }
+      
+      const isActive = model.isActive;
+      const finalMatch = brandMatch && categoryMatch && isActive;
+      
+      if (selectedCategory) {
+        console.log(`✅ ${(model as any).brand} ${(model as any).model}: brandMatch=${brandMatch}, categoryMatch=${categoryMatch}, isActive=${isActive}, finalMatch=${finalMatch}`);
+      }
+      
+      return finalMatch;
     });
+    
+    console.log(`🎯 Modèles filtrés: ${filtered.length}/${deviceModels.length}`);
+    return filtered;
   };
 
   // Charger les utilisateurs au montage du composant
@@ -221,6 +308,21 @@ const Kanban: React.FC = () => {
       });
     }
   }, [users]);
+
+  // Debug: Afficher les modèles d'appareils
+  useEffect(() => {
+    console.log('📱 Modèles d\'appareils dans le store:', deviceModels.length);
+    if (deviceModels.length > 0) {
+      console.log('🔍 Détail des modèles chargés:');
+      deviceModels.forEach((model, index) => {
+        console.log(`${index + 1}. ${(model as any).brand} ${(model as any).model} (${(model as any).type}) - Actif: ${model.isActive}`);
+      });
+      
+      // Afficher les types uniques
+      const uniqueTypes = Array.from(new Set(deviceModels.map(m => (m as any).type)));
+      console.log('🎯 Types uniques trouvés:', uniqueTypes);
+    }
+  }, [deviceModels]);
 
   // Fonction utilitaire pour sécuriser les dates
   const safeFormatDate = (date: any, formatString: string) => {
@@ -377,23 +479,33 @@ const Kanban: React.FC = () => {
         return;
       }
 
-      // Créer un appareil temporaire dans Supabase basé sur le modèle sélectionné
-      await createDeviceFromModel(newRepair.deviceId);
-      
-      // Trouver l'appareil créé dans la liste
-      const model = deviceModels.find(m => m.id === newRepair.deviceId);
-      const brand = deviceBrands.find(b => b.id === model?.brandId);
-      
+      // Récupérer les informations du modèle sélectionné
+      const selectedModel = deviceModels.find(m => m.id === newRepair.deviceId);
+      if (!selectedModel) {
+        throw new Error('Modèle sélectionné non trouvé');
+      }
+
+      // Créer un appareil temporaire basé sur le modèle
+      const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
+        brand: (selectedModel as any).brand,
+        model: (selectedModel as any).model || (selectedModel as any).name,
+        serialNumber: undefined,
+        type: (selectedModel as any).type as any,
+        specifications: {},
+      };
+
+      // Créer l'appareil dans Supabase
+      await addDevice(deviceData as Device);
+
+      // Trouver l'appareil créé
       const createdDevice = devices.find(d => 
-        d.brand === brand?.name && 
-        d.model === model?.name
+        d.brand === deviceData.brand && 
+        d.model === deviceData.model
       );
-      
+
       if (!createdDevice) {
         throw new Error('Impossible de créer l\'appareil');
       }
-      
-      const deviceId = createdDevice.id;
 
       // Calculer le prix final après réduction
       const originalPrice = newRepair.totalPrice;
@@ -403,7 +515,7 @@ const Kanban: React.FC = () => {
       // Préparer les données pour Supabase (sans id, createdAt, updatedAt)
       const repairData: Omit<Repair, 'id' | 'createdAt' | 'updatedAt'> = {
         clientId: newRepair.clientId,
-        deviceId: deviceId,
+        deviceId: createdDevice.id,
         description: newRepair.description,
         issue: newRepair.issue,
         status: newRepair.status,
@@ -420,6 +532,9 @@ const Kanban: React.FC = () => {
       };
 
       await addRepair(repairData as Repair);
+      
+      // Recharger les réparations pour mettre à jour l'affichage
+      await loadRepairs();
       
       // Réinitialiser le formulaire
       resetNewRepairForm();
@@ -439,40 +554,7 @@ const Kanban: React.FC = () => {
     }));
   };
 
-  // Fonction pour créer un appareil temporaire dans Supabase quand on sélectionne un modèle
-  const createDeviceFromModel = async (modelId: string) => {
-    try {
-      const model = deviceModels.find(m => m.id === modelId);
-      if (!model) {
-        throw new Error('Modèle non trouvé');
-      }
 
-      const brand = deviceBrands.find(b => b.id === model.brandId);
-      const category = deviceCategories.find(c => c.id === model.categoryId);
-      
-      if (!brand || !category) {
-        throw new Error('Marque ou catégorie non trouvée');
-      }
-
-      // Créer un appareil temporaire dans Supabase basé sur le modèle
-      const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
-        brand: brand.name,
-        model: model.name,
-        serialNumber: undefined,
-        type: category.name.toLowerCase() as any,
-        specifications: {},
-      };
-
-      await addDevice(deviceData as Device);
-      
-      // Retourner l'ID du modèle pour l'instant
-      // L'appareil sera créé automatiquement dans Supabase
-      return modelId;
-    } catch (error) {
-      console.error('Erreur lors de la création de l\'appareil:', error);
-      throw error;
-    }
-  };
 
   const resetNewRepairForm = () => {
     setNewRepair({
@@ -523,10 +605,11 @@ const Kanban: React.FC = () => {
 
       // Créer le modèle dans le store centralisé
       const modelData = {
-        name: newDevice.model.trim(),
-        brandId: newDevice.brandId,
-        categoryId: newDevice.categoryId,
+        brand: brand.name,
+        model: newDevice.model.trim(),
+        type: category.name.toLowerCase() as any,
         year: new Date().getFullYear(),
+        specifications: {},
         commonIssues: [],
         repairDifficulty: 'medium' as 'easy' | 'medium' | 'hard',
         partsAvailability: 'medium' as 'high' | 'medium' | 'low',
@@ -534,7 +617,7 @@ const Kanban: React.FC = () => {
       };
 
       // Utiliser la fonction du store pour ajouter le modèle
-      addDeviceModel(modelData);
+      await addDeviceModel(modelData as any);
       
       // Créer aussi un appareil dans l'ancien système pour la compatibilité
       const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -663,6 +746,140 @@ const Kanban: React.FC = () => {
     setSelectedRepairForIntervention(null);
   };
 
+  // Fonction pour générer le bon d'intervention depuis l'onglet
+  const handleGenerateInterventionFromTab = async () => {
+    try {
+      console.log('🔍 Début de la génération du bon d\'intervention');
+      console.log('📋 Données de réparation:', newRepair);
+      console.log('📋 Données d\'intervention:', interventionData);
+      
+      // Vérifier que les informations de base sont remplies
+      if (!newRepair.clientId || !newRepair.deviceId || !newRepair.description) {
+        alert('❌ Veuillez d\'abord remplir les informations de base dans l\'onglet "Réparation" (client, appareil, description).');
+        return;
+      }
+
+      // Vérifier que les conditions légales sont acceptées
+      if (!interventionData.termsAccepted || !interventionData.liabilityAccepted) {
+        alert('❌ Veuillez accepter les conditions légales pour générer le bon d\'intervention.');
+        return;
+      }
+
+      // Récupérer les informations du client et du modèle
+      const client = getClientById(newRepair.clientId);
+      const selectedModel = deviceModels.find(m => m.id === newRepair.deviceId);
+      
+      console.log('👤 Client trouvé:', client);
+      console.log('📱 Modèle trouvé:', selectedModel);
+      
+      if (!client || !selectedModel) {
+        alert('❌ Erreur : informations client ou modèle manquantes.');
+        return;
+      }
+
+      // Créer un objet réparation temporaire pour le bon d'intervention
+      const tempRepair: Repair = {
+        id: 'temp-' + Date.now(),
+        clientId: newRepair.clientId,
+        deviceId: newRepair.deviceId,
+        description: newRepair.description,
+        issue: newRepair.issue,
+        status: 'new',
+        estimatedDuration: 0,
+        isUrgent: newRepair.isUrgent,
+        totalPrice: newRepair.totalPrice,
+        dueDate: new Date(newRepair.dueDate),
+        services: [],
+        parts: [],
+        isPaid: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Créer les données complètes pour le bon d'intervention
+      const completeInterventionData = {
+        interventionDate: new Date().toISOString().split('T')[0],
+        technicianName: interventionData.technicianName,
+        clientName: `${client.firstName} ${client.lastName}`,
+        clientPhone: client.phone || '',
+        clientEmail: client.email || '',
+        deviceBrand: (selectedModel as any).brand,
+        deviceModel: (selectedModel as any).model || (selectedModel as any).name,
+        deviceSerialNumber: '', // Pas de numéro de série pour un modèle
+        deviceType: (selectedModel as any).type,
+        deviceCondition: interventionData.deviceCondition,
+        visibleDamages: interventionData.visibleDamages,
+        missingParts: interventionData.missingParts,
+        passwordProvided: interventionData.passwordProvided,
+        dataBackup: interventionData.dataBackup,
+        reportedIssue: newRepair.description,
+        initialDiagnosis: interventionData.initialDiagnosis,
+        proposedSolution: interventionData.proposedSolution,
+        estimatedCost: newRepair.totalPrice,
+        estimatedDuration: interventionData.estimatedDuration,
+        dataLossRisk: interventionData.dataLossRisk,
+        dataLossRiskDetails: interventionData.dataLossRiskDetails,
+        cosmeticChanges: interventionData.cosmeticChanges,
+        cosmeticChangesDetails: interventionData.cosmeticChangesDetails,
+        warrantyVoid: interventionData.warrantyVoid,
+        warrantyVoidDetails: interventionData.warrantyVoidDetails,
+        clientAuthorizesRepair: interventionData.clientAuthorizesRepair,
+        clientAuthorizesDataAccess: interventionData.clientAuthorizesDataAccess,
+        clientAuthorizesReplacement: interventionData.clientAuthorizesReplacement,
+        additionalNotes: interventionData.additionalNotes,
+        specialInstructions: interventionData.specialInstructions,
+        termsAccepted: interventionData.termsAccepted,
+        liabilityAccepted: interventionData.liabilityAccepted,
+        // Nouveaux champs pour le système de schéma et mots de passe
+        authType: interventionData.authType,
+        accessCode: interventionData.accessCode,
+        patternPoints: interventionData.patternPoints,
+        patternDescription: interventionData.patternDescription,
+        securityInfo: interventionData.securityInfo,
+        accessConfirmed: interventionData.accessConfirmed,
+        backupBeforeAccess: interventionData.backupBeforeAccess,
+      };
+
+      console.log('📄 Données complètes pour le PDF:', completeInterventionData);
+
+      // Générer le PDF en utilisant la fonction du composant InterventionForm
+      console.log('🔄 Tentative de génération du PDF...');
+      try {
+        // Import dynamique pour éviter les problèmes de require
+        const InterventionFormModule = await import('../../components/InterventionForm');
+        console.log('✅ Module InterventionForm importé');
+        
+                  if (InterventionFormModule.generateInterventionPDF) {
+            // Préparer les paramètres de l'atelier
+            const workshopSettings = {
+              workshop_name: systemSettings.find(s => s.key === 'workshop_name')?.value || 'Atelier de réparation',
+              workshop_address: systemSettings.find(s => s.key === 'workshop_address')?.value || 'Adresse non configurée',
+              workshop_phone: systemSettings.find(s => s.key === 'workshop_phone')?.value || 'Téléphone non configuré',
+              workshop_email: systemSettings.find(s => s.key === 'workshop_email')?.value || 'Email non configuré',
+              workshop_website: systemSettings.find(s => s.key === 'workshop_website')?.value || 'Site web non configuré',
+              workshop_siret: systemSettings.find(s => s.key === 'workshop_siret')?.value || '',
+              workshop_vat: systemSettings.find(s => s.key === 'workshop_vat')?.value || ''
+            };
+            
+            console.log('🏢 Paramètres de l\'atelier:', workshopSettings);
+            InterventionFormModule.generateInterventionPDF(completeInterventionData, tempRepair, workshopSettings);
+            console.log('✅ PDF généré avec succès');
+          
+          alert('✅ Bon d\'intervention généré avec succès !\n\nVous pouvez maintenant créer la réparation dans l\'onglet "Réparation".');
+        } else {
+          throw new Error('Fonction generateInterventionPDF non trouvée');
+        }
+      } catch (pdfError: any) {
+        console.error('❌ Erreur lors de la génération du PDF:', pdfError);
+        throw new Error(`Erreur PDF: ${pdfError.message || 'Erreur inconnue'}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la génération du bon d\'intervention:', error);
+      alert('❌ Erreur lors de la génération du bon d\'intervention. Veuillez réessayer.');
+    }
+  };
+
   const handlePaymentValidation = async (repair: Repair, event: React.MouseEvent) => {
     // Empêcher la propagation et le comportement par défaut
     event.preventDefault();
@@ -785,12 +1002,19 @@ const Kanban: React.FC = () => {
             </Box>
           </Box>
 
-          <Typography variant="subtitle2" gutterBottom>
-            {client?.firstName} {client?.lastName}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="subtitle2">
+              {client?.firstName} {client?.lastName}
+            </Typography>
+            {repair.repairNumber && (
+              <Typography variant="caption" color="primary" sx={{ fontWeight: 'bold' }}>
+                {repair.repairNumber}
+              </Typography>
+            )}
+          </Box>
 
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            {device?.brand} {device?.model}
+            {device?.brand} {device?.model} {!device && 'Appareil'}
           </Typography>
 
           <Typography variant="body2" sx={{ mb: 1 }}>
@@ -844,32 +1068,7 @@ const Kanban: React.FC = () => {
             </Typography>
           </Box>
 
-          {/* Bouton Bon d'intervention - uniquement pour les réparations "Nouvelle" */}
-          {repair.status === 'new' && (
-            <Box sx={{ mt: 1 }}>
-              <Button
-                variant="contained"
-                size="medium"
-                startIcon={<PrintIcon />}
-                onClick={(e) => { e.stopPropagation(); openInterventionForm(repair); }}
-                onMouseDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                sx={{ 
-                  width: '100%',
-                  backgroundColor: '#1976d2',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: '#1565c0',
-                  },
-                  py: 1,
-                  fontSize: '0.875rem',
-                  fontWeight: 600
-                }}
-              >
-                📋 Bon d'Intervention
-              </Button>
-            </Box>
-          )}
+
         </CardContent>
       </Card>
     );
@@ -1146,7 +1345,8 @@ const Kanban: React.FC = () => {
             <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
               <Tab label="Réparation" />
               <Tab label="Nouveau client" />
-                                <Tab label="Nouveau modèle" />
+              <Tab label="Nouveau modèle" />
+              <Tab label="Bon d'intervention" />
             </Tabs>
           </Box>
         </DialogTitle>
@@ -1230,11 +1430,14 @@ const Kanban: React.FC = () => {
                     disabled={getFilteredModels().length === 0}
                   >
                     {getFilteredModels().map((model) => {
-                      const brand = deviceBrands.find(b => b.id === model.brandId);
-                      const category = deviceCategories.find(c => c.id === model.categoryId);
+                      // Utiliser directement brand et type du modèle
+                      const brandName = (model as any).brand || 'N/A';
+                      const modelName = (model as any).model || model.name || 'N/A';
+                      const categoryName = (model as any).type || 'N/A';
+                      
                       return (
                         <MenuItem key={model.id} value={model.id}>
-                          {brand?.name || 'N/A'} {model.name} ({category?.name || 'N/A'})
+                          {brandName} {modelName} ({categoryName})
                         </MenuItem>
                       );
                     })}
@@ -1469,6 +1672,286 @@ const Kanban: React.FC = () => {
                 >
                   Créer l'appareil
                 </Button>
+              </Grid>
+            </Grid>
+          )}
+          
+          {activeTab === 3 && (
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Configurez le bon d'intervention pour documenter l'état initial de l'appareil et les conditions de réparation.
+                </Alert>
+              </Grid>
+              
+              {/* Informations de base */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Nom du technicien"
+                  value={interventionData.technicianName}
+                  onChange={(e) => setInterventionData(prev => ({ ...prev, technicianName: e.target.value }))}
+                  required
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Durée estimée"
+                  value={interventionData.estimatedDuration}
+                  onChange={(e) => setInterventionData(prev => ({ ...prev, estimatedDuration: e.target.value }))}
+                  placeholder="ex: 2-3 jours"
+                />
+              </Grid>
+
+              {/* État de l'appareil */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="État de l'appareil"
+                  value={interventionData.deviceCondition}
+                  onChange={(e) => setInterventionData(prev => ({ ...prev, deviceCondition: e.target.value }))}
+                  placeholder="Décrivez l'état général, dommages visibles, pièces manquantes..."
+                />
+              </Grid>
+
+              {/* Section Sécurité */}
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 2, color: '#1976d2', borderBottom: '2px solid #1976d2', pb: 1 }}>
+                  🔐 Sécurité et Accès
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Type d'authentification</InputLabel>
+                  <Select
+                    value={interventionData.authType || ''}
+                    onChange={(e) => setInterventionData(prev => ({ ...prev, authType: e.target.value }))}
+                    label="Type d'authentification"
+                  >
+                    <MenuItem value="password">Mot de passe</MenuItem>
+                    <MenuItem value="pattern">Schéma de déverrouillage</MenuItem>
+                    <MenuItem value="pin">Code PIN</MenuItem>
+                    <MenuItem value="fingerprint">Empreinte digitale</MenuItem>
+                    <MenuItem value="face">Reconnaissance faciale</MenuItem>
+                    <MenuItem value="none">Aucun</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Code d'accès"
+                  value={interventionData.accessCode || ''}
+                  onChange={(e) => setInterventionData(prev => ({ ...prev, accessCode: e.target.value }))}
+                  placeholder="Mot de passe, PIN, ou description"
+                  type="password"
+                />
+              </Grid>
+
+              {/* Schéma interactif */}
+              {interventionData.authType === 'pattern' && (
+                <Grid item xs={12}>
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #1976d2', 
+                    borderRadius: 2, 
+                    backgroundColor: '#f8f9fa',
+                    textAlign: 'center'
+                  }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: '#1976d2' }}>
+                      📱 Schéma de déverrouillage
+                    </Typography>
+                    
+                    <Box sx={{ 
+                      width: 150, 
+                      height: 150, 
+                      mx: 'auto',
+                      border: '2px solid #ccc',
+                      borderRadius: 2,
+                      backgroundColor: '#fff',
+                      mb: 2
+                    }}>
+                      <Box sx={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(3, 1fr)', 
+                        gap: 1,
+                        p: 2,
+                        height: '100%'
+                      }}>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((point) => (
+                          <Box
+                            key={point}
+                            sx={{
+                              width: 15,
+                              height: 15,
+                              borderRadius: '50%',
+                              backgroundColor: interventionData.patternPoints?.includes(point) ? '#1976d2' : '#e0e0e0',
+                              border: '2px solid #ccc',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              fontWeight: 'bold',
+                              color: interventionData.patternPoints?.includes(point) ? 'white' : '#666',
+                              '&:hover': {
+                                backgroundColor: interventionData.patternPoints?.includes(point) ? '#1565c0' : '#f0f0f0',
+                              }
+                            }}
+                            onClick={() => {
+                              const currentPoints = interventionData.patternPoints || [];
+                              const newPoints = currentPoints.includes(point) 
+                                ? currentPoints.filter(p => p !== point)
+                                : [...currentPoints, point];
+                              setInterventionData(prev => ({ 
+                                ...prev, 
+                                patternPoints: newPoints,
+                                accessCode: `Schéma: ${newPoints.join('-')}`
+                              }));
+                            }}
+                          >
+                            {point}
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                    
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setInterventionData(prev => ({ 
+                        ...prev, 
+                        patternPoints: [],
+                        accessCode: '',
+                        patternDescription: ''
+                      }))}
+                    >
+                      Effacer le schéma
+                    </Button>
+                  </Box>
+                </Grid>
+              )}
+
+              {/* Confirmations */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={interventionData.dataBackup}
+                        onChange={(e) => setInterventionData(prev => ({ ...prev, dataBackup: e.target.checked }))}
+                      />
+                    }
+                    label="Sauvegarde des données effectuée"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={interventionData.accessConfirmed}
+                        onChange={(e) => setInterventionData(prev => ({ ...prev, accessConfirmed: e.target.checked }))}
+                      />
+                    }
+                    label="Accès testé et confirmé"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={interventionData.clientAuthorizesRepair}
+                        onChange={(e) => setInterventionData(prev => ({ ...prev, clientAuthorizesRepair: e.target.checked }))}
+                      />
+                    }
+                    label="Client autorise la réparation"
+                  />
+                </Box>
+              </Grid>
+
+              {/* Diagnostic */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Diagnostic et solution proposée"
+                  value={interventionData.initialDiagnosis}
+                  onChange={(e) => setInterventionData(prev => ({ ...prev, initialDiagnosis: e.target.value }))}
+                  placeholder="Décrivez le problème et la solution..."
+                />
+              </Grid>
+
+              {/* Notes */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Notes additionnelles"
+                  value={interventionData.additionalNotes}
+                  onChange={(e) => setInterventionData(prev => ({ ...prev, additionalNotes: e.target.value }))}
+                  placeholder="Informations importantes, risques, etc."
+                />
+              </Grid>
+
+              {/* Conditions */}
+              <Grid item xs={12}>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Important :</strong> Le client accepte les conditions de réparation et les risques potentiels.
+                  </Typography>
+                </Alert>
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={interventionData.termsAccepted}
+                      onChange={(e) => setInterventionData(prev => ({ ...prev, termsAccepted: e.target.checked }))}
+                      required
+                    />
+                  }
+                  label="J'accepte les conditions de réparation"
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={interventionData.liabilityAccepted}
+                      onChange={(e) => setInterventionData(prev => ({ ...prev, liabilityAccepted: e.target.checked }))}
+                      required
+                    />
+                  }
+                  label="Je comprends et accepte les clauses de responsabilité"
+                />
+              </Grid>
+
+              {/* Bouton de génération */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<PrintIcon />}
+                    onClick={handleGenerateInterventionFromTab}
+                    disabled={!interventionData.technicianName || !interventionData.termsAccepted || !interventionData.liabilityAccepted}
+                    sx={{ 
+                      backgroundColor: '#1976d2',
+                      '&:hover': {
+                        backgroundColor: '#1565c0',
+                      },
+                      px: 4,
+                      py: 1.5
+                    }}
+                  >
+                    Générer le Bon d'Intervention
+                  </Button>
+                </Box>
               </Grid>
             </Grid>
           )}

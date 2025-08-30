@@ -54,6 +54,10 @@ const LandingNavbar: React.FC<NavbarProps> = ({ transparent = true }) => {
     navigate('/app/dashboard');
   };
 
+  const handleRepairTracking = () => {
+    navigate('/repair-tracking');
+  };
+
   const menuItems = [
     { label: 'Fonctionnalités', href: '#features' },
     { label: 'Avantages', href: '#benefits' },
@@ -182,6 +186,21 @@ const LandingNavbar: React.FC<NavbarProps> = ({ transparent = true }) => {
         ))}
         <ListItem sx={{ pt: 2 }}>
           <Button
+            variant="outlined"
+            fullWidth
+            onClick={handleRepairTracking}
+            sx={{
+              py: 1.5,
+              fontWeight: 600,
+              borderRadius: 2,
+              mb: 1
+            }}
+          >
+            Suivre ma Réparation
+          </Button>
+        </ListItem>
+        <ListItem>
+          <Button
             variant="contained"
             fullWidth
             onClick={handleAccessApp}
@@ -268,6 +287,28 @@ const LandingNavbar: React.FC<NavbarProps> = ({ transparent = true }) => {
                       {item.label}
                     </Button>
                   ))}
+                  <Button
+                    variant="outlined"
+                    onClick={handleRepairTracking}
+                    sx={{
+                      borderColor: transparent && !scrolled ? 'white' : theme.palette.primary.main,
+                      color: transparent && !scrolled ? 'white' : theme.palette.primary.main,
+                      px: 3,
+                      py: 1.5,
+                      fontWeight: 600,
+                      borderRadius: '50px',
+                      fontSize: '0.9rem',
+                      borderWidth: 2,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        bgcolor: transparent && !scrolled ? 'rgba(255, 255, 255, 0.1)' : 'rgba(25, 118, 210, 0.1)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+                      }
+                    }}
+                  >
+                    Suivre Réparation
+                  </Button>
                   <Button
                     variant="contained"
                     onClick={handleAccessApp}

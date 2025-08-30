@@ -28,7 +28,6 @@ import {
   Person as PersonIcon,
   Home as HomeIcon,
   Info as InfoIcon,
-  Upload as UploadIcon,
   Business as BusinessIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
@@ -64,7 +63,6 @@ interface ClientFormData {
   // Autres informations
   accountingCode: string;
   cniIdentifier: string;
-  attachedFile: File | null;
   internalNote: string;
   status: 'displayed' | 'hidden';
   smsNotification: boolean;
@@ -121,10 +119,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSubmit, existi
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
-    setFormData(prev => ({ ...prev, attachedFile: file }));
-  };
+
 
   const handleSubmit = () => {
     console.log('🔍 DEBUG - Données du formulaire avant soumission:', formData);
@@ -182,7 +177,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSubmit, existi
       billingCity: '',
       accountingCode: '',
       cniIdentifier: '',
-      attachedFile: null,
       internalNote: '',
       status: 'displayed',
       smsNotification: true,
@@ -590,31 +584,6 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSubmit, existi
                 onChange={(e) => handleInputChange('cniIdentifier', e.target.value)}
                 placeholder="Veuillez saisir identifiant CNI"
               />
-            </Grid>
-
-            <Grid item xs={12} md={4}>
-                              <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={<UploadIcon />}
-                  fullWidth
-                  sx={{ height: 56, borderColor: '#6b7280', color: '#6b7280' }}
-                >
-                Charger
-                <input
-                  type="file"
-                  hidden
-                  onChange={handleFileUpload}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                />
-              </Button>
-              {formData.attachedFile && (
-                <Chip 
-                  label={formData.attachedFile.name} 
-                  onDelete={() => handleInputChange('attachedFile', null)}
-                  sx={{ mt: 1 }}
-                />
-              )}
             </Grid>
 
             <Grid item xs={12}>

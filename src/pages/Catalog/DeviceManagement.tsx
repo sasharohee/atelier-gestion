@@ -1223,9 +1223,10 @@ const DeviceManagement: React.FC = () => {
     return matchesSearch && matchesCategory;
   });
 
-  const filteredModels = deviceModels.filter(model =>
-    model.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredModels = deviceModels.filter(model => {
+    const modelName = (model as any).name || (model as any).model || 'N/A';
+    return modelName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
 
 
@@ -1234,13 +1235,15 @@ const DeviceManagement: React.FC = () => {
     const model = deviceModels.find(m => m.id === modelId);
     if (!model) return { name: 'N/A', brand: 'N/A', category: 'N/A' };
     
-    const brand = deviceBrands.find(b => b.id === model.brandId);
-    const category = deviceCategories.find(c => c.id === model.categoryId);
+    // Utiliser la nouvelle structure des modèles
+    const modelName = (model as any).name || (model as any).model || 'N/A';
+    const brandName = (model as any).brand || 'N/A';
+    const categoryName = (model as any).type || 'N/A';
     
     return {
-      name: model.name,
-      brand: brand?.name || 'N/A',
-      category: category?.name || 'N/A',
+      name: modelName,
+      brand: brandName,
+      category: categoryName,
     };
   };
 
@@ -1440,7 +1443,7 @@ const DeviceManagement: React.FC = () => {
                 <TableBody>
                   {filteredBrands.map((brand) => {
                     const category = deviceCategories.find(cat => cat.id === brand.categoryId);
-                    const modelCount = deviceModels.filter(model => model.brandId === brand.id).length;
+                    const modelCount = deviceModels.filter(model => (model as any).brand === brand.name).length;
                     return (
                       <TableRow key={brand.id} hover>
                         <TableCell>
@@ -1523,14 +1526,14 @@ const DeviceManagement: React.FC = () => {
                     <TableRow key={model.id} hover>
                       <TableCell>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                          {model.name}
+                          {(model as any).name || (model as any).model || 'N/A'}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {deviceBrands.find(brand => brand.id === model.brandId)?.name || 'N/A'}
+                        {(model as any).brand || 'N/A'}
                       </TableCell>
                       <TableCell>
-                        {deviceCategories.find(cat => cat.id === model.categoryId)?.name || 'N/A'}
+                        {(model as any).type || 'N/A'}
                       </TableCell>
                       <TableCell>{model.year}</TableCell>
                       <TableCell>

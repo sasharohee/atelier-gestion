@@ -48,6 +48,8 @@ import CGV from './pages/Legal/CGV';
 import RGPD from './pages/Legal/RGPD';
 import Support from './pages/Support/Support';
 import FAQ from './pages/Support/FAQ';
+import RepairTracking from './pages/RepairTracking/RepairTracking';
+import RepairHistory from './pages/RepairTracking/RepairHistory';
 
 // Services
 import { demoDataService } from './services/demoDataService';
@@ -173,6 +175,8 @@ function App() {
                 <Route path="/rgpd" element={<RGPD />} />
                 <Route path="/support" element={<Support />} />
                 <Route path="/faq" element={<FAQ />} />
+                <Route path="/repair-tracking" element={<RepairTracking />} />
+                <Route path="/repair-history" element={<RepairHistory />} />
                 <Route path="/app/*" element={
                   <AuthGuard>
                     <Layout>

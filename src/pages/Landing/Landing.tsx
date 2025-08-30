@@ -145,6 +145,10 @@ const Landing: React.FC = () => {
     navigate('/auth');
   };
 
+  const handleRepairTracking = () => {
+    navigate('/repair-tracking');
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Navbar */}
@@ -292,8 +296,15 @@ const Landing: React.FC = () => {
                     </Stack>
                   </Box>
 
-                  {/* CTA Button */}
-                  <Box sx={{ mb: { xs: 3, md: 4 }, textAlign: { xs: 'center', md: 'left' } }}>
+                  {/* CTA Buttons */}
+                  <Box sx={{ 
+                    mb: { xs: 3, md: 4 }, 
+                    textAlign: { xs: 'center', md: 'left' },
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 2,
+                    justifyContent: { xs: 'center', md: 'flex-start' }
+                  }}>
                     <Button
                       variant="contained"
                       size="large"
@@ -318,6 +329,31 @@ const Landing: React.FC = () => {
                       endIcon={<ArrowForwardIcon />}
                     >
                       Accéder à l'Atelier
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="large"
+                      onClick={handleRepairTracking}
+                      sx={{
+                        borderColor: 'white',
+                        color: 'white',
+                        px: { xs: 3, md: 4 },
+                        py: { xs: 1.5, md: 2 },
+                        fontSize: { xs: '1rem', md: '1.1rem' },
+                        fontWeight: 600,
+                        borderRadius: 3,
+                        borderWidth: 2,
+                        transition: 'all 0.3s ease',
+                        width: { xs: '100%', sm: 'auto' },
+                        '&:hover': {
+                          bgcolor: 'rgba(255, 255, 255, 0.1)',
+                          borderColor: 'white',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 8px 32px rgba(255,255,255,0.2)'
+                        }
+                      }}
+                    >
+                      Suivre ma Réparation
                     </Button>
                   </Box>
 

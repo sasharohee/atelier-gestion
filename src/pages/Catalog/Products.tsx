@@ -43,7 +43,7 @@ const Products: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'accessoire',
+    category: 'smartphone',
     price: 0,
     stockQuantity: 0,
     minStockLevel: 1,
@@ -51,6 +51,14 @@ const Products: React.FC = () => {
   });
 
   const productCategories = [
+    { value: 'console', label: 'Console de jeux' },
+    { value: 'ordinateur_portable', label: 'Ordinateur portable' },
+    { value: 'ordinateur_fixe', label: 'Ordinateur fixe' },
+    { value: 'smartphone', label: 'Smartphone' },
+    { value: 'montre', label: 'Montre connectée' },
+    { value: 'manette_jeux', label: 'Manette de jeux' },
+    { value: 'ecouteur', label: 'Écouteur' },
+    { value: 'casque', label: 'Casque audio' },
     { value: 'accessoire', label: 'Accessoire' },
     { value: 'protection', label: 'Protection' },
     { value: 'connectique', label: 'Connectique' },
@@ -66,7 +74,7 @@ const Products: React.FC = () => {
       setFormData({
         name: product.name || '',
         description: product.description || '',
-        category: product.category || 'accessoire',
+        category: product.category || 'smartphone',
         price: product.price || 0,
         stockQuantity: product.stockQuantity || 0,
         minStockLevel: product.minStockLevel || 1,
@@ -77,7 +85,7 @@ const Products: React.FC = () => {
       setFormData({
         name: '',
         description: '',
-        category: 'accessoire',
+        category: 'smartphone',
         price: 0,
         stockQuantity: 0,
         minStockLevel: 1,

@@ -115,9 +115,9 @@ interface AppActions {
   deleteDeviceBrand: (id: string) => void;
   
   // Modèles
-  addDeviceModel: (model: Omit<DeviceModel, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateDeviceModel: (id: string, updates: Partial<DeviceModel>) => void;
-  deleteDeviceModel: (id: string) => void;
+  addDeviceModel: (model: Omit<DeviceModel, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateDeviceModel: (id: string, updates: Partial<DeviceModel>) => Promise<void>;
+  deleteDeviceModel: (id: string) => Promise<void>;
   
   // Getters utilitaires
   getDeviceCategories: () => DeviceCategory[];
@@ -1176,6 +1176,7 @@ export const useAppStore = create<AppStore>()(
               parts: [], // Tableau vide par défaut
               totalPrice: result.data.total_price || 0,
               isPaid: result.data.is_paid || false,
+              repairNumber: result.data.repair_number, // ✅ Ajout du numéro de réparation
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
               updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
             };
@@ -1219,6 +1220,7 @@ export const useAppStore = create<AppStore>()(
               parts: [], // Tableau vide par défaut
               totalPrice: result.data.total_price,
               isPaid: result.data.is_paid,
+              repairNumber: result.data.repair_number, // ✅ Ajout du numéro de réparation
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
               updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
             };
@@ -1710,16 +1712,17 @@ export const useAppStore = create<AppStore>()(
             // Transformer les données de Supabase vers le format de l'application
             const transformedModels = result.data.map((model: any) => ({
               id: model.id,
-              name: model.name,
-              brandId: model.brand_id || model.brandId,
-              categoryId: model.category_id || model.categoryId,
+              brand: model.brand,
+              model: model.model,
+              type: model.type,
               year: model.year || new Date().getFullYear(),
-              commonIssues: model.common_issues || model.commonIssues || [],
-              repairDifficulty: model.repair_difficulty || model.repairDifficulty || 'medium',
-              partsAvailability: model.parts_availability || model.partsAvailability || 'medium',
-              isActive: model.is_active !== undefined ? model.is_active : model.isActive,
-              createdAt: model.created_at ? new Date(model.created_at) : new Date(),
-              updatedAt: model.updated_at ? new Date(model.updated_at) : new Date(),
+              specifications: model.specifications || {},
+              commonIssues: model.commonIssues || [],
+              repairDifficulty: model.repairDifficulty || 'medium',
+              partsAvailability: model.partsAvailability || 'medium',
+              isActive: model.isActive !== undefined ? model.isActive : true,
+              createdAt: model.createdAt ? new Date(model.createdAt) : new Date(),
+              updatedAt: model.updatedAt ? new Date(model.updatedAt) : new Date(),
             }));
             set({ deviceModels: transformedModels });
           }
@@ -1999,30 +2002,78 @@ export const useAppStore = create<AppStore>()(
       },
       
       // Modèles
-      addDeviceModel: (model) => {
-        const newModel = {
-          ...model,
-          id: uuidv4(),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        set((state) => ({
-          deviceModels: [...state.deviceModels, newModel]
-        }));
+      addDeviceModel: async (model) => {
+        try {
+          const result = await deviceModelService.create(model);
+          if (result.success && 'data' in result && result.data) {
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedModel: DeviceModel = {
+              id: result.data.id,
+              brand: result.data.brand,
+              model: result.data.model,
+              type: result.data.type,
+              year: result.data.year || new Date().getFullYear(),
+              specifications: result.data.specifications || {},
+              commonIssues: result.data.commonIssues || [],
+              repairDifficulty: result.data.repairDifficulty || 'medium',
+              partsAvailability: result.data.partsAvailability || 'medium',
+              isActive: result.data.isActive !== undefined ? result.data.isActive : true,
+              createdAt: result.data.createdAt ? new Date(result.data.createdAt) : new Date(),
+              updatedAt: result.data.updatedAt ? new Date(result.data.updatedAt) : new Date(),
+            };
+            set((state) => ({
+              deviceModels: [...state.deviceModels, transformedModel]
+            }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de l\'ajout du modèle:', error);
+          throw error;
+        }
       },
       
-      updateDeviceModel: (id, updates) => {
-        set((state) => ({
-          deviceModels: state.deviceModels.map(model =>
-            model.id === id ? { ...model, ...updates, updatedAt: new Date() } : model
-          )
-        }));
+      updateDeviceModel: async (id, updates) => {
+        try {
+          const result = await deviceModelService.update(id, updates);
+          if (result.success && 'data' in result && result.data) {
+            // Transformer les données de Supabase vers le format de l'application
+            const transformedModel: DeviceModel = {
+              id: result.data.id,
+              brand: result.data.brand,
+              model: result.data.model,
+              type: result.data.type,
+              year: result.data.year || new Date().getFullYear(),
+              specifications: result.data.specifications || {},
+              commonIssues: result.data.commonIssues || [],
+              repairDifficulty: result.data.repairDifficulty || 'medium',
+              partsAvailability: result.data.partsAvailability || 'medium',
+              isActive: result.data.isActive !== undefined ? result.data.isActive : true,
+              createdAt: result.data.createdAt ? new Date(result.data.createdAt) : new Date(),
+              updatedAt: result.data.updatedAt ? new Date(result.data.updatedAt) : new Date(),
+            };
+            set((state) => ({
+              deviceModels: state.deviceModels.map(model =>
+                model.id === id ? transformedModel : model
+              )
+            }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour du modèle:', error);
+          throw error;
+        }
       },
       
-      deleteDeviceModel: (id) => {
-        set((state) => ({
-          deviceModels: state.deviceModels.filter(model => model.id !== id)
-        }));
+      deleteDeviceModel: async (id) => {
+        try {
+          const result = await deviceModelService.delete(id);
+          if (result.success) {
+            set((state) => ({
+              deviceModels: state.deviceModels.filter(model => model.id !== id)
+            }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de la suppression du modèle:', error);
+          throw error;
+        }
       },
       
       // Getters utilitaires

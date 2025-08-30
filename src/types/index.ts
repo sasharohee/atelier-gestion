@@ -153,6 +153,7 @@ export interface RepairStatus {
 
 export interface Repair {
   id: string;
+  repairNumber?: string; // Numéro de réparation unique (ex: REP-20241201-1234)
   clientId: string;
   deviceId: string | null; // Peut être null si aucun appareil n'est sélectionné
   status: string; // ID du statut

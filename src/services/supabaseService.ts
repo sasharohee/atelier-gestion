@@ -1600,6 +1600,7 @@ export const repairService = {
     // Convertir les données de snake_case vers camelCase
     const convertedData = data?.map(repair => ({
       id: repair.id,
+      repairNumber: repair.repair_number,
       clientId: repair.client_id,
       deviceId: repair.device_id,
       status: repair.status,
@@ -1648,6 +1649,7 @@ export const repairService = {
     // Convertir les données de snake_case vers camelCase
     const convertedData = data ? {
       id: data.id,
+      repairNumber: data.repair_number,
       clientId: data.client_id,
       deviceId: data.device_id,
       status: data.status,

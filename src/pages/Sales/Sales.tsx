@@ -617,6 +617,83 @@ const Sales: React.FC = () => {
         </Grid>
       </Grid>
 
+      {/* Statistiques par catégorie */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <PieChartIcon sx={{ color: '#9c27b0', mr: 1 }} />
+                <Typography variant="h6">
+                  Ventes par catégorie de produits
+                </Typography>
+              </Box>
+              <Grid container spacing={2}>
+                {[
+                  { key: 'console', label: 'Consoles de jeux', color: '#ff6b35', icon: '🎮' },
+                  { key: 'ordinateur_portable', label: 'Ordinateurs portables', color: '#2196f3', icon: '💻' },
+                  { key: 'ordinateur_fixe', label: 'Ordinateurs fixes', color: '#4caf50', icon: '🖥️' },
+                  { key: 'smartphone', label: 'Smartphones', color: '#9c27b0', icon: '📱' },
+                  { key: 'montre', label: 'Montres connectées', color: '#ff9800', icon: '⌚' },
+                  { key: 'manette_jeux', label: 'Manettes de jeux', color: '#f44336', icon: '🎯' },
+                  { key: 'ecouteur', label: 'Écouteurs', color: '#795548', icon: '🎧' },
+                  { key: 'casque', label: 'Casques audio', color: '#607d8b', icon: '🎧' },
+                  { key: 'accessoire', label: 'Accessoires', color: '#1976d2', icon: '🔧' },
+                  { key: 'protection', label: 'Protection', color: '#2e7d32', icon: '🛡️' },
+                  { key: 'connectique', label: 'Connectique', color: '#ed6c02', icon: '🔌' },
+                  { key: 'logiciel', label: 'Logiciel', color: '#7b1fa2', icon: '💾' },
+                  { key: 'autre', label: 'Autre', color: '#757575', icon: '📦' },
+                ].map((category) => {
+                  const categorySales = sales.filter(sale => 
+                    sale.items && sale.items.some((item: any) => 
+                      item.type === 'product' && item.category === category.key
+                    )
+                  );
+                  const totalRevenue = categorySales.reduce((sum, sale) => sum + sale.total, 0);
+                  const totalQuantity = categorySales.reduce((sum, sale) => 
+                    sum + (sale.items?.reduce((itemSum: number, item: any) => 
+                      item.type === 'product' && item.category === category.key ? itemSum + item.quantity : itemSum, 0) || 0), 0
+                  );
+                  
+                  return (
+                    <Grid item xs={12} sm={6} md={4} lg={3} key={category.key}>
+                      <Card variant="outlined" sx={{ 
+                        borderLeft: `4px solid ${category.color}`,
+                        '&:hover': { boxShadow: 2 }
+                      }}>
+                        <CardContent sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="h4" sx={{ mr: 1 }}>
+                              {category.icon}
+                            </Typography>
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                {category.label}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {categorySales.length} ventes
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: category.color }}>
+                              {totalRevenue.toLocaleString('fr-FR')} €
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {totalQuantity} unités vendues
+                            </Typography>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       {/* Liste des ventes */}
       <Card>
         <CardContent>

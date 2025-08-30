@@ -87,6 +87,15 @@ interface InterventionData {
   // Informations légales
   termsAccepted: boolean;
   liabilityAccepted: boolean;
+  
+  // Nouveaux champs pour le système de schéma et mots de passe
+  authType?: string;
+  accessCode?: string;
+  patternPoints?: number[];
+  patternDescription?: string;
+  securityInfo?: string;
+  accessConfirmed?: boolean;
+  backupBeforeAccess?: boolean;
 }
 
 const InterventionForm: React.FC<InterventionFormProps> = ({ repair, open, onClose }) => {
@@ -122,8 +131,8 @@ const InterventionForm: React.FC<InterventionFormProps> = ({ repair, open, onClo
     clientAuthorizesReplacement: false,
     additionalNotes: '',
     specialInstructions: '',
-    termsAccepted: false,
-    liabilityAccepted: false,
+    termsAccepted: true, // Coché par défaut
+    liabilityAccepted: true, // Coché par défaut
   });
 
   // Charger les paramètres système
@@ -148,6 +157,7 @@ const InterventionForm: React.FC<InterventionFormProps> = ({ repair, open, onClo
   }, [repair]);
 
   const handleInputChange = (field: keyof InterventionData, value: any) => {
+    console.log('🔄 Changement de champ:', field, 'valeur:', value);
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -162,7 +172,7 @@ const InterventionForm: React.FC<InterventionFormProps> = ({ repair, open, onClo
 
 
   const isFormValid = () => {
-    return (
+    const isValid = (
       formData.technicianName &&
       formData.clientName &&
       formData.deviceBrand &&
@@ -171,6 +181,19 @@ const InterventionForm: React.FC<InterventionFormProps> = ({ repair, open, onClo
       formData.termsAccepted &&
       formData.liabilityAccepted
     );
+    
+    console.log('🔍 Validation du formulaire:', {
+      technicianName: !!formData.technicianName,
+      clientName: !!formData.clientName,
+      deviceBrand: !!formData.deviceBrand,
+      deviceModel: !!formData.deviceModel,
+      reportedIssue: !!formData.reportedIssue,
+      termsAccepted: formData.termsAccepted,
+      liabilityAccepted: formData.liabilityAccepted,
+      isValid
+    });
+    
+    return isValid;
   };
 
   return (
@@ -673,7 +696,7 @@ const InterventionForm: React.FC<InterventionFormProps> = ({ repair, open, onClo
 };
 
 // Fonction pour générer le PDF
-const generateInterventionPDF = (data: InterventionData, repair: Repair) => {
+const generateInterventionPDF = (data: InterventionData, repair: Repair, workshopSettings?: any) => {
   try {
     // Créer un nouveau document PDF
     const doc = new jsPDF();
@@ -682,253 +705,235 @@ const generateInterventionPDF = (data: InterventionData, repair: Repair) => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
-    const lineHeight = 5;
     let yPosition = margin;
 
-    // Fonction pour ajouter du texte avec gestion de la pagination
+    // Fonction pour ajouter du texte
     const addText = (text: string, x: number, y: number, options?: any) => {
-      if (y > pageHeight - margin) {
-        doc.addPage();
-        yPosition = margin;
-      }
       doc.text(text, x, y, options);
-      return y + lineHeight;
+      return y + 5;
     };
 
-    // Fonction pour ajouter une section avec espacement amélioré
-    const addSpacedSection = (title: string, content: string[], startY: number, color: number[] = [52, 152, 219]) => {
-      let y = startY;
+    // Fonction pour dessiner une case
+    const drawBox = (x: number, y: number, width: number, height: number, label: string) => {
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(x, y, width, height, 'S');
       
-      // Titre de section avec accent coloré
-      doc.setFontSize(12);
+      // Label au-dessus de la case
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(color[0], color[1], color[2]);
-      y = addText(title, margin, y);
-      
-      // Ligne de séparation colorée
-      doc.setDrawColor(color[0], color[1], color[2]);
-      doc.line(margin, y - 2, pageWidth - margin, y - 2);
-      
-      // Contenu en colonnes avec espacement
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(51, 51, 51);
-      
-      const itemsPerRow = 2;
-      let maxY = y + 4;
-      
-      for (let i = 0; i < content.length; i += itemsPerRow) {
-        const row = content.slice(i, i + itemsPerRow);
-        
-        row.forEach((item, index) => {
-          const itemWidth = (pageWidth - 2 * margin - 20) / itemsPerRow;
-          const x = margin + (index * (itemWidth + 20));
-          const itemY = addText(item, x, maxY);
-          maxY = Math.max(maxY, itemY);
-        });
-        
-        if (i + itemsPerRow < content.length) {
-          maxY += 4; // Espacement entre les lignes
-        }
-      }
-      
-      return maxY + 8;
+      doc.setTextColor(0, 0, 0);
+      doc.text(label, x, y - 2);
     };
 
-    // En-tête moderne avec couleur (compact)
-    const headerHeight = 25;
-    
-    // Fond coloré pour l'en-tête
-    doc.setFillColor(52, 152, 219);
-    doc.rect(0, 0, pageWidth, headerHeight, 'F');
-    
-    // Accent coloré en bas
-    doc.setFillColor(41, 128, 185);
-    doc.rect(0, headerHeight - 2, pageWidth, 2, 'F');
-    
-    // Titre principal avec signature obligatoire
-    doc.setFontSize(16);
+    // ===== EN-TÊTE =====
+    // Titre principal
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
-    yPosition = addText('BON D\'INTERVENTION - Signature obligatoire', pageWidth / 2, 12, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    yPosition = addText('BON D\'INTERVENTION', pageWidth / 2, yPosition, { align: 'center' });
     
-    // Informations secondaires
+    // Informations de l'atelier (si disponibles)
+    if (workshopSettings) {
+      yPosition += 5;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      yPosition = addText(`${workshopSettings.workshop_name}`, pageWidth / 2, yPosition, { align: 'center' });
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      yPosition = addText(`${workshopSettings.workshop_address}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition = addText(`Tél: ${workshopSettings.workshop_phone} | Email: ${workshopSettings.workshop_email}`, pageWidth / 2, yPosition, { align: 'center' });
+      
+      if (workshopSettings.workshop_siret) {
+        yPosition = addText(`SIRET: ${workshopSettings.workshop_siret}`, pageWidth / 2, yPosition, { align: 'center' });
+      }
+      if (workshopSettings.workshop_vat) {
+        yPosition = addText(`N° TVA: ${workshopSettings.workshop_vat}`, pageWidth / 2, yPosition, { align: 'center' });
+      }
+    }
+    
+    // Ligne de séparation
+    yPosition += 5;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(1);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 10;
+
+    // ===== INFORMATIONS CLIENT =====
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    yPosition = addText('INFORMATIONS CLIENT', margin, yPosition);
+    
     doc.setFontSize(9);
-    doc.setTextColor(240, 240, 240);
-    yPosition = addText(`Réparation #${repair.id.slice(0, 8)} | ${format(new Date(data.interventionDate), 'dd/MM/yyyy')}`, pageWidth / 2, 20, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    yPosition = addText(`Nom: ${data.clientName}`, margin, yPosition);
+    yPosition = addText(`Téléphone: ${data.clientPhone || 'Non renseigné'}`, margin, yPosition);
+    yPosition = addText(`Email: ${data.clientEmail || 'Non renseigné'}`, margin, yPosition);
+    yPosition += 5;
+
+    // ===== INFORMATIONS APPAREIL =====
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    yPosition = addText('INFORMATIONS APPAREIL', margin, yPosition);
     
-    // Message contractuel sous le titre
-    yPosition += 6;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    yPosition = addText(`Marque: ${data.deviceBrand}`, margin, yPosition);
+    yPosition = addText(`Modèle: ${data.deviceModel}`, margin, yPosition);
+    yPosition = addText(`Type: ${data.deviceType || 'Non renseigné'}`, margin, yPosition);
+    yPosition += 5;
+
+    // ===== DIAGNOSTIC =====
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    yPosition = addText('DIAGNOSTIC', margin, yPosition);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    yPosition = addText(`Problème signalé: ${data.reportedIssue}`, margin, yPosition);
+    if (data.initialDiagnosis) {
+      yPosition = addText(`Diagnostic: ${data.initialDiagnosis}`, margin, yPosition);
+    }
+    if (data.proposedSolution) {
+      yPosition = addText(`Solution proposée: ${data.proposedSolution}`, margin, yPosition);
+    }
+    yPosition = addText(`Coût estimé: ${data.estimatedCost} €`, margin, yPosition);
+    yPosition += 5;
+
+    // ===== ÉTAT INITIAL =====
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    yPosition = addText('ÉTAT INITIAL DE L\'APPAREIL', margin, yPosition);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    if (data.deviceCondition) {
+      yPosition = addText(`État général: ${data.deviceCondition}`, margin, yPosition);
+    }
+    if (data.visibleDamages) {
+      yPosition = addText(`Dommages visibles: ${data.visibleDamages}`, margin, yPosition);
+    }
+    if (data.missingParts) {
+      yPosition = addText(`Pièces manquantes: ${data.missingParts}`, margin, yPosition);
+    }
+    yPosition = addText(`Sauvegarde effectuée: ${data.dataBackup ? 'Oui' : 'Non'}`, margin, yPosition);
+    
+    // Informations de sécurité et accès
+    if (data.authType || data.accessCode || data.patternDescription) {
+      yPosition += 3;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      yPosition = addText('Sécurité et accès:', margin, yPosition);
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      if (data.authType) {
+        yPosition = addText(`Type d'authentification: ${data.authType}`, margin, yPosition);
+      }
+      if (data.accessCode) {
+        yPosition = addText(`Code d'accès: ${data.accessCode}`, margin, yPosition);
+      }
+      if (data.patternDescription) {
+        yPosition = addText(`Description du schéma: ${data.patternDescription}`, margin, yPosition);
+      }
+      if (data.securityInfo) {
+        yPosition = addText(`Informations de sécurité: ${data.securityInfo}`, margin, yPosition);
+      }
+      yPosition = addText(`Accès confirmé: ${data.accessConfirmed ? 'Oui' : 'Non'}`, margin, yPosition);
+      yPosition = addText(`Sauvegarde avant accès: ${data.backupBeforeAccess ? 'Oui' : 'Non'}`, margin, yPosition);
+    }
+    yPosition += 5;
+
+    // ===== CONDITIONS LÉGALES =====
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    yPosition = addText('CONDITIONS LÉGALES', margin, yPosition);
+    
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(240, 240, 240);
-    doc.text('Document contractuel - Signature obligatoire pour validation', pageWidth / 2, yPosition, { align: 'center' });
-    
-    // Reset colors
-    doc.setTextColor(51, 51, 51);
-    yPosition = headerHeight + 15;
+    yPosition = addText('• Le client confirme avoir été informé des risques de perte de données', margin, yPosition);
+    yPosition = addText('• Le client autorise l\'intervention sur son appareil', margin, yPosition);
+    yPosition = addText('• Le client accepte les conditions générales de réparation', margin, yPosition);
+    yPosition = addText('• Le client confirme avoir effectué une sauvegarde de ses données', margin, yPosition);
+    yPosition += 5;
 
-    // Informations générales et appareil combinées
-    const generalInfo = [
-      `Technicien: ${data.technicianName}`,
-      `Client: ${data.clientName}`,
-      `Téléphone: ${data.clientPhone || 'Non renseigné'}`,
-      `Email: ${data.clientEmail || 'Non renseigné'}`,
-      `Marque: ${data.deviceBrand}`,
-      `Modèle: ${data.deviceModel}`,
-      `Numéro de série: ${data.deviceSerialNumber || 'Non renseigné'}`,
-      `Type: ${data.deviceType || 'Non renseigné'}`
-    ];
-    yPosition = addSpacedSection('INFORMATIONS GÉNÉRALES & APPAREIL', generalInfo, yPosition, [52, 152, 219]);
-
-    // État initial et diagnostic combinés
-    const technicalInfo = [
-      `État général: ${data.deviceCondition || 'Non renseigné'}`,
-      `Dommages visibles: ${data.visibleDamages || 'Aucun'}`,
-      `Pièces manquantes: ${data.missingParts || 'Aucune'}`,
-      `Mot de passe fourni: ${data.passwordProvided ? 'Oui' : 'Non'}`,
-      `Sauvegarde effectuée: ${data.dataBackup ? 'Oui' : 'Non'}`,
-      `Problème signalé: ${data.reportedIssue}`,
-      `Diagnostic initial: ${data.initialDiagnosis || 'Non renseigné'}`,
-      `Solution proposée: ${data.proposedSolution || 'Non renseigné'}`,
-      `Coût estimé: ${data.estimatedCost} €`,
-      `Durée estimée: ${data.estimatedDuration || 'Non renseigné'}`
-    ];
-    yPosition = addSpacedSection('TECHNIQUE & DIAGNOSTIC', technicalInfo, yPosition, [46, 204, 113]);
-
-    // Risques et autorisations combinés
-    const risksAndAuth = [];
-    if (data.dataLossRisk) {
-      risksAndAuth.push(`Risque perte données: ${data.dataLossRiskDetails || 'Oui'}`);
-    }
-    if (data.cosmeticChanges) {
-      risksAndAuth.push(`Modifications esthétiques: ${data.cosmeticChangesDetails || 'Oui'}`);
-    }
-    if (data.warrantyVoid) {
-      risksAndAuth.push(`Garantie annulée: ${data.warrantyVoidDetails || 'Oui'}`);
-    }
-    if (risksAndAuth.length === 0) {
-      risksAndAuth.push('Aucun risque particulier identifié');
-    }
-    risksAndAuth.push(`Autorise réparation: ${data.clientAuthorizesRepair ? 'Oui' : 'Non'}`);
-    risksAndAuth.push(`Autorise accès données: ${data.clientAuthorizesDataAccess ? 'Oui' : 'Non'}`);
-    risksAndAuth.push(`Autorise remplacement: ${data.clientAuthorizesReplacement ? 'Oui' : 'Non'}`);
-    
-    yPosition = addSpacedSection('RISQUES & AUTORISATIONS', risksAndAuth, yPosition, [230, 126, 34]);
-
-    // Notes et conditions légales
-    const notesAndLegal = [];
-    if (data.additionalNotes) {
-      notesAndLegal.push(`Notes: ${data.additionalNotes}`);
-    }
-    if (data.specialInstructions) {
-      notesAndLegal.push(`Instructions: ${data.specialInstructions}`);
-    }
-    if (notesAndLegal.length === 0) {
-      notesAndLegal.push('Aucune note additionnelle');
-    }
-    notesAndLegal.push(`Conditions acceptées: ${data.termsAccepted ? 'Oui' : 'Non'}`);
-    notesAndLegal.push(`Responsabilité acceptée: ${data.liabilityAccepted ? 'Oui' : 'Non'}`);
-    
-    yPosition = addSpacedSection('NOTES & CONDITIONS', notesAndLegal, yPosition, [155, 89, 182]);
-
-    // Section signatures avec espacement et alignement améliorés
-    yPosition += 12;
-    
-    // Titre de section signatures avec couleur
-    doc.setFontSize(12);
+    // ===== SIGNATURES =====
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(52, 73, 94);
     yPosition = addText('SIGNATURES', pageWidth / 2, yPosition, { align: 'center' });
-    
     yPosition += 8;
     
-    // Ligne de séparation colorée
-    doc.setDrawColor(52, 73, 94);
+    // Ligne de séparation
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
     doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 8;
     
-    yPosition += 10;
-    
-    // Signatures côte à côte avec cases alignées
+    // Cases de signature côte à côte
     const signatureWidth = (pageWidth - 2 * margin - 20) / 2;
-    const signatureStartY = yPosition;
     const caseHeight = 25;
-    const caseWidth = signatureWidth - 10;
     
     // Case signature technicien (gauche)
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(52, 152, 219);
-    doc.text('👨‍🔧 TECHNICIEN', margin, signatureStartY);
+    drawBox(margin, yPosition, signatureWidth, caseHeight, 'SIGNATURE TECHNICIEN');
     
-    yPosition += 8;
+    // Case signature client (droite)
+    drawBox(margin + signatureWidth + 20, yPosition, signatureWidth, caseHeight, 'SIGNATURE CLIENT');
     
-    // Case pour la signature du technicien
-    doc.setDrawColor(52, 152, 219);
-    doc.setLineWidth(1.5);
-    doc.rect(margin, yPosition, caseWidth, caseHeight, 'S');
+    yPosition += caseHeight + 8;
     
-    // Texte à l'intérieur de la case
+    // Informations sous les signatures
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(128, 128, 128);
-    doc.text('Signature du technicien', margin + 5, yPosition + 8);
-    
-    // Nom et date du technicien
-    yPosition += caseHeight + 5;
-    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(51, 51, 51);
-    doc.text('Nom:', margin, yPosition);
-    doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPosition + 2, margin + caseWidth - 5, yPosition + 2);
+    doc.setTextColor(0, 0, 0);
     
-    yPosition += 8;
-    doc.text('Date:', margin, yPosition);
-    doc.line(margin, yPosition + 2, margin + caseWidth - 5, yPosition + 2);
+    // Technicien
+    doc.text('Nom du technicien:', margin, yPosition);
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    doc.line(margin, yPosition + 2, margin + signatureWidth - 5, yPosition + 2);
     
-    // Case signature client (droite) - alignée avec la gauche
-    const clientStartY = signatureStartY;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(46, 204, 113);
-    doc.text('👤 CLIENT', margin + signatureWidth + 10, clientStartY);
+    doc.text('Date:', margin, yPosition + 8);
+    doc.line(margin, yPosition + 10, margin + signatureWidth - 5, yPosition + 10);
     
-    const clientY = clientStartY + 8;
+    // Client
+    doc.text('Nom du client:', margin + signatureWidth + 20, yPosition);
+    doc.line(margin + signatureWidth + 20, yPosition + 2, pageWidth - margin - 5, yPosition + 2);
     
-    // Case pour la signature du client - alignée avec la gauche
-    doc.setDrawColor(46, 204, 113);
-    doc.setLineWidth(1.5);
-    doc.rect(margin + signatureWidth + 10, clientY, caseWidth, caseHeight, 'S');
+    doc.text('Date:', margin + signatureWidth + 20, yPosition + 8);
+    doc.line(margin + signatureWidth + 20, yPosition + 10, pageWidth - margin - 5, yPosition + 10);
     
-    // Texte à l'intérieur de la case
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(128, 128, 128);
-    doc.text('Signature du client', margin + signatureWidth + 15, clientY + 8);
-    
-    // Nom et date du client - alignés avec la gauche
-    const clientBottomY = clientY + caseHeight + 5;
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(51, 51, 51);
-    doc.text('Nom:', margin + signatureWidth + 10, clientBottomY);
-    doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.5);
-    doc.line(margin + signatureWidth + 10, clientBottomY + 2, pageWidth - margin - 5, clientBottomY + 2);
-    
-    const clientDateY = clientBottomY + 8;
-    doc.text('Date:', margin + signatureWidth + 10, clientDateY);
-    doc.line(margin + signatureWidth + 10, clientDateY + 2, pageWidth - margin - 5, clientDateY + 2);
-    
-    // Ajuster la position finale
-    yPosition = Math.max(yPosition, clientDateY + 8);
+    yPosition += 15;
 
-    // Pied de page sobre
-    const footerY = pageHeight - 15;
-    doc.setDrawColor(220, 220, 220);
-    doc.line(0, footerY, pageWidth, footerY);
+    // ===== INFORMATIONS COMPLÉMENTAIRES =====
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    yPosition = addText('INFORMATIONS COMPLÉMENTAIRES', margin, yPosition);
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    yPosition = addText(`Date d'intervention: ${format(new Date(data.interventionDate), 'dd/MM/yyyy', { locale: fr })}`, margin, yPosition);
+    yPosition = addText(`Technicien: ${data.technicianName}`, margin, yPosition);
+    yPosition = addText(`Numéro de réparation: ${repair.id.slice(0, 8)}`, margin, yPosition);
+    
+    if (data.additionalNotes) {
+      yPosition = addText(`Notes: ${data.additionalNotes}`, margin, yPosition);
+    }
+    yPosition += 5;
+
+    // Pied de page professionnel
+    const footerY = pageHeight - 12;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.line(margin, footerY, pageWidth - margin, footerY);
+    
+    // Texte du pied de page
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Document contractuel - Signature obligatoire pour validation de l\'intervention', pageWidth / 2, footerY + 5, { align: 'center' });
+    doc.text(`Généré le ${format(new Date(), 'dd/MM/yyyy à HH:mm')}`, pageWidth / 2, footerY + 10, { align: 'center' });
 
     // Générer le nom du fichier
     const fileName = `Bon_Intervention_${repair.id.slice(0, 8)}_${format(new Date(), 'ddMMyyyy_HHmm')}.pdf`;
@@ -944,4 +949,5 @@ const generateInterventionPDF = (data: InterventionData, repair: Repair) => {
   }
 };
 
+export { generateInterventionPDF };
 export default InterventionForm;
