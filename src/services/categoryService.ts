@@ -9,6 +9,7 @@ export interface ProductCategory {
   is_active: boolean;
   sort_order: number;
   workshop_id: string;
+  user_id?: string;
   created_at: string;
   updated_at: string;
 }

@@ -166,7 +166,7 @@ const CategoryIsolationTest: React.FC = () => {
                   <ListItem>
                     <ListItemText
                       primary={category.name}
-                      secondary={`${category.description} | ID: ${category.id} | User: ${category.user_id}`}
+                      secondary={`${category.description} | ID: ${category.id} | User: ${category.user_id || 'N/A'}`}
                     />
                     <Button
                       variant="outlined"
