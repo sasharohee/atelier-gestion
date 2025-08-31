@@ -145,3 +145,5 @@ Si le problème persiste :
 ---
 
 **🎯 Ce guide vous aide à diagnostiquer et résoudre le problème d'affichage des catégories !**
+
+

@@ -186,3 +186,5 @@ const LoyaltySettingsTest: React.FC = () => {
 };
 
 export default LoyaltySettingsTest;
+
+

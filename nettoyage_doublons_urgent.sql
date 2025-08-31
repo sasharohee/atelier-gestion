@@ -94,3 +94,5 @@ ORDER BY workshop_id;
 SELECT '🎉 NETTOYAGE TERMINÉ !' as result;
 SELECT '📋 Tous les doublons ont été supprimés.' as next_step;
 SELECT '🔄 Vous pouvez maintenant exécuter le script de correction des clients.' as instruction;
+
+

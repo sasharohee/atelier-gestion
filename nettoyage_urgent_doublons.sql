@@ -83,3 +83,4 @@ SELECT '✅ Test de mise à jour effectué sur Argent' as result;
 SELECT '🎉 NETTOYAGE URGENT TERMINÉ !' as result;
 SELECT '📋 Vous devriez maintenant avoir exactement 7 configurations et 5 niveaux uniques.' as next_step;
 SELECT '🔧 Les mises à jour devraient maintenant fonctionner correctement.' as final_note;
+

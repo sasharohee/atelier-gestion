@@ -718,3 +718,5 @@ WHERE table_schema = 'public'
 ORDER BY column_name;
 
 SELECT '✅ CORRECTION COMPLÈTE TERMINÉE - Devices, réparations et services peuvent maintenant être créés sans erreur 403' as resultat;
+
+

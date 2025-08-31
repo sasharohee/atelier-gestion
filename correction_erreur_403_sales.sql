@@ -271,3 +271,5 @@ WHERE table_schema = 'public'
 ORDER BY column_name;
 
 SELECT '✅ CORRECTION TERMINÉE - Les ventes peuvent maintenant être créées depuis l''application' as resultat;
+
+

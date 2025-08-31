@@ -107,3 +107,5 @@ SELECT
 FROM pg_tables 
 WHERE tablename IN ('loyalty_config', 'loyalty_tiers_advanced', 'loyalty_points_history')
 AND schemaname = 'public';
+
+

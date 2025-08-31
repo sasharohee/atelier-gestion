@@ -255,3 +255,5 @@ WHERE table_schema = 'public'
 ORDER BY column_name;
 
 SELECT '✅ CORRECTION TERMINÉE - Les services peuvent maintenant être créés depuis l\'application' as resultat;
+
+

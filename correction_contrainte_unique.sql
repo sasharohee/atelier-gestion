@@ -57,3 +57,5 @@ END $$;
 SELECT 
     'CORRECTION TERMINÉE' as status,
     'Les contraintes d''unicité ont été modifiées pour permettre l''isolation par utilisateur' as message;
+
+

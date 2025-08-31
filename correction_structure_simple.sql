@@ -102,3 +102,5 @@ GROUP BY workshop_id;
 SELECT '🎉 STRUCTURE CORRIGÉE !' as result;
 SELECT '📋 L''isolation par atelier est maintenant possible.' as next_step;
 SELECT '🔄 Vous pouvez maintenant exécuter le script de création des fonctions.' as instruction;
+
+

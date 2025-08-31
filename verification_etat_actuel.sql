@@ -97,3 +97,5 @@ ORDER BY c.loyalty_points DESC;
 -- 6. MESSAGE DE CONFIRMATION
 SELECT '🎉 CORRECTION TERMINÉE !' as result;
 SELECT '📋 Rafraîchissez la page pour voir les changements.' as next_step;
+
+

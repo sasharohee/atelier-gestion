@@ -117,3 +117,5 @@ ORDER BY c.loyalty_points DESC;
 -- 7. MESSAGE DE CONFIRMATION
 SELECT '🎉 DIAGNOSTIC TERMINÉ !' as result;
 SELECT '📋 Les niveaux devraient maintenant s''afficher correctement.' as next_step;
+
+

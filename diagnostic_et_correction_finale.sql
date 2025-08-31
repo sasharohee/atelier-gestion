@@ -139,3 +139,5 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
 SELECT '🎉 CORRECTION TERMINÉE !' as result;
 SELECT '📋 La contrainte pointe maintenant vers loyalty_tiers_advanced.' as next_step;
 SELECT '🔄 Rafraîchissez la page pour voir les changements.' as instruction;
+
+

@@ -292,3 +292,5 @@ WHERE table_schema = 'public'
 ORDER BY column_name;
 
 SELECT '✅ CORRECTION TERMINÉE - Les réparations peuvent maintenant être créées depuis la page kanban' as resultat;
+
+

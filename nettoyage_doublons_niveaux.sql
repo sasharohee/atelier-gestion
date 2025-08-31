@@ -123,3 +123,5 @@ ORDER BY workshop_id;
 SELECT '🎉 NETTOYAGE TERMINÉ !' as result;
 SELECT '📋 Les doublons ont été supprimés.' as next_step;
 SELECT '🔄 Rafraîchissez la page pour voir les changements.' as instruction;
+
+

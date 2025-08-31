@@ -78,6 +78,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       '/app/transaction/clients': 'Clients',
       '/app/transaction/devices': 'Appareils',
       '/app/transaction/sales': 'Ventes',
+      '/app/transaction/quotes': 'Devis',
+      '/app/transaction/orders': 'Suivi Commandes',
       '/app/sales': 'Ventes',
       '/app/statistics': 'Statistiques',
       '/app/administration': 'Administration',
@@ -185,6 +187,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         'devices': 'Appareils',
         'sales': 'Ventes',
         'quotes': 'Devis',
+        'orders': 'Suivi Commandes',
       };
       
       if (subTitles[subPath]) {

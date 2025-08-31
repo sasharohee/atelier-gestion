@@ -244,3 +244,5 @@ WHERE table_schema = 'public'
 ORDER BY column_name;
 
 SELECT '✅ CORRECTION TERMINÉE - Les devices peuvent maintenant être créés depuis la page kanban' as resultat;
+
+

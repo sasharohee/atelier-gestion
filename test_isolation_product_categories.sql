@@ -63,3 +63,5 @@ SELECT
 FROM public.product_categories
 GROUP BY workshop_id
 ORDER BY workshop_id;
+
+

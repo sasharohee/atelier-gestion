@@ -124,3 +124,5 @@ BEGIN
         RAISE NOTICE '✅ Isolation partielle: % catégories visibles sur % total', visible_categories, total_categories;
     END IF;
 END $$;
+
+

@@ -67,3 +67,5 @@ FROM loyalty_tiers_advanced;
 -- 5. MESSAGE DE CONFIRMATION
 SELECT '🎉 NETTOYAGE COMPLET TERMINÉ !' as result;
 SELECT '📋 Vous devriez maintenant avoir exactement 7 configurations et 5 niveaux uniques.' as next_step;
+
+

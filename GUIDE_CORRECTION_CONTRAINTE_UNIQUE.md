@@ -99,3 +99,5 @@ Après cette correction :
 ---
 
 **🎯 Cette correction résout définitivement le problème de contrainte unique et permet l'isolation complète !**
+
+

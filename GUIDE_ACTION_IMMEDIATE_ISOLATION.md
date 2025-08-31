@@ -121,3 +121,5 @@ Si le problème persiste :
 ---
 
 **🎯 Cette solution résout définitivement le problème d'isolation des catégories !**
+
+

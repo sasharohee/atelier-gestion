@@ -491,3 +491,5 @@ WHERE table_schema = 'public'
 ORDER BY column_name;
 
 SELECT '✅ CORRECTION COMPLÈTE TERMINÉE - Devices et réparations peuvent maintenant être créés depuis la page kanban' as resultat;
+
+

@@ -152,3 +152,5 @@ SELECT 'get_loyalty_config fonctionne' as test_result
 WHERE EXISTS (
     SELECT 1 FROM get_loyalty_config((SELECT id FROM auth.users LIMIT 1))
 );
+
+

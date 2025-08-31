@@ -310,3 +310,5 @@ console.log('- testStatistics() : Test des statistiques');
 console.log('- testDashboard() : Test du tableau de bord');
 console.log('- testLoyaltyTiers() : Test des niveaux');
 console.log('- cleanupTestData() : Nettoyage des données de test');
+
+

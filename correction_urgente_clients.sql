@@ -141,3 +141,5 @@ SELECT '🎉 CORRECTION TERMINÉE !' as result;
 SELECT '📋 Tous les clients ont été assignés au bon workshop.' as next_step;
 SELECT '🔄 Rechargez la page de fidélité pour voir les clients.' as instruction;
 SELECT '🔍 Vérifiez la console pour les logs de débogage.' as debug_info;
+
+

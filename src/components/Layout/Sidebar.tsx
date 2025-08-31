@@ -45,6 +45,7 @@ import {
   Archive as ArchiveIcon,
   Description as DescriptionIcon,
   Star as StarIcon,
+  LocalShipping as ShippingIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
@@ -96,6 +97,7 @@ const menuItems = [
       { text: 'Clients', path: '/app/transaction/clients', icon: <PeopleIcon /> },
       { text: 'Ventes', path: '/app/transaction/sales', icon: <SalesIcon /> },
       { text: 'Devis', path: '/app/transaction/quotes', icon: <DescriptionIcon /> },
+      { text: 'Suivi Commandes', path: '/app/transaction/orders', icon: <ShippingIcon /> },
     ],
   },
   {

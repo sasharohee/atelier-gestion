@@ -41,3 +41,5 @@ ORDER BY c.loyalty_points DESC;
 
 -- 6. MESSAGE DE CONFIRMATION
 SELECT 'SUCCÈS: La contrainte a été supprimée!' as result;
+
+

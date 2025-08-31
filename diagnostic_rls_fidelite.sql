@@ -129,3 +129,5 @@ SELECT COUNT(*) as total_tiers FROM loyalty_tiers_advanced;
 -- 9. MESSAGE DE CONFIRMATION
 SELECT '🎉 POLITIQUES RLS CORRIGÉES !' as result;
 SELECT '📋 Vous pouvez maintenant tester l''interface de fidélité.' as next_step;
+
+

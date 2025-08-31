@@ -175,3 +175,5 @@ Après l'implémentation :
 ---
 
 **✅ Cette solution résout définitivement le problème d'isolation des catégories !**
+
+

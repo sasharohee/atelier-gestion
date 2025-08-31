@@ -202,3 +202,5 @@ Si vous rencontrez des erreurs similaires avec `parts` ou `products`, appliquez 
 L'erreur 403 sur la table `services` était causée par des politiques RLS incohérentes avec la structure de la table. Le script de correction standardise la structure, nettoie les politiques conflictuelles et met en place un système d'isolation automatique via un trigger.
 
 Après l'exécution du script, la création de services depuis l'application devrait fonctionner correctement.
+
+

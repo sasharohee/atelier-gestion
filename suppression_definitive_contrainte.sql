@@ -121,3 +121,5 @@ ORDER BY c.loyalty_points DESC;
 SELECT '🎉 CONTRAINTE SUPPRIMÉE DÉFINITIVEMENT !' as result;
 SELECT '📋 La contrainte problématique a été supprimée.' as next_step;
 SELECT '🔄 Testez maintenant l''ajout de points.' as instruction;
+
+

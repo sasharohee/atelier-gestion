@@ -173,3 +173,5 @@ ORDER BY c.loyalty_points DESC;
 SELECT '🎉 SOLUTION DÉFINITIVE APPLIQUÉE !' as result;
 SELECT '📋 Utilisez add_loyalty_points_safe() au lieu de add_loyalty_points().' as next_step;
 SELECT '🔄 Modifiez le code frontend pour utiliser la nouvelle fonction.' as instruction;
+
+

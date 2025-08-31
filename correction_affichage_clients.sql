@@ -117,3 +117,5 @@ ORDER BY c.loyalty_points DESC;
 SELECT '🎉 CORRECTION TERMINÉE !' as result;
 SELECT '📋 Les clients devraient maintenant apparaître dans la page de fidélité.' as next_step;
 SELECT '🔄 Rafraîchissez la page pour voir les changements.' as instruction;
+
+

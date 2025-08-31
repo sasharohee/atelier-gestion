@@ -13,6 +13,7 @@ import {
   People as PeopleIcon,
   Receipt as ReceiptIcon,
   Description as DescriptionIcon,
+  LocalShipping as ShippingIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 
@@ -20,6 +21,7 @@ import { useAppStore } from '../../store';
 import Clients from '../Catalog/Clients';
 import Sales from '../Sales/Sales';
 import Quotes from '../Quotes/Quotes';
+import OrderTracking from './OrderTracking/OrderTracking';
 
 const Transaction: React.FC = () => {
   const navigate = useNavigate();
@@ -34,7 +36,6 @@ const Transaction: React.FC = () => {
       count: clients.length,
       color: '#607d8b',
     },
-
     {
       title: 'Ventes',
       description: 'Gestion des ventes et factures',
@@ -50,6 +51,14 @@ const Transaction: React.FC = () => {
       path: '/app/transaction/quotes',
       count: 0, // À remplacer par quotes.length quand le store sera mis à jour
       color: '#ff9800',
+    },
+    {
+      title: 'Suivi Commandes',
+      description: 'Suivi des commandes fournisseurs',
+      icon: <ShippingIcon />,
+      path: '/app/transaction/orders',
+      count: 0, // Page vierge - aucune commande
+      color: '#2196f3',
     },
   ];
 
@@ -110,9 +119,9 @@ const Transaction: React.FC = () => {
         </Box>
       } />
       <Route path="/clients" element={<Clients />} />
-
       <Route path="/sales" element={<Sales />} />
       <Route path="/quotes" element={<Quotes />} />
+      <Route path="/orders" element={<OrderTracking />} />
     </Routes>
   );
 };

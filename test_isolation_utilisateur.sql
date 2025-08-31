@@ -110,3 +110,5 @@ BEGIN
         RAISE NOTICE '❌ Problème d''isolation détecté';
     END IF;
 END $$;
+
+

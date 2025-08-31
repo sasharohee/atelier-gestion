@@ -103,3 +103,5 @@ ORDER BY c.loyalty_points DESC;
 -- 7. MESSAGE DE DIAGNOSTIC
 SELECT '📋 DIAGNOSTIC TERMINÉ' as result;
 SELECT '🔧 Préparez-vous à corriger les problèmes identifiés.' as next_step;
+
+

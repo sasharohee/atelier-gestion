@@ -134,3 +134,5 @@ ORDER BY c.loyalty_points DESC;
 SELECT '🎉 VÉRIFICATION TERMINÉE !' as result;
 SELECT '📋 Tous les clients ont maintenant un niveau correct.' as next_step;
 SELECT '🔄 Rechargez la page de fidélité pour voir les niveaux.' as instruction;
+
+

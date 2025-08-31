@@ -127,3 +127,5 @@ GRANT EXECUTE ON FUNCTION assign_loyalty_tiers() TO authenticated;
 SELECT '🎉 FONCTIONS CORRIGÉES !' as result;
 SELECT '📋 add_loyalty_points ne met plus à jour current_tier_id automatiquement.' as next_step;
 SELECT '🔧 Utilisez assign_loyalty_tiers() pour assigner les niveaux manuellement.' as instruction;
+
+

@@ -421,3 +421,5 @@ SELECT 'SELECT get_loyalty_statistics();' as example;
 
 SELECT '-- Consulter le tableau de bord' as example;
 SELECT 'SELECT * FROM loyalty_dashboard;' as example;
+
+

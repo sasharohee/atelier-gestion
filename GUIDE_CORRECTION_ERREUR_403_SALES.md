@@ -206,3 +206,5 @@ CREATE TABLE sales (
 ---
 
 **✅ CORRECTION TERMINÉE - Les ventes peuvent maintenant être créées depuis l'application avec un aperçu de facture correct**
+
+

@@ -126,3 +126,5 @@ SELECT name, points_required, discount_percentage, color, is_active FROM loyalty
 -- 9. MESSAGE DE CONFIRMATION
 SELECT '🎉 CORRECTION RLS TERMINÉE !' as result;
 SELECT '📋 Vous pouvez maintenant utiliser l''interface de fidélité.' as next_step;
+
+

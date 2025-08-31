@@ -73,3 +73,5 @@ FROM loyalty_tiers_advanced;
 -- 6. MESSAGE DE CONFIRMATION
 SELECT '🎉 NETTOYAGE TERMINÉ !' as result;
 SELECT '📋 Chaque niveau n''apparaît plus qu''une seule fois.' as next_step;
+
+

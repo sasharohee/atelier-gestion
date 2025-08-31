@@ -40,3 +40,5 @@ SELECT get_loyalty_statistics();
 -- 5. MESSAGE DE CONFIRMATION
 SELECT '🎉 Données de fidélité insérées avec succès !' as result;
 SELECT '📋 Vous pouvez maintenant modifier les paramètres dans l''interface.' as next_step;
+
+

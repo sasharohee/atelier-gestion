@@ -80,3 +80,5 @@ ORDER BY created_at DESC;
 SELECT '🎉 CORRECTION TERMINÉE !' as result;
 SELECT '📋 La table referrals a été corrigée.' as next_step;
 SELECT '🔄 Vous pouvez maintenant recharger la page de fidélité.' as instruction;
+
+

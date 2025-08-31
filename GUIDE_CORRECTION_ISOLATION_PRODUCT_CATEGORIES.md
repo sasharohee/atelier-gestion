@@ -168,3 +168,5 @@ Si vous rencontrez des problèmes :
 ---
 
 **✅ Une fois ces étapes terminées, votre table `product_categories` sera correctement isolée et sécurisée !**
+
+

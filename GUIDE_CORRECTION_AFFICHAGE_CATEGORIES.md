@@ -123,3 +123,5 @@ Une fois que l'affichage des catégories fonctionne :
 ---
 
 **🎯 La correction est maintenant appliquée ! Testez immédiatement la création de catégories pour confirmer que l'affichage fonctionne.**
+
+

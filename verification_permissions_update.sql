@@ -95,3 +95,5 @@ ORDER BY table_name, privilege_type;
 -- 7. MESSAGE DE CONFIRMATION
 SELECT '🎉 PERMISSIONS CORRIGÉES !' as result;
 SELECT '📋 Les mises à jour devraient maintenant fonctionner.' as next_step;
+
+

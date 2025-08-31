@@ -127,3 +127,5 @@ ORDER BY c.loyalty_points DESC;
 SELECT '🎉 DIAGNOSTIC TERMINÉ !' as result;
 SELECT '📋 Les clients ont été corrigés.' as next_step;
 SELECT '🔄 Rechargez la page de fidélité pour voir les clients.' as instruction;
+
+

@@ -62,3 +62,5 @@ SELECT
     END as isolation_status
 FROM public.product_categories
 ORDER BY sort_order;
+
+

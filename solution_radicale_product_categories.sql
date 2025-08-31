@@ -46,3 +46,5 @@ SELECT 'VÉRIFICATION' as info,
        COUNT(*) as total_categories,
        COUNT(CASE WHEN workshop_id IS NOT NULL THEN 1 END) as categories_avec_workshop_id
 FROM public.product_categories;
+
+

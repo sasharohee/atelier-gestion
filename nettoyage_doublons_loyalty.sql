@@ -93,3 +93,5 @@ ORDER BY points_required;
 SELECT '🎉 NETTOYAGE TERMINÉ !' as result;
 SELECT '📋 Les doublons ont été supprimés.' as next_step;
 SELECT '🔄 Vous pouvez maintenant exécuter le script de création des fonctions.' as instruction;
+
+

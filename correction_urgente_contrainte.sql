@@ -102,3 +102,5 @@ SELECT 'Test réussi si aucune erreur' as test_result;
 SELECT '🎉 CORRECTION URGENTE TERMINÉE !' as result;
 SELECT '📋 La contrainte est maintenant correcte.' as next_step;
 SELECT '🔄 Rafraîchissez la page et testez l''ajout de points.' as instruction;
+
+

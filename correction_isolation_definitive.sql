@@ -162,3 +162,5 @@ SELECT
 FROM public.product_categories
 GROUP BY user_id
 ORDER BY user_id;
+
+

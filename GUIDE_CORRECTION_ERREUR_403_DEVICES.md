@@ -138,3 +138,5 @@ Pour éviter ce problème à l'avenir :
 L'erreur 403 sur la table `devices` était causée par des politiques RLS incohérentes avec la structure de la table. Le script de correction standardise la structure, nettoie les politiques conflictuelles et met en place un système d'isolation automatique via un trigger.
 
 Après l'exécution du script, la création de devices depuis la page kanban devrait fonctionner correctement.
+
+

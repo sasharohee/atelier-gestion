@@ -185,3 +185,5 @@ Dans cet ordre pour s'assurer que les tables `devices` et `clients` sont correct
 L'erreur 403 sur la table `repairs` était causée par des politiques RLS incohérentes avec la structure de la table. Le script de correction standardise la structure, nettoie les politiques conflictuelles et met en place un système d'isolation automatique via un trigger.
 
 Après l'exécution du script, la création de réparations depuis la page kanban devrait fonctionner correctement, même si des clients ou devices de test doivent être créés automatiquement.
+
+
