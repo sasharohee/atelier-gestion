@@ -245,47 +245,8 @@ const DeviceManagement: React.FC = () => {
     updatedAt: new Date(dbCategory.updated_at),
   });
 
-  // Utiliser les catégories de la base de données ou les catégories par défaut en fallback
-  const defaultCategories: DeviceCategory[] = dbCategories.length > 0 
-    ? dbCategories.map(convertDbCategoryToDeviceCategory)
-    : [
-    {
-      id: '1',
-      name: 'Smartphones',
-      description: 'Téléphones mobiles et smartphones',
-      icon: 'smartphone',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '2',
-      name: 'Tablettes',
-      description: 'Tablettes tactiles',
-      icon: 'tablet',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '3',
-      name: 'Ordinateurs portables',
-      description: 'Laptops et notebooks',
-      icon: 'laptop',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '4',
-      name: 'Ordinateurs fixes',
-      description: 'PC de bureau et stations de travail',
-      icon: 'desktop',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
+  // Utiliser uniquement les catégories de la base de données (qui incluent les catégories par défaut)
+  const allCategories: DeviceCategory[] = dbCategories.map(convertDbCategoryToDeviceCategory);
 
   // Données de test pour les marques
   const defaultBrands: DeviceBrand[] = [
@@ -1326,7 +1287,7 @@ const DeviceManagement: React.FC = () => {
   };
 
   // Filtrage des données
-  const filteredCategories = defaultCategories.filter(cat =>
+  const filteredCategories = allCategories.filter(cat =>
     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -1525,7 +1486,7 @@ const DeviceManagement: React.FC = () => {
                 Marques ({filteredBrands.length})
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                {defaultCategories.map((category) => {
+                {allCategories.map((category) => {
                   const brandCount = deviceBrands.filter(brand => brand.categoryId === category.id).length;
                   return (
                     <Chip
@@ -1555,7 +1516,7 @@ const DeviceManagement: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {filteredBrands.map((brand) => {
-                    const category = defaultCategories.find(cat => cat.id === brand.categoryId);
+                    const category = allCategories.find(cat => cat.id === brand.categoryId);
                     const modelCount = deviceModels.filter(model => (model as any).brand === brand.name).length;
                     return (
                       <TableRow key={brand.id} hover>
@@ -1807,7 +1768,7 @@ const DeviceManagement: React.FC = () => {
                   onChange={(e) => setNewBrand(prev => ({ ...prev, categoryId: e.target.value }))}
                   required
                 >
-                  {defaultCategories.map((category) => (
+                  {allCategories.map((category) => (
                     <MenuItem key={category.id} value={category.id}>
                       {category.name}
                     </MenuItem>
@@ -1883,7 +1844,7 @@ const DeviceManagement: React.FC = () => {
                   onChange={(e) => setNewModel(prev => ({ ...prev, categoryId: e.target.value }))}
                   required
                 >
-                  {defaultCategories.map((category) => (
+                  {allCategories.map((category) => (
                     <MenuItem key={category.id} value={category.id}>
                       {category.name}
                     </MenuItem>

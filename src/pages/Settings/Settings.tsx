@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { supabase } from '../../lib/supabase';
+import { theme } from '../../theme';
 
 interface SettingsData {
   profile: {
@@ -13,7 +14,6 @@ interface SettingsData {
   preferences: {
     themeDarkMode: boolean;
     language: string;
-    twoFactorAuth: boolean;
   };
   workshop: {
     name: string;
@@ -48,8 +48,7 @@ const Settings: React.FC = () => {
     },
     preferences: {
       themeDarkMode: false,
-      language: 'fr',
-      twoFactorAuth: false
+      language: 'fr'
     },
     workshop: {
       name: 'Atelier de réparation',
@@ -337,37 +336,41 @@ const Settings: React.FC = () => {
 
   return (
     <div style={{
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      maxWidth: '800px',
+      fontFamily: theme.typography.fontFamily,
+      maxWidth: '1000px',
       margin: '0 auto',
-      padding: '20px',
-      backgroundColor: '#f8f9fa',
+      padding: '24px',
+      backgroundColor: theme.palette.background.default,
       minHeight: '100vh'
     }}>
       <div style={{
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        overflow: 'hidden'
+        backgroundColor: theme.palette.background.paper,
+        borderRadius: theme.shape.borderRadius,
+        boxShadow: theme.shadows[3],
+        overflow: 'hidden',
+        border: `1px solid ${theme.palette.divider}`
       }}>
       {/* En-tête */}
         <div style={{
-          padding: '24px',
-          borderBottom: '1px solid #e9ecef',
-          backgroundColor: '#f8f9fa'
+          padding: '32px',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          color: theme.palette.primary.contrastText
         }}>
           <h1 style={{
-            margin: '0 0 8px 0',
-            fontSize: '24px',
-            fontWeight: '600',
-            color: '#333'
+            margin: '0 0 12px 0',
+            fontSize: theme.typography.h3.fontSize,
+            fontWeight: theme.typography.h3.fontWeight,
+            color: theme.palette.primary.contrastText,
+            letterSpacing: theme.typography.h3.letterSpacing
           }}>
-            Paramètres
+            ⚙️ Paramètres
           </h1>
           <p style={{
             margin: '0',
-            color: '#666',
-            fontSize: '14px'
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: theme.typography.body1.fontSize,
+            lineHeight: theme.typography.body1.lineHeight
           }}>
             Gérez vos préférences et les informations de votre atelier
           </p>
@@ -376,8 +379,9 @@ const Settings: React.FC = () => {
         {/* Onglets */}
         <div style={{
           display: 'flex',
-          borderBottom: '1px solid #e9ecef',
-          backgroundColor: 'white'
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          backgroundColor: theme.palette.background.paper,
+          padding: '0 8px'
         }}>
           {tabs.map((tab, index) => (
             <button
@@ -385,14 +389,33 @@ const Settings: React.FC = () => {
               onClick={() => setActiveTab(index)}
               style={{
                 flex: '1',
-                padding: '16px',
+                padding: '20px 16px',
                 border: 'none',
-                backgroundColor: activeTab === index ? '#007bff' : 'transparent',
-                color: activeTab === index ? 'white' : '#666',
+                backgroundColor: activeTab === index ? theme.palette.primary.main : 'transparent',
+                color: activeTab === index ? theme.palette.primary.contrastText : theme.palette.text.secondary,
                 cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: activeTab === index ? '600' : '400',
-                transition: 'all 0.2s ease'
+                fontSize: theme.typography.body2.fontSize,
+                fontWeight: activeTab === index ? theme.typography.button.fontWeight : '400',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                borderRadius: `${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0 0`,
+                margin: '8px 4px 0 4px',
+                position: 'relative',
+                '&:hover': {
+                  backgroundColor: activeTab === index ? theme.palette.primary.dark : 'rgba(55, 65, 81, 0.08)',
+                  transform: 'translateY(-2px)'
+                }
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== index) {
+                  e.currentTarget.style.backgroundColor = 'rgba(55, 65, 81, 0.08)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== index) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }
               }}
             >
               {tab.label}
@@ -403,37 +426,82 @@ const Settings: React.FC = () => {
         {/* Message de notification */}
         {message && (
           <div style={{
-            padding: '12px 24px',
-            backgroundColor: message.type === 'success' ? '#d4edda' : 
-                           message.type === 'error' ? '#f8d7da' : '#d1ecf1',
-            color: message.type === 'success' ? '#155724' : 
-                   message.type === 'error' ? '#721c24' : '#0c5460',
-            border: `1px solid ${message.type === 'success' ? '#c3e6cb' : 
-                                message.type === 'error' ? '#f5c6cb' : '#bee5eb'}`,
-            borderRadius: '4px',
-            margin: '16px 24px',
-            fontSize: '14px'
+            padding: '16px 24px',
+            backgroundColor: message.type === 'success' ? theme.palette.success.light + '20' : 
+                           message.type === 'error' ? theme.palette.error.light + '20' : theme.palette.info.light + '20',
+            color: message.type === 'success' ? theme.palette.success.dark : 
+                   message.type === 'error' ? theme.palette.error.dark : theme.palette.info.dark,
+            border: `1px solid ${message.type === 'success' ? theme.palette.success.main : 
+                                message.type === 'error' ? theme.palette.error.main : theme.palette.info.main}`,
+            borderRadius: theme.shape.borderRadius,
+            margin: '20px 24px',
+            fontSize: theme.typography.body2.fontSize,
+            fontWeight: theme.typography.body2.fontWeight,
+            boxShadow: theme.shadows[1],
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
           }}>
+            <span style={{ fontSize: '18px' }}>
+              {message.type === 'success' ? '✅' : message.type === 'error' ? '❌' : 'ℹ️'}
+            </span>
             {message.text}
           </div>
         )}
 
         {/* Contenu des onglets */}
-        <div style={{ padding: '24px' }}>
+        <div style={{ padding: '32px' }}>
           {activeTab === 0 && (
             <div>
-              <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
-                Informations personnelles
-              </h2>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '28px',
+                padding: '20px',
+                backgroundColor: 'rgba(55, 65, 81, 0.05)',
+                borderRadius: theme.shape.borderRadius,
+                border: `1px solid ${theme.palette.divider}`
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: theme.palette.primary.main,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '16px',
+                  fontSize: '20px'
+                }}>
+                  👤
+                </div>
+                <div>
+                  <h2 style={{ 
+                    margin: '0 0 4px 0', 
+                    fontSize: theme.typography.h5.fontSize, 
+                    fontWeight: theme.typography.h5.fontWeight, 
+                    color: theme.palette.text.primary 
+                  }}>
+                    Informations personnelles
+                  </h2>
+                  <p style={{
+                    margin: '0',
+                    color: theme.palette.text.secondary,
+                    fontSize: theme.typography.body2.fontSize
+                  }}>
+                    Gérez vos informations de profil et vos coordonnées
+                  </p>
+                </div>
+              </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
+                    marginBottom: '8px', 
+                    fontWeight: theme.typography.button.fontWeight,
+                    color: theme.palette.text.primary,
+                    fontSize: theme.typography.body2.fontSize
                   }}>
                     Prénom
                   </label>
@@ -446,11 +514,27 @@ const Settings: React.FC = () => {
                     }))}
                     style={{
                       width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
+                      padding: '12px 16px',
+                      border: `2px solid ${theme.palette.divider}`,
+                      borderRadius: theme.shape.borderRadius,
+                      fontSize: theme.typography.body1.fontSize,
+                      boxSizing: 'border-box',
+                      backgroundColor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      transition: 'all 0.2s ease-in-out',
+                      '&:focus': {
+                        outline: 'none',
+                        borderColor: theme.palette.primary.main,
+                        boxShadow: `0 0 0 3px ${theme.palette.primary.main}20`
+                      }
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = theme.palette.primary.main;
+                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = theme.palette.divider;
+                      e.target.style.boxShadow = 'none';
                     }}
                   />
                 </div>
@@ -458,10 +542,10 @@ const Settings: React.FC = () => {
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
+                    marginBottom: '8px', 
+                    fontWeight: theme.typography.button.fontWeight,
+                    color: theme.palette.text.primary,
+                    fontSize: theme.typography.body2.fontSize
                   }}>
                     Nom
                   </label>
@@ -474,23 +558,34 @@ const Settings: React.FC = () => {
                     }))}
                     style={{
                       width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
+                      padding: '12px 16px',
+                      border: `2px solid ${theme.palette.divider}`,
+                      borderRadius: theme.shape.borderRadius,
+                      fontSize: theme.typography.body1.fontSize,
+                      boxSizing: 'border-box',
+                      backgroundColor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = theme.palette.primary.main;
+                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = theme.palette.divider;
+                      e.target.style.boxShadow = 'none';
                     }}
                   />
                 </div>
               </div>
               
-              <div style={{ marginBottom: '20px' }}>
+              <div style={{ marginBottom: '24px' }}>
                 <label style={{ 
                   display: 'block', 
-                  marginBottom: '6px', 
-                  fontWeight: '500',
-                  color: '#333',
-                  fontSize: '14px'
+                  marginBottom: '8px', 
+                  fontWeight: theme.typography.button.fontWeight,
+                  color: theme.palette.text.primary,
+                  fontSize: theme.typography.body2.fontSize
                 }}>
                   Email
                 </label>
@@ -503,22 +598,33 @@ const Settings: React.FC = () => {
                   }))}
                   style={{
                     width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
+                    padding: '12px 16px',
+                    border: `2px solid ${theme.palette.divider}`,
+                    borderRadius: theme.shape.borderRadius,
+                    fontSize: theme.typography.body1.fontSize,
+                    boxSizing: 'border-box',
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                    transition: 'all 0.2s ease-in-out'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = theme.palette.primary.main;
+                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = theme.palette.divider;
+                    e.target.style.boxShadow = 'none';
                   }}
                 />
               </div>
               
-              <div style={{ marginBottom: '20px' }}>
+              <div style={{ marginBottom: '24px' }}>
                 <label style={{ 
                   display: 'block', 
-                  marginBottom: '6px', 
-                  fontWeight: '500',
-                  color: '#333',
-                  fontSize: '14px'
+                  marginBottom: '8px', 
+                  fontWeight: theme.typography.button.fontWeight,
+                  color: theme.palette.text.primary,
+                  fontSize: theme.typography.body2.fontSize
                 }}>
                   Téléphone
                 </label>
@@ -531,11 +637,22 @@ const Settings: React.FC = () => {
                   }))}
                   style={{
                     width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
+                    padding: '12px 16px',
+                    border: `2px solid ${theme.palette.divider}`,
+                    borderRadius: theme.shape.borderRadius,
+                    fontSize: theme.typography.body1.fontSize,
+                    boxSizing: 'border-box',
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                    transition: 'all 0.2s ease-in-out'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = theme.palette.primary.main;
+                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = theme.palette.divider;
+                    e.target.style.boxShadow = 'none';
                   }}
                 />
               </div>
@@ -546,39 +663,65 @@ const Settings: React.FC = () => {
 
           {activeTab === 1 && (
             <div>
-              <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
-                Sécurité
-              </h2>
-              
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  color: '#333'
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '28px',
+                padding: '20px',
+                backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                borderRadius: theme.shape.borderRadius,
+                border: `1px solid ${theme.palette.divider}`
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: theme.palette.error.main,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '16px',
+                  fontSize: '20px'
                 }}>
-                  <input
-                    type="checkbox"
-                    checked={settings.preferences.twoFactorAuth}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      preferences: { ...prev.preferences, twoFactorAuth: e.target.checked }
-                    }))}
-                    style={{ marginRight: '8px' }}
-                  />
-                  Authentification à deux facteurs
-                </label>
+                  🔒
+                </div>
+                <div>
+                  <h2 style={{ 
+                    margin: '0 0 4px 0', 
+                    fontSize: theme.typography.h5.fontSize, 
+                    fontWeight: theme.typography.h5.fontWeight, 
+                    color: theme.palette.text.primary 
+                  }}>
+                    Sécurité du compte
+                  </h2>
+                  <p style={{
+                    margin: '0',
+                    color: theme.palette.text.secondary,
+                    fontSize: theme.typography.body2.fontSize
+                  }}>
+                    Gérez votre mot de passe et les paramètres de sécurité
+                  </p>
+                </div>
               </div>
               
+              
               <div style={{ 
-                padding: '20px', 
-                backgroundColor: '#f8f9fa', 
-                borderRadius: '8px',
-                marginBottom: '20px',
-                border: '1px solid #e9ecef'
+                padding: '24px', 
+                backgroundColor: theme.palette.background.default, 
+                borderRadius: theme.shape.borderRadius,
+                marginBottom: '24px',
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: theme.shadows[1]
               }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
+                <h3 style={{ 
+                  margin: '0 0 20px 0', 
+                  fontSize: theme.typography.h6.fontSize, 
+                  fontWeight: theme.typography.h6.fontWeight, 
+                  color: theme.palette.text.primary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
                   🔐 Changer le mot de passe
                 </h3>
                 
@@ -777,17 +920,54 @@ const Settings: React.FC = () => {
 
           {activeTab === 2 && (
             <div>
-              <h2 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '600', color: '#333' }}>
-                Informations de l'atelier
-              </h2>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '28px',
+                padding: '20px',
+                backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                borderRadius: theme.shape.borderRadius,
+                border: `1px solid ${theme.palette.divider}`
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: theme.palette.success.main,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '16px',
+                  fontSize: '20px'
+                }}>
+                  🏢
+                </div>
+                <div>
+                  <h2 style={{ 
+                    margin: '0 0 4px 0', 
+                    fontSize: theme.typography.h5.fontSize, 
+                    fontWeight: theme.typography.h5.fontWeight, 
+                    color: theme.palette.text.primary 
+                  }}>
+                    Informations de l'atelier
+                  </h2>
+                  <p style={{
+                    margin: '0',
+                    color: theme.palette.text.secondary,
+                    fontSize: theme.typography.body2.fontSize
+                  }}>
+                    Configurez les informations de votre atelier et vos paramètres commerciaux
+                  </p>
+                </div>
+              </div>
               
-              <div style={{ marginBottom: '20px' }}>
+              <div style={{ marginBottom: '24px' }}>
                 <label style={{ 
                   display: 'block', 
-                  marginBottom: '6px', 
-                  fontWeight: '500',
-                  color: '#333',
-                  fontSize: '14px'
+                  marginBottom: '8px', 
+                  fontWeight: theme.typography.button.fontWeight,
+                  color: theme.palette.text.primary,
+                  fontSize: theme.typography.body2.fontSize
                 }}>
                   Nom de l'atelier
                 </label>
@@ -800,22 +980,33 @@ const Settings: React.FC = () => {
                   }))}
                   style={{
                     width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
+                    padding: '12px 16px',
+                    border: `2px solid ${theme.palette.divider}`,
+                    borderRadius: theme.shape.borderRadius,
+                    fontSize: theme.typography.body1.fontSize,
+                    boxSizing: 'border-box',
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                    transition: 'all 0.2s ease-in-out'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = theme.palette.primary.main;
+                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = theme.palette.divider;
+                    e.target.style.boxShadow = 'none';
                   }}
                 />
               </div>
               
-              <div style={{ marginBottom: '20px' }}>
+              <div style={{ marginBottom: '24px' }}>
                 <label style={{ 
                   display: 'block', 
-                  marginBottom: '6px', 
-                  fontWeight: '500',
-                  color: '#333',
-                  fontSize: '14px'
+                  marginBottom: '8px', 
+                  fontWeight: theme.typography.button.fontWeight,
+                  color: theme.palette.text.primary,
+                  fontSize: theme.typography.body2.fontSize
                 }}>
                   Adresse
                 </label>
@@ -828,23 +1019,34 @@ const Settings: React.FC = () => {
                   }))}
                   style={{
                     width: '100%',
-                    padding: '10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box'
+                    padding: '12px 16px',
+                    border: `2px solid ${theme.palette.divider}`,
+                    borderRadius: theme.shape.borderRadius,
+                    fontSize: theme.typography.body1.fontSize,
+                    boxSizing: 'border-box',
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                    transition: 'all 0.2s ease-in-out'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = theme.palette.primary.main;
+                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = theme.palette.divider;
+                    e.target.style.boxShadow = 'none';
                   }}
                 />
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
+                    marginBottom: '8px', 
+                    fontWeight: theme.typography.button.fontWeight,
+                    color: theme.palette.text.primary,
+                    fontSize: theme.typography.body2.fontSize
                   }}>
                     Téléphone
                   </label>
@@ -857,11 +1059,22 @@ const Settings: React.FC = () => {
                     }))}
                     style={{
                       width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
+                      padding: '12px 16px',
+                      border: `2px solid ${theme.palette.divider}`,
+                      borderRadius: theme.shape.borderRadius,
+                      fontSize: theme.typography.body1.fontSize,
+                      boxSizing: 'border-box',
+                      backgroundColor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = theme.palette.primary.main;
+                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = theme.palette.divider;
+                      e.target.style.boxShadow = 'none';
                     }}
                   />
                 </div>
@@ -869,10 +1082,10 @@ const Settings: React.FC = () => {
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
+                    marginBottom: '8px', 
+                    fontWeight: theme.typography.button.fontWeight,
+                    color: theme.palette.text.primary,
+                    fontSize: theme.typography.body2.fontSize
                   }}>
                     Email
                   </label>
@@ -885,24 +1098,35 @@ const Settings: React.FC = () => {
                     }))}
                     style={{
                       width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
+                      padding: '12px 16px',
+                      border: `2px solid ${theme.palette.divider}`,
+                      borderRadius: theme.shape.borderRadius,
+                      fontSize: theme.typography.body1.fontSize,
+                      boxSizing: 'border-box',
+                      backgroundColor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = theme.palette.primary.main;
+                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = theme.palette.divider;
+                      e.target.style.boxShadow = 'none';
                     }}
                   />
                 </div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '24px' }}>
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
+                    marginBottom: '8px', 
+                    fontWeight: theme.typography.button.fontWeight,
+                    color: theme.palette.text.primary,
+                    fontSize: theme.typography.body2.fontSize
                   }}>
                     SIRET
                   </label>
@@ -916,11 +1140,22 @@ const Settings: React.FC = () => {
                     placeholder="123 456 789 00012"
                     style={{
                       width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
+                      padding: '12px 16px',
+                      border: `2px solid ${theme.palette.divider}`,
+                      borderRadius: theme.shape.borderRadius,
+                      fontSize: theme.typography.body1.fontSize,
+                      boxSizing: 'border-box',
+                      backgroundColor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = theme.palette.primary.main;
+                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = theme.palette.divider;
+                      e.target.style.boxShadow = 'none';
                     }}
                   />
                 </div>
@@ -928,10 +1163,10 @@ const Settings: React.FC = () => {
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
+                    marginBottom: '8px', 
+                    fontWeight: theme.typography.button.fontWeight,
+                    color: theme.palette.text.primary,
+                    fontSize: theme.typography.body2.fontSize
                   }}>
                     Numéro de TVA
                   </label>
@@ -945,11 +1180,22 @@ const Settings: React.FC = () => {
                     placeholder="FR12345678901"
                     style={{
                       width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
+                      padding: '12px 16px',
+                      border: `2px solid ${theme.palette.divider}`,
+                      borderRadius: theme.shape.borderRadius,
+                      fontSize: theme.typography.body1.fontSize,
+                      boxSizing: 'border-box',
+                      backgroundColor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = theme.palette.primary.main;
+                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = theme.palette.divider;
+                      e.target.style.boxShadow = 'none';
                     }}
                   />
                 </div>
@@ -957,10 +1203,10 @@ const Settings: React.FC = () => {
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
+                    marginBottom: '8px', 
+                    fontWeight: theme.typography.button.fontWeight,
+                    color: theme.palette.text.primary,
+                    fontSize: theme.typography.body2.fontSize
                   }}>
                     Taux de TVA (%)
                   </label>
@@ -973,24 +1219,35 @@ const Settings: React.FC = () => {
                     }))}
                     style={{
                       width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
+                      padding: '12px 16px',
+                      border: `2px solid ${theme.palette.divider}`,
+                      borderRadius: theme.shape.borderRadius,
+                      fontSize: theme.typography.body1.fontSize,
+                      boxSizing: 'border-box',
+                      backgroundColor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = theme.palette.primary.main;
+                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = theme.palette.divider;
+                      e.target.style.boxShadow = 'none';
                     }}
                   />
                 </div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '24px' }}>
                 <div>
                   <label style={{ 
                     display: 'block', 
-                    marginBottom: '6px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
+                    marginBottom: '8px', 
+                    fontWeight: theme.typography.button.fontWeight,
+                    color: theme.palette.text.primary,
+                    fontSize: theme.typography.body2.fontSize
                   }}>
                     Devise
                   </label>
@@ -1002,11 +1259,23 @@ const Settings: React.FC = () => {
                     }))}
                     style={{
                       width: '100%',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                      boxSizing: 'border-box'
+                      padding: '12px 16px',
+                      border: `2px solid ${theme.palette.divider}`,
+                      borderRadius: theme.shape.borderRadius,
+                      fontSize: theme.typography.body1.fontSize,
+                      boxSizing: 'border-box',
+                      backgroundColor: theme.palette.background.paper,
+                      color: theme.palette.text.primary,
+                      transition: 'all 0.2s ease-in-out',
+                      cursor: 'pointer'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = theme.palette.primary.main;
+                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = theme.palette.divider;
+                      e.target.style.boxShadow = 'none';
                     }}
                   >
                     <option value="EUR">EUR (€)</option>
@@ -1020,26 +1289,49 @@ const Settings: React.FC = () => {
 
           {/* Bouton de sauvegarde */}
           <div style={{
-            marginTop: '32px',
-            paddingTop: '20px',
-            borderTop: '1px solid #e9ecef',
+            marginTop: '40px',
+            paddingTop: '24px',
+            borderTop: `1px solid ${theme.palette.divider}`,
             textAlign: 'right'
           }}>
             <button
               onClick={saveSettingsData}
               disabled={loading}
               style={{
-                backgroundColor: '#28a745',
-                color: 'white',
+                backgroundColor: loading ? theme.palette.secondary.main : theme.palette.success.main,
+                color: theme.palette.success.contrastText || 'white',
                 border: 'none',
-                padding: '12px 24px',
-                borderRadius: '4px',
+                padding: '14px 32px',
+                borderRadius: theme.shape.borderRadius,
                 cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                opacity: loading ? 0.6 : 1
+                fontSize: theme.typography.button.fontSize,
+                fontWeight: theme.typography.button.fontWeight,
+                opacity: loading ? 0.7 : 1,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: theme.shadows[2],
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginLeft: 'auto',
+                minWidth: '200px',
+                justifyContent: 'center'
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = theme.shadows[4];
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = theme.shadows[2];
+                }
               }}
             >
+              <span style={{ fontSize: '16px' }}>
+                {loading ? '🔄' : '💾'}
+              </span>
               {loading ? 'Sauvegarde...' : 'Sauvegarder les paramètres'}
             </button>
           </div>

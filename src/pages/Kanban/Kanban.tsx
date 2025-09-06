@@ -47,6 +47,7 @@ import {
   Archive as ArchiveIcon,
   Payment as PaymentIcon,
   CheckCircle as CheckCircleIcon,
+  Category as CategoryIcon,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
@@ -194,6 +195,29 @@ const Kanban: React.FC = () => {
     return deviceTypeColors[type as keyof typeof deviceTypeColors] || '#757575';
   };
 
+  // Fonction pour obtenir le label lisible de la catégorie d'appareil
+  const getDeviceTypeLabel = (type: string) => {
+    const typeLabels: { [key: string]: string } = {
+      'smartphone': 'Smartphone',
+      'smartphones': 'Smartphones',
+      'phone': 'Téléphone',
+      'mobile': 'Mobile',
+      'tablet': 'Tablette',
+      'tablets': 'Tablettes',
+      'laptop': 'Ordinateur portable',
+      'laptops': 'Ordinateurs portables',
+      'notebook': 'Ordinateur portable',
+      'desktop': 'Ordinateur fixe',
+      'desktops': 'Ordinateurs fixes',
+      'pc': 'PC',
+      'computer': 'Ordinateur',
+      'other': 'Autre',
+      'others': 'Autres'
+    };
+    
+    return typeLabels[type.toLowerCase()] || type;
+  };
+
   // Fonctions utilitaires pour obtenir les marques et catégories uniques
   const getUniqueBrands = () => {
     // Utiliser les marques du store centralisé (filtrées par catégorie si sélectionnée)
@@ -201,8 +225,10 @@ const Kanban: React.FC = () => {
     
     // Si une catégorie est sélectionnée, filtrer les marques par cette catégorie
     if (selectedCategory) {
+      // Chercher la catégorie par nom (plus flexible)
       const category = deviceCategories.find(c => c.name === selectedCategory);
       if (category) {
+        // Filtrer par ID de catégorie
         filteredBrands = filteredBrands.filter(brand => brand.categoryId === category.id);
       }
     }
@@ -212,11 +238,22 @@ const Kanban: React.FC = () => {
   };
 
   const getUniqueCategories = () => {
-    // Utiliser les catégories du store centralisé
-    return deviceCategories
-      .filter(category => category.isActive)
-      .map(category => category.name)
-      .sort();
+    // Utiliser les catégories de la base de données (comme DeviceManagement)
+    // Si pas de catégories en base, utiliser celles du store en fallback
+    if (deviceCategories && deviceCategories.length > 0) {
+      return deviceCategories
+        .filter(category => category.isActive)
+        .map(category => category.name)
+        .sort();
+    }
+    
+    // Fallback vers les catégories par défaut du store
+    return [
+      'Smartphones',
+      'Tablettes', 
+      'Ordinateurs portables',
+      'Ordinateurs fixes'
+    ].sort();
   };
 
   const getFilteredModels = () => {
@@ -1016,6 +1053,19 @@ const Kanban: React.FC = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             {device?.brand} {device?.model} {!device && 'Appareil'}
           </Typography>
+          
+          {/* Affichage de la catégorie de l'appareil */}
+          {device?.type && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Chip
+                label={getDeviceTypeLabel(device.type)}
+                size="small"
+                color="primary"
+                variant="outlined"
+                icon={<CategoryIcon />}
+              />
+            </Box>
+          )}
 
           <Typography variant="body2" sx={{ mb: 1 }}>
             {repair.description}

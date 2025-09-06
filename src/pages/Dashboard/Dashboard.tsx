@@ -537,13 +537,6 @@ const Dashboard: React.FC = () => {
                   </Box>
                   <Chip label={defaultStats.lowStockItems} color="warning" size="small" />
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <MessageIcon color="info" sx={{ mr: 1 }} />
-                    <Typography variant="body2" component="span">Messages en attente</Typography>
-                  </Box>
-                  <Chip label={defaultStats.pendingMessages} color="info" size="small" />
-                </Box>
               </Box>
             </CardContent>
           </Card>

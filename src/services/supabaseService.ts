@@ -491,36 +491,23 @@ export const userService = {
       
       console.log('✅ Inscription réussie:', data);
       
-      // Si l'utilisateur a été créé, tenter de synchroniser avec subscription_status
+      // Si l'utilisateur a été créé, tenter de synchroniser avec subscription_status via RPC
       if (data.user) {
         try {
-          console.log('🔄 Tentative de synchronisation avec subscription_status...');
+          console.log('🔄 Tentative de synchronisation avec subscription_status via RPC...');
           
-          const userEmail = data.user.email?.toLowerCase();
-          const isAdmin = userEmail === 'srohee32@gmail.com' || userEmail === 'repphonereparation@gmail.com';
-          const userRole = userData.role || 'technician';
-          
-          // Tenter d'insérer dans subscription_status
-          const { error: syncError } = await supabase
-            .from('subscription_status')
-            .insert({
-              user_id: data.user.id,
-              first_name: userData.firstName || 'Utilisateur',
-              last_name: userData.lastName || 'Test',
-              email: data.user.email || '',
-              is_active: isAdmin || userRole === 'admin',
-              subscription_type: isAdmin || userRole === 'admin' ? 'premium' : 'free',
-              notes: 'Compte créé lors de l\'inscription',
-              status: isAdmin || userRole === 'admin' ? 'ACTIF' : 'INACTIF'
-            });
+          // Utiliser la fonction RPC pour créer les données par défaut
+          const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_default_data', {
+            p_user_id: data.user.id
+          });
 
-          if (syncError) {
-            console.log('⚠️ Erreur lors de la synchronisation (normal si le trigger fonctionne):', syncError);
+          if (rpcError) {
+            console.log('⚠️ Erreur lors de la synchronisation RPC:', rpcError);
           } else {
-            console.log('✅ Synchronisation avec subscription_status réussie');
+            console.log('✅ Synchronisation avec subscription_status réussie via RPC:', rpcData);
           }
         } catch (syncErr) {
-          console.log('⚠️ Exception lors de la synchronisation (normal si le trigger fonctionne):', syncErr);
+          console.log('⚠️ Exception lors de la synchronisation RPC:', syncErr);
         }
       }
       
