@@ -400,10 +400,6 @@ const Settings: React.FC = () => {
                 borderRadius: `${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0 0`,
                 margin: '8px 4px 0 4px',
                 position: 'relative',
-                '&:hover': {
-                  backgroundColor: activeTab === index ? theme.palette.primary.dark : 'rgba(55, 65, 81, 0.08)',
-                  transform: 'translateY(-2px)'
-                }
               }}
               onMouseEnter={(e) => {
                 if (activeTab !== index) {
@@ -522,11 +518,6 @@ const Settings: React.FC = () => {
                       backgroundColor: theme.palette.background.paper,
                       color: theme.palette.text.primary,
                       transition: 'all 0.2s ease-in-out',
-                      '&:focus': {
-                        outline: 'none',
-                        borderColor: theme.palette.primary.main,
-                        boxShadow: `0 0 0 3px ${theme.palette.primary.main}20`
-                      }
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = theme.palette.primary.main;
