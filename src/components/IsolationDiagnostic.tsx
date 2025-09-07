@@ -74,7 +74,7 @@ const IsolationDiagnostic: React.FC = () => {
       
       if (serviceResult.success && 'data' in serviceResult && serviceResult.data) {
         addResult('service', 'success', `${serviceResult.data.length} clients récupérés via le service`, {
-          clients: serviceResult.data.map(c => ({ id: c.id, name: `${c.firstName} ${c.lastName}`, userId: c.userId }))
+          clients: serviceResult.data.map(c => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }))
         });
       } else {
         addResult('service', 'error', 'Erreur lors de la récupération via le service', serviceResult);

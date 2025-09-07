@@ -60,7 +60,6 @@ import LoyaltySettingsSimple from '../../components/LoyaltyManagement/LoyaltySet
 import LoyaltySettingsDebug from '../../components/LoyaltyManagement/LoyaltySettingsDebug';
 import LoyaltySettingsTestUpdate from '../../components/LoyaltyManagement/LoyaltySettingsTestUpdate';
 import LoyaltySettingsTestPoints from '../../components/LoyaltyManagement/LoyaltySettingsTestPoints';
-import LoyaltyIsolationDiagnostic from '../../components/LoyaltyIsolationDiagnostic';
 
 // Types pour les données de fidélité
 interface LoyaltyTier {
@@ -750,9 +749,6 @@ const Loyalty: React.FC = () => {
           </Button>
         </Box>
       </Box>
-
-      {/* Diagnostic d'isolation */}
-      <LoyaltyIsolationDiagnostic />
 
       {/* Statistiques */}
       {statistics && (
