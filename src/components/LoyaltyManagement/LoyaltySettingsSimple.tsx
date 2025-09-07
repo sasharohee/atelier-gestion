@@ -170,10 +170,10 @@ const LoyaltySettingsSimple: React.FC<LoyaltySettingsProps> = ({ onDataChanged }
 
       // Nettoyer les doublons et trier par clé
       const cleanConfigData = configData ? configData
-        .filter((item, index, self) => 
-          index === self.findIndex(t => t.key === item.key)
+        .filter((item: any, index: number, self: any[]) => 
+          index === self.findIndex((t: any) => t.key === item.key)
         )
-        .sort((a, b) => a.key.localeCompare(b.key)) : [];
+        .sort((a: any, b: any) => a.key.localeCompare(b.key)) : [];
 
       console.log('✅ Configuration chargée:', cleanConfigData);
       setConfig(cleanConfigData);
@@ -531,7 +531,7 @@ const LoyaltySettingsSimple: React.FC<LoyaltySettingsProps> = ({ onDataChanged }
       // Supprimer les doublons en gardant seulement le plus récent
       for (const key of keysToClean) {
         const configs = duplicates[key];
-        const sortedConfigs = configs.sort((a, b) => 
+        const sortedConfigs = configs.sort((a: any, b: any) => 
           new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
         );
         

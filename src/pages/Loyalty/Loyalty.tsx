@@ -258,8 +258,8 @@ const Loyalty: React.FC = () => {
         console.log('✅ Niveaux chargés:', tiersData?.length || 0);
         
         // Supprimer les doublons en gardant seulement le premier de chaque nom
-        const uniqueTiers = tiersData?.reduce((acc, tier) => {
-          if (!acc.find(t => t.name === tier.name)) {
+        const uniqueTiers = tiersData?.reduce((acc: any[], tier: any) => {
+          if (!acc.find((t: any) => t.name === tier.name)) {
             acc.push(tier);
           }
           return acc;
