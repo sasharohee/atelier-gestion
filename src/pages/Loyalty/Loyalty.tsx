@@ -60,6 +60,7 @@ import LoyaltySettingsSimple from '../../components/LoyaltyManagement/LoyaltySet
 import LoyaltySettingsDebug from '../../components/LoyaltyManagement/LoyaltySettingsDebug';
 import LoyaltySettingsTestUpdate from '../../components/LoyaltyManagement/LoyaltySettingsTestUpdate';
 import LoyaltySettingsTestPoints from '../../components/LoyaltyManagement/LoyaltySettingsTestPoints';
+import LoyaltyIsolationDiagnostic from '../../components/LoyaltyIsolationDiagnostic';
 
 // Types pour les données de fidélité
 interface LoyaltyTier {
@@ -179,13 +180,6 @@ const Loyalty: React.FC = () => {
         setStatistics(statsData.data);
       }
       
-      // Charger tous les clients pour les formulaires
-      const { data: allClientsData } = await supabase
-        .from('clients')
-        .select('id, first_name, last_name, email')
-        .order('first_name');
-      setAllClients(allClientsData || []);
-      
       // Récupérer l'utilisateur actuel
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -194,11 +188,19 @@ const Loyalty: React.FC = () => {
         return;
       }
 
-      // Charger les clients avec leurs points (temporairement sans filtre pour diagnostiquer)
+      // Charger SEULEMENT les clients de l'utilisateur connecté pour les formulaires
+      const { data: allClientsData } = await supabase
+        .from('clients')
+        .select('id, first_name, last_name, email')
+        .eq('user_id', user.id)  // Filtrage par user_id pour l'isolation
+        .order('first_name');
+      setAllClients(allClientsData || []);
+
+      // Charger SEULEMENT les clients de l'utilisateur connecté avec leurs points
       console.log('🔍 Chargement des clients avec points...');
       console.log('🔍 User ID:', user.id);
       
-      // Essayer d'abord avec le filtre workshop_id
+      // Utiliser le filtre user_id pour l'isolation
       let { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select(`
@@ -209,40 +211,24 @@ const Loyalty: React.FC = () => {
           phone,
           loyalty_points,
           current_tier_id,
-          workshop_id,
+          user_id,
           created_at,
           updated_at
         `)
-        .eq('workshop_id', user.id)
+        .eq('user_id', user.id)  // Filtrage par user_id pour l'isolation
         .order('loyalty_points', { ascending: false });
       
-      // Si aucun client trouvé, essayer sans filtre pour diagnostiquer
+      // Diagnostic si aucun client trouvé
       if (!clientsData || clientsData.length === 0) {
-        console.log('⚠️ Aucun client trouvé avec workshop_id, essai sans filtre...');
-        const { data: allClientsData, error: allClientsError } = await supabase
-          .from('clients')
-          .select(`
-            id,
-            first_name,
-            last_name,
-            email,
-            phone,
-            loyalty_points,
-            current_tier_id,
-            workshop_id,
-            created_at,
-            updated_at
-          `)
-          .order('loyalty_points', { ascending: false });
+        console.log('⚠️ Aucun client trouvé pour user_id:', user.id);
+        console.log('🔍 Vérification de l\'isolation des clients...');
         
-        if (allClientsError) {
-          console.error('❌ Erreur lors du chargement de tous les clients:', allClientsError);
-        } else {
-          console.log('📊 Tous les clients (sans filtre):', allClientsData);
-          // Utiliser tous les clients temporairement
-          clientsData = allClientsData;
-          clientsError = null;
-        }
+        // Vérifier combien de clients existent au total (pour diagnostic)
+        const { data: totalClientsData } = await supabase
+          .from('clients')
+          .select('id, user_id', { count: 'exact', head: true });
+        
+        console.log('📊 Total clients dans la base:', totalClientsData?.length || 0);
       }
       
       if (clientsError) {
@@ -260,12 +246,12 @@ const Loyalty: React.FC = () => {
         }
       }
       
-      // Charger les niveaux de fidélité pour cet atelier uniquement
+      // Charger les niveaux de fidélité pour cet utilisateur uniquement
       console.log('🔍 Chargement des niveaux de fidélité...');
       const { data: tiersData, error: tiersError } = await supabase
         .from('loyalty_tiers_advanced')
         .select('*')
-        .eq('workshop_id', user.id)
+        .eq('workshop_id', user.id)  // Utiliser workshop_id pour les niveaux
         .order('points_required', { ascending: true });
 
       if (tiersError) {
@@ -275,12 +261,12 @@ const Loyalty: React.FC = () => {
         setLoyaltyTiers(tiersData || []);
       }
 
-      // Charger l'historique des points pour cet atelier uniquement
+      // Charger l'historique des points pour cet utilisateur uniquement
       console.log('🔍 Chargement de l\'historique des points...');
       const { data: historyData, error: historyError } = await supabase
         .from('loyalty_points_history')
         .select('client_id, points_change')
-        .eq('workshop_id', user.id)
+        .eq('workshop_id', user.id)  // Utiliser workshop_id pour l'historique
         .lt('points_change', 0); // Seulement les utilisations (points négatifs)
 
       if (historyError) {
@@ -368,7 +354,7 @@ const Loyalty: React.FC = () => {
 
       setClients(clientsWithTiers);
       
-      // Charger les parrainages pour cet atelier uniquement (avec gestion d'erreur)
+      // Charger les parrainages pour cet utilisateur uniquement (avec gestion d'erreur)
       let referralsData = [];
       try {
         const { data: referralsResult, error: referralsError } = await supabase
@@ -378,7 +364,7 @@ const Loyalty: React.FC = () => {
             referrer_client:clients!referrals_referrer_client_id_fkey(first_name, last_name, email),
             referred_client:clients!referrals_referred_client_id_fkey(first_name, last_name, email)
           `)
-          .eq('workshop_id', user.id)
+          .eq('workshop_id', user.id)  // Utiliser workshop_id pour les parrainages
           .order('created_at', { ascending: false });
         
         if (referralsError) {
@@ -764,6 +750,9 @@ const Loyalty: React.FC = () => {
           </Button>
         </Box>
       </Box>
+
+      {/* Diagnostic d'isolation */}
+      <LoyaltyIsolationDiagnostic />
 
       {/* Statistiques */}
       {statistics && (

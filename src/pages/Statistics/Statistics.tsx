@@ -158,6 +158,7 @@ const Statistics: React.FC = () => {
     console.log(`  - Réparations avec clients valides: ${repairsWithClients.length}/${repairs.length}`);
     
     const repairsWithDevices = repairs.filter(repair => {
+      if (!repair.deviceId) return false;
       const device = getDeviceById(repair.deviceId);
       return device !== undefined;
     });

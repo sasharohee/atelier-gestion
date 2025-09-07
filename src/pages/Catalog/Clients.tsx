@@ -24,10 +24,14 @@ import {
   Email as EmailIcon,
   Phone as PhoneIcon,
   Refresh as RefreshIcon,
+  Security as SecurityIcon,
+  PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import ClientForm from '../../components/ClientForm';
 import { clientService } from '../../services/supabaseService';
+import IsolationDiagnostic from '../../components/IsolationDiagnostic';
+import NewAccountDiagnostic from '../../components/NewAccountDiagnostic';
 
 const Clients: React.FC = () => {
   const { clients, loadClients, addClient, deleteClient } = useAppStore();
@@ -37,6 +41,8 @@ const Clients: React.FC = () => {
   const [clientFormOpen, setClientFormOpen] = useState(false);
   const [editClientFormOpen, setEditClientFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
+  const [showDiagnostic, setShowDiagnostic] = useState(false);
+  const [showNewAccountDiagnostic, setShowNewAccountDiagnostic] = useState(false);
 
   useEffect(() => {
     const loadClientsData = async () => {
@@ -348,6 +354,25 @@ const Clients: React.FC = () => {
         >
           Actualiser
         </Button>
+
+        <Button 
+          variant="outlined" 
+          color="warning"
+          startIcon={<SecurityIcon />}
+          onClick={() => setShowDiagnostic(!showDiagnostic)}
+        >
+          {showDiagnostic ? 'Masquer' : 'Diagnostic'} d'isolation
+        </Button>
+
+        <Button 
+          variant="outlined" 
+          color="info"
+          startIcon={<PersonAddIcon />}
+          onClick={() => setShowNewAccountDiagnostic(!showNewAccountDiagnostic)}
+        >
+          {showNewAccountDiagnostic ? 'Masquer' : 'Diagnostic'} nouveaux comptes
+        </Button>
+        
         {isLoading && <CircularProgress size={20} />}
       </Box>
 
@@ -356,6 +381,20 @@ const Clients: React.FC = () => {
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
+      )}
+
+      {/* Diagnostic d'isolation */}
+      {showDiagnostic && (
+        <Box sx={{ mb: 3 }}>
+          <IsolationDiagnostic />
+        </Box>
+      )}
+
+      {/* Diagnostic nouveaux comptes */}
+      {showNewAccountDiagnostic && (
+        <Box sx={{ mb: 3 }}>
+          <NewAccountDiagnostic />
+        </Box>
       )}
 
       <Card>
