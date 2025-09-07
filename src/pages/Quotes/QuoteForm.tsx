@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Client, Product, Service, Part, Device } from '../../types';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import RepairForm, { RepairFormData } from './RepairForm';
 
 interface QuoteItemForm {
@@ -114,6 +115,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   updateItemQuantity,
 }) => {
   const [repairFormOpen, setRepairFormOpen] = useState(false);
+  const { workshopSettings, isLoading: settingsLoading } = useWorkshopSettings();
 
   // Gérer la création d'une réparation
   const handleCreateRepair = (repairData: RepairFormData) => {
@@ -482,7 +484,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                    <Typography variant="body2">TVA (20%) :</Typography>
+                    <Typography variant="body2">
+                      TVA ({settingsLoading ? '...' : workshopSettings.vatRate}%) :
+                    </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       {totals.tax.toLocaleString('fr-FR')} €
                     </Typography>

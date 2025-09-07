@@ -68,6 +68,7 @@ import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../store';
 import { Quote, QuoteItem } from '../../types';
 import { generateQuoteNumber, formatQuoteNumber } from '../../utils/quoteUtils';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import QuoteForm from './QuoteForm';
 import QuoteView from './QuoteView';
 import RepairForm, { RepairFormData } from './RepairForm';
@@ -97,6 +98,8 @@ const Quotes: React.FC = () => {
     getDeviceById,
   } = useAppStore();
   
+  const { workshopSettings } = useWorkshopSettings();
+  
   const [newQuoteDialogOpen, setNewQuoteDialogOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [quoteItems, setQuoteItems] = useState<QuoteItemForm[]>([]);
@@ -113,11 +116,12 @@ const Quotes: React.FC = () => {
   // Calcul des totaux
   const totals = useMemo(() => {
     const subtotal = quoteItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const tax = subtotal * 0.20; // TVA 20%
+    const vatRate = parseFloat(workshopSettings.vatRate) / 100; // Convertir le pourcentage en décimal
+    const tax = subtotal * vatRate;
     const total = subtotal + tax;
     
     return { subtotal, tax, total };
-  }, [quoteItems]);
+  }, [quoteItems, workshopSettings.vatRate]);
 
   // Filtrage des articles selon le type et la recherche
   const filteredItems = useMemo(() => {

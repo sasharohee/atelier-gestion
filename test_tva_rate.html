@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test TVA Rate</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+        .result {
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+        .error {
+            background: #ffe8e8;
+            color: #d32f2f;
+        }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test du Taux de TVA Dynamique</h1>
+        
+        <div class="test-section">
+            <h3>1. Test de Calcul de TVA</h3>
+            <p>Entrez un montant et un taux de TVA pour tester le calcul :</p>
+            <input type="number" id="amount" placeholder="Montant HT" value="500">
+            <input type="number" id="vatRate" placeholder="Taux TVA (%)" value="20">
+            <button onclick="calculateVAT()">Calculer</button>
+            <div id="vatResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Test de Formatage</h3>
+            <p>Test du formatage des montants et pourcentages :</p>
+            <button onclick="testFormatting()">Tester le formatage</button>
+            <div id="formatResult" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Simulation de Devis</h3>
+            <p>Simulation d'un devis avec différents taux de TVA :</p>
+            <button onclick="simulateQuote()">Simuler un devis</button>
+            <div id="quoteResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        function calculateVAT() {
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
+            
+            if (amount <= 0 || vatRate < 0) {
+                document.getElementById('vatResult').innerHTML = 
+                    '<span class="error">❌ Veuillez entrer des valeurs valides</span>';
+                return;
+            }
+            
+            const vatAmount = amount * (vatRate / 100);
+            const total = amount + vatAmount;
+            
+            document.getElementById('vatResult').innerHTML = `
+                <strong>Résultat du calcul :</strong><br>
+                Montant HT : ${amount.toLocaleString('fr-FR')} €<br>
+                TVA (${vatRate}%) : ${vatAmount.toLocaleString('fr-FR')} €<br>
+                <strong>Total TTC : ${total.toLocaleString('fr-FR')} €</strong>
+            `;
+        }
+
+        function testFormatting() {
+            const testValues = [20, 10, 5.5, 0];
+            let result = '<strong>Test de formatage :</strong><br>';
+            
+            testValues.forEach(rate => {
+                const amount = 500;
+                const vatAmount = amount * (rate / 100);
+                const total = amount + vatAmount;
+                
+                result += `
+                    Taux ${rate}% : ${amount.toLocaleString('fr-FR')}€ + ${vatAmount.toLocaleString('fr-FR')}€ = ${total.toLocaleString('fr-FR')}€<br>
+                `;
+            });
+            
+            document.getElementById('formatResult').innerHTML = result;
+        }
+
+        function simulateQuote() {
+            const items = [
+                { name: 'Réparation iPhone', price: 150, quantity: 1 },
+                { name: 'Écran de remplacement', price: 80, quantity: 1 },
+                { name: 'Main d\'œuvre', price: 50, quantity: 2 }
+            ];
+            
+            const vatRates = [20, 10, 5.5];
+            let result = '<strong>Simulation de devis :</strong><br><br>';
+            
+            vatRates.forEach(rate => {
+                const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const vatAmount = subtotal * (rate / 100);
+                const total = subtotal + vatAmount;
+                
+                result += `
+                    <strong>Taux TVA ${rate}% :</strong><br>
+                    ${items.map(item => `• ${item.name} : ${item.quantity}x ${item.price.toLocaleString('fr-FR')}€ = ${(item.price * item.quantity).toLocaleString('fr-FR')}€`).join('<br>')}<br>
+                    Sous-total : ${subtotal.toLocaleString('fr-FR')} €<br>
+                    TVA (${rate}%) : ${vatAmount.toLocaleString('fr-FR')} €<br>
+                    <strong>Total : ${total.toLocaleString('fr-FR')} €</strong><br><br>
+                `;
+            });
+            
+            document.getElementById('quoteResult').innerHTML = result;
+        }
+
+        // Calculer automatiquement au chargement
+        window.onload = function() {
+            calculateVAT();
+        };
+    </script>
+</body>
+</html>

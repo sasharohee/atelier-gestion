@@ -245,19 +245,28 @@ const Loyalty: React.FC = () => {
         }
       }
       
-      // Charger les niveaux de fidélité pour cet utilisateur uniquement
+      // Charger les niveaux de fidélité (sans filtre workshop_id pour l'instant)
       console.log('🔍 Chargement des niveaux de fidélité...');
       const { data: tiersData, error: tiersError } = await supabase
         .from('loyalty_tiers_advanced')
         .select('*')
-        .eq('workshop_id', user.id)  // Utiliser workshop_id pour les niveaux
         .order('points_required', { ascending: true });
 
       if (tiersError) {
         console.error('❌ Erreur lors du chargement des niveaux:', tiersError);
       } else {
         console.log('✅ Niveaux chargés:', tiersData?.length || 0);
-        setLoyaltyTiers(tiersData || []);
+        
+        // Supprimer les doublons en gardant seulement le premier de chaque nom
+        const uniqueTiers = tiersData?.reduce((acc, tier) => {
+          if (!acc.find(t => t.name === tier.name)) {
+            acc.push(tier);
+          }
+          return acc;
+        }, [] as LoyaltyTier[]) || [];
+        
+        console.log('✅ Niveaux uniques après déduplication:', uniqueTiers.length);
+        setLoyaltyTiers(uniqueTiers);
       }
 
       // Charger l'historique des points pour cet utilisateur uniquement
@@ -265,7 +274,6 @@ const Loyalty: React.FC = () => {
       const { data: historyData, error: historyError } = await supabase
         .from('loyalty_points_history')
         .select('client_id, points_change')
-        .eq('workshop_id', user.id)  // Utiliser workshop_id pour l'historique
         .lt('points_change', 0); // Seulement les utilisations (points négatifs)
 
       if (historyError) {
@@ -363,7 +371,6 @@ const Loyalty: React.FC = () => {
             referrer_client:clients!referrals_referrer_client_id_fkey(first_name, last_name, email),
             referred_client:clients!referrals_referred_client_id_fkey(first_name, last_name, email)
           `)
-          .eq('workshop_id', user.id)  // Utiliser workshop_id pour les parrainages
           .order('created_at', { ascending: false });
         
         if (referralsError) {
@@ -886,10 +893,32 @@ const Loyalty: React.FC = () => {
               <TableBody>
                 {clients.map((client) => {
                   const availablePoints = (client.loyalty_points || 0) - (client.used_points || 0);
+                  
+                  // Trouver le niveau actuel et le niveau suivant
+                  const currentTier = client.tier;
                   const nextTier = loyaltyTiers.find(t => t.points_required > availablePoints);
-                  const progress = nextTier 
-                    ? ((availablePoints - (client.tier?.points_required || 0)) / (nextTier.points_required - (client.tier?.points_required || 0))) * 100
-                    : 100;
+                  
+                  // Calculer la progression
+                  let progress = 0;
+                  if (nextTier && currentTier) {
+                    // Si on a un niveau actuel et un niveau suivant
+                    const currentTierPoints = currentTier.points_required || 0;
+                    const nextTierPoints = nextTier.points_required;
+                    const pointsInCurrentTier = availablePoints - currentTierPoints;
+                    const pointsNeededForNextTier = nextTierPoints - currentTierPoints;
+                    
+                    if (pointsNeededForNextTier > 0) {
+                      progress = Math.max(0, Math.min(100, (pointsInCurrentTier / pointsNeededForNextTier) * 100));
+                    } else {
+                      progress = 100;
+                    }
+                  } else if (nextTier && !currentTier) {
+                    // Si on n'a pas de niveau actuel mais un niveau suivant
+                    progress = Math.max(0, Math.min(100, (availablePoints / nextTier.points_required) * 100));
+                  } else {
+                    // Si on est au niveau maximum ou plus
+                    progress = 100;
+                  }
                   
                   return (
                     <TableRow key={client.id}>
@@ -935,13 +964,30 @@ const Loyalty: React.FC = () => {
                           <LinearProgress
                             variant="determinate"
                             value={Math.min(progress, 100)}
-                            sx={{ height: 8, borderRadius: 4 }}
+                            sx={{ 
+                              height: 8, 
+                              borderRadius: 4,
+                              backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                              '& .MuiLinearProgress-bar': {
+                                backgroundColor: progress >= 100 ? '#4caf50' : '#2196f3'
+                              }
+                            }}
                           />
-                          {nextTier && (
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
                             <Typography variant="caption" color="text.secondary">
-                              {Math.round(progress)}% vers {nextTier.name}
+                              {Math.round(progress)}%
                             </Typography>
-                          )}
+                            {nextTier && progress < 100 && (
+                              <Typography variant="caption" color="text.secondary">
+                                {nextTier.points_required - availablePoints} pts vers {nextTier.name}
+                              </Typography>
+                            )}
+                            {progress >= 100 && (
+                              <Typography variant="caption" color="success.main" fontWeight="bold">
+                                Niveau max atteint
+                              </Typography>
+                            )}
+                          </Box>
                         </Box>
                       </TableCell>
                                              <TableCell>

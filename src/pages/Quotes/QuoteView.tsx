@@ -41,6 +41,7 @@ import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Quote, Client, Repair } from '../../types';
 import { useAppStore } from '../../store';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatQuoteNumber } from '../../utils/quoteUtils';
 
 interface QuoteViewProps {
@@ -59,6 +60,7 @@ const QuoteView: React.FC<QuoteViewProps> = ({
   onStatusChange,
 }) => {
   const { addRepair, repairStatuses } = useAppStore();
+  const { workshopSettings, isLoading: settingsLoading } = useWorkshopSettings();
   
   if (!quote) return null;
 
@@ -414,7 +416,7 @@ L'équipe Mon Atelier
                     <span>${quote.subtotal.toLocaleString('fr-FR')} €</span>
                   </div>
                   <div class="total-row">
-                    <span>TVA (20%) :</span>
+                    <span>TVA (${settingsLoading ? '...' : workshopSettings.vatRate}%) :</span>
                     <span>${quote.tax.toLocaleString('fr-FR')} €</span>
                   </div>
                   <div class="total-row">
@@ -625,7 +627,9 @@ L'équipe Mon Atelier
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                <Typography variant="body2">TVA (20%) :</Typography>
+                <Typography variant="body2">
+                  TVA ({settingsLoading ? '...' : workshopSettings.vatRate}%) :
+                </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
                   {quote.tax.toLocaleString('fr-FR')} €
                 </Typography>
