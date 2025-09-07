@@ -36,10 +36,18 @@ class CategoryService {
   // Récupérer toutes les catégories de l'utilisateur connecté
   async getAll(): Promise<{ success: boolean; data?: ProductCategory[]; error?: string }> {
     try {
+      // Récupérer l'utilisateur actuel pour l'isolation
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non connecté' };
+      }
+
       const { data, error } = await supabase
         .from('product_categories')
         .select('*')
         .eq('is_active', true)
+        .eq('user_id', user.id)
         .order('sort_order', { ascending: true });
 
       if (error) {
@@ -57,10 +65,18 @@ class CategoryService {
   // Récupérer une catégorie par ID
   async getById(id: string): Promise<{ success: boolean; data?: ProductCategory; error?: string }> {
     try {
+      // Récupérer l'utilisateur actuel pour l'isolation
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non connecté' };
+      }
+
       const { data, error } = await supabase
         .from('product_categories')
         .select('*')
         .eq('id', id)
+        .eq('user_id', user.id)
         .single();
 
       if (error) {
@@ -78,6 +94,13 @@ class CategoryService {
   // Créer une nouvelle catégorie
   async create(categoryData: CreateCategoryData): Promise<{ success: boolean; data?: ProductCategory; error?: string }> {
     try {
+      // Récupérer l'utilisateur actuel pour l'isolation
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non connecté' };
+      }
+
       const { data, error } = await supabase
         .from('product_categories')
         .insert([{
@@ -86,8 +109,8 @@ class CategoryService {
           icon: categoryData.icon,
           color: categoryData.color || '#1976d2',
           is_active: categoryData.is_active !== undefined ? categoryData.is_active : true,
-          sort_order: categoryData.sort_order || 0
-          // user_id sera automatiquement assigné par le trigger
+          sort_order: categoryData.sort_order || 0,
+          user_id: user.id
         }])
         .select()
         .single();
@@ -117,6 +140,13 @@ class CategoryService {
   // Mettre à jour une catégorie
   async update(id: string, updates: UpdateCategoryData): Promise<{ success: boolean; data?: ProductCategory; error?: string }> {
     try {
+      // Récupérer l'utilisateur actuel pour l'isolation
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non connecté' };
+      }
+
       const { data, error } = await supabase
         .from('product_categories')
         .update({
@@ -124,6 +154,7 @@ class CategoryService {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
+        .eq('user_id', user.id)
         .select()
         .single();
 
@@ -142,10 +173,18 @@ class CategoryService {
   // Supprimer une catégorie
   async delete(id: string): Promise<{ success: boolean; error?: string }> {
     try {
+      // Récupérer l'utilisateur actuel pour l'isolation
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non connecté' };
+      }
+
       const { error } = await supabase
         .from('product_categories')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Erreur lors de la suppression de la catégorie:', error);
@@ -172,11 +211,19 @@ class CategoryService {
   // Récupérer les catégories par nom (recherche)
   async searchByName(searchTerm: string): Promise<{ success: boolean; data?: ProductCategory[]; error?: string }> {
     try {
+      // Récupérer l'utilisateur actuel pour l'isolation
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non connecté' };
+      }
+
       const { data, error } = await supabase
         .from('product_categories')
         .select('*')
         .ilike('name', `%${searchTerm}%`)
         .eq('is_active', true)
+        .eq('user_id', user.id)
         .order('sort_order', { ascending: true });
 
       if (error) {

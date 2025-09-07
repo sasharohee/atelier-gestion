@@ -126,17 +126,44 @@ const Statistics: React.FC = () => {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
+      console.log('🔄 STATISTIQUES - Rechargement des données...');
       await Promise.all([
         loadRepairs(),
         loadSales(),
         loadClients(),
         loadDevices(),
       ]);
+      console.log('✅ STATISTIQUES - Données rechargées avec succès');
     } catch (error) {
-      console.error('Erreur lors du rechargement des données:', error);
+      console.error('❌ STATISTIQUES - Erreur lors du rechargement des données:', error);
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  // Fonction de diagnostic
+  const handleDiagnostic = () => {
+    console.log('🔍 DIAGNOSTIC STATISTIQUES - État actuel:');
+    console.log('📊 Données dans le store:');
+    console.log('  - Réparations:', repairs.length);
+    console.log('  - Clients:', clients.length);
+    console.log('  - Appareils:', devices.length);
+    console.log('  - Ventes:', sales.length);
+    
+    console.log('🔗 Vérification des liens:');
+    const repairsWithClients = repairs.filter(repair => {
+      const client = getClientById(repair.clientId);
+      return client !== undefined;
+    });
+    console.log(`  - Réparations avec clients valides: ${repairsWithClients.length}/${repairs.length}`);
+    
+    const repairsWithDevices = repairs.filter(repair => {
+      const device = getDeviceById(repair.deviceId);
+      return device !== undefined;
+    });
+    console.log(`  - Réparations avec appareils valides: ${repairsWithDevices.length}/${repairs.length}`);
+    
+    console.log('💡 Pour voir le calcul détaillé, changez d\'onglet ou modifiez un filtre');
   };
 
   // Calcul de la période sélectionnée
@@ -307,19 +334,33 @@ const Statistics: React.FC = () => {
 
   // Top clients
   const topClients = useMemo(() => {
+    console.log('🔍 STATISTIQUES - Calcul du top 10 des clients');
+    console.log('📊 Données disponibles:');
+    console.log('  - Réparations:', repairs.length);
+    console.log('  - Clients:', clients.length);
+    console.log('  - Appareils:', devices.length);
+    console.log('  - Type d\'appareil sélectionné:', deviceType);
+    
     const clientRepairs = new Map<string, { client: any; repairs: number; revenue: number }>();
+    let repairsProcessed = 0;
+    let repairsWithValidClients = 0;
+    let repairsWithInvalidClients = 0;
     
     repairs.forEach(repair => {
+      repairsProcessed++;
+      
       // Si un type d'appareil spécifique est sélectionné, filtrer par type
       if (deviceType !== 'all') {
         const repairDevice = devices.find(d => d.id === repair.deviceId);
         if (!repairDevice || repairDevice.type !== deviceType) {
+          console.log(`⚠️ Réparation #${repair.repairNumber} filtrée par type d'appareil`);
           return;
         }
       }
       
       const client = getClientById(repair.clientId);
       if (client) {
+        repairsWithValidClients++;
         const existing = clientRepairs.get(client.id);
         if (existing) {
           existing.repairs += 1;
@@ -327,13 +368,29 @@ const Statistics: React.FC = () => {
         } else {
           clientRepairs.set(client.id, { client, repairs: 1, revenue: repair.totalPrice });
         }
+      } else {
+        repairsWithInvalidClients++;
+        console.log(`⚠️ Réparation #${repair.repairNumber} - Client ID ${repair.clientId} non trouvé`);
       }
     });
     
-    return Array.from(clientRepairs.values())
+    console.log('📈 Résultats du calcul:');
+    console.log(`  - Réparations traitées: ${repairsProcessed}`);
+    console.log(`  - Réparations avec clients valides: ${repairsWithValidClients}`);
+    console.log(`  - Réparations avec clients invalides: ${repairsWithInvalidClients}`);
+    console.log(`  - Clients uniques avec réparations: ${clientRepairs.size}`);
+    
+    const result = Array.from(clientRepairs.values())
       .sort((a, b) => b.repairs - a.repairs)
       .slice(0, 10);
-  }, [repairs, getClientById, deviceType, devices]);
+    
+    console.log(`✅ Top ${result.length} clients calculé:`);
+    result.forEach((item, index) => {
+      console.log(`  ${index + 1}. ${item.client.firstName} ${item.client.lastName} (${item.repairs} réparations, ${item.revenue.toFixed(2)}€)`);
+    });
+    
+    return result;
+  }, [repairs, getClientById, deviceType, devices, clients]);
 
   // Top appareils
   const topDevices = useMemo(() => {
@@ -455,6 +512,11 @@ const Statistics: React.FC = () => {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip title="Diagnostic des données">
+              <IconButton onClick={handleDiagnostic}>
+                <AnalyticsIcon />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Actualiser les données">
               <IconButton 
                 onClick={handleRefresh}

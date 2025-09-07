@@ -57,9 +57,17 @@ const handleSupabaseSuccess = (data: any) => {
 // Service pour les catégories
 export const categoryService = {
   async getAll(): Promise<{ success: boolean; data: DeviceCategory[] }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: [] };
+    }
+
     const { data, error } = await supabase
       .from('device_categories')
       .select('*')
+      .eq('user_id', user.id)
       .order('name');
     
     if (error) return handleSupabaseError(error);
@@ -77,12 +85,20 @@ export const categoryService = {
     return handleSupabaseSuccess(categories);
   },
 
-  async create(category: Omit<DeviceCategory, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; data: DeviceCategory }> {
+  async create(category: Omit<DeviceCategory, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; data: DeviceCategory | null }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: null };
+    }
+
     const categoryData = {
       name: category.name,
       description: category.description,
       icon: category.icon,
       is_active: category.isActive,
+      user_id: user.id,
     };
 
     const { data, error } = await supabase
@@ -106,7 +122,14 @@ export const categoryService = {
     return handleSupabaseSuccess(newCategory);
   },
 
-  async update(id: string, updates: Partial<DeviceCategory>): Promise<{ success: boolean; data: DeviceCategory }> {
+  async update(id: string, updates: Partial<DeviceCategory>): Promise<{ success: boolean; data: DeviceCategory | null }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: null };
+    }
+
     const updateData: any = {};
     
     if (updates.name !== undefined) updateData.name = updates.name;
@@ -118,6 +141,7 @@ export const categoryService = {
       .from('device_categories')
       .update(updateData)
       .eq('id', id)
+      .eq('user_id', user.id)
       .select()
       .single();
     
@@ -137,10 +161,18 @@ export const categoryService = {
   },
 
   async delete(id: string): Promise<{ success: boolean }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false };
+    }
+
     const { error } = await supabase
       .from('device_categories')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.id);
     
     if (error) return handleSupabaseError(error);
     return { success: true };
@@ -150,12 +182,20 @@ export const categoryService = {
 // Service pour les marques
 export const brandService = {
   async getAll(): Promise<{ success: boolean; data: DeviceBrand[] }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: [] };
+    }
+
     const { data, error } = await supabase
       .from('device_brands')
       .select(`
         *,
         device_categories!inner(name)
       `)
+      .eq('user_id', user.id)
       .order('name');
     
     if (error) return handleSupabaseError(error);
@@ -174,13 +214,21 @@ export const brandService = {
     return handleSupabaseSuccess(brands);
   },
 
-  async create(brand: Omit<DeviceBrand, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; data: DeviceBrand }> {
+  async create(brand: Omit<DeviceBrand, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; data: DeviceBrand | null }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: null };
+    }
+
     const brandData = {
       name: brand.name,
       category_id: brand.categoryId,
       description: brand.description,
       logo: brand.logo,
       is_active: brand.isActive,
+      user_id: user.id,
     };
 
     const { data, error } = await supabase
@@ -205,7 +253,14 @@ export const brandService = {
     return handleSupabaseSuccess(newBrand);
   },
 
-  async update(id: string, updates: Partial<DeviceBrand>): Promise<{ success: boolean; data: DeviceBrand }> {
+  async update(id: string, updates: Partial<DeviceBrand>): Promise<{ success: boolean; data: DeviceBrand | null }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: null };
+    }
+
     const updateData: any = {};
     
     if (updates.name !== undefined) updateData.name = updates.name;
@@ -218,6 +273,7 @@ export const brandService = {
       .from('device_brands')
       .update(updateData)
       .eq('id', id)
+      .eq('user_id', user.id)
       .select()
       .single();
     
@@ -238,20 +294,36 @@ export const brandService = {
   },
 
   async delete(id: string): Promise<{ success: boolean }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false };
+    }
+
     const { error } = await supabase
       .from('device_brands')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.id);
     
     if (error) return handleSupabaseError(error);
     return { success: true };
   },
 
   async getByCategory(categoryId: string): Promise<{ success: boolean; data: DeviceBrand[] }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: [] };
+    }
+
     const { data, error } = await supabase
       .from('device_brands')
       .select('*')
       .eq('category_id', categoryId)
+      .eq('user_id', user.id)
       .order('name');
     
     if (error) return handleSupabaseError(error);
@@ -274,6 +346,13 @@ export const brandService = {
 // Service pour les modèles
 export const modelService = {
   async getAll(): Promise<{ success: boolean; data: DeviceModel[] }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: [] };
+    }
+
     const { data, error } = await supabase
       .from('device_models')
       .select(`
@@ -281,6 +360,7 @@ export const modelService = {
         device_brands!inner(name),
         device_categories!inner(name)
       `)
+      .eq('user_id', user.id)
       .order('name');
     
     if (error) return handleSupabaseError(error);
@@ -303,7 +383,14 @@ export const modelService = {
     return handleSupabaseSuccess(models);
   },
 
-  async create(model: Omit<DeviceModel, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; data: DeviceModel }> {
+  async create(model: Omit<DeviceModel, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; data: DeviceModel | null }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: null };
+    }
+
     const modelData = {
       brand: model.brand,
       model: model.model,
@@ -314,6 +401,7 @@ export const modelService = {
       repair_difficulty: model.repairDifficulty,
       parts_availability: model.partsAvailability,
       is_active: model.isActive,
+      user_id: user.id,
     };
 
     const { data, error } = await supabase
@@ -342,7 +430,14 @@ export const modelService = {
     return handleSupabaseSuccess(newModel);
   },
 
-  async update(id: string, updates: Partial<DeviceModel>): Promise<{ success: boolean; data: DeviceModel }> {
+  async update(id: string, updates: Partial<DeviceModel>): Promise<{ success: boolean; data: DeviceModel | null }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: null };
+    }
+
     const updateData: any = {};
     
     if (updates.brand !== undefined) updateData.brand = updates.brand;
@@ -359,6 +454,7 @@ export const modelService = {
       .from('device_models')
       .update(updateData)
       .eq('id', id)
+      .eq('user_id', user.id)
       .select()
       .single();
     
@@ -383,20 +479,36 @@ export const modelService = {
   },
 
   async delete(id: string): Promise<{ success: boolean }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false };
+    }
+
     const { error } = await supabase
       .from('device_models')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.id);
     
     if (error) return handleSupabaseError(error);
     return { success: true };
   },
 
   async getByBrand(brandId: string): Promise<{ success: boolean; data: DeviceModel[] }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: [] };
+    }
+
     const { data, error } = await supabase
       .from('device_models')
       .select('*')
       .eq('brand_id', brandId)
+      .eq('user_id', user.id)
       .order('name');
     
     if (error) return handleSupabaseError(error);
@@ -419,10 +531,18 @@ export const modelService = {
   },
 
   async getByCategory(categoryId: string): Promise<{ success: boolean; data: DeviceModel[] }> {
+    // Récupérer l'utilisateur actuel pour l'isolation
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { success: false, data: [] };
+    }
+
     const { data, error } = await supabase
       .from('device_models')
       .select('*')
       .eq('category_id', categoryId)
+      .eq('user_id', user.id)
       .order('name');
     
     if (error) return handleSupabaseError(error);

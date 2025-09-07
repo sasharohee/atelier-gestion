@@ -795,10 +795,11 @@ export const clientService = {
     
     console.log('🔒 Récupération des clients pour l\'utilisateur:', user.id);
     
-    // Récupérer les clients de l'utilisateur connecté (RLS activé)
+    // Récupérer les clients de l'utilisateur connecté avec filtrage par user_id
     const { data, error } = await supabase
       .from('clients')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
     
     if (error) return handleSupabaseError(error);
@@ -882,68 +883,11 @@ export const clientService = {
     const currentUserId = await getCurrentUserId();
     
     if (!currentUserId) {
-      console.log('⚠️ Aucun utilisateur connecté, récupération du client sans filtrage');
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) return handleSupabaseError(error);
-      
-      // Convertir les données de snake_case vers camelCase
-      const convertedData = {
-        id: data.id,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        notes: data.notes,
-        
-        // Nouveaux champs pour les informations personnelles et entreprise
-        category: data.category,
-        title: data.title,
-        companyName: data.company_name,
-        vatNumber: data.vat_number,
-        sirenNumber: data.siren_number,
-        countryCode: data.country_code,
-        
-        // Nouveaux champs pour l'adresse détaillée
-        addressComplement: data.address_complement,
-        region: data.region,
-        postalCode: data.postal_code,
-        city: data.city,
-        
-        // Nouveaux champs pour l'adresse de facturation
-        billingAddressSame: data.billing_address_same,
-        billingAddress: data.billing_address,
-        billingAddressComplement: data.billing_address_complement,
-        billingRegion: data.billing_region,
-        billingPostalCode: data.billing_postal_code,
-        billingCity: data.billing_city,
-        
-        // Nouveaux champs pour les informations complémentaires
-        accountingCode: data.accounting_code,
-        cniIdentifier: data.cni_identifier,
-        attachedFilePath: data.attached_file_path,
-        internalNote: data.internal_note,
-        
-        // Nouveaux champs pour les préférences
-        status: data.status,
-        smsNotification: data.sms_notification,
-        emailNotification: data.email_notification,
-        smsMarketing: data.sms_marketing,
-        emailMarketing: data.email_marketing,
-        
-        createdAt: data.created_at,
-        updatedAt: data.updated_at
-      };
-      
-      return handleSupabaseSuccess(convertedData);
+      console.log('⚠️ Aucun utilisateur connecté, impossible de récupérer le client');
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
     }
     
-    // Récupérer le client de l'utilisateur connecté
+    console.log('🔒 Récupération du client pour l\'utilisateur:', currentUserId);
     const { data, error } = await supabase
       .from('clients')
       .select('*')
