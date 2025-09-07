@@ -239,7 +239,7 @@ const Loyalty: React.FC = () => {
         // Diagnostic supplémentaire
         if (clientsData && clientsData.length > 0) {
           console.log('🔍 Premier client:', clientsData[0]);
-          console.log('🔍 Workshop ID du premier client:', clientsData[0].workshop_id);
+          console.log('🔍 Workshop ID du premier client:', (clientsData[0] as any).workshop_id);
         } else {
           console.log('⚠️ Aucun client trouvé pour workshop_id:', user.id);
         }
