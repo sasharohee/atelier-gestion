@@ -401,6 +401,9 @@ const LoyaltySettingsSimple: React.FC<LoyaltySettingsProps> = ({ onDataChanged }
       // Sauvegarder une copie des modifications avant de les vider
       const modificationsToSave = { ...editingTiers };
       
+      console.log('🔄 Début de la sauvegarde en base de données...');
+      console.log('📝 Modifications à sauvegarder:', modificationsToSave);
+      
       for (const [id, updates] of Object.entries(modificationsToSave)) {
         try {
           const tierData = tiers.find(tier => tier.id === id);
@@ -421,36 +424,23 @@ const LoyaltySettingsSimple: React.FC<LoyaltySettingsProps> = ({ onDataChanged }
           };
           
           console.log(`🔄 Sauvegarde tier ${tierData.name}:`, updateData);
+          console.log(`🔄 ID du tier: ${id}`);
           
-          // Essayer d'abord une mise à jour
-          const { data: updateResult, error: updateError } = await supabase
+          // Essayer d'abord une mise à jour avec upsert pour être sûr
+          const { data: upsertResult, error: upsertError } = await supabase
             .from('loyalty_tiers_advanced')
-            .update(updateData)
-            .eq('id', id)
+            .upsert({
+              id: id,
+              ...updateData,
+              created_at: tierData.created_at || new Date().toISOString()
+            })
             .select();
 
-          if (updateError) {
-            console.warn(`⚠️ Erreur mise à jour ${id}:`, updateError);
-            
-            // Si la mise à jour échoue, essayer un insert
-            const { data: insertResult, error: insertError } = await supabase
-              .from('loyalty_tiers_advanced')
-              .insert({
-                id: id,
-                ...updateData,
-                created_at: new Date().toISOString()
-              })
-              .select();
-
-            if (insertError) {
-              console.error(`❌ Erreur insertion ${id}:`, insertError);
-              dbErrorCount++;
-            } else {
-              console.log(`✅ Tier ${id} inséré avec succès`);
-              dbSuccessCount++;
-            }
+          if (upsertError) {
+            console.error(`❌ Erreur upsert ${id}:`, upsertError);
+            dbErrorCount++;
           } else {
-            console.log(`✅ Tier ${id} mis à jour avec succès`);
+            console.log(`✅ Tier ${id} sauvegardé avec succès (upsert):`, upsertResult);
             dbSuccessCount++;
           }
         } catch (err) {
@@ -475,10 +465,15 @@ const LoyaltySettingsSimple: React.FC<LoyaltySettingsProps> = ({ onDataChanged }
       
       console.log('✅ Sauvegarde terminée');
       
-      // Notifier la page parent des changements
+      // Notifier la page parent des changements immédiatement
       if (onDataChanged) {
         console.log('🔄 Notification de changement envoyée à la page parent');
+        // Appeler le callback immédiatement et une seule fois avec délai pour s'assurer que la DB est à jour
         onDataChanged();
+        setTimeout(() => {
+          console.log('🔄 Notification de changement envoyée à la page parent (délai 2s)');
+          onDataChanged();
+        }, 2000);
       }
 
     } catch (err: any) {
@@ -656,7 +651,7 @@ const LoyaltySettingsSimple: React.FC<LoyaltySettingsProps> = ({ onDataChanged }
         loadData();
       }, 1000);
       
-      // Notifier la page parent des changements
+      // Notifier la page parent des changements immédiatement
       if (onDataChanged) {
         console.log('🔄 Notification de changement envoyée à la page parent');
         onDataChanged();
@@ -745,7 +740,7 @@ const LoyaltySettingsSimple: React.FC<LoyaltySettingsProps> = ({ onDataChanged }
       setTimeout(() => {
         loadData();
         setSuccess(null);
-        // Notifier la page parent des changements
+        // Notifier la page parent des changements immédiatement
         if (onDataChanged) {
           console.log('🔄 Notification de changement envoyée à la page parent');
           onDataChanged();

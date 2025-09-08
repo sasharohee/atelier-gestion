@@ -1626,10 +1626,13 @@ export const useAppStore = create<AppStore>()(
           const result = await clientService.getAll();
           if (result.success && 'data' in result && result.data) {
             // Transformer les données de Supabase vers le format de l'application
-            const transformedClients = result.data.map((client: any) => ({
+            console.log('🔍 STORE - Données reçues du service:', result.data);
+            const transformedClients = result.data.map((client: any) => {
+              console.log('🔍 STORE - Transformation client:', client.firstName, client.lastName, 'companyName:', client.companyName);
+              return {
               id: client.id,
-              firstName: client.first_name || client.firstName,
-              lastName: client.last_name || client.lastName,
+              firstName: client.firstName,
+              lastName: client.lastName,
               email: client.email,
               phone: client.phone,
               address: client.address,
@@ -1638,41 +1641,42 @@ export const useAppStore = create<AppStore>()(
               // Nouveaux champs pour les informations personnelles et entreprise
               category: client.category,
               title: client.title,
-              companyName: client.company_name,
-              vatNumber: client.vat_number,
-              sirenNumber: client.siren_number,
-              countryCode: client.country_code,
+              companyName: client.companyName,
+              vatNumber: client.vatNumber,
+              sirenNumber: client.sirenNumber,
+              countryCode: client.countryCode,
               
               // Nouveaux champs pour l'adresse détaillée
-              addressComplement: client.address_complement,
+              addressComplement: client.addressComplement,
               region: client.region,
-              postalCode: client.postal_code,
+              postalCode: client.postalCode,
               city: client.city,
               
               // Nouveaux champs pour l'adresse de facturation
-              billingAddressSame: client.billing_address_same,
-              billingAddress: client.billing_address,
-              billingAddressComplement: client.billing_address_complement,
-              billingRegion: client.billing_region,
-              billingPostalCode: client.billing_postal_code,
-              billingCity: client.billing_city,
+              billingAddressSame: client.billingAddressSame,
+              billingAddress: client.billingAddress,
+              billingAddressComplement: client.billingAddressComplement,
+              billingRegion: client.billingRegion,
+              billingPostalCode: client.billingPostalCode,
+              billingCity: client.billingCity,
               
               // Nouveaux champs pour les informations complémentaires
-              accountingCode: client.accounting_code,
-              cniIdentifier: client.cni_identifier,
-              attachedFilePath: client.attached_file_path,
-              internalNote: client.internal_note,
+              accountingCode: client.accountingCode,
+              cniIdentifier: client.cniIdentifier,
+              attachedFilePath: client.attachedFilePath,
+              internalNote: client.internalNote,
               
               // Nouveaux champs pour les préférences
               status: client.status,
-              smsNotification: client.sms_notification,
-              emailNotification: client.email_notification,
-              smsMarketing: client.sms_marketing,
-              emailMarketing: client.email_marketing,
+              smsNotification: client.smsNotification,
+              emailNotification: client.emailNotification,
+              smsMarketing: client.smsMarketing,
+              emailMarketing: client.emailMarketing,
               
-              createdAt: client.created_at ? new Date(client.created_at) : new Date(),
-              updatedAt: client.updated_at ? new Date(client.updated_at) : new Date(),
-            }));
+              createdAt: client.createdAt ? new Date(client.createdAt) : new Date(),
+              updatedAt: client.updatedAt ? new Date(client.updatedAt) : new Date(),
+            };
+            });
             console.log('🔍 STORE - loadClients - Clients transformés:', transformedClients.length);
             set({ clients: transformedClients });
           }

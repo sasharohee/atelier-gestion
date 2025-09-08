@@ -41,20 +41,20 @@ const Settings: React.FC = () => {
   
   const [settings, setSettings] = useState<SettingsData>({
     profile: {
-      firstName: 'Utilisateur',
-      lastName: 'Test',
-      email: 'user@example.com',
-      phone: '07 59 23 91 70'
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: ''
     },
     preferences: {
       themeDarkMode: false,
       language: 'fr'
     },
     workshop: {
-      name: 'Atelier de réparation',
-      address: '123 Rue de la Paix, 75001 Paris',
-      phone: '07 59 23 91 70',
-      email: 'contact.ateliergestion@gmail.com',
+      name: '',
+      address: '',
+      phone: '',
+      email: '',
       siret: '',
       vatNumber: '',
       vatRate: '20',
@@ -504,6 +504,7 @@ const Settings: React.FC = () => {
                   <input
                     type="text"
                     value={settings.profile.firstName}
+                    placeholder="Ex: Jean"
                     onChange={(e) => setSettings(prev => ({
                       ...prev,
                       profile: { ...prev.profile, firstName: e.target.value }
@@ -543,6 +544,7 @@ const Settings: React.FC = () => {
                   <input
                     type="text"
                     value={settings.profile.lastName}
+                    placeholder="Ex: Dupont"
                     onChange={(e) => setSettings(prev => ({
                       ...prev,
                       profile: { ...prev.profile, lastName: e.target.value }
@@ -583,6 +585,7 @@ const Settings: React.FC = () => {
                 <input
                   type="email"
                   value={settings.profile.email}
+                  placeholder="Ex: jean.dupont@email.com"
                   onChange={(e) => setSettings(prev => ({
                     ...prev,
                     profile: { ...prev.profile, email: e.target.value }
@@ -622,6 +625,7 @@ const Settings: React.FC = () => {
                 <input
                   type="tel"
                   value={settings.profile.phone}
+                  placeholder="Ex: 06 12 34 56 78"
                   onChange={(e) => setSettings(prev => ({
                     ...prev,
                     profile: { ...prev.profile, phone: e.target.value }
@@ -965,6 +969,7 @@ const Settings: React.FC = () => {
                 <input
                   type="text"
                   value={settings.workshop.name}
+                  placeholder="Ex: Atelier de réparation automobile"
                   onChange={(e) => setSettings(prev => ({
                     ...prev,
                     workshop: { ...prev.workshop, name: e.target.value }
@@ -1004,6 +1009,7 @@ const Settings: React.FC = () => {
                 <input
                   type="text"
                   value={settings.workshop.address}
+                  placeholder="Ex: 123 Rue de la Paix, 75001 Paris"
                   onChange={(e) => setSettings(prev => ({
                     ...prev,
                     workshop: { ...prev.workshop, address: e.target.value }
@@ -1044,6 +1050,7 @@ const Settings: React.FC = () => {
                   <input
                     type="tel"
                     value={settings.workshop.phone}
+                    placeholder="Ex: 01 23 45 67 89"
                     onChange={(e) => setSettings(prev => ({
                       ...prev,
                       workshop: { ...prev.workshop, phone: e.target.value }
@@ -1083,6 +1090,7 @@ const Settings: React.FC = () => {
                   <input
                     type="email"
                     value={settings.workshop.email}
+                    placeholder="Ex: contact@atelier.fr"
                     onChange={(e) => setSettings(prev => ({
                       ...prev,
                       workshop: { ...prev.workshop, email: e.target.value }

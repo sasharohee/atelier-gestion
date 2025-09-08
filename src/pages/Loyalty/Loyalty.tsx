@@ -60,6 +60,7 @@ import LoyaltySettingsSimple from '../../components/LoyaltyManagement/LoyaltySet
 import LoyaltySettingsDebug from '../../components/LoyaltyManagement/LoyaltySettingsDebug';
 import LoyaltySettingsTestUpdate from '../../components/LoyaltyManagement/LoyaltySettingsTestUpdate';
 import LoyaltySettingsTestPoints from '../../components/LoyaltyManagement/LoyaltySettingsTestPoints';
+import LoyaltyTiersDisplay from '../../components/LoyaltyManagement/LoyaltyTiersDisplay';
 
 // Types pour les données de fidélité
 interface LoyaltyTier {
@@ -128,6 +129,8 @@ const Loyalty: React.FC = () => {
   const [allClients, setAllClients] = useState<any[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [loyaltyTiers, setLoyaltyTiers] = useState<LoyaltyTier[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // États pour les dialogues
   const [referralDialog, setReferralDialog] = useState(false);
@@ -165,9 +168,23 @@ const Loyalty: React.FC = () => {
 
   // Fonction pour rafraîchir les données après modification des paramètres
   const handleSettingsDataChanged = () => {
+    if (isRefreshing) {
+      console.log('🔄 Rafraîchissement déjà en cours, ignoré...');
+      return;
+    }
+    
     console.log('🔄 Rafraîchissement des données après modification des paramètres...');
+    setIsRefreshing(true);
     loadData();
+    
+    // Incrémenter le trigger pour forcer le rechargement du composant avec un délai
+    setTimeout(() => {
+      console.log('🔄 Rafraîchissement forcé des niveaux après paramètres...');
+      setRefreshTrigger(prev => prev + 1);
+      setIsRefreshing(false);
+    }, 2000);
   };
+
 
   const loadData = async () => {
     try {
@@ -1161,35 +1178,40 @@ const Loyalty: React.FC = () => {
 
       {activeTab === 2 && (
         <Box>
-          <Typography variant="h6" sx={{ mb: 2 }}>Niveaux de Fidélité</Typography>
+          {/* Bouton de rafraîchissement forcé */}
+          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Niveaux de Fidélité</Typography>
+            <Button
+              variant="contained"
+              startIcon={<RefreshIcon />}
+              onClick={() => {
+                if (isRefreshing) {
+                  console.log('🔄 Rafraîchissement déjà en cours, ignoré...');
+                  return;
+                }
+                console.log('🔄 Rafraîchissement forcé depuis l\'onglet niveaux...');
+                setIsRefreshing(true);
+                loadData();
+                // Incrémenter le trigger pour forcer le rechargement du composant
+                setRefreshTrigger(prev => prev + 1);
+                setTimeout(() => setIsRefreshing(false), 1000);
+              }}
+              color="primary"
+              disabled={isRefreshing}
+            >
+              {isRefreshing ? 'Rafraîchissement...' : 'Rafraîchir depuis la Base'}
+            </Button>
+          </Box>
           
-          <Grid container spacing={3}>
-                            {loyaltyTiers.map((tier) => (
-              <Grid item xs={12} sm={6} md={4} key={tier.id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Avatar sx={{ bgcolor: tier.color, mr: 2 }}>
-                        <StarIcon />
-                      </Avatar>
-                      <Box>
-                        <Typography variant="h6">{tier.name}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {tier.points_required} points requis
-                        </Typography>
-                      </Box>
-                    </Box>
-                    <Typography variant="h4" color="primary" sx={{ mb: 1 }}>
-                      {tier.discount_percentage}%
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {tier.description}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+          {/* Nouveau composant de niveaux de fidélité */}
+          <LoyaltyTiersDisplay 
+            onTierUpdate={() => {
+              console.log('🔄 Niveau mis à jour, rafraîchissement des données...');
+              loadData();
+            }}
+            refreshTrigger={refreshTrigger}
+          />
+          
         </Box>
       )}
 
@@ -1443,7 +1465,9 @@ const Loyalty: React.FC = () => {
       <Dialog open={settingsDialog} onClose={() => setSettingsDialog(false)} maxWidth="xl" fullWidth>
         <DialogTitle>Paramètres de Fidélité</DialogTitle>
         <DialogContent>
-          <LoyaltySettingsSimple onDataChanged={handleSettingsDataChanged} />
+          <LoyaltySettingsSimple 
+            onDataChanged={handleSettingsDataChanged} 
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSettingsDialog(false)}>Fermer</Button>

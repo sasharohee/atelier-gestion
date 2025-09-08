@@ -874,6 +874,9 @@ export const clientService = {
     console.log('🔍 DONNÉES BRUTES DE SUPABASE:');
     data?.forEach((client, index) => {
       console.log(`  Client ${index + 1} brut:`, client);
+      console.log(`    - company_name:`, client.company_name);
+      console.log(`    - vat_number:`, client.vat_number);
+      console.log(`    - siren_number:`, client.siren_number);
     });
     return handleSupabaseSuccess(convertedData);
   },
@@ -896,6 +899,16 @@ export const clientService = {
       .single();
     
     if (error) return handleSupabaseError(error);
+    
+    console.log('🔍 GETBYID - Données brutes récupérées:', data);
+    console.log('🔍 GETBYID - Champs d\'entreprise:');
+    console.log('  - company_name:', data.company_name);
+    console.log('  - vat_number:', data.vat_number);
+    console.log('  - siren_number:', data.siren_number);
+    console.log('  - address_complement:', data.address_complement);
+    console.log('  - region:', data.region);
+    console.log('  - postal_code:', data.postal_code);
+    console.log('  - city:', data.city);
     
     // Convertir les données de snake_case vers camelCase
     const convertedData = {

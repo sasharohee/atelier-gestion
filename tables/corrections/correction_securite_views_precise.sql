@@ -541,3 +541,4 @@ SELECT
     '4. Relancez Supabase Security Advisor pour vérifier la correction' as step4,
     '5. Les avertissements SECURITY DEFINER et unrestricted devraient disparaître' as step5,
     '6. Les vues sont maintenant sécurisées et respectent les bonnes pratiques' as step6;
+

@@ -30,7 +30,7 @@ import ClientForm from '../../components/ClientForm';
 import { clientService } from '../../services/supabaseService';
 
 const Clients: React.FC = () => {
-  const { clients, loadClients, addClient, deleteClient } = useAppStore();
+  const { clients, loadClients, addClient, updateClient, deleteClient } = useAppStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -282,10 +282,8 @@ const Clients: React.FC = () => {
         emailMarketing: clientFormData.emailMarketing,
       };
 
-      // Utiliser la fonction updateClient du store (à implémenter si nécessaire)
-      // Pour l'instant, on va supprimer et recréer le client
-      await deleteClient(editingClient.id);
-      await addClient(clientData);
+      // Utiliser la fonction updateClient du store
+      await updateClient(editingClient.id, clientData);
 
       setEditClientFormOpen(false);
       setEditingClient(null);
@@ -423,6 +421,8 @@ const Clients: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Box>
+                            {/* Debug: Log des données du client */}
+                            {console.log('🔍 AFFICHAGE - Client:', client.firstName, client.lastName, 'CompanyName:', client.companyName, 'VatNumber:', client.vatNumber, 'SirenNumber:', client.sirenNumber)}
                             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                               {client.companyName || '-'}
                             </Typography>
@@ -517,7 +517,10 @@ const Clients: React.FC = () => {
           setEditingClient(null);
         }}
         onSubmit={handleUpdateClient}
-        existingEmails={clients.map(c => c.email).filter(Boolean)}
+        existingEmails={clients
+          .filter(c => c.id !== editingClient?.id) // Exclure le client en cours de modification
+          .map(c => c.email)
+          .filter(Boolean)}
         initialData={editingClient ? {
           category: editingClient.category || 'particulier',
           title: editingClient.title || 'mr',
