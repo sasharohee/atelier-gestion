@@ -490,6 +490,36 @@ const Settings: React.FC = () => {
                 </div>
               </div>
               
+              {/* Message informatif */}
+              <div style={{
+                padding: '16px 20px',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: theme.shape.borderRadius,
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  fontSize: '20px',
+                  color: '#10b981'
+                }}>
+                  👤
+                </div>
+                <div>
+                  <p style={{
+                    margin: '0',
+                    color: '#047857',
+                    fontSize: theme.typography.body2.fontSize,
+                    fontWeight: '500',
+                    lineHeight: '1.4'
+                  }}>
+                    <strong>Personnalisez votre profil :</strong> Remplissez vos vraies informations personnelles (prénom, nom, email, téléphone) pour une meilleure expérience utilisateur.
+                  </p>
+                </div>
+              </div>
+              
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
                 <div>
                   <label style={{ 
@@ -952,6 +982,36 @@ const Settings: React.FC = () => {
                     fontSize: theme.typography.body2.fontSize
                   }}>
                     Configurez les informations de votre atelier et vos paramètres commerciaux
+                  </p>
+                </div>
+              </div>
+              
+              {/* Message informatif */}
+              <div style={{
+                padding: '16px 20px',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: theme.shape.borderRadius,
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  fontSize: '20px',
+                  color: '#3b82f6'
+                }}>
+                  ℹ️
+                </div>
+                <div>
+                  <p style={{
+                    margin: '0',
+                    color: '#1e40af',
+                    fontSize: theme.typography.body2.fontSize,
+                    fontWeight: '500',
+                    lineHeight: '1.4'
+                  }}>
+                    <strong>Important :</strong> Veuillez remplacer toutes les informations ci-dessous par les vraies informations de votre atelier (nom, adresse, téléphone, email, SIRET, etc.).
                   </p>
                 </div>
               </div>

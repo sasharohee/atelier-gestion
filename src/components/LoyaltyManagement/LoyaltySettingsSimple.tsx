@@ -46,6 +46,7 @@ interface LoyaltyTier {
   color: string;
   benefits: string[];
   is_active: boolean;
+  created_at?: string;
 }
 
 interface LoyaltySettingsProps {
@@ -432,7 +433,7 @@ const LoyaltySettingsSimple: React.FC<LoyaltySettingsProps> = ({ onDataChanged }
             .upsert({
               id: id,
               ...updateData,
-              created_at: tierData.created_at || new Date().toISOString()
+              created_at: (tierData as any).created_at || new Date().toISOString()
             })
             .select();
 

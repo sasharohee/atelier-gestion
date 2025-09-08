@@ -421,8 +421,6 @@ const Clients: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Box>
-                            {/* Debug: Log des données du client */}
-                            {console.log('🔍 AFFICHAGE - Client:', client.firstName, client.lastName, 'CompanyName:', client.companyName, 'VatNumber:', client.vatNumber, 'SirenNumber:', client.sirenNumber)}
                             <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
                               {client.companyName || '-'}
                             </Typography>

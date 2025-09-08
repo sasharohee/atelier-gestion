@@ -136,7 +136,7 @@ const LoyaltyTiersDisplay: React.FC<LoyaltyTiersDisplayProps> = ({ onTierUpdate,
       }, []) || [];
 
       console.log('✅ Niveaux uniques après déduplication:', uniqueTiers);
-      console.log('📊 Détail des niveaux:', uniqueTiers.map(t => ({ name: t.name, points: t.points_required })));
+      console.log('📊 Détail des niveaux:', uniqueTiers.map((t: any) => ({ name: t.name, points: t.points_required })));
       
       setTiers(uniqueTiers);
 
