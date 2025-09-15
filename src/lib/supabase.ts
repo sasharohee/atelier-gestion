@@ -28,7 +28,7 @@ export const postgresConfig = {
   port: 5432,
   database: 'postgres',
   user: 'postgres',
-  password: 'wi?8sN$wn&#BVr7'
+  password: 'EGQUN6paP21OlNUu'
 };
 
 // Types pour les réponses Supabase

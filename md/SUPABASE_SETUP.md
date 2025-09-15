@@ -21,7 +21,7 @@ VITE_POSTGRES_HOST=db.gggoqnxrspviuxadvkbh.supabase.co
 VITE_POSTGRES_PORT=5432
 VITE_POSTGRES_DB=postgres
 VITE_POSTGRES_USER=postgres
-VITE_POSTGRES_PASSWORD=wi?8sN$wn&#BVr7
+VITE_POSTGRES_PASSWORD=EGQUN6paP21OlNUu
 ```
 
 ## Étape 3: Création des tables dans Supabase
