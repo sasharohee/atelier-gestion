@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Supabase</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnostic Supabase</h1>
+        
+        <div class="info">
+            <strong>Objectif :</strong> Vérifier la connexion Supabase et l'état des tables.
+        </div>
+
+        <div id="status-container">
+            <div class="status info">
+                <strong>En attente...</strong> Cliquez sur "Diagnostiquer" pour commencer.
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="diagnoseSupabase()">🔍 Diagnostiquer</button>
+            <button onclick="clearResults()">🗑️ Effacer</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <!-- Import de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Configuration Supabase (remplacez par vos vraies valeurs)
+        const SUPABASE_URL = 'https://olrihggkxyksuofkesnk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9scmloZ2dreXZrc3VvZmtlc25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NTQ4MDQsImV4cCI6MjA1MDUzMDgwNH0.7nXqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqK';
+
+        let supabase;
+
+        function updateStatus(message, type = 'info') {
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = `<div class="status ${type}"><strong>${message}</strong></div>`;
+        }
+
+        function addResult(message, type = 'info') {
+            const resultsContainer = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result`;
+            resultDiv.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            resultsContainer.appendChild(resultDiv);
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            updateStatus('Résultats effacés. Prêt pour un nouveau diagnostic.', 'info');
+        }
+
+        async function diagnoseSupabase() {
+            updateStatus('🔍 Diagnostic en cours...', 'info');
+            addResult('Début du diagnostic Supabase...');
+
+            try {
+                // Test 1: Initialiser Supabase
+                addResult('Test 1: Initialisation de Supabase...');
+                try {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    addResult('✅ Supabase initialisé avec succès');
+                } catch (error) {
+                    addResult(`❌ Erreur lors de l'initialisation: ${error.message}`);
+                    return;
+                }
+
+                // Test 2: Vérifier la connexion
+                addResult('Test 2: Vérification de la connexion...');
+                try {
+                    const { data, error } = await supabase.from('_supabase_migrations').select('*').limit(1);
+                    if (error && error.code !== 'PGRST116') {
+                        addResult(`⚠️ Erreur de connexion: ${error.message}`);
+                    } else {
+                        addResult('✅ Connexion Supabase établie');
+                    }
+                } catch (error) {
+                    addResult(`❌ Erreur de connexion: ${error.message}`);
+                }
+
+                // Test 3: Vérifier les tables
+                addResult('Test 3: Vérification des tables...');
+                
+                // Test table device_categories
+                try {
+                    const { data, error } = await supabase.from('device_categories').select('count').limit(1);
+                    if (error) {
+                        addResult(`❌ Table device_categories: ${error.message}`);
+                    } else {
+                        addResult('✅ Table device_categories accessible');
+                    }
+                } catch (error) {
+                    addResult(`❌ Table device_categories: ${error.message}`);
+                }
+
+                // Test table device_brands
+                try {
+                    const { data, error } = await supabase.from('device_brands').select('count').limit(1);
+                    if (error) {
+                        addResult(`❌ Table device_brands: ${error.message}`);
+                    } else {
+                        addResult('✅ Table device_brands accessible');
+                    }
+                } catch (error) {
+                    addResult(`❌ Table device_brands: ${error.message}`);
+                }
+
+                // Test table device_models
+                try {
+                    const { data, error } = await supabase.from('device_models').select('count').limit(1);
+                    if (error) {
+                        addResult(`❌ Table device_models: ${error.message}`);
+                    } else {
+                        addResult('✅ Table device_models accessible');
+                    }
+                } catch (error) {
+                    addResult(`❌ Table device_models: ${error.message}`);
+                }
+
+                // Test table brand_categories
+                try {
+                    const { data, error } = await supabase.from('brand_categories').select('count').limit(1);
+                    if (error) {
+                        addResult(`❌ Table brand_categories: ${error.message}`);
+                    } else {
+                        addResult('✅ Table brand_categories accessible');
+                    }
+                } catch (error) {
+                    addResult(`❌ Table brand_categories: ${error.message}`);
+                }
+
+                // Test 4: Vérifier les vues
+                addResult('Test 4: Vérification des vues...');
+                try {
+                    const { data, error } = await supabase.from('brand_with_categories').select('count').limit(1);
+                    if (error) {
+                        addResult(`❌ Vue brand_with_categories: ${error.message}`);
+                    } else {
+                        addResult('✅ Vue brand_with_categories accessible');
+                    }
+                } catch (error) {
+                    addResult(`❌ Vue brand_with_categories: ${error.message}`);
+                }
+
+                // Test 5: Vérifier les fonctions RPC
+                addResult('Test 5: Vérification des fonctions RPC...');
+                try {
+                    const { data, error } = await supabase.rpc('upsert_brand', {
+                        p_id: 'test-diagnostic',
+                        p_name: 'Test Diagnostic',
+                        p_description: 'Test',
+                        p_logo: '',
+                        p_category_ids: []
+                    });
+                    if (error) {
+                        addResult(`❌ Fonction upsert_brand: ${error.message}`);
+                    } else {
+                        addResult('✅ Fonction upsert_brand accessible');
+                        // Nettoyer le test
+                        await supabase.from('device_brands').delete().eq('id', 'test-diagnostic');
+                    }
+                } catch (error) {
+                    addResult(`❌ Fonction upsert_brand: ${error.message}`);
+                }
+
+                updateStatus('✅ Diagnostic terminé', 'success');
+                addResult('🎉 Diagnostic complet terminé !');
+
+            } catch (error) {
+                updateStatus('❌ Erreur lors du diagnostic', 'error');
+                addResult(`❌ Erreur: ${error.message}`);
+            }
+        }
+
+        // Diagnostic automatique au chargement
+        window.addEventListener('load', () => {
+            addResult('📄 Page de diagnostic chargée');
+            addResult('💡 Cliquez sur "Diagnostiquer" pour commencer');
+        });
+    </script>
+</body>
+</html>

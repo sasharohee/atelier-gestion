@@ -82,6 +82,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       '/app/transaction/orders': 'Suivi Commandes',
       '/app/sales': 'Ventes',
       '/app/statistics': 'Statistiques',
+      '/app/loyalty': 'Points de Fidélité',
+      '/app/expenses': 'Dépenses',
       '/app/administration': 'Administration',
       '/app/settings': 'Réglages',
     };

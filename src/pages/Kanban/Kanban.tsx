@@ -62,7 +62,8 @@ import { getRepairEligibleUsers, getRepairUserDisplayName } from '../../utils/us
 import ClientForm from '../../components/ClientForm';
 import { supabase } from '../../lib/supabase';
 import { repairService } from '../../services/supabaseService';
-import { categoryService, ProductCategory } from '../../services/categoryService';
+import { deviceCategoryService, DeviceCategory } from '../../services/deviceCategoryService';
+import { brandService, BrandWithCategories } from '../../services/brandService';
 
 const Kanban: React.FC = () => {
   const navigate = useNavigate();
@@ -147,21 +148,42 @@ const Kanban: React.FC = () => {
     const loadCategories = async () => {
       try {
         setCategoriesLoading(true);
-        const result = await categoryService.getAll();
+        const result = await deviceCategoryService.getAll();
         if (result.success && result.data) {
           setDbCategories(result.data);
-          console.log('✅ Catégories chargées depuis la base de données:', result.data.length);
+          console.log('✅ Catégories d\'appareils chargées depuis la base de données:', result.data.length);
         } else {
-          console.error('❌ Erreur lors du chargement des catégories:', result.error);
+          console.warn('⚠️ Aucune catégorie d\'appareil trouvée ou erreur:', result.error);
+          setDbCategories([]);
         }
       } catch (error) {
-        console.error('❌ Erreur lors du chargement des catégories:', error);
+        console.error('❌ Erreur lors du chargement des catégories d\'appareils:', error);
+        setDbCategories([]);
       } finally {
         setCategoriesLoading(false);
       }
     };
 
     loadCategories();
+  }, []);
+
+  // Charger les marques depuis la base de données
+  useEffect(() => {
+    const loadBrands = async () => {
+      try {
+        setBrandsLoading(true);
+        const brands = await brandService.getAll();
+        setDbBrands(brands);
+        console.log('✅ Marques chargées depuis la base de données:', brands.length);
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des marques:', error);
+        setDbBrands([]);
+      } finally {
+        setBrandsLoading(false);
+      }
+    };
+
+    loadBrands();
   }, []);
 
   // Fonction pour obtenir le taux de TVA configuré
@@ -189,8 +211,12 @@ const Kanban: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   
   // État pour les catégories depuis la base de données
-  const [dbCategories, setDbCategories] = useState<ProductCategory[]>([]);
+  const [dbCategories, setDbCategories] = useState<DeviceCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  
+  // État pour les marques depuis la base de données
+  const [dbBrands, setDbBrands] = useState<BrandWithCategories[]>([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
 
   // États pour le nouveau modèle
   const [newDevice, setNewDevice] = useState({
@@ -247,19 +273,19 @@ const Kanban: React.FC = () => {
 
   // Fonctions utilitaires pour obtenir les marques et catégories uniques
   const getUniqueBrands = () => {
-    // Utiliser les marques du store centralisé (filtrées par catégorie si sélectionnée)
-    let filteredBrands = deviceBrands.filter(brand => brand.isActive);
+    // Utiliser les marques de la base de données (comme DeviceManagement)
+    let filteredBrands = dbBrands.filter(brand => brand.isActive);
     
     // Si une catégorie est sélectionnée, filtrer les marques par cette catégorie
     if (selectedCategory) {
-      // Chercher la catégorie par nom (priorité aux catégories de la base de données)
-      const dbCategory = dbCategories.find(c => c.name === selectedCategory);
-      const storeCategory = deviceCategories.find(c => c.name === selectedCategory);
-      const category = dbCategory || storeCategory;
+      // Chercher la catégorie par nom
+      const category = dbCategories.find(c => c.name === selectedCategory);
       
       if (category) {
-        // Filtrer par ID de catégorie
-        filteredBrands = filteredBrands.filter(brand => brand.categoryId === category.id);
+        // Filtrer les marques qui ont cette catégorie dans leurs catégories associées
+        filteredBrands = filteredBrands.filter(brand => 
+          brand.categories.some(cat => cat.id === category.id)
+        );
       }
     }
     
@@ -271,7 +297,7 @@ const Kanban: React.FC = () => {
     // Utiliser les catégories de la base de données (comme DeviceManagement)
     if (dbCategories && dbCategories.length > 0) {
       return dbCategories
-        .filter(category => category.is_active)
+        .filter(category => category.isActive)
         .map(category => category.name)
         .sort();
     }
@@ -324,10 +350,8 @@ const Kanban: React.FC = () => {
           'others': 'Autres'
         };
         
-        // Approche 2: Recherche par nom de catégorie dans dbCategories (priorité) ou deviceCategories
-        const dbCategory = dbCategories.find(cat => cat.name === selectedCategory);
-        const storeCategory = deviceCategories.find(cat => cat.name === selectedCategory);
-        const category = dbCategory || storeCategory;
+        // Recherche par nom de catégorie dans dbCategories
+        const category = dbCategories.find(cat => cat.name === selectedCategory);
         let categoryMatchByType = false;
         
         if (category) {
@@ -671,10 +695,8 @@ const Kanban: React.FC = () => {
       }
 
       // Créer le nouveau modèle
-      const brand = deviceBrands.find(b => b.id === newDevice.brandId);
-      const dbCategory = dbCategories.find(c => c.id === newDevice.categoryId);
-      const storeCategory = deviceCategories.find(c => c.id === newDevice.categoryId);
-      const category = dbCategory || storeCategory;
+      const brand = dbBrands.find(b => b.id === newDevice.brandId);
+      const category = dbCategories.find(c => c.id === newDevice.categoryId);
       
       if (!brand || !category) {
         alert('❌ Erreur : marque ou catégorie introuvable.');
@@ -1707,7 +1729,7 @@ const Kanban: React.FC = () => {
                     onChange={(e) => setNewDevice(prev => ({ ...prev, categoryId: e.target.value }))}
                   >
                     {dbCategories
-                      .filter(category => category.is_active)
+                      .filter(category => category.isActive)
                       .map((category) => (
                         <MenuItem key={category.id} value={category.id}>
                           {category.name}
@@ -1733,8 +1755,8 @@ const Kanban: React.FC = () => {
                     onChange={(e) => setNewDevice(prev => ({ ...prev, brandId: e.target.value }))}
                     disabled={!newDevice.categoryId}
                   >
-                    {deviceBrands
-                      .filter(brand => brand.isActive && (!newDevice.categoryId || brand.categoryId === newDevice.categoryId))
+                    {dbBrands
+                      .filter(brand => brand.isActive && (!newDevice.categoryId || brand.categories.some(cat => cat.id === newDevice.categoryId)))
                       .map((brand) => (
                         <MenuItem key={brand.id} value={brand.id}>
                           {brand.name}

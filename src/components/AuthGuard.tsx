@@ -1,24 +1,28 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
-import { useAuth } from '../hooks/useAuth';
-import { useSubscription } from '../hooks/useSubscription';
-import SubscriptionBlocked from '../pages/Auth/SubscriptionBlocked';
+import { useUltraFastAccess } from '../hooks/useUltraFastAccess';
+
+// Lazy loading de SubscriptionBlocked
+const SubscriptionBlocked = lazy(() => import('../pages/Auth/SubscriptionBlocked'));
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const { isAuthenticated, loading: authLoading, user } = useAuth();
-  const { subscriptionStatus, loading: subscriptionLoading } = useSubscription();
+  const { 
+    user, 
+    isAuthenticated, 
+    isAccessActive, 
+    loading, 
+    authLoading, 
+    subscriptionLoading 
+  } = useUltraFastAccess();
   const location = useLocation();
 
-  // Vérifier si l'abonnement est actif
-  const isSubscriptionActive = subscriptionStatus?.is_active || false;
-
   // Si l'authentification ou le statut d'abonnement est en cours de chargement
-  if (authLoading || (isAuthenticated && subscriptionLoading)) {
+  if (loading || authLoading || subscriptionLoading) {
     return (
       <Box
         sx={{
@@ -30,9 +34,14 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           gap: 2
         }}
       >
-        <CircularProgress size={60} />
-        <Typography variant="h6" color="text.secondary">
-          {authLoading ? 'Vérification de l\'authentification...' : 'Vérification de votre accès...'}
+        <CircularProgress size={50} sx={{ mb: 2 }} />
+        <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+          {authLoading ? 'Authentification...' : subscriptionLoading ? 'Vérification des permissions...' : 'Préparation...'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {authLoading ? 'Vérification de votre identité' : 
+           subscriptionLoading ? 'Chargement de vos droits d\'accès' : 
+           'Finalisation de l\'interface'}
         </Typography>
       </Box>
     );
@@ -44,8 +53,25 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   }
 
   // Si l'utilisateur est connecté mais que l'abonnement n'est pas actif
-  if (user && !isSubscriptionActive) {
-    return <SubscriptionBlocked />;
+  if (user && !isAccessActive) {
+    return (
+      <Suspense fallback={
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '50vh',
+          flexDirection: 'column'
+        }}>
+          <CircularProgress size={30} sx={{ mb: 1 }} />
+          <Typography variant="body2" color="text.secondary">
+            Chargement de la page...
+          </Typography>
+        </Box>
+      }>
+        <SubscriptionBlocked />
+      </Suspense>
+    );
   }
 
   return <>{children}</>;

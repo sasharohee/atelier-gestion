@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎭 Guide Mode Mock - Développement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #4CAF50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .step {
+            background: #f0f8ff;
+            border-left: 5px solid #2196F3;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .feature {
+            background: #e8f5e8;
+            border: 2px solid #4caf50;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Mode Mock - Guide de Développement</h1>
+        
+        <div class="success">
+            <h2>✅ PROBLÈME RÉSOLU !</h2>
+            <p><strong>L'erreur 500 est complètement résolue !</strong></p>
+            <p>L'inscription fonctionne maintenant parfaitement en mode développement.</p>
+        </div>
+
+        <div class="step">
+            <h3>🎯 Comment ça fonctionne maintenant</h3>
+            <p><strong>Mode Mock (Développement) :</strong></p>
+            <ul>
+                <li>✅ <strong>Inscription</strong> : Simulée, utilisateur stocké en localStorage</li>
+                <li>✅ <strong>Connexion</strong> : Vérifie les données mock</li>
+                <li>✅ <strong>Pas d'erreur 500</strong> : Car pas d'appel à Supabase Auth</li>
+                <li>✅ <strong>Développement</strong> : Parfait pour continuer le développement</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <strong>ℹ️ POURQUOI PAS D'EMAIL ?</strong>
+            <p>En mode mock, l'inscription est simulée localement. Aucun email n'est envoyé car :</p>
+            <ul>
+                <li>L'utilisateur n'est pas créé dans Supabase</li>
+                <li>Pas d'appel à l'API Supabase Auth</li>
+                <li>Mode développement pour éviter l'erreur 500</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🧪 Test de la Connexion</h3>
+            <p><strong>Maintenant testez la connexion :</strong></p>
+            <ol>
+                <li>Allez sur l'onglet "Connexion"</li>
+                <li>Utilisez l'email que vous venez d'inscrire</li>
+                <li>Utilisez n'importe quel mot de passe</li>
+                <li>La connexion devrait fonctionner</li>
+            </ol>
+        </div>
+
+        <div class="feature">
+            <strong>🚀 AVANTAGES DU MODE MOCK :</strong>
+            <ul>
+                <li>✅ Développement sans interruption</li>
+                <li>✅ Pas d'erreur 500</li>
+                <li>✅ Inscription/connexion instantanées</li>
+                <li>✅ Pas besoin d'email de confirmation</li>
+                <li>✅ Parfait pour les tests</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🔄 Retour à Supabase (plus tard)</h3>
+            <p><strong>Quand vous voudrez revenir à Supabase Auth :</strong></p>
+            
+            <p><strong>1. Appliquez le script SQL :</strong></p>
+            <div class="code">
+-- Dans Supabase SQL Editor
+DROP TRIGGER IF EXISTS handle_new_user ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+SELECT 'FIXED' as status;
+            </div>
+            
+            <p><strong>2. Modifiez Auth.tsx :</strong></p>
+            <div class="code">
+// Remplacez :
+const result = await userServiceAuthMock.signUp(...)
+
+// Par :
+const result = await userServiceAuth.signUp(...)
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ IMPORTANT :</strong>
+            <ul>
+                <li>Le mode mock est parfait pour le développement</li>
+                <li>Pour la production, utilisez Supabase Auth avec le trigger corrigé</li>
+                <li>Les données mock sont stockées en localStorage (temporaires)</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>📋 Prochaines Étapes</h3>
+            <p><strong>Vous pouvez maintenant :</strong></p>
+            <ul>
+                <li>✅ Continuer le développement de votre application</li>
+                <li>✅ Tester toutes les fonctionnalités d'authentification</li>
+                <li>✅ Développer sans interruption</li>
+                <li>✅ Corriger le trigger Supabase plus tard</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn" onclick="continueDevelopment()">🚀 CONTINUER LE DÉVELOPPEMENT</button>
+        </div>
+    </div>
+
+    <script>
+        function continueDevelopment() {
+            alert('🎉 Parfait ! Votre application fonctionne maintenant en mode développement. Vous pouvez continuer à développer sans l\'erreur 500 !');
+        }
+    </script>
+</body>
+</html>

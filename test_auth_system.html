@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test du Système d'Authentification</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .test-section h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .loading {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Test du Système d'Authentification</h1>
+        
+        <div id="status" class="status loading">
+            Initialisation du système d'authentification...
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Test d'Inscription</h3>
+            <div class="form-group">
+                <label for="signup-firstname">Prénom:</label>
+                <input type="text" id="signup-firstname" placeholder="Votre prénom">
+            </div>
+            <div class="form-group">
+                <label for="signup-lastname">Nom:</label>
+                <input type="text" id="signup-lastname" placeholder="Votre nom">
+            </div>
+            <div class="form-group">
+                <label for="signup-email">Email:</label>
+                <input type="email" id="signup-email" placeholder="votre@email.com">
+            </div>
+            <div class="form-group">
+                <label for="signup-password">Mot de passe:</label>
+                <input type="password" id="signup-password" placeholder="Mot de passe sécurisé">
+            </div>
+            <button onclick="testSignUp()">Tester l'Inscription</button>
+            <div id="signup-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔑 Test de Connexion</h3>
+            <div class="form-group">
+                <label for="login-email">Email:</label>
+                <input type="email" id="login-email" placeholder="votre@email.com">
+            </div>
+            <div class="form-group">
+                <label for="login-password">Mot de passe:</label>
+                <input type="password" id="login-password" placeholder="Votre mot de passe">
+            </div>
+            <button onclick="testSignIn()">Tester la Connexion</button>
+            <div id="login-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>👤 Test de Récupération d'Utilisateur</h3>
+            <button onclick="testGetCurrentUser()">Récupérer l'Utilisateur Actuel</button>
+            <div id="user-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚪 Test de Déconnexion</h3>
+            <button onclick="testSignOut()">Tester la Déconnexion</button>
+            <div id="logout-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📧 Test de Renvoi d'Email de Confirmation</h3>
+            <div class="form-group">
+                <label for="resend-email">Email:</label>
+                <input type="email" id="resend-email" placeholder="votre@email.com">
+            </div>
+            <button onclick="testResendConfirmation()">Renvoyer l'Email</button>
+            <div id="resend-result" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔄 Test de Réinitialisation de Mot de Passe</h3>
+            <div class="form-group">
+                <label for="reset-email">Email:</label>
+                <input type="email" id="reset-email" placeholder="votre@email.com">
+            </div>
+            <button onclick="testResetPassword()">Réinitialiser le Mot de Passe</button>
+            <div id="reset-result" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Configuration Supabase
+        const supabaseUrl = 'https://olrihggkxyksuofkesnk.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+
+        // Initialiser Supabase
+        let supabase;
+        
+        async function initializeSupabase() {
+            try {
+                // Import dynamique de Supabase
+                const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js@2');
+                supabase = createClient(supabaseUrl, supabaseAnonKey);
+                
+                // Écouter les changements d'authentification
+                supabase.auth.onAuthStateChange((event, session) => {
+                    console.log('🔄 Changement d\'état d\'authentification:', event, session?.user?.email);
+                    updateStatus(`État: ${event} - ${session ? 'Connecté' : 'Déconnecté'}`);
+                });
+
+                updateStatus('✅ Système d\'authentification initialisé avec succès');
+                console.log('✅ Supabase initialisé');
+            } catch (error) {
+                console.error('❌ Erreur d\'initialisation:', error);
+                updateStatus('❌ Erreur d\'initialisation du système');
+            }
+        }
+
+        function updateStatus(message) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            
+            if (message.includes('✅')) {
+                statusEl.className = 'status success';
+            } else if (message.includes('❌')) {
+                statusEl.className = 'status error';
+            } else {
+                statusEl.className = 'status info';
+            }
+        }
+
+        function showResult(elementId, result, isSuccess = true) {
+            const resultEl = document.getElementById(elementId);
+            resultEl.style.display = 'block';
+            resultEl.className = `result ${isSuccess ? 'success' : 'error'}`;
+            resultEl.textContent = typeof result === 'object' ? JSON.stringify(result, null, 2) : result;
+        }
+
+        // Tests globaux
+        window.testSignUp = async function() {
+            const firstName = document.getElementById('signup-firstname').value;
+            const lastName = document.getElementById('signup-lastname').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+
+            if (!firstName || !lastName || !email || !password) {
+                showResult('signup-result', 'Veuillez remplir tous les champs', false);
+                return;
+            }
+
+            try {
+                console.log('🔐 Tentative d\'inscription...');
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            firstName: firstName,
+                            lastName: lastName,
+                            role: 'technician'
+                        }
+                    }
+                });
+
+                if (error) {
+                    showResult('signup-result', `Erreur: ${error.message}`, false);
+                } else {
+                    showResult('signup-result', `Succès! Utilisateur créé: ${data.user?.email}\nConfirmation email requise: ${!data.session}`);
+                }
+            } catch (err) {
+                showResult('signup-result', `Exception: ${err.message}`, false);
+            }
+        };
+
+        window.testSignIn = async function() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            if (!email || !password) {
+                showResult('login-result', 'Veuillez remplir tous les champs', false);
+                return;
+            }
+
+            try {
+                console.log('🔐 Tentative de connexion...');
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) {
+                    showResult('login-result', `Erreur: ${error.message}`, false);
+                } else {
+                    showResult('login-result', `Succès! Connecté en tant que: ${data.user?.email}`);
+                }
+            } catch (err) {
+                showResult('login-result', `Exception: ${err.message}`, false);
+            }
+        };
+
+        window.testGetCurrentUser = async function() {
+            try {
+                console.log('👤 Récupération de l\'utilisateur actuel...');
+                const { data: { user }, error } = await supabase.auth.getUser();
+
+                if (error) {
+                    showResult('user-result', `Erreur: ${error.message}`, false);
+                } else if (user) {
+                    showResult('user-result', `Utilisateur connecté:\n${JSON.stringify({
+                        id: user.id,
+                        email: user.email,
+                        firstName: user.user_metadata?.firstName,
+                        lastName: user.user_metadata?.lastName,
+                        role: user.user_metadata?.role,
+                        emailConfirmed: !!user.email_confirmed_at
+                    }, null, 2)}`);
+                } else {
+                    showResult('user-result', 'Aucun utilisateur connecté');
+                }
+            } catch (err) {
+                showResult('user-result', `Exception: ${err.message}`, false);
+            }
+        };
+
+        window.testSignOut = async function() {
+            try {
+                console.log('🚪 Déconnexion...');
+                const { error } = await supabase.auth.signOut();
+
+                if (error) {
+                    showResult('logout-result', `Erreur: ${error.message}`, false);
+                } else {
+                    showResult('logout-result', 'Succès! Déconnexion effectuée');
+                }
+            } catch (err) {
+                showResult('logout-result', `Exception: ${err.message}`, false);
+            }
+        };
+
+        window.testResendConfirmation = async function() {
+            const email = document.getElementById('resend-email').value;
+
+            if (!email) {
+                showResult('resend-result', 'Veuillez entrer un email', false);
+                return;
+            }
+
+            try {
+                console.log('📧 Renvoi d\'email de confirmation...');
+                const { error } = await supabase.auth.resend({
+                    type: 'signup',
+                    email: email
+                });
+
+                if (error) {
+                    showResult('resend-result', `Erreur: ${error.message}`, false);
+                } else {
+                    showResult('resend-result', 'Succès! Email de confirmation renvoyé');
+                }
+            } catch (err) {
+                showResult('resend-result', `Exception: ${err.message}`, false);
+            }
+        };
+
+        window.testResetPassword = async function() {
+            const email = document.getElementById('reset-email').value;
+
+            if (!email) {
+                showResult('reset-result', 'Veuillez entrer un email', false);
+                return;
+            }
+
+            try {
+                console.log('🔄 Demande de réinitialisation...');
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/auth/reset-password`
+                });
+
+                if (error) {
+                    showResult('reset-result', `Erreur: ${error.message}`, false);
+                } else {
+                    showResult('reset-result', 'Succès! Email de réinitialisation envoyé');
+                }
+            } catch (err) {
+                showResult('reset-result', `Exception: ${err.message}`, false);
+            }
+        };
+
+        // Initialiser au chargement
+        initializeSupabase();
+    </script>
+</body>
+</html>

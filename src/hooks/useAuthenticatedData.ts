@@ -33,22 +33,38 @@ export const useAuthenticatedData = () => {
     setError(null);
 
     try {
-      // Charger toutes les données en parallèle
+      // Chargement progressif par priorité
+      // 1. Données essentielles (priorité haute)
+      console.log('📊 Chargement des données essentielles...');
       await Promise.all([
         loadUsers(),
         loadClients(),
         loadDevices(),
+      ]);
+
+      // 2. Données secondaires (priorité moyenne)
+      console.log('📋 Chargement des données secondaires...');
+      await Promise.all([
         loadDeviceModels(),
         loadServices(),
         loadParts(),
+      ]);
+
+      // 3. Données volumineuses (priorité basse) - en arrière-plan
+      console.log('📈 Chargement des données volumineuses...');
+      Promise.all([
         loadProducts(),
         loadRepairs(),
         loadSales(),
         loadAppointments(),
-      ]);
+      ]).then(() => {
+        console.log('✅ Données volumineuses chargées en arrière-plan');
+      }).catch(err => {
+        console.warn('⚠️ Erreur lors du chargement des données volumineuses:', err);
+      });
 
       setIsDataLoaded(true);
-      console.log('✅ Données chargées avec succès');
+      console.log('✅ Données essentielles chargées avec succès');
     } catch (err) {
       console.error('❌ Erreur lors du chargement des données:', err);
       setError(err instanceof Error ? err : new Error('Erreur inconnue'));

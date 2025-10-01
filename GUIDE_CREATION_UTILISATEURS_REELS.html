@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👥 Création d'Utilisateurs Réels Supabase</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #2196F3;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: #f0f8ff;
+            border-left: 5px solid #2196F3;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background: #1976D2;
+        }
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👥 Création d'Utilisateurs Réels Supabase</h1>
+        
+        <div class="success">
+            <h2>✅ OBJECTIF : Créer de Vrais Utilisateurs</h2>
+            <p>Vous voulez créer de vrais utilisateurs dans Supabase avec emails de confirmation.</p>
+        </div>
+
+        <div class="step">
+            <h3>🔧 ÉTAPE 1 : Corriger le Trigger Supabase</h3>
+            <p><strong>1. Allez sur votre Dashboard Supabase :</strong></p>
+            <a href="https://supabase.com/dashboard" target="_blank" class="btn">🚀 Ouvrir Supabase</a>
+            
+            <p><strong>2. Ouvrez l'Éditeur SQL :</strong></p>
+            <ul>
+                <li>Cliquez sur <strong>"SQL Editor"</strong> dans le menu de gauche</li>
+                <li>Cliquez sur <strong>"New query"</strong></li>
+            </ul>
+            
+            <p><strong>3. Copiez et collez ce script :</strong></p>
+            <div class="code" id="sql-script">
+-- SCRIPT FINAL POUR CRÉER DE VRAIS UTILISATEURS SUPABASE
+-- Ce script corrige le trigger et permet la création d'utilisateurs réels
+
+-- 1. Supprimer le trigger problématique
+DROP TRIGGER IF EXISTS handle_new_user ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- 2. Créer une fonction handle_new_user robuste
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Vérifier si l'utilisateur existe déjà
+  IF NOT EXISTS (SELECT 1 FROM public.users WHERE id = NEW.id) THEN
+    BEGIN
+      -- Insérer l'utilisateur dans public.users
+      INSERT INTO public.users (
+        id,
+        first_name,
+        last_name,
+        email,
+        role,
+        created_at,
+        updated_at
+      ) VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'firstName', 'Utilisateur'),
+        COALESCE(NEW.raw_user_meta_data->>'lastName', ''),
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'role', 'technician'),
+        NOW(),
+        NOW()
+      );
+      
+      -- Créer les données par défaut pour l'utilisateur
+      INSERT INTO public.subscription_status (
+        user_id,
+        status,
+        created_at,
+        updated_at
+      ) VALUES (
+        NEW.id,
+        'active',
+        NOW(),
+        NOW()
+      );
+      
+      -- Créer les paramètres système par défaut
+      INSERT INTO public.system_settings (
+        user_id,
+        setting_key,
+        setting_value,
+        created_at,
+        updated_at
+      ) VALUES 
+        (NEW.id, 'notifications_enabled', 'true', NOW(), NOW()),
+        (NEW.id, 'theme', 'light', NOW(), NOW()),
+        (NEW.id, 'language', 'fr', NOW(), NOW());
+        
+    EXCEPTION
+      WHEN OTHERS THEN
+        -- En cas d'erreur, logger mais ne pas bloquer l'inscription
+        RAISE WARNING 'Erreur dans handle_new_user: %', SQLERRM;
+    END;
+  END IF;
+  
+  RETURN NEW;
+  
+EXCEPTION
+  WHEN OTHERS THEN
+    -- En cas d'erreur globale, logger mais continuer
+    RAISE WARNING 'Erreur globale dans handle_new_user: %', SQLERRM;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. S'assurer que les tables existent
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  first_name TEXT,
+  last_name TEXT,
+  email TEXT UNIQUE NOT NULL,
+  role TEXT DEFAULT 'technician',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.subscription_status (
+  id SERIAL PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.system_settings (
+  id SERIAL PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  setting_key TEXT NOT NULL,
+  setting_value TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 4. Activer RLS
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscription_status ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+
+-- 5. Créer les politiques RLS
+DROP POLICY IF EXISTS "Users can view own data" ON public.users;
+CREATE POLICY "Users can view own data" ON public.users
+  FOR ALL USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can view own subscription" ON public.subscription_status;
+CREATE POLICY "Users can view own subscription" ON public.subscription_status
+  FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can view own settings" ON public.system_settings;
+CREATE POLICY "Users can view own settings" ON public.system_settings
+  FOR ALL USING (auth.uid() = user_id);
+
+-- 6. Recréer le trigger
+CREATE TRIGGER handle_new_user
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- 7. Vérification finale
+SELECT 'Trigger corrigé - Création d utilisateurs réels activée' as status;
+            </div>
+            
+            <button class="btn" onclick="copyScript()">📋 COPIER LE SCRIPT</button>
+        </div>
+
+        <div class="step">
+            <h3>▶️ ÉTAPE 2 : Exécuter le Script</h3>
+            <p><strong>1. Collez le script dans l'éditeur SQL de Supabase</strong></p>
+            <p><strong>2. Cliquez sur "Run" pour exécuter</strong></p>
+            <p><strong>3. Vous devriez voir "Trigger corrigé - Création d'utilisateurs réels activée"</strong></p>
+        </div>
+
+        <div class="step">
+            <h3>🔄 ÉTAPE 3 : Le Code est Déjà Modifié</h3>
+            <p><strong>J'ai déjà modifié votre code pour utiliser l'authentification réelle :</strong></p>
+            <div class="code">
+// Dans Auth.tsx, maintenant utilise :
+const result = await userServiceAuth.signUp(...)
+// Au lieu de userServiceAuthMock.signUp(...)
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🧪 ÉTAPE 4 : Tester la Création d'Utilisateurs Réels</h3>
+            <p><strong>1. Redémarrez votre serveur de développement :</strong></p>
+            <div class="code">
+npm run dev
+# ou
+yarn dev
+            </div>
+            
+            <p><strong>2. Testez l'inscription :</strong></p>
+            <ul>
+                <li>Allez sur votre application</li>
+                <li>Essayez de créer un nouveau compte</li>
+                <li>L'utilisateur sera créé dans Supabase</li>
+                <li>Vous recevrez un email de confirmation</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <strong>📧 EMAILS DE CONFIRMATION :</strong>
+            <ul>
+                <li>Les utilisateurs recevront un email de confirmation</li>
+                <li>Ils devront cliquer sur le lien pour activer leur compte</li>
+                <li>Les données utilisateur seront créées automatiquement</li>
+                <li>Les paramètres par défaut seront configurés</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ IMPORTANT :</strong>
+            <ul>
+                <li>Assurez-vous d'avoir configuré l'email dans Supabase</li>
+                <li>Vérifiez que les emails ne vont pas dans les spams</li>
+                <li>Testez avec un email valide</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <strong>✅ RÉSULTAT ATTENDU :</strong>
+            <ul>
+                <li>✅ Utilisateurs créés dans Supabase</li>
+                <li>✅ Emails de confirmation envoyés</li>
+                <li>✅ Données utilisateur stockées</li>
+                <li>✅ Paramètres par défaut créés</li>
+                <li>✅ Pas d'erreur 500</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn" onclick="markAsReady()">🚀 PRÊT À TESTER</button>
+        </div>
+    </div>
+
+    <script>
+        function copyScript() {
+            const script = document.getElementById('sql-script').textContent;
+            navigator.clipboard.writeText(script).then(() => {
+                alert('✅ Script copié ! Maintenant collez-le dans Supabase SQL Editor.');
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = script;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('✅ Script copié ! Maintenant collez-le dans Supabase SQL Editor.');
+            });
+        }
+
+        function markAsReady() {
+            alert('🎉 Parfait ! Maintenant appliquez le script SQL dans Supabase, puis testez l\'inscription. Vous devriez recevoir un email de confirmation !');
+        }
+    </script>
+</body>
+</html>

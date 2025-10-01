@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Correction Base de Données Locale - Atelier Gestion</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196F3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Correction Base de Données Locale</h1>
+        <p>Cette page corrige les problèmes d'authentification avec la base de données locale.</p>
+
+        <div class="test-section">
+            <h2>📋 Actions de Correction</h2>
+            <button onclick="fixDatabase()" id="fixBtn">🚀 Corriger la base de données</button>
+            <button onclick="createUser()" id="userBtn">👤 Créer un utilisateur de test</button>
+            <button onclick="testLogin()" id="testBtn">🔐 Tester la connexion</button>
+            <button onclick="clearLogs()">🧹 Effacer les logs</button>
+            <button onclick="openMainApp()">🌐 Ouvrir l'application</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Logs de Correction</h2>
+            <div id="fix-logs" class="log">
+                Prêt pour les corrections...<br>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>👤 Identifiants de Test</h2>
+            <div id="credentials" style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+                <p><strong>Email:</strong> <span id="test-email">test@atelier.local</span></p>
+                <p><strong>Mot de passe:</strong> <span id="test-password">TestPassword123!</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let fixLogs = [];
+
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            fixLogs.push({ message: logEntry, type });
+            
+            const logElement = document.getElementById('fix-logs');
+            const colorClass = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
+            logElement.innerHTML += `<span class="${colorClass}">${logEntry}</span><br>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLogs() {
+            fixLogs = [];
+            document.getElementById('fix-logs').innerHTML = 'Logs effacés...<br>';
+        }
+
+        function openMainApp() {
+            addLog('🌐 Ouverture de l\'application principale...', 'info');
+            window.open('/', '_blank');
+        }
+
+        function setButtonsEnabled(enabled) {
+            document.getElementById('fixBtn').disabled = !enabled;
+            document.getElementById('userBtn').disabled = !enabled;
+            document.getElementById('testBtn').disabled = !enabled;
+        }
+
+        async function fixDatabase() {
+            addLog('🚀 Début de la correction de la base de données...', 'info');
+            setButtonsEnabled(false);
+            
+            try {
+                // Charger le script de correction
+                const script = document.createElement('script');
+                script.src = '/fix_local_database.js';
+                script.onload = () => {
+                    addLog('✅ Script de correction chargé', 'success');
+                    addLog('🔄 Les corrections sont en cours d\'application...', 'info');
+                };
+                script.onerror = () => {
+                    addLog('❌ Erreur lors du chargement du script', 'error');
+                    setButtonsEnabled(true);
+                };
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                addLog(`❌ Erreur: ${error.message}`, 'error');
+                setButtonsEnabled(true);
+            }
+        }
+
+        async function createUser() {
+            addLog('👤 Création d\'un utilisateur de test...', 'info');
+            setButtonsEnabled(false);
+            
+            try {
+                const script = document.createElement('script');
+                script.src = '/create_test_user_local.js';
+                script.onload = () => {
+                    addLog('✅ Script de création d\'utilisateur chargé', 'success');
+                };
+                script.onerror = () => {
+                    addLog('❌ Erreur lors du chargement du script', 'error');
+                    setButtonsEnabled(true);
+                };
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                addLog(`❌ Erreur: ${error.message}`, 'error');
+                setButtonsEnabled(true);
+            }
+        }
+
+        async function testLogin() {
+            addLog('🔐 Test de connexion...', 'info');
+            
+            try {
+                if (typeof window.supabase === 'undefined') {
+                    addLog('❌ Client Supabase non disponible', 'error');
+                    return;
+                }
+                
+                const email = document.getElementById('test-email').textContent;
+                const password = document.getElementById('test-password').textContent;
+                
+                const { data, error } = await window.supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) {
+                    addLog(`❌ Erreur de connexion: ${error.message}`, 'error');
+                } else {
+                    addLog(`✅ Connexion réussie avec ${email}`, 'success');
+                    addLog('🚪 Déconnexion...', 'info');
+                    await window.supabase.auth.signOut();
+                    addLog('✅ Déconnexion effectuée', 'success');
+                }
+                
+            } catch (error) {
+                addLog(`❌ Erreur lors du test: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialisation
+        window.addEventListener('load', () => {
+            addLog('🔧 Page de correction chargée', 'info');
+            addLog('💡 Cliquez sur "Corriger la base de données" pour commencer', 'info');
+        });
+    </script>
+</body>
+</html>
+

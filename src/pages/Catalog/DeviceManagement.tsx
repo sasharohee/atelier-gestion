@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../../store';
 import { DeviceCategory, DeviceBrand, DeviceModel } from '../../types/deviceManagement';
-import { categoryService, ProductCategory } from '../../services/categoryService';
+import { deviceCategoryService } from '../../services/deviceCategoryService';
+import { brandService, BrandWithCategories, CreateBrandData, UpdateBrandData } from '../../services/brandService';
+import { deviceModelService } from '../../services/deviceModelService';
 import {
   Box,
   Typography,
@@ -67,1051 +69,212 @@ import {
   ModelTraining as ModelIcon,
   Inventory as InventoryIcon,
   Settings as SettingsIcon,
-  // Icônes de base pour les catégories (testées et sûres)
-  Watch as WatchIcon,
-  Headphones as HeadphonesIcon,
-  CameraAlt as CameraIcon,
-  Tv as TvIcon,
-  Speaker as SpeakerIcon,
-  Keyboard as KeyboardIcon,
-  Mouse as MouseIcon,
-  Router as RouterIcon,
-  Memory as MemoryIcon,
-  Storage as StorageIcon,
-  BatteryChargingFull as BatteryIcon,
-  Wifi as WifiIcon,
-  Bluetooth as BluetoothIcon,
-  Usb as UsbIcon,
-  Power as PowerIcon,
-  Security as SecurityIcon,
-  Speed as SpeedIcon,
-  SdCard as SdCardIcon,
-  SimCard as SimCardIcon,
-  NetworkCheck as NetworkIcon,
-  SignalCellular4Bar as SignalIcon,
-  GpsFixed as GpsIcon,
-  Sensors as SensorsIcon,
-  FlashOn as FlashIcon,
-  VolumeUp as VolumeIcon,
-  Mic as MicIcon,
-  Videocam as VideocamIcon,
-  PhotoCamera as PhotoCameraIcon,
-  Print as PrintIcon,
-  Scanner as ScannerIcon,
-  Fax as FaxIcon,
-  Monitor as MonitorIcon,
-  DisplaySettings as DisplayIcon,
-  Brightness6 as BrightnessIcon,
-  Contrast as ContrastIcon,
-  ColorLens as ColorIcon,
-  HdrOn as HdrIcon,
-  AutoAwesome as AutoAwesomeIcon,
-  HighQuality as QualityIcon,
-  SurroundSound as SurroundIcon,
-  Subscriptions as SubscriptionsIcon,
-  LiveTv as LiveTvIcon,
-  MusicNote as MusicIcon,
-  Radio as RadioIcon,
-  Podcasts as PodcastsIcon,
-  Audiotrack as AudiotrackIcon,
-  Equalizer as EqualizerIcon,
-  GraphicEq as GraphicEqIcon,
-  VolumeOff as VolumeOffIcon,
-  VolumeDown as VolumeDownIcon,
-  BluetoothAudio as BluetoothAudioIcon,
-  Airplay as AirplayIcon,
-  Cast as CastIcon,
-  ScreenShare as ScreenShareIcon,
-  ConnectedTv as ConnectedTvIcon,
-  SmartDisplay as SmartDisplayIcon,
-  VideoCall as VideoCallIcon,
-  VideoChat as VideoChatIcon,
-  VideoSettings as VideoSettingsIcon,
-  VideoStable as VideoStableIcon,
-  VideoFile as VideoFileIcon,
-  VideoLabel as VideoLabelIcon,
 } from '@mui/icons-material';
-import { Device, DeviceType } from '../../types';
-import SpecificationsDisplay from '../../components/SpecificationsDisplay';
+import CategoryIconDisplay from '../../components/CategoryIconDisplay';
+import CategoryIconGrid from '../../components/CategoryIconGrid';
 
+interface NewBrandForm {
+  name: string;
+  description: string;
+  categoryIds: string[];
+  isActive: boolean;
+}
 
+interface NewCategoryForm {
+  name: string;
+  description: string;
+  icon: string;
+  isActive: boolean;
+}
+
+interface NewModelForm {
+  name: string;
+  description: string;
+  specifications: Record<string, any>;
+  brandId: string;
+  categoryId: string;
+  isActive: boolean;
+}
 
 const DeviceManagement: React.FC = () => {
-  const { 
-    deviceCategories,
-    deviceBrands,
-    deviceModels,
-    addDeviceCategory,
-    updateDeviceCategory,
-    deleteDeviceCategory,
-    addDeviceBrand,
-    updateDeviceBrand,
-    deleteDeviceBrand,
-    addDeviceModel,
-    updateDeviceModel,
-    deleteDeviceModel,
-    getDeviceCategories,
-    getDeviceBrands,
-    getDeviceModels,
-  } = useAppStore();
+  // États pour les données
+  const [allCategories, setAllCategories] = useState<DeviceCategory[]>([]);
+  const [allBrands, setAllBrands] = useState<BrandWithCategories[]>([]);
+  const [allModels, setAllModels] = useState<DeviceModel[]>([]);
   
-  // État principal pour les onglets
-  const [mainTab, setMainTab] = useState(0);
+  // États pour les filtres et recherche
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategoryForBrands, setSelectedCategoryForBrands] = useState<string>('');
+  const [selectedCategoryForModels, setSelectedCategoryForModels] = useState<string>('');
+  const [selectedBrandForModels, setSelectedBrandForModels] = useState<string>('');
   
-  // États pour les catégories
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<DeviceCategory | null>(null);
-  const [newCategory, setNewCategory] = useState({
-    name: '',
-    description: '',
-    icon: 'smartphone',
-    isActive: true,
-  });
-
-  // États pour les marques
+  // États pour les dialogues
+  const [activeTab, setActiveTab] = useState(0);
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
-  const [selectedBrand, setSelectedBrand] = useState<DeviceBrand | null>(null);
-  const [newBrand, setNewBrand] = useState({
-    name: '',
-    categoryId: '',
-    description: '',
-    logo: '',
-    isActive: true,
-  });
-
-  // États pour les modèles
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<{ type: 'brand' | 'category' | 'model'; item: any } | null>(null);
+  
+  // États pour les formulaires
+  const [selectedBrand, setSelectedBrand] = useState<BrandWithCategories | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<DeviceCategory | null>(null);
   const [selectedModel, setSelectedModel] = useState<DeviceModel | null>(null);
-  const [newModel, setNewModel] = useState<any>({
-    brand: '',
-    model: '',
-    type: 'smartphone',
-    year: new Date().getFullYear(),
-    specifications: {},
-    commonIssues: [''],
-    repairDifficulty: 'medium',
-    partsAvailability: 'medium',
+  const [newBrand, setNewBrand] = useState<NewBrandForm>({
+    name: '',
+    description: '',
+    categoryIds: [],
     isActive: true,
   });
-
-
-
-  // États généraux
-  const [searchQuery, setSearchQuery] = useState('');
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<any>(null);
-  const [deleteType, setDeleteType] = useState<'category' | 'brand' | 'model'>('category');
-  const [selectedCategoryForBrands, setSelectedCategoryForBrands] = useState<string>('all');
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
-
-  // État pour les catégories depuis la base de données
-  const [dbCategories, setDbCategories] = useState<ProductCategory[]>([]);
-
-  // Charger les catégories depuis la base de données avec isolation
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        setCategoriesLoading(true);
-        setCategoriesError(null);
-        
-        const result = await categoryService.getAll();
-        if (result.success && result.data) {
-          setDbCategories(result.data);
-          console.log('✅ Catégories chargées depuis la base de données:', result.data.length);
-        } else {
-          setCategoriesError(result.error || 'Erreur lors du chargement des catégories');
-          console.error('❌ Erreur lors du chargement des catégories:', result.error);
-        }
-      } catch (error) {
-        setCategoriesError('Erreur lors du chargement des catégories');
-        console.error('❌ Erreur lors du chargement des catégories:', error);
-      } finally {
-        setCategoriesLoading(false);
-      }
-    };
-
-    loadCategories();
-  }, []);
-
-  // Convertir les catégories de la base de données au format DeviceCategory
-  const convertDbCategoryToDeviceCategory = (dbCategory: ProductCategory): DeviceCategory => ({
-    id: dbCategory.id,
-    name: dbCategory.name,
-    description: dbCategory.description,
-    icon: dbCategory.icon,
-    isActive: dbCategory.is_active,
-    createdAt: new Date(dbCategory.created_at),
-    updatedAt: new Date(dbCategory.updated_at),
+  const [newCategory, setNewCategory] = useState<NewCategoryForm>({
+    name: '',
+    description: '',
+    icon: 'category',
+    isActive: true,
   });
+  const [newModel, setNewModel] = useState<NewModelForm>({
+    name: '',
+    description: '',
+    specifications: {},
+    brandId: '',
+    categoryId: '',
+    isActive: true,
+  });
+  
+  // États pour le chargement
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Utiliser uniquement les catégories de la base de données (qui incluent les catégories par défaut)
-  const allCategories: DeviceCategory[] = dbCategories.map(convertDbCategoryToDeviceCategory);
-
-  // Données de test pour les marques
-  const defaultBrands: DeviceBrand[] = [
-    // Smartphones
-    {
-      id: '1',
-      name: 'Apple',
-      categoryId: '1',
-      description: 'Fabricant américain de produits électroniques premium',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '2',
-      name: 'Samsung',
-      categoryId: '1',
-      description: 'Fabricant coréen leader en électronique et smartphones',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '3',
-      name: 'Xiaomi',
-      categoryId: '1',
-      description: 'Fabricant chinois de smartphones et IoT',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '4',
-      name: 'Huawei',
-      categoryId: '1',
-      description: 'Fabricant chinois de télécommunications et smartphones',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '5',
-      name: 'OnePlus',
-      categoryId: '1',
-      description: 'Marque de smartphones premium',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '6',
-      name: 'Google',
-      categoryId: '1',
-      description: 'Fabricant des smartphones Pixel',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '7',
-      name: 'Sony',
-      categoryId: '1',
-      description: 'Fabricant japonais d\'électronique',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '8',
-      name: 'LG',
-      categoryId: '1',
-      description: 'Fabricant coréen d\'électronique',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '9',
-      name: 'Nokia',
-      categoryId: '1',
-      description: 'Fabricant finlandais de télécommunications',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '10',
-      name: 'Motorola',
-      categoryId: '1',
-      description: 'Fabricant américain de télécommunications',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '11',
-      name: 'HTC',
-      categoryId: '1',
-      description: 'Fabricant taïwanais de smartphones',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '12',
-      name: 'ASUS',
-      categoryId: '1',
-      description: 'Fabricant taïwanais d\'électronique',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '13',
-      name: 'ZTE',
-      categoryId: '1',
-      description: 'Fabricant chinois de télécommunications',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '14',
-      name: 'OPPO',
-      categoryId: '1',
-      description: 'Fabricant chinois de smartphones',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '15',
-      name: 'Vivo',
-      categoryId: '1',
-      description: 'Fabricant chinois de smartphones',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '16',
-      name: 'Realme',
-      categoryId: '1',
-      description: 'Marque de smartphones chinoise',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '17',
-      name: 'Honor',
-      categoryId: '1',
-      description: 'Marque de smartphones chinoise',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '18',
-      name: 'Nothing',
-      categoryId: '1',
-      description: 'Marque de smartphones innovante',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '19',
-      name: 'Fairphone',
-      categoryId: '1',
-      description: 'Fabricant de smartphones éthiques',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '20',
-      name: 'Cat',
-      categoryId: '1',
-      description: 'Smartphones robustes pour professionnels',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    // Tablettes
-    {
-      id: '21',
-      name: 'iPad',
-      categoryId: '2',
-      description: 'Tablettes Apple',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '22',
-      name: 'Samsung Galaxy Tab',
-      categoryId: '2',
-      description: 'Tablettes Samsung',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '23',
-      name: 'Lenovo',
-      categoryId: '2',
-      description: 'Fabricant chinois d\'ordinateurs et tablettes',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '24',
-      name: 'Huawei MediaPad',
-      categoryId: '2',
-      description: 'Tablettes Huawei',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '25',
-      name: 'Xiaomi Mi Pad',
-      categoryId: '2',
-      description: 'Tablettes Xiaomi',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '26',
-      name: 'Amazon',
-      categoryId: '2',
-      description: 'Fabricant des tablettes Kindle et Fire',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '27',
-      name: 'Microsoft',
-      categoryId: '2',
-      description: 'Fabricant des tablettes Surface',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    // Ordinateurs portables
-    {
-      id: '28',
-      name: 'Dell',
-      categoryId: '3',
-      description: 'Fabricant américain d\'ordinateurs',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '29',
-      name: 'HP',
-      categoryId: '3',
-      description: 'Fabricant américain d\'imprimantes et ordinateurs',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '30',
-      name: 'Lenovo',
-      categoryId: '3',
-      description: 'Fabricant chinois d\'ordinateurs',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '31',
-      name: 'Acer',
-      categoryId: '3',
-      description: 'Fabricant taïwanais d\'ordinateurs',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '32',
-      name: 'ASUS',
-      categoryId: '3',
-      description: 'Fabricant taïwanais d\'ordinateurs',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '33',
-      name: 'MSI',
-      categoryId: '3',
-      description: 'Fabricant taïwanais d\'ordinateurs gaming',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '34',
-      name: 'Razer',
-      categoryId: '3',
-      description: 'Fabricant américain d\'ordinateurs gaming',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '35',
-      name: 'Alienware',
-      categoryId: '3',
-      description: 'Marque gaming de Dell',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '36',
-      name: 'Gigabyte',
-      categoryId: '3',
-      description: 'Fabricant taïwanais d\'ordinateurs',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '37',
-      name: 'Toshiba',
-      categoryId: '3',
-      description: 'Fabricant japonais d\'électronique',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '38',
-      name: 'Fujitsu',
-      categoryId: '3',
-      description: 'Fabricant japonais d\'informatique',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '39',
-      name: 'Sony VAIO',
-      categoryId: '3',
-      description: 'Ordinateurs portables Sony',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '40',
-      name: 'Samsung',
-      categoryId: '3',
-      description: 'Ordinateurs portables Samsung',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '41',
-      name: 'LG',
-      categoryId: '3',
-      description: 'Ordinateurs portables LG',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '42',
-      name: 'Huawei',
-      categoryId: '3',
-      description: 'Ordinateurs portables Huawei',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '43',
-      name: 'Xiaomi',
-      categoryId: '3',
-      description: 'Ordinateurs portables Xiaomi',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '44',
-      name: 'Microsoft',
-      categoryId: '3',
-      description: 'Fabricant des ordinateurs Surface',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '45',
-      name: 'Apple',
-      categoryId: '3',
-      description: 'Fabricant des MacBook',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    // Ordinateurs fixes
-    {
-      id: '46',
-      name: 'Dell',
-      categoryId: '4',
-      description: 'Ordinateurs de bureau Dell',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '47',
-      name: 'HP',
-      categoryId: '4',
-      description: 'Ordinateurs de bureau HP',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '48',
-      name: 'Lenovo',
-      categoryId: '4',
-      description: 'Ordinateurs de bureau Lenovo',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '49',
-      name: 'Acer',
-      categoryId: '4',
-      description: 'Ordinateurs de bureau Acer',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '50',
-      name: 'ASUS',
-      categoryId: '4',
-      description: 'Ordinateurs de bureau ASUS',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '51',
-      name: 'MSI',
-      categoryId: '4',
-      description: 'Ordinateurs de bureau gaming MSI',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '52',
-      name: 'Alienware',
-      categoryId: '4',
-      description: 'Ordinateurs de bureau gaming Alienware',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '53',
-      name: 'Corsair',
-      categoryId: '4',
-      description: 'Fabricant américain de composants gaming',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '54',
-      name: 'CyberPowerPC',
-      categoryId: '4',
-      description: 'Fabricant américain d\'ordinateurs gaming',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '55',
-      name: 'iBUYPOWER',
-      categoryId: '4',
-      description: 'Fabricant américain d\'ordinateurs gaming',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '56',
-      name: 'Origin PC',
-      categoryId: '4',
-      description: 'Fabricant américain d\'ordinateurs gaming',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '57',
-      name: 'Falcon Northwest',
-      categoryId: '4',
-      description: 'Fabricant américain d\'ordinateurs haut de gamme',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '58',
-      name: 'Maingear',
-      categoryId: '4',
-      description: 'Fabricant américain d\'ordinateurs gaming',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '59',
-      name: 'Digital Storm',
-      categoryId: '4',
-      description: 'Fabricant américain d\'ordinateurs gaming',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: '60',
-      name: 'Apple',
-      categoryId: '4',
-      description: 'Fabricant des iMac et Mac Pro',
-      logo: '',
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ];
-
-  // Charger les données au montage
+  // Charger les données au montage du composant
   useEffect(() => {
-    // Les données sont maintenant gérées par le store centralisé
-    // Pas besoin de charger ici car elles sont déjà initialisées dans le store
+    loadData();
   }, []);
 
-  // Liste des icônes disponibles pour les catégories (icônes sûres et testées)
-  const availableIcons = [
-    { value: 'smartphone', label: 'Smartphone', color: '#2196f3' },
-    { value: 'tablet', label: 'Tablette', color: '#9c27b0' },
-    { value: 'laptop', label: 'Ordinateur portable', color: '#ff9800' },
-    { value: 'desktop', label: 'Ordinateur fixe', color: '#4caf50' },
-    { value: 'watch', label: 'Montre connectée', color: '#e91e63' },
-    { value: 'headphones', label: 'Casque audio', color: '#795548' },
-    { value: 'camera', label: 'Appareil photo', color: '#607d8b' },
-    { value: 'tv', label: 'Télévision', color: '#3f51b5' },
-    { value: 'speaker', label: 'Haut-parleur', color: '#8bc34a' },
-    { value: 'keyboard', label: 'Clavier', color: '#ff5722' },
-    { value: 'mouse', label: 'Souris', color: '#9e9e9e' },
-    { value: 'router', label: 'Routeur', color: '#00bcd4' },
-    { value: 'memory', label: 'Mémoire', color: '#673ab7' },
-    { value: 'storage', label: 'Stockage', color: '#ffc107' },
-    { value: 'battery', label: 'Batterie', color: '#4caf50' },
-    { value: 'wifi', label: 'Wi-Fi', color: '#2196f3' },
-    { value: 'bluetooth', label: 'Bluetooth', color: '#3f51b5' },
-    { value: 'usb', label: 'USB', color: '#ff9800' },
-    { value: 'power', label: 'Alimentation', color: '#f44336' },
-    { value: 'security', label: 'Sécurité', color: '#e91e63' },
-    { value: 'speed', label: 'Performance', color: '#00bcd4' },
-    { value: 'sdcard', label: 'Carte SD', color: '#795548' },
-    { value: 'simcard', label: 'Carte SIM', color: '#607d8b' },
-    { value: 'network', label: 'Réseau', color: '#3f51b5' },
-    { value: 'signal', label: 'Signal', color: '#4caf50' },
-    { value: 'gps', label: 'GPS', color: '#2196f3' },
-    { value: 'sensors', label: 'Capteurs', color: '#9c27b0' },
-    { value: 'flash', label: 'Flash', color: '#ffc107' },
-    { value: 'volume', label: 'Volume', color: '#ff9800' },
-    { value: 'mic', label: 'Microphone', color: '#795548' },
-    { value: 'videocam', label: 'Caméra vidéo', color: '#e91e63' },
-    { value: 'photocamera', label: 'Appareil photo', color: '#607d8b' },
-    { value: 'print', label: 'Imprimante', color: '#9e9e9e' },
-    { value: 'scanner', label: 'Scanner', color: '#795548' },
-    { value: 'fax', label: 'Fax', color: '#607d8b' },
-    { value: 'monitor', label: 'Écran', color: '#3f51b5' },
-    { value: 'display', label: 'Affichage', color: '#2196f3' },
-    { value: 'brightness', label: 'Luminosité', color: '#ffc107' },
-    { value: 'contrast', label: 'Contraste', color: '#9e9e9e' },
-    { value: 'color', label: 'Couleur', color: '#e91e63' },
-    { value: 'hdr', label: 'HDR', color: '#ff9800' },
-    { value: 'autoawesome', label: 'Auto', color: '#4caf50' },
-    { value: 'quality', label: 'Qualité', color: '#2196f3' },
-    { value: 'surround', label: 'Surround', color: '#3f51b5' },
-    { value: 'subscriptions', label: 'Abonnements', color: '#e91e63' },
-    { value: 'livetv', label: 'TV en direct', color: '#f44336' },
-    { value: 'music', label: 'Musique', color: '#9c27b0' },
-    { value: 'radio', label: 'Radio', color: '#ff9800' },
-    { value: 'podcasts', label: 'Podcasts', color: '#795548' },
-    { value: 'audiotrack', label: 'Piste audio', color: '#607d8b' },
-    { value: 'equalizer', label: 'Égaliseur', color: '#3f51b5' },
-    { value: 'graphiceq', label: 'Graphic EQ', color: '#2196f3' },
-    { value: 'volumeoff', label: 'Volume off', color: '#9e9e9e' },
-    { value: 'volumedown', label: 'Volume bas', color: '#ff9800' },
-    { value: 'bluetoothaudio', label: 'Audio Bluetooth', color: '#3f51b5' },
-    { value: 'airplay', label: 'AirPlay', color: '#2196f3' },
-    { value: 'cast', label: 'Cast', color: '#ff5722' },
-    { value: 'screenshare', label: 'Partage écran', color: '#00bcd4' },
-    { value: 'connectedtv', label: 'TV connectée', color: '#673ab7' },
-    { value: 'smartdisplay', label: 'Écran intelligent', color: '#4caf50' },
-    { value: 'videocall', label: 'Appel vidéo', color: '#e91e63' },
-    { value: 'videochat', label: 'Chat vidéo', color: '#2196f3' },
-    { value: 'videosettings', label: 'Paramètres vidéo', color: '#3f51b5' },
-    { value: 'videostable', label: 'Stabilisation vidéo', color: '#ff9800' },
-    { value: 'videofile', label: 'Fichier vidéo', color: '#795548' },
-    { value: 'videolabel', label: 'Label vidéo', color: '#607d8b' },
-    { value: 'other', label: 'Autre', color: '#757575' },
-  ];
-
-  // Fonctions utilitaires
-  const getDeviceTypeIcon = (icon: string) => {
-    switch (icon) {
-      case 'smartphone': return <PhoneIcon />;
-      case 'tablet': return <TabletIcon />;
-      case 'laptop': return <LaptopIcon />;
-      case 'desktop': return <ComputerIcon />;
-      case 'watch': return <WatchIcon />;
-      case 'headphones': return <HeadphonesIcon />;
-      case 'camera': return <CameraIcon />;
-      case 'tv': return <TvIcon />;
-      case 'speaker': return <SpeakerIcon />;
-      case 'keyboard': return <KeyboardIcon />;
-      case 'mouse': return <MouseIcon />;
-      case 'router': return <RouterIcon />;
-      case 'memory': return <MemoryIcon />;
-      case 'storage': return <StorageIcon />;
-      case 'battery': return <BatteryIcon />;
-      case 'wifi': return <WifiIcon />;
-      case 'bluetooth': return <BluetoothIcon />;
-      case 'usb': return <UsbIcon />;
-      case 'power': return <PowerIcon />;
-      case 'security': return <SecurityIcon />;
-      case 'speed': return <SpeedIcon />;
-      case 'sdcard': return <SdCardIcon />;
-      case 'simcard': return <SimCardIcon />;
-      case 'network': return <NetworkIcon />;
-      case 'signal': return <SignalIcon />;
-      case 'gps': return <GpsIcon />;
-      case 'sensors': return <SensorsIcon />;
-      case 'flash': return <FlashIcon />;
-      case 'volume': return <VolumeIcon />;
-      case 'mic': return <MicIcon />;
-      case 'videocam': return <VideocamIcon />;
-      case 'photocamera': return <PhotoCameraIcon />;
-      case 'print': return <PrintIcon />;
-      case 'scanner': return <ScannerIcon />;
-      case 'fax': return <FaxIcon />;
-      case 'monitor': return <MonitorIcon />;
-      case 'display': return <DisplayIcon />;
-      case 'brightness': return <BrightnessIcon />;
-      case 'contrast': return <ContrastIcon />;
-      case 'color': return <ColorIcon />;
-      case 'hdr': return <HdrIcon />;
-      case 'autoawesome': return <AutoAwesomeIcon />;
-      case 'quality': return <QualityIcon />;
-      case 'surround': return <SurroundIcon />;
-      case 'subscriptions': return <SubscriptionsIcon />;
-      case 'livetv': return <LiveTvIcon />;
-      case 'music': return <MusicIcon />;
-      case 'radio': return <RadioIcon />;
-      case 'podcasts': return <PodcastsIcon />;
-      case 'audiotrack': return <AudiotrackIcon />;
-      case 'equalizer': return <EqualizerIcon />;
-      case 'graphiceq': return <GraphicEqIcon />;
-      case 'volumeoff': return <VolumeOffIcon />;
-      case 'volumedown': return <VolumeDownIcon />;
-      case 'bluetoothaudio': return <BluetoothAudioIcon />;
-      case 'airplay': return <AirplayIcon />;
-      case 'cast': return <CastIcon />;
-      case 'screenshare': return <ScreenShareIcon />;
-      case 'connectedtv': return <ConnectedTvIcon />;
-      case 'smartdisplay': return <SmartDisplayIcon />;
-      case 'videocall': return <VideoCallIcon />;
-      case 'videochat': return <VideoChatIcon />;
-      case 'videosettings': return <VideoSettingsIcon />;
-      case 'videostable': return <VideoStableIcon />;
-      case 'videofile': return <VideoFileIcon />;
-      case 'videolabel': return <VideoLabelIcon />;
-      default: return <DeviceHubIcon />;
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Charger les catégories
+      const categoriesResult = await deviceCategoryService.getAll();
+      if (categoriesResult.success && categoriesResult.data) {
+        setAllCategories(categoriesResult.data);
+      } else {
+        console.warn('⚠️ Aucune catégorie trouvée ou erreur:', categoriesResult.error);
+        setAllCategories([]);
+      }
+      
+      // Charger les marques
+      const brands = await brandService.getAll();
+      setAllBrands(brands);
+      
+      // Charger les modèles
+      const modelsResult = await deviceModelService.getAll();
+      if (modelsResult.success && modelsResult.data) {
+        setAllModels(modelsResult.data);
+      } else {
+        console.warn('⚠️ Aucun modèle trouvé ou erreur:', modelsResult.error);
+        setAllModels([]);
+      }
+      
+      console.log('✅ Données chargées avec succès');
+    } catch (err) {
+      console.error('❌ Erreur lors du chargement des données:', err);
+      setError('Erreur lors du chargement des données');
+      // S'assurer que les états sont des tableaux vides en cas d'erreur
+      setAllCategories([]);
+      setAllBrands([]);
+    } finally {
+      setLoading(false);
     }
   };
-
-  const getDeviceTypeColor = (icon: string) => {
-    const iconData = availableIcons.find(i => i.value === icon);
-    return iconData ? iconData.color : '#757575';
-  };
-
-  const getDeviceTypeLabel = (icon: string) => {
-    const iconData = availableIcons.find(i => i.value === icon);
-    return iconData ? iconData.label : 'Autre';
-  };
-
-  const getDifficultyColor = (difficulty: string): 'success' | 'warning' | 'error' | 'default' => {
-    const colors: Record<string, 'success' | 'warning' | 'error'> = {
-      easy: 'success',
-      medium: 'warning',
-      hard: 'error',
-    };
-    return colors[difficulty] || 'default';
-  };
-
-  const getAvailabilityColor = (availability: string): 'success' | 'warning' | 'error' | 'default' => {
-    const colors: Record<string, 'success' | 'warning' | 'error'> = {
-      high: 'success',
-      medium: 'warning',
-      low: 'error',
-    };
-    return colors[availability] || 'default';
-  };
-
-
 
   // Fonctions pour les catégories
   const handleCreateCategory = async () => {
     try {
-      const result = await categoryService.create({
+      setLoading(true);
+      
+      const result = await deviceCategoryService.create({
         name: newCategory.name,
         description: newCategory.description,
         icon: newCategory.icon,
-        is_active: newCategory.isActive,
       });
-
-      if (result.success && result.data) {
-        console.log('✅ Catégorie créée avec succès:', result.data);
+      
+      if (result.success) {
+        // Mettre à jour la liste des catégories
+        await loadData();
         
-        // Recharger les catégories depuis la base de données
-        const categoriesResult = await categoryService.getAll();
-        if (categoriesResult.success && categoriesResult.data) {
-          setDbCategories(categoriesResult.data);
-          console.log('✅ Catégories rechargées:', categoriesResult.data.length);
-        } else {
-          console.error('❌ Erreur lors du rechargement des catégories:', categoriesResult.error);
-        }
-        
+        // Fermer le dialogue et réinitialiser le formulaire
         setCategoryDialogOpen(false);
         resetCategoryForm();
+        
+        console.log('✅ Catégorie créée avec succès:', result.data);
       } else {
         console.error('❌ Erreur lors de la création de la catégorie:', result.error);
-        setCategoriesError(result.error || 'Erreur lors de la création de la catégorie');
+        setError(result.error || 'Erreur lors de la création de la catégorie');
       }
     } catch (error) {
       console.error('❌ Erreur lors de la création de la catégorie:', error);
-      setCategoriesError('Erreur lors de la création de la catégorie');
+      setError('Erreur lors de la création de la catégorie');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleUpdateCategory = async () => {
-    if (selectedCategory) {
-      try {
-        const result = await categoryService.update(selectedCategory.id, {
-          name: newCategory.name,
-          description: newCategory.description,
-          icon: newCategory.icon,
-          color: '#1976d2',
-          is_active: newCategory.isActive,
-        });
-
-        if (result.success && result.data) {
-          console.log('✅ Catégorie mise à jour avec succès:', result.data);
-          
-          // Recharger les catégories depuis la base de données
-          const categoriesResult = await categoryService.getAll();
-          if (categoriesResult.success && categoriesResult.data) {
-            setDbCategories(categoriesResult.data);
-            console.log('✅ Catégories rechargées après mise à jour:', categoriesResult.data.length);
-          }
-          
-          setCategoryDialogOpen(false);
-          setSelectedCategory(null);
-          resetCategoryForm();
-        } else {
-          console.error('❌ Erreur lors de la mise à jour de la catégorie:', result.error);
-          setCategoriesError(result.error || 'Erreur lors de la mise à jour de la catégorie');
-        }
-      } catch (error) {
-        console.error('❌ Erreur lors de la mise à jour de la catégorie:', error);
-        setCategoriesError('Erreur lors de la mise à jour de la catégorie');
+    if (!selectedCategory) return;
+    
+    try {
+      setLoading(true);
+      
+      const result = await deviceCategoryService.update(selectedCategory.id, {
+        name: newCategory.name,
+        description: newCategory.description,
+        icon: newCategory.icon,
+      });
+      
+      if (result.success) {
+        // Mettre à jour la liste des catégories
+        await loadData();
+        
+        // Fermer le dialogue et réinitialiser le formulaire
+        setCategoryDialogOpen(false);
+        resetCategoryForm();
+        
+        console.log('✅ Catégorie mise à jour avec succès:', result.data);
+      } else {
+        console.error('❌ Erreur lors de la mise à jour de la catégorie:', result.error);
+        setError(result.error || 'Erreur lors de la mise à jour de la catégorie');
       }
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour de la catégorie:', error);
+      setError('Erreur lors de la mise à jour de la catégorie');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const resetCategoryForm = () => {
-    setNewCategory({
-      name: '',
-      description: '',
-      icon: 'smartphone',
-      isActive: true,
-    });
+  const handleDeleteCategory = async (category: DeviceCategory) => {
+    try {
+      setLoading(true);
+      
+      const result = await deviceCategoryService.delete(category.id);
+      
+      if (result.success) {
+        // Mettre à jour la liste des catégories
+        await loadData();
+        
+        console.log('✅ Catégorie supprimée avec succès');
+      } else {
+        console.error('❌ Erreur lors de la suppression de la catégorie:', result.error);
+        setError(result.error || 'Erreur lors de la suppression de la catégorie');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la suppression de la catégorie:', error);
+      setError('Erreur lors de la suppression de la catégorie');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openCategoryEditDialog = (category: DeviceCategory) => {
@@ -1125,438 +288,447 @@ const DeviceManagement: React.FC = () => {
     setCategoryDialogOpen(true);
   };
 
-  // Fonctions pour les marques
-  const handleCreateBrand = () => {
-    addDeviceBrand({
-      name: newBrand.name,
-      categoryId: newBrand.categoryId,
-      description: newBrand.description,
-      logo: newBrand.logo,
-      isActive: newBrand.isActive,
+  const resetCategoryForm = () => {
+    setSelectedCategory(null);
+    setNewCategory({
+      name: '',
+      description: '',
+      icon: 'category',
+      isActive: true,
     });
-    setBrandDialogOpen(false);
-    resetBrandForm();
   };
 
-  const handleUpdateBrand = () => {
-    if (selectedBrand) {
-      updateDeviceBrand(selectedBrand.id, {
-        name: newBrand.name,
-        categoryId: newBrand.categoryId,
-        description: newBrand.description,
-        logo: newBrand.logo,
-        isActive: newBrand.isActive,
+  // Fonctions pour les modèles
+  const handleCreateModel = async () => {
+    try {
+      setLoading(true);
+      
+      const result = await deviceModelService.create({
+        name: newModel.name,
+        description: newModel.description,
+        specifications: newModel.specifications,
+        brandId: newModel.brandId,
+        categoryId: newModel.categoryId,
       });
+      
+      if (result.success) {
+        // Mettre à jour la liste des modèles
+        await loadData();
+        
+        // Fermer le dialogue et réinitialiser le formulaire
+        setModelDialogOpen(false);
+        resetModelForm();
+        
+        console.log('✅ Modèle créé avec succès:', result.data);
+      } else {
+        console.error('❌ Erreur lors de la création du modèle:', result.error);
+        setError(result.error || 'Erreur lors de la création du modèle');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la création du modèle:', error);
+      setError('Erreur lors de la création du modèle');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateModel = async () => {
+    if (!selectedModel) return;
+    
+    try {
+      setLoading(true);
+      
+      const result = await deviceModelService.update(selectedModel.id, {
+        name: newModel.name,
+        description: newModel.description,
+        specifications: newModel.specifications,
+        brandId: newModel.brandId,
+        categoryId: newModel.categoryId,
+      });
+      
+      if (result.success) {
+        // Mettre à jour la liste des modèles
+        await loadData();
+        
+        // Fermer le dialogue et réinitialiser le formulaire
+        setModelDialogOpen(false);
+        resetModelForm();
+        
+        console.log('✅ Modèle mis à jour avec succès:', result.data);
+      } else {
+        console.error('❌ Erreur lors de la mise à jour du modèle:', result.error);
+        setError(result.error || 'Erreur lors de la mise à jour du modèle');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du modèle:', error);
+      setError('Erreur lors de la mise à jour du modèle');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteModel = async (model: DeviceModel) => {
+    try {
+      setLoading(true);
+      
+      const result = await deviceModelService.delete(model.id);
+      
+      if (result.success) {
+        // Mettre à jour la liste des modèles
+        await loadData();
+        
+        console.log('✅ Modèle supprimé avec succès');
+      } else {
+        console.error('❌ Erreur lors de la suppression du modèle:', result.error);
+        setError(result.error || 'Erreur lors de la suppression du modèle');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la suppression du modèle:', error);
+      setError('Erreur lors de la suppression du modèle');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openModelEditDialog = (model: DeviceModel) => {
+    setSelectedModel(model);
+    setNewModel({
+      name: model.name,
+      description: model.description || '',
+      specifications: model.specifications || {},
+      brandId: model.brandId,
+      categoryId: model.categoryId,
+      isActive: model.isActive,
+    });
+    setModelDialogOpen(true);
+  };
+
+  const resetModelForm = () => {
+    setSelectedModel(null);
+    setNewModel({
+      name: '',
+      description: '',
+      specifications: {},
+      brandId: '',
+      categoryId: '',
+      isActive: true,
+    });
+  };
+
+  // Fonctions pour les marques
+  const handleCreateBrand = async () => {
+    try {
+      setLoading(true);
+      
+      const brandData: CreateBrandData = {
+        name: newBrand.name,
+        description: newBrand.description,
+        categoryIds: newBrand.categoryIds,
+      };
+      
+      const result = await brandService.create(brandData);
+      
+      // Mettre à jour la liste des marques
+      await loadData();
+      
+      // Fermer le dialogue et réinitialiser le formulaire
       setBrandDialogOpen(false);
-      setSelectedBrand(null);
       resetBrandForm();
+      
+      console.log('✅ Marque créée avec succès:', result);
+    } catch (error) {
+      console.error('❌ Erreur lors de la création de la marque:', error);
+      setError('Erreur lors de la création de la marque');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateBrand = async () => {
+    if (!selectedBrand) return;
+    
+    try {
+      setLoading(true);
+      
+      const updateData: UpdateBrandData = {
+        name: newBrand.name,
+        description: newBrand.description,
+        categoryIds: newBrand.categoryIds,
+      };
+      
+      const result = await brandService.update(selectedBrand.id, updateData);
+      
+      // Mettre à jour la liste des marques
+      await loadData();
+      
+      // Fermer le dialogue et réinitialiser le formulaire
+      setBrandDialogOpen(false);
+      resetBrandForm();
+      setSelectedBrand(null);
+      
+      console.log('✅ Marque mise à jour avec succès:', result);
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour de la marque:', error);
+      setError('Erreur lors de la mise à jour de la marque');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteBrand = async (brand: BrandWithCategories) => {
+    try {
+      setLoading(true);
+      
+      await brandService.delete(brand.id);
+      
+      // Mettre à jour la liste des marques
+      await loadData();
+      
+      console.log('✅ Marque supprimée avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors de la suppression de la marque:', error);
+      setError('Erreur lors de la suppression de la marque');
+    } finally {
+      setLoading(false);
     }
   };
 
   const resetBrandForm = () => {
     setNewBrand({
       name: '',
-      categoryId: '',
       description: '',
-      logo: '',
+      categoryIds: [],
       isActive: true,
     });
+    setSelectedBrand(null);
   };
 
-  const openBrandEditDialog = (brand: DeviceBrand) => {
+  const openBrandEditDialog = (brand: BrandWithCategories) => {
     setSelectedBrand(brand);
     setNewBrand({
       name: brand.name,
-      categoryId: brand.categoryId,
       description: brand.description,
-      logo: brand.logo || '',
+      categoryIds: brand.categories.map(cat => cat.id),
       isActive: brand.isActive,
     });
     setBrandDialogOpen(true);
   };
 
-  // Fonctions pour les modèles
-  const handleCreateModel = () => {
-    addDeviceModel({
-      brand: newModel.brand,
-      model: newModel.model,
-      type: newModel.type,
-      year: newModel.year,
-      specifications: newModel.specifications,
-      commonIssues: newModel.commonIssues.filter(issue => issue.trim() !== ''),
-      repairDifficulty: newModel.repairDifficulty,
-      partsAvailability: newModel.partsAvailability,
-      isActive: newModel.isActive,
-    });
-    setModelDialogOpen(false);
-    resetModelForm();
-  };
-
-  const handleUpdateModel = () => {
-    if (selectedModel) {
-      updateDeviceModel(selectedModel.id, {
-        brand: newModel.brand,
-        model: newModel.model,
-        type: newModel.type,
-        year: newModel.year,
-        specifications: newModel.specifications,
-        commonIssues: newModel.commonIssues.filter((issue: string) => issue.trim() !== ''),
-        repairDifficulty: newModel.repairDifficulty,
-        partsAvailability: newModel.partsAvailability,
-        isActive: newModel.isActive,
-      });
-      setModelDialogOpen(false);
-      setSelectedModel(null);
-      resetModelForm();
-    }
-  };
-
-  const resetModelForm = () => {
-    setNewModel({
-      brand: '',
-      model: '',
-      type: 'smartphone',
-      year: new Date().getFullYear(),
-      specifications: {},
-      commonIssues: [''],
-      repairDifficulty: 'medium',
-      partsAvailability: 'medium',
-      isActive: true,
-    });
-  };
-
-  const openModelEditDialog = (model: DeviceModel) => {
-    setSelectedModel(model);
-    setNewModel({
-      brand: model.brand,
-      model: model.model,
-      type: model.type,
-      year: model.year,
-      specifications: model.specifications,
-      commonIssues: [...model.commonIssues],
-      repairDifficulty: model.repairDifficulty,
-      partsAvailability: model.partsAvailability,
-      isActive: model.isActive,
-    });
-    setModelDialogOpen(true);
-  };
-
-
-
-  // Fonction de suppression générique
-  const handleDelete = async () => {
-    if (itemToDelete) {
-      try {
-        switch (deleteType) {
-          case 'category':
-            const result = await categoryService.delete(itemToDelete.id);
-            if (result.success) {
-              console.log('✅ Catégorie supprimée avec succès');
-              
-              // Recharger les catégories depuis la base de données
-              const categoriesResult = await categoryService.getAll();
-              if (categoriesResult.success && categoriesResult.data) {
-                setDbCategories(categoriesResult.data);
-                console.log('✅ Catégories rechargées après suppression:', categoriesResult.data.length);
-              }
-            } else {
-              console.error('❌ Erreur lors de la suppression de la catégorie:', result.error);
-              setCategoriesError(result.error || 'Erreur lors de la suppression de la catégorie');
-            }
-            break;
-          case 'brand':
-            deleteDeviceBrand(itemToDelete.id);
-            break;
-          case 'model':
-            deleteDeviceModel(itemToDelete.id);
-            break;
-        }
-        setDeleteDialogOpen(false);
-        setItemToDelete(null);
-      } catch (error) {
-        console.error('❌ Erreur lors de la suppression:', error);
-        setCategoriesError('Erreur lors de la suppression');
-      }
-    }
-  };
-
-  const openDeleteDialog = (item: any, type: 'category' | 'brand' | 'model') => {
-    setItemToDelete(item);
-    setDeleteType(type);
+  const openDeleteDialog = (item: any, type: 'brand' | 'category' | 'model') => {
+    setDeleteItem({ type, item });
     setDeleteDialogOpen(true);
   };
 
-  // Filtrage des données
-  const filteredCategories = allCategories.filter(cat =>
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const confirmDelete = async () => {
+    if (!deleteItem) return;
+    
+    if (deleteItem.type === 'brand') {
+      await handleDeleteBrand(deleteItem.item);
+    } else if (deleteItem.type === 'category') {
+      await handleDeleteCategory(deleteItem.item);
+    } else if (deleteItem.type === 'model') {
+      await handleDeleteModel(deleteItem.item);
+    }
+    
+    setDeleteDialogOpen(false);
+    setDeleteItem(null);
+  };
 
-  const filteredBrands = deviceBrands.filter(brand => {
-    const matchesSearch = brand.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategoryForBrands === 'all' || brand.categoryId === selectedCategoryForBrands;
+  // Filtrer les marques
+  const filteredBrands = (allBrands || []).filter(brand => {
+    const matchesSearch = brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         brand.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = !selectedCategoryForBrands || 
+                           brand.categories.some(cat => cat.id === selectedCategoryForBrands);
+    
     return matchesSearch && matchesCategory;
   });
 
-  const filteredModels = deviceModels.filter(model => {
-    const modelName = (model as any).name || (model as any).model || 'N/A';
-    return modelName.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  // Compter les marques par catégorie
+  const brandCountByCategory = (allCategories || []).map(category => ({
+    category,
+    count: (allBrands || []).filter(brand => 
+      brand.categories.some(cat => cat.id === category.id)
+    ).length
+  }));
 
-
-
-  // Fonction pour obtenir les informations d'un modèle
-  const getModelInfo = (modelId: string) => {
-    const model = deviceModels.find(m => m.id === modelId);
-    if (!model) return { name: 'N/A', brand: 'N/A', category: 'N/A' };
-    
-    // Utiliser la nouvelle structure des modèles
-    const modelName = (model as any).name || (model as any).model || 'N/A';
-    const brandName = (model as any).brand || 'N/A';
-    const categoryName = (model as any).type || 'N/A';
-    
-    return {
-      name: modelName,
-      brand: brandName,
-      category: categoryName,
-    };
+  // Obtenir l'icône pour une catégorie
+  const getCategoryIcon = (categoryName: string, iconValue?: string) => {
+    const iconType = iconValue || categoryName.toLowerCase().replace(/\s+/g, '-');
+    return <CategoryIconDisplay iconType={iconType} size={20} />;
   };
 
+  if (loading && (allBrands || []).length === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Box>
+    <Box sx={{ p: 3 }}>
       {/* En-tête */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-          Gestion des Appareils et Modèles
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Gestion des Appareils
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Gestion centralisée des catégories, marques, modèles et instances d'appareils
+          Gérez vos marques, catégories et modèles d'appareils
         </Typography>
       </Box>
 
-      {/* Onglets principaux */}
-      <Card sx={{ mb: 3 }}>
-        <Tabs 
-          value={mainTab} 
-          onChange={(e, newValue) => setMainTab(newValue)}
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
-        >
-          <Tab 
-            icon={<CategoryIcon />} 
-            label="Catégories" 
-            iconPosition="start"
-          />
-          <Tab 
-            icon={<BrandingIcon />} 
-            label="Marques" 
-            iconPosition="start"
-          />
-          <Tab 
-            icon={<ModelIcon />} 
-            label="Modèles" 
-            iconPosition="start"
-          />
-
-        </Tabs>
-      </Card>
-
-      {/* Barre de recherche et filtres */}
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
-        <TextField
-          placeholder="Rechercher..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-          }}
-          sx={{ flexGrow: 1 }}
-        />
-        
-        {mainTab === 1 && (
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Filtrer par catégorie</InputLabel>
-            <Select
-              value={selectedCategoryForBrands}
-              label="Filtrer par catégorie"
-              onChange={(e) => setSelectedCategoryForBrands(e.target.value)}
-            >
-              <MenuItem value="all">Toutes les catégories</MenuItem>
-              {deviceCategories.map((category) => (
-                <MenuItem key={category.id} value={category.id}>
-                  {category.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        )}
-        
-
-        
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => {
-            switch (mainTab) {
-              case 0:
-                setCategoryDialogOpen(true);
-                break;
-              case 1:
-                setBrandDialogOpen(true);
-                break;
-              case 2:
-                setModelDialogOpen(true);
-                break;
-            }
-          }}
-        >
-          Ajouter
-        </Button>
-      </Box>
-
-      {/* Contenu des onglets */}
-      {mainTab === 0 && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Catégories d'Appareils ({filteredCategories.length})
-            </Typography>
-            <Grid container spacing={2}>
-              {filteredCategories.map((category) => (
-                <Grid item xs={12} sm={6} md={4} key={category.id}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <Avatar
-                          sx={{
-                            bgcolor: getDeviceTypeColor(category.icon),
-                            mr: 2,
-                            width: 48,
-                            height: 48,
-                          }}
-                        >
-                          {getDeviceTypeIcon(category.icon)}
-                        </Avatar>
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="h6">{category.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {category.description}
-                          </Typography>
-                          <Chip
-                            label={getDeviceTypeLabel(category.icon)}
-                            size="small"
-                            sx={{ 
-                              mt: 0.5,
-                              bgcolor: getDeviceTypeColor(category.icon),
-                              color: 'white',
-                              fontSize: '0.7rem'
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button
-                          size="small"
-                          startIcon={<EditIcon />}
-                          onClick={() => openCategoryEditDialog(category)}
-                        >
-                          Modifier
-                        </Button>
-                        <Button
-                          size="small"
-                          color="error"
-                          startIcon={<DeleteIcon />}
-                          onClick={() => openDeleteDialog(category, 'category')}
-                        >
-                          Supprimer
-                        </Button>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </CardContent>
-        </Card>
+      {/* Affichage des erreurs */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
       )}
 
-      {mainTab === 1 && (
+      {/* Onglets */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+          <Tab label="Marques" icon={<BrandingIcon />} />
+          <Tab label="Catégories" icon={<CategoryIcon />} />
+          <Tab label="Modèles" icon={<ModelIcon />} />
+        </Tabs>
+      </Paper>
+
+      {/* Onglet Marques */}
+      {activeTab === 0 && (
         <Card>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                Marques ({filteredBrands.length})
+              <Typography variant="h6">Marques ({filteredBrands.length})</Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  resetBrandForm();
+                  setBrandDialogOpen(true);
+                }}
+              >
+                Ajouter une marque
+              </Button>
+            </Box>
+
+            {/* Filtres */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+              <TextField
+                placeholder="Rechercher une marque..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
+                sx={{ minWidth: 200 }}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                }}
+              />
+              
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Filtrer par catégorie</InputLabel>
+                <Select
+                  value={selectedCategoryForBrands}
+                  onChange={(e) => setSelectedCategoryForBrands(e.target.value)}
+                  label="Filtrer par catégorie"
+                >
+                  <MenuItem value="">Toutes les catégories</MenuItem>
+                  {(allCategories || []).map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            {/* Statistiques par catégorie */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Marques par catégorie:
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                {allCategories.map((category) => {
-                  const brandCount = deviceBrands.filter(brand => brand.categoryId === category.id).length;
-                  return (
-                    <Chip
-                      key={category.id}
-                      label={`${category.name}: ${brandCount}`}
-                      size="small"
-                      color={selectedCategoryForBrands === category.id ? 'primary' : 'default'}
-                      onClick={() => setSelectedCategoryForBrands(
-                        selectedCategoryForBrands === category.id ? 'all' : category.id
-                      )}
-                      sx={{ cursor: 'pointer' }}
-                    />
-                  );
-                })}
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {brandCountByCategory.map(({ category, count }) => (
+                  <Chip
+                    key={category.id}
+                    label={`${category.name}: ${count}`}
+                    variant={selectedCategoryForBrands === category.id ? 'filled' : 'outlined'}
+                    onClick={() => setSelectedCategoryForBrands(
+                      selectedCategoryForBrands === category.id ? '' : category.id
+                    )}
+                    color={selectedCategoryForBrands === category.id ? 'primary' : 'default'}
+                  />
+                ))}
               </Box>
             </Box>
-            <TableContainer component={Paper} variant="outlined">
+
+            {/* Tableau des marques */}
+            <TableContainer component={Paper}>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Marque</TableCell>
-                    <TableCell>Catégorie</TableCell>
+                    <TableCell>Nom</TableCell>
                     <TableCell>Description</TableCell>
-                    <TableCell>Modèles</TableCell>
+                    <TableCell>Catégories</TableCell>
+                    <TableCell>Statut</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredBrands.map((brand) => {
-                    const category = allCategories.find(cat => cat.id === brand.categoryId);
-                    const modelCount = deviceModels.filter(model => (model as any).brand === brand.name).length;
-                    return (
-                      <TableRow key={brand.id} hover>
-                        <TableCell>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                  {filteredBrands.map((brand) => (
+                    <TableRow key={brand.id}>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                            {brand.name.charAt(0)}
+                          </Avatar>
+                          <Typography variant="body2" fontWeight="medium">
                             {brand.name}
                           </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={category?.name || 'N/A'}
-                            size="small"
-                            sx={{
-                              bgcolor: category ? getDeviceTypeColor(category.icon) : '#9e9e9e',
-                              color: 'white',
-                              fontSize: '0.7rem'
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            {brand.description}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={modelCount}
-                            size="small"
-                            color={modelCount > 0 ? 'success' : 'default'}
-                            variant={modelCount > 0 ? 'filled' : 'outlined'}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {brand.description || 'Aucune description'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                          {brand.categories.length > 0 ? (
+                            brand.categories.map((category) => (
+                              <Chip
+                                key={category.id}
+                                label={category.name}
+                                size="small"
+                                icon={getCategoryIcon(category.name, category.icon)}
+                              />
+                            ))
+                          ) : (
+                            <Typography variant="body2" color="text.secondary">
+                              Aucune catégorie
+                            </Typography>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={brand.isActive ? 'Actif' : 'Inactif'}
+                          color={brand.isActive ? 'success' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Tooltip title="Modifier">
                             <IconButton
                               size="small"
                               onClick={() => openBrandEditDialog(brand)}
                             >
                               <EditIcon />
                             </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Supprimer">
                             <IconButton
                               size="small"
                               color="error"
@@ -1564,64 +736,224 @@ const DeviceManagement: React.FC = () => {
                             >
                               <DeleteIcon />
                             </IconButton>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </TableContainer>
+
+            {filteredBrands.length === 0 && (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body1" color="text.secondary">
+                  Aucune marque trouvée
+                </Typography>
+              </Box>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {mainTab === 2 && (
+      {/* Onglet Catégories */}
+      {activeTab === 1 && (
         <Card>
           <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Modèles ({filteredModels.length})
-            </Typography>
-            <TableContainer component={Paper} variant="outlined">
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Catégories ({(allCategories || []).length})</Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  resetCategoryForm();
+                  setCategoryDialogOpen(true);
+                }}
+              >
+                Ajouter une catégorie
+              </Button>
+            </Box>
+
+            {/* Tableau des catégories */}
+            <TableContainer component={Paper}>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Modèle</TableCell>
-                    <TableCell>Marque</TableCell>
-                    <TableCell>Catégorie</TableCell>
-                    <TableCell>Année</TableCell>
-                    <TableCell>Difficulté</TableCell>
-                    <TableCell>Pièces</TableCell>
+                    <TableCell>Nom</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell>Icône</TableCell>
+                    <TableCell>Statut</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredModels.map((model) => (
-                    <TableRow key={model.id} hover>
+                  {(allCategories || []).map((category) => (
+                    <TableRow key={category.id}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {getCategoryIcon(category.name, category.icon)}
+                        <Typography variant="body2" fontWeight="medium">
+                          {category.name}
+                        </Typography>
+                      </Box>
+                    </TableCell>
                       <TableCell>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                          {(model as any).name || (model as any).model || 'N/A'}
+                        <Typography variant="body2" color="text.secondary">
+                          {category.description}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        {(model as any).brand || 'N/A'}
+                        {getCategoryIcon(category.name, category.icon)}
                       </TableCell>
-                      <TableCell>
-                        {(model as any).type || 'N/A'}
-                      </TableCell>
-                      <TableCell>{model.year}</TableCell>
                       <TableCell>
                         <Chip
-                          label={model.repairDifficulty}
+                          label={category.isActive ? 'Actif' : 'Inactif'}
+                          color={category.isActive ? 'success' : 'default'}
                           size="small"
-                          color={getDifficultyColor(model.repairDifficulty)}
                         />
                       </TableCell>
                       <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => openCategoryEditDialog(category)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => openDeleteDialog(category, 'category')}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {(allCategories || []).length === 0 && (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body1" color="text.secondary">
+                  Aucune catégorie trouvée
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Onglet Modèles */}
+      {activeTab === 2 && (
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Modèles ({(allModels || []).length})</Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  resetModelForm();
+                  setModelDialogOpen(true);
+                }}
+              >
+                Ajouter un modèle
+              </Button>
+            </Box>
+
+            {/* Filtres pour les modèles */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+              <TextField
+                placeholder="Rechercher un modèle..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
+                sx={{ minWidth: 200 }}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                }}
+              />
+              
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Filtrer par marque</InputLabel>
+                <Select
+                  value={selectedBrandForModels}
+                  onChange={(e) => setSelectedBrandForModels(e.target.value)}
+                  label="Filtrer par marque"
+                >
+                  <MenuItem value="">Toutes les marques</MenuItem>
+                  {(allBrands || []).map((brand) => (
+                    <MenuItem key={brand.id} value={brand.id}>
+                      {brand.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Filtrer par catégorie</InputLabel>
+                <Select
+                  value={selectedCategoryForModels}
+                  onChange={(e) => setSelectedCategoryForModels(e.target.value)}
+                  label="Filtrer par catégorie"
+                >
+                  <MenuItem value="">Toutes les catégories</MenuItem>
+                  {(allCategories || []).map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            {/* Tableau des modèles */}
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Nom</TableCell>
+                    <TableCell>Marque</TableCell>
+                    <TableCell>Catégorie</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell>Statut</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(allModels || []).map((model) => (
+                    <TableRow key={model.id}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {model.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {model.brandName}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {getCategoryIcon(model.categoryName)}
+                          <Typography variant="body2" color="text.secondary">
+                            {model.categoryName}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {model.description}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
                         <Chip
-                          label={model.partsAvailability}
+                          label={model.isActive ? 'Actif' : 'Inactif'}
+                          color={model.isActive ? 'success' : 'default'}
                           size="small"
-                          color={getAvailabilityColor(model.partsAvailability)}
                         />
                       </TableCell>
                       <TableCell>
@@ -1646,147 +978,86 @@ const DeviceManagement: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
+
+            {(allModels || []).length === 0 && (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body1" color="text.secondary">
+                  Aucun modèle trouvé
+                </Typography>
+              </Box>
+            )}
           </CardContent>
         </Card>
       )}
 
-
-
-      {/* Dialog pour les catégories */}
-      <Dialog open={categoryDialogOpen} onClose={() => setCategoryDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {selectedCategory ? 'Modifier la catégorie' : 'Créer une nouvelle catégorie'}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Nom de la catégorie *"
-                value={newCategory.name}
-                onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={3}
-                value={newCategory.description}
-                onChange={(e) => setNewCategory(prev => ({ ...prev, description: e.target.value }))}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>
-                Sélectionner une icône pour la catégorie
-              </Typography>
-              <Box sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', 
-                gap: 1,
-                maxHeight: 300,
-                overflowY: 'auto',
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: 1,
-                p: 1
-              }}>
-                {availableIcons.map((iconData) => (
-                  <Box
-                    key={iconData.value}
-                    onClick={() => setNewCategory(prev => ({ ...prev, icon: iconData.value }))}
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      p: 1,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      border: newCategory.icon === iconData.value ? 2 : 1,
-                      borderColor: newCategory.icon === iconData.value ? 'primary.main' : 'divider',
-                      bgcolor: newCategory.icon === iconData.value ? 'primary.50' : 'transparent',
-                      '&:hover': {
-                        bgcolor: 'action.hover',
-                      },
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <Avatar sx={{ bgcolor: iconData.color, width: 40, height: 40, mb: 1 }}>
-                      {getDeviceTypeIcon(iconData.value)}
-                    </Avatar>
-                    <Typography variant="caption" textAlign="center" sx={{ fontSize: '0.7rem' }}>
-                      {iconData.label}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                Icône sélectionnée : {getDeviceTypeLabel(newCategory.icon)}
-              </Typography>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCategoryDialogOpen(false)}>
-            Annuler
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={selectedCategory ? handleUpdateCategory : handleCreateCategory}
-            disabled={!newCategory.name}
-          >
-            {selectedCategory ? 'Modifier' : 'Créer'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialog pour les marques */}
-      <Dialog open={brandDialogOpen} onClose={() => setBrandDialogOpen(false)} maxWidth="sm" fullWidth>
+      {/* Dialogue pour créer/modifier une marque */}
+      <Dialog open={brandDialogOpen} onClose={() => setBrandDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           {selectedBrand ? 'Modifier la marque' : 'Créer une nouvelle marque'}
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Nom de la marque *"
-                value={newBrand.name}
-                onChange={(e) => setNewBrand(prev => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Catégorie *</InputLabel>
-                <Select
-                  value={newBrand.categoryId}
-                  label="Catégorie *"
-                  onChange={(e) => setNewBrand(prev => ({ ...prev, categoryId: e.target.value }))}
-                  required
-                >
-                  {allCategories.map((category) => (
-                    <MenuItem key={category.id} value={category.id}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Nom de la marque"
+              value={newBrand.name}
+              onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
+              fullWidth
+              required
+            />
+            
+            <TextField
+              label="Description"
+              value={newBrand.description}
+              onChange={(e) => setNewBrand({ ...newBrand, description: e.target.value })}
+              fullWidth
+              multiline
+              rows={3}
+            />
+            
+            
+            <FormControl fullWidth>
+              <InputLabel>Catégories</InputLabel>
+              <Select
+                multiple
+                value={newBrand.categoryIds}
+                onChange={(e) => setNewBrand({ ...newBrand, categoryIds: e.target.value as string[] })}
+                label="Catégories"
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {(selected as string[]).map((value) => {
+                      const category = (allCategories || []).find(cat => cat.id === value);
+                      return (
+                        <Chip
+                          key={value}
+                          label={category?.name || value}
+                          size="small"
+                        />
+                      );
+                    })}
+                  </Box>
+                )}
+              >
+                {(allCategories || []).map((category) => (
+                  <MenuItem key={category.id} value={category.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {getCategoryIcon(category.name, category.icon)}
                       {category.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={3}
-                value={newBrand.description}
-                onChange={(e) => setNewBrand(prev => ({ ...prev, description: e.target.value }))}
-              />
-            </Grid>
-          </Grid>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={newBrand.isActive}
+                  onChange={(e) => setNewBrand({ ...newBrand, isActive: e.target.checked })}
+                />
+              }
+              label="Marque active"
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBrandDialogOpen(false)}>
@@ -1795,139 +1066,160 @@ const DeviceManagement: React.FC = () => {
           <Button 
             variant="contained" 
             onClick={selectedBrand ? handleUpdateBrand : handleCreateBrand}
-            disabled={!newBrand.name || !newBrand.categoryId}
+            disabled={!newBrand.name || loading}
           >
-            {selectedBrand ? 'Modifier' : 'Créer'}
+            {loading ? <CircularProgress size={20} /> : (selectedBrand ? 'Modifier' : 'Créer')}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialog pour les modèles */}
+      {/* Dialogue pour créer/modifier une catégorie */}
+      <Dialog open={categoryDialogOpen} onClose={() => setCategoryDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {selectedCategory ? 'Modifier la catégorie' : 'Créer une nouvelle catégorie'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Nom de la catégorie"
+              value={newCategory.name}
+              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+              fullWidth
+              required
+            />
+            
+            <TextField
+              label="Description"
+              value={newCategory.description}
+              onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+              fullWidth
+              multiline
+              rows={3}
+            />
+            
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                Sélectionner une icône pour la catégorie
+              </Typography>
+              <Box sx={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
+                <CategoryIconGrid 
+                  selectedIcon={newCategory.icon}
+                  onIconSelect={(iconType) => setNewCategory({ ...newCategory, icon: iconType })}
+                />
+              </Box>
+            </Box>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={newCategory.isActive}
+                  onChange={(e) => setNewCategory({ ...newCategory, isActive: e.target.checked })}
+                />
+              }
+              label="Catégorie active"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCategoryDialogOpen(false)}>
+            Annuler
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={selectedCategory ? handleUpdateCategory : handleCreateCategory}
+            disabled={!newCategory.name || loading}
+          >
+            {loading ? <CircularProgress size={20} /> : (selectedCategory ? 'Modifier' : 'Créer')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialogue pour créer/modifier un modèle */}
       <Dialog open={modelDialogOpen} onClose={() => setModelDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           {selectedModel ? 'Modifier le modèle' : 'Créer un nouveau modèle'}
         </DialogTitle>
         <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Nom du modèle *"
-                value={newModel.name}
-                onChange={(e) => setNewModel((prev: any) => ({ ...prev, name: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Marque *</InputLabel>
-                <Select
-                  value={newModel.brandId}
-                  label="Marque *"
-                  onChange={(e) => setNewModel((prev: any) => ({ ...prev, brandId: e.target.value }))}
-                  required
-                >
-                  {deviceBrands.map((brand) => (
-                    <MenuItem key={brand.id} value={brand.id}>
-                      {brand.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-                              <FormControl fullWidth>
-                <InputLabel>Catégorie *</InputLabel>
-                <Select
-                  value={newModel.categoryId}
-                  label="Catégorie *"
-                  onChange={(e) => setNewModel(prev => ({ ...prev, categoryId: e.target.value }))}
-                  required
-                >
-                  {allCategories.map((category) => (
-                    <MenuItem key={category.id} value={category.id}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Année"
-                type="number"
-                value={newModel.year}
-                onChange={(e) => setNewModel(prev => ({ ...prev, year: parseInt(e.target.value) }))}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Difficulté de réparation</InputLabel>
-                <Select
-                  value={newModel.repairDifficulty}
-                  onChange={(e) => setNewModel(prev => ({ ...prev, repairDifficulty: e.target.value as any }))}
-                  label="Difficulté de réparation"
-                >
-                  <MenuItem value="easy">Facile</MenuItem>
-                  <MenuItem value="medium">Moyenne</MenuItem>
-                  <MenuItem value="hard">Difficile</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Disponibilité des pièces</InputLabel>
-                <Select
-                  value={newModel.partsAvailability}
-                  onChange={(e) => setNewModel(prev => ({ ...prev, partsAvailability: e.target.value as any }))}
-                  label="Disponibilité des pièces"
-                >
-                  <MenuItem value="high">Élevée</MenuItem>
-                  <MenuItem value="medium">Moyenne</MenuItem>
-                  <MenuItem value="low">Faible</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>
-                Problèmes courants rencontrés
-              </Typography>
-              {newModel.commonIssues.map((issue, index) => (
-                <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                  <TextField
-                    fullWidth
-                    label={`Problème ${index + 1}`}
-                    value={issue}
-                    onChange={(e) => {
-                      const updatedIssues = [...newModel.commonIssues];
-                      updatedIssues[index] = e.target.value;
-                      setNewModel(prev => ({ ...prev, commonIssues: updatedIssues }));
-                    }}
-                  />
-                  <IconButton
-                    color="error"
-                    onClick={() => {
-                      const updatedIssues = newModel.commonIssues.filter((_, i) => i !== index);
-                      setNewModel(prev => ({ ...prev, commonIssues: updatedIssues }));
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              ))}
-              <Button
-                startIcon={<AddIcon />}
-                onClick={() => setNewModel(prev => ({ 
-                  ...prev, 
-                  commonIssues: [...prev.commonIssues, '']
-                }))}
-                sx={{ mt: 1 }}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Nom du modèle"
+              value={newModel.name}
+              onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
+              fullWidth
+              required
+            />
+            
+            <TextField
+              label="Description"
+              value={newModel.description}
+              onChange={(e) => setNewModel({ ...newModel, description: e.target.value })}
+              fullWidth
+              multiline
+              rows={3}
+            />
+            
+            <FormControl fullWidth required>
+              <InputLabel>Marque</InputLabel>
+              <Select
+                value={newModel.brandId}
+                onChange={(e) => setNewModel({ ...newModel, brandId: e.target.value })}
+                label="Marque"
               >
-                Ajouter un problème
-              </Button>
-            </Grid>
-          </Grid>
+                {(allBrands || []).map((brand) => (
+                  <MenuItem key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth required>
+              <InputLabel>Catégorie</InputLabel>
+              <Select
+                value={newModel.categoryId}
+                onChange={(e) => setNewModel({ ...newModel, categoryId: e.target.value })}
+                label="Catégorie"
+              >
+                {(allCategories || []).map((category) => (
+                  <MenuItem key={category.id} value={category.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {getCategoryIcon(category.name, category.icon)}
+                      <span>{category.name}</span>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <TextField
+              label="Spécifications (JSON)"
+              value={JSON.stringify(newModel.specifications, null, 2)}
+              onChange={(e) => {
+                try {
+                  const specs = JSON.parse(e.target.value);
+                  setNewModel({ ...newModel, specifications: specs });
+                } catch (error) {
+                  // Garder la valeur textuelle pour permettre l'édition
+                  console.warn('JSON invalide, garde la valeur textuelle');
+                }
+              }}
+              fullWidth
+              multiline
+              rows={4}
+              placeholder='{"processeur": "Intel i5", "mémoire": "8GB", "stockage": "256GB"}'
+              helperText="Format JSON pour les spécifications techniques"
+            />
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={newModel.isActive}
+                  onChange={(e) => setNewModel({ ...newModel, isActive: e.target.checked })}
+                />
+              }
+              label="Modèle actif"
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setModelDialogOpen(false)}>
@@ -1936,32 +1228,23 @@ const DeviceManagement: React.FC = () => {
           <Button 
             variant="contained" 
             onClick={selectedModel ? handleUpdateModel : handleCreateModel}
-            disabled={!newModel.name || !newModel.brandId || !newModel.categoryId}
+            disabled={!newModel.name || !newModel.brandId || !newModel.categoryId || loading}
           >
-            {selectedModel ? 'Modifier' : 'Créer'}
+            {loading ? <CircularProgress size={20} /> : (selectedModel ? 'Modifier' : 'Créer')}
           </Button>
         </DialogActions>
       </Dialog>
 
-
-
-      {/* Dialog de confirmation de suppression */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
+      {/* Dialogue de confirmation de suppression */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>
           Confirmer la suppression
         </DialogTitle>
         <DialogContent>
-          {itemToDelete && (
-            <Alert severity="warning">
-              Êtes-vous sûr de vouloir supprimer cet élément ?
-              Cette action est irréversible.
-            </Alert>
-          )}
+          <Typography>
+            Êtes-vous sûr de vouloir supprimer {deleteItem?.type === 'brand' ? 'cette marque' : deleteItem?.type === 'category' ? 'cette catégorie' : 'ce modèle'} ?
+            Cette action est irréversible.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>
@@ -1970,9 +1253,10 @@ const DeviceManagement: React.FC = () => {
           <Button 
             variant="contained" 
             color="error"
-            onClick={handleDelete}
+            onClick={confirmDelete}
+            disabled={loading}
           >
-            Supprimer
+            {loading ? <CircularProgress size={20} /> : 'Supprimer'}
           </Button>
         </DialogActions>
       </Dialog>

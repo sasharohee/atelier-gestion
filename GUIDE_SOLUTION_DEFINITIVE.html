@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 SOLUTION DÉFINITIVE - Erreur 500</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #e74c3c;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .urgent {
+            background: #ffebee;
+            border: 3px solid #f44336;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .step {
+            background: #f0f8ff;
+            border-left: 5px solid #2196F3;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background: #c82333;
+        }
+        .copy-btn {
+            background: #6c757d;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+        .copy-btn:hover {
+            background: #545b62;
+        }
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 SOLUTION DÉFINITIVE - Erreur 500</h1>
+        
+        <div class="urgent">
+            <h2>❌ PROBLÈME : Le Script SQL N'a Pas Été Appliqué</h2>
+            <p>L'erreur 500 persiste car le trigger problématique est toujours actif dans Supabase.</p>
+            <p><strong>Vous devez appliquer le script SQL MAINTENANT !</strong></p>
+        </div>
+
+        <div class="step">
+            <h3>⚡ SOLUTION DÉFINITIVE</h3>
+            <p><strong>1. Allez sur Supabase Dashboard :</strong></p>
+            <a href="https://supabase.com/dashboard" target="_blank" class="btn">🚀 Ouvrir Supabase</a>
+            
+            <p><strong>2. Ouvrez SQL Editor :</strong></p>
+            <ul>
+                <li>Cliquez sur <strong>"SQL Editor"</strong> dans le menu de gauche</li>
+                <li>Cliquez sur <strong>"New query"</strong></li>
+            </ul>
+            
+            <p><strong>3. Copiez et collez ce script DÉFINITIF :</strong></p>
+            <div class="code" id="definitive-script">
+-- SOLUTION DÉFINITIVE POUR L'ERREUR 500
+-- Copiez et collez ceci dans Supabase SQL Editor
+
+-- 1. Supprimer complètement le trigger problématique
+DROP TRIGGER IF EXISTS handle_new_user ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- 2. Vérifier que le trigger est supprimé
+SELECT 'Trigger supprimé avec succès' as status;
+
+-- 3. Vérifier les triggers restants
+SELECT 
+    trigger_name,
+    event_manipulation,
+    action_timing
+FROM information_schema.triggers 
+WHERE event_object_table = 'users' 
+  AND event_object_schema = 'auth';
+
+-- 4. Message de confirmation
+SELECT 'L inscription devrait maintenant fonctionner sans erreur 500' as status;
+            </div>
+            
+            <button class="btn copy-btn" onclick="copyDefinitiveScript()">📋 COPIER LE SCRIPT DÉFINITIF</button>
+        </div>
+
+        <div class="step">
+            <h3>▶️ ÉTAPE 4 : Exécuter</h3>
+            <p><strong>1. Collez le script dans l'éditeur SQL</strong></p>
+            <p><strong>2. Cliquez sur "Run"</strong></p>
+            <p><strong>3. Vous devriez voir "L'inscription devrait maintenant fonctionner sans erreur 500"</strong></p>
+        </div>
+
+        <div class="step">
+            <h3>🧪 ÉTAPE 5 : Tester Immédiatement</h3>
+            <p><strong>1. Retournez sur votre application</strong></p>
+            <p><strong>2. Essayez de créer un nouveau compte</strong></p>
+            <p><strong>3. L'erreur 500 devrait être complètement résolue</strong></p>
+        </div>
+
+        <div class="success">
+            <strong>✅ RÉSULTAT ATTENDU :</strong>
+            <ul>
+                <li>✅ Erreur 500 résolue</li>
+                <li>✅ Inscription fonctionne</li>
+                <li>✅ Utilisateurs créés dans Supabase</li>
+                <li>✅ Emails de confirmation envoyés</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn" onclick="markAsFixed()">✅ J'AI APPLIQUÉ LE SCRIPT</button>
+        </div>
+    </div>
+
+    <script>
+        function copyDefinitiveScript() {
+            const script = document.getElementById('definitive-script').textContent;
+            navigator.clipboard.writeText(script).then(() => {
+                alert('✅ Script définitif copié ! Maintenant collez-le dans Supabase SQL Editor et cliquez sur "Run".');
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = script;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('✅ Script définitif copié ! Maintenant collez-le dans Supabase SQL Editor et cliquez sur "Run".');
+            });
+        }
+
+        function markAsFixed() {
+            alert('🎉 Parfait ! Maintenant testez l\'inscription dans votre application. L\'erreur 500 devrait être complètement résolue !');
+        }
+    </script>
+</body>
+</html>

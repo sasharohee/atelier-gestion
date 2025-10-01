@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Chargement des Données</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .data-display {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Test de Chargement des Données</h1>
+        
+        <div class="info">
+            <strong>Objectif :</strong> Vérifier que les catégories, marques et modèles se chargent correctement.
+        </div>
+
+        <div id="status-container">
+            <div class="status info">
+                <strong>En attente...</strong> Cliquez sur "Tester le Chargement des Données" pour commencer.
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="testDataLoading()">🧪 Tester le Chargement des Données</button>
+            <button onclick="clearResults()">🗑️ Effacer les Résultats</button>
+        </div>
+
+        <div id="test-results"></div>
+
+        <div class="section">
+            <h3>📊 Résultats des Tests</h3>
+            <div id="data-display"></div>
+        </div>
+    </div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const resultsContainer = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong> - ${message}`;
+            resultsContainer.appendChild(resultDiv);
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        }
+
+        function updateStatus(message, type = 'info') {
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = `<div class="status ${type}"><strong>${message}</strong></div>`;
+        }
+
+        function displayData(data) {
+            const dataContainer = document.getElementById('data-display');
+            dataContainer.textContent = JSON.stringify(data, null, 2);
+        }
+
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = '';
+            document.getElementById('data-display').textContent = '';
+            updateStatus('Résultats effacés. Prêt pour un nouveau test.', 'info');
+        }
+
+        async function testDataLoading() {
+            updateStatus('🧪 Test en cours...', 'info');
+            addResult('Début du test de chargement des données', 'info');
+
+            const testResults = {
+                categories: { success: false, data: [], error: null },
+                brands: { success: false, data: [], error: null },
+                models: { success: false, data: [], error: null }
+            };
+
+            try {
+                // Test 1: Vérifier les catégories
+                addResult('Test 1: Vérification des catégories d\'appareils...', 'info');
+                try {
+                    const categoriesResponse = await fetch('http://localhost:3000/api/test-categories');
+                    if (categoriesResponse.ok) {
+                        const categoriesData = await categoriesResponse.json();
+                        testResults.categories = { success: true, data: categoriesData, error: null };
+                        addResult(`✅ ${categoriesData.length} catégories trouvées`, 'success');
+                    } else {
+                        addResult('⚠️ API des catégories non disponible, test direct...', 'warning');
+                        testResults.categories = { success: false, data: [], error: 'API non disponible' };
+                    }
+                } catch (error) {
+                    addResult('⚠️ Test direct des catégories...', 'warning');
+                    testResults.categories = { success: false, data: [], error: error.message };
+                }
+
+                // Test 2: Vérifier les marques
+                addResult('Test 2: Vérification des marques...', 'info');
+                try {
+                    const brandsResponse = await fetch('http://localhost:3000/api/test-brands');
+                    if (brandsResponse.ok) {
+                        const brandsData = await brandsResponse.json();
+                        testResults.brands = { success: true, data: brandsData, error: null };
+                        addResult(`✅ ${brandsData.length} marques trouvées`, 'success');
+                    } else {
+                        addResult('⚠️ API des marques non disponible, test direct...', 'warning');
+                        testResults.brands = { success: false, data: [], error: 'API non disponible' };
+                    }
+                } catch (error) {
+                    addResult('⚠️ Test direct des marques...', 'warning');
+                    testResults.brands = { success: false, data: [], error: error.message };
+                }
+
+                // Test 3: Vérifier les modèles
+                addResult('Test 3: Vérification des modèles...', 'info');
+                try {
+                    const modelsResponse = await fetch('http://localhost:3000/api/test-models');
+                    if (modelsResponse.ok) {
+                        const modelsData = await modelsResponse.json();
+                        testResults.models = { success: true, data: modelsData, error: null };
+                        addResult(`✅ ${modelsData.length} modèles trouvés`, 'success');
+                    } else {
+                        addResult('⚠️ API des modèles non disponible, test direct...', 'warning');
+                        testResults.models = { success: false, data: [], error: 'API non disponible' };
+                    }
+                } catch (error) {
+                    addResult('⚠️ Test direct des modèles...', 'warning');
+                    testResults.models = { success: false, data: [], error: error.message };
+                }
+
+                // Afficher les résultats
+                displayData(testResults);
+
+                // Résumé
+                const totalSuccess = Object.values(testResults).filter(r => r.success).length;
+                if (totalSuccess === 3) {
+                    updateStatus('✅ Tous les tests sont passés avec succès !', 'success');
+                    addResult('🎉 Toutes les données se chargent correctement !', 'success');
+                } else if (totalSuccess > 0) {
+                    updateStatus(`⚠️ ${totalSuccess}/3 tests réussis`, 'warning');
+                    addResult(`⚠️ Seulement ${totalSuccess}/3 types de données se chargent correctement`, 'warning');
+                } else {
+                    updateStatus('❌ Aucun test réussi', 'error');
+                    addResult('❌ Aucune donnée ne se charge correctement', 'error');
+                }
+
+                addResult('💡 Ouvrez la console du navigateur pour voir les détails des erreurs', 'info');
+
+            } catch (error) {
+                updateStatus('❌ Erreur lors du test', 'error');
+                addResult(`❌ Erreur: ${error.message}`, 'error');
+                displayData({ error: error.message });
+            }
+        }
+
+        // Test automatique au chargement de la page
+        window.addEventListener('load', () => {
+            addResult('📄 Page de test chargée', 'info');
+            addResult('💡 Cliquez sur "Tester le Chargement des Données" pour commencer', 'info');
+        });
+    </script>
+</body>
+</html>

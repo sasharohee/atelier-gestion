@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nettoyage du Cache - Atelier Gestion</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .step {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 5px solid #4CAF50;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        .credentials {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .credential-item {
+            margin: 10px 0;
+            font-size: 1.2em;
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .warning {
+            background: rgba(255, 193, 7, 0.2);
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .success {
+            background: rgba(40, 167, 69, 0.2);
+            border: 2px solid #28a745;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Nettoyage du Cache - Atelier Gestion</h1>
+        
+        <div class="warning">
+            <h3>⚠️ Important</h3>
+            <p>Suivez ces étapes dans l'ordre pour résoudre les problèmes de connexion Supabase.</p>
+        </div>
+
+        <div class="step">
+            <h3>Étape 1 : Ouvrir les outils de développement</h3>
+            <p>Appuyez sur <strong>F12</strong> ou <strong>Cmd+Option+I</strong> (Mac) pour ouvrir les outils de développement.</p>
+        </div>
+
+        <div class="step">
+            <h3>Étape 2 : Aller dans l'onglet Application</h3>
+            <p>Cliquez sur l'onglet <strong>"Application"</strong> (Chrome) ou <strong>"Storage"</strong> (Firefox).</p>
+        </div>
+
+        <div class="step">
+            <h3>Étape 3 : Nettoyer le localStorage</h3>
+            <p>Dans le panneau de gauche, trouvez <strong>"Local Storage"</strong> et supprimez toutes les entrées liées à votre application.</p>
+        </div>
+
+        <div class="step">
+            <h3>Étape 4 : Nettoyer le sessionStorage</h3>
+            <p>De même, supprimez toutes les entrées de <strong>"Session Storage"</strong>.</p>
+        </div>
+
+        <div class="step">
+            <h3>Étape 5 : Recharger la page</h3>
+            <p>Appuyez sur <strong>Ctrl+F5</strong> (Windows) ou <strong>Cmd+Shift+R</strong> (Mac) pour recharger la page en ignorant le cache.</p>
+        </div>
+
+        <div class="credentials">
+            <h3>🔑 Identifiants de connexion</h3>
+            <div class="credential-item">
+                <strong>📧 Email :</strong> sasharohee@icloud.com
+            </div>
+            <div class="credential-item">
+                <strong>🔑 Mot de passe :</strong> password123
+            </div>
+        </div>
+
+        <div class="success">
+            <h3>✅ Après le nettoyage</h3>
+            <p>Une fois le cache nettoyé, vous devriez pouvoir vous connecter sans erreur avec les identifiants ci-dessus.</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="button" onclick="window.open('http://localhost:3000', '_blank')">
+                🚀 Ouvrir l'application
+            </button>
+            <button class="button" onclick="window.open('http://127.0.0.1:54323', '_blank')">
+                🗄️ Supabase Studio
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Fonction pour nettoyer automatiquement le localStorage (si possible)
+        function clearLocalStorage() {
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                alert('✅ Cache nettoyé avec succès !');
+            } catch (error) {
+                alert('⚠️ Impossible de nettoyer automatiquement. Suivez les étapes manuelles ci-dessus.');
+            }
+        }
+
+        // Ajouter un bouton de nettoyage automatique
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.querySelector('.container');
+            const autoClearButton = document.createElement('button');
+            autoClearButton.className = 'button';
+            autoClearButton.textContent = '🧹 Nettoyer automatiquement';
+            autoClearButton.onclick = clearLocalStorage;
+            autoClearButton.style.marginTop = '20px';
+            container.appendChild(autoClearButton);
+        });
+    </script>
+</body>
+</html>

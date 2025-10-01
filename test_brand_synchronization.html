@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Synchronisation des Marques</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196f3; }
+        .step {
+            margin: 10px 0;
+            padding: 15px;
+            border-left: 4px solid #2196f3;
+            background-color: #f8f9fa;
+        }
+        .code {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+        }
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+        .alert {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Test - Synchronisation des Marques</h1>
+        
+        <div class="alert">
+            <strong>🎯 Objectif :</strong> S'assurer que les marques utilisées dans les réparations correspondent exactement à celles de "Gestion des Appareils".
+        </div>
+
+        <div class="step">
+            <h3>🚨 Problème Identifié</h3>
+            <p>Les marques dans les réparations ne correspondaient pas à celles de "Gestion des Appareils" car :</p>
+            <ul>
+                <li class="error">❌ <strong>Sources différentes</strong> : Réparations utilisaient des marques hardcodées du store</li>
+                <li class="error">❌ <strong>Pas d'isolation</strong> : Les réparations voyaient toutes les marques</li>
+                <li class="error">❌ <strong>Désynchronisation</strong> : Ajout d'une marque dans "Gestion des Appareils" ne l'affichait pas dans les réparations</li>
+                <li class="error">❌ <strong>Incohérence</strong> : Deux systèmes de gestion des marques séparés</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>✅ Corrections Appliquées</h3>
+            <p>J'ai corrigé le problème en :</p>
+            <ul>
+                <li class="success">✅ <strong>Modifié Kanban</strong> : Utilise maintenant `brandService.getAll()` au lieu des marques hardcodées</li>
+                <li class="success">✅ <strong>Ajouté le chargement</strong> : `useEffect` pour charger les marques depuis la base de données</li>
+                <li class="success">✅ <strong>Mis à jour getUniqueBrands</strong> : Utilise `dbBrands` au lieu de `deviceBrands` du store</li>
+                <li class="success">✅ <strong>Filtré par catégorie</strong> : Les marques sont filtrées selon les catégories associées</li>
+                <li class="success">✅ <strong>Isolation des données</strong> : Chaque utilisateur ne voit que ses propres marques</li>
+                <li class="success">✅ <strong>Script de synchronisation</strong> : Synchronise les marques hardcodées vers la base de données</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>📋 Étapes de Synchronisation</h3>
+            <p><strong>Exécutez ces scripts SQL dans l'ordre :</strong></p>
+            
+            <h4>1. Correction de l'isolation (si pas encore fait)</h4>
+            <div class="code">
+                fix_brand_isolation_complete.sql
+            </div>
+            
+            <h4>2. Synchronisation des marques</h4>
+            <div class="code">
+                sync_hardcoded_brands_to_database.sql
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🧪 Test de la Synchronisation</h3>
+            <p>Après avoir exécuté les scripts SQL :</p>
+            <ol>
+                <li><strong>Connectez-vous</strong> avec un utilisateur</li>
+                <li><strong>Allez dans</strong> Gestion des Appareils > Marques</li>
+                <li><strong>Vérifiez</strong> que vous voyez les marques (Apple, Samsung, etc.)</li>
+                <li><strong>Créez une nouvelle marque</strong> :
+                    <ul>
+                        <li>Nom : "Test Brand Sync"</li>
+                        <li>Description : "Test de synchronisation"</li>
+                        <li>Catégories : Sélectionnez une catégorie</li>
+                    </ul>
+                </li>
+                <li><strong>Allez dans</strong> Kanban > Nouvelle réparation</li>
+                <li><strong>Cliquez sur</strong> "Créer un nouvel appareil"</li>
+                <li><strong>Sélectionnez</strong> la catégorie correspondante</li>
+                <li><strong>Vérifiez</strong> que la marque "Test Brand Sync" apparaît dans la liste des marques</li>
+                <li><strong>Testez</strong> avec d'autres marques existantes</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🔍 Vérifications Spécifiques</h3>
+            <ul>
+                <li class="success">✅ <strong>Marques identiques</strong> : Les marques dans les réparations = marques dans "Gestion des Appareils"</li>
+                <li class="success">✅ <strong>Filtrage par catégorie</strong> : Sélectionner une catégorie filtre les marques correspondantes</li>
+                <li class="success">✅ <strong>Isolation par utilisateur</strong> : Chaque utilisateur ne voit que ses marques</li>
+                <li class="success">✅ <strong>Synchronisation temps réel</strong> : Ajouter une marque la rend immédiatement disponible dans les réparations</li>
+                <li class="success">✅ <strong>Marques hardcodées</strong> : Apple, Samsung, etc. sont disponibles pour tous les utilisateurs</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🚨 Si le Problème Persiste</h3>
+            <p>Si les marques ne correspondent toujours pas :</p>
+            <ol>
+                <li><strong>Vérifiez la console</strong> pour les erreurs JavaScript</li>
+                <li><strong>Vérifiez que le script SQL</strong> a été exécuté sans erreur</li>
+                <li><strong>Rechargez l'application</strong> (Ctrl+F5)</li>
+                <li><strong>Vérifiez l'isolation</strong> : Connectez-vous avec un autre utilisateur</li>
+                <li><strong>Vérifiez la base</strong> : <code>SELECT * FROM device_brands ORDER BY name;</code></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🎉 Résultat Attendu</h3>
+            <p>Après la correction, vous devriez voir :</p>
+            <ul class="success">
+                <li>✅ Les marques dans les réparations correspondent exactement à celles de "Gestion des Appareils"</li>
+                <li>✅ Ajouter une marque dans "Gestion des Appareils" la rend disponible dans les réparations</li>
+                <li>✅ Le filtrage par catégorie fonctionne dans les deux sections</li>
+                <li>✅ L'isolation par utilisateur est respectée</li>
+                <li>✅ Toutes les marques hardcodées sont disponibles</li>
+                <li>✅ Aucune incohérence entre les deux systèmes</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>📊 Comparaison Avant/Après</h3>
+            <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
+                <tr style="background-color: #f5f5f5;">
+                    <th style="border: 1px solid #ddd; padding: 8px;">Aspect</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; color: #f44336;">Avant</th>
+                    <th style="border: 1px solid #ddd; padding: 8px; color: #4caf50;">Après</th>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>Source des marques</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Store hardcodé</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Base de données</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>Isolation</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Aucune</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Par utilisateur</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>Synchronisation</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Manuelle</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Automatique</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px;"><strong>Cohérence</strong></td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Incohérente</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">Parfaite</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.open('http://localhost:3000/app/kanban', '_blank')">
+                🚀 Tester la Synchronisation des Marques
+            </button>
+        </div>
+    </div>
+</body>
+</html>

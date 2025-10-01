@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 URGENT: Fix Auth Error 500</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #e74c3c;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .urgent {
+            background: #ffebee;
+            border: 2px solid #f44336;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 5px solid #007bff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #007bff;
+            font-size: 1.3em;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border: 1px solid #4a5568;
+        }
+        .btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px;
+            transition: all 0.3s;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-copy {
+            background: #6c757d;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+        .btn-copy:hover {
+            background: #545b62;
+        }
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 URGENT: Fix Auth Error 500</h1>
+        
+        <div class="urgent">
+            <h2>❌ ERREUR CRITIQUE DÉTECTÉE</h2>
+            <p><strong>POST https://olrihggkxyksuofkesnk.supabase.co/auth/v1/signup 500 (Internal Server Error)</strong></p>
+            <p><strong>Database error saving new user</strong></p>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ ATTENTION:</strong> Cette erreur empêche complètement l'inscription des utilisateurs. 
+            Vous devez appliquer cette correction IMMÉDIATEMENT.
+        </div>
+
+        <div class="step">
+            <h3>🔗 ÉTAPE 1: Ouvrir Supabase Dashboard</h3>
+            <p>Cliquez sur ce lien pour accéder à votre dashboard Supabase :</p>
+            <a href="https://supabase.com/dashboard" target="_blank" class="btn">🚀 Ouvrir Supabase Dashboard</a>
+            <p><small>Assurez-vous d'être connecté avec le bon compte et de sélectionner le projet <strong>olrihggkxyksuofkesnk</strong></small></p>
+        </div>
+
+        <div class="step">
+            <h3>📝 ÉTAPE 2: Ouvrir l'Éditeur SQL</h3>
+            <p>1. Dans le dashboard Supabase, cliquez sur <strong>"SQL Editor"</strong> dans le menu de gauche</p>
+            <p>2. Cliquez sur <strong>"New query"</strong> pour créer une nouvelle requête</p>
+        </div>
+
+        <div class="step">
+            <h3>⚡ ÉTAPE 3: Copier et Coller le Script de Correction</h3>
+            <p><strong>Copiez TOUT le script ci-dessous et collez-le dans l'éditeur SQL :</strong></p>
+            
+            <div class="code-block" id="fix-script">
+-- URGENT FIX: Disable problematic auth trigger
+-- Copy and paste this entire script into your Supabase SQL Editor
+
+-- Step 1: Remove the problematic trigger
+DROP TRIGGER IF EXISTS handle_new_user ON auth.users;
+
+-- Step 2: Remove the problematic function
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- Step 3: Verify removal
+SELECT 'Trigger removed successfully' as status;
+
+-- Step 4: Check remaining triggers
+SELECT 
+    trigger_name,
+    event_manipulation,
+    action_timing
+FROM information_schema.triggers 
+WHERE event_object_table = 'users' 
+  AND event_object_schema = 'auth';
+
+-- Step 5: Confirmation
+SELECT 'Auth should now work without 500 error' as status;
+            </div>
+            
+            <button class="btn btn-copy" onclick="copyScript()">📋 COPIER LE SCRIPT COMPLET</button>
+        </div>
+
+        <div class="step">
+            <h3>▶️ ÉTAPE 4: Exécuter le Script</h3>
+            <p>1. Collez le script dans l'éditeur SQL de Supabase</p>
+            <p>2. Cliquez sur le bouton <strong>"Run"</strong> (ou Ctrl+Enter)</p>
+            <p>3. Attendez 5-10 secondes que le script s'exécute</p>
+            <p>4. Vous devriez voir des messages de succès</p>
+        </div>
+
+        <div class="step">
+            <h3>🧪 ÉTAPE 5: Tester Immédiatement</h3>
+            <p>1. Retournez sur votre application</p>
+            <p>2. Essayez de créer un nouveau compte</p>
+            <p>3. L'erreur 500 devrait être complètement résolue</p>
+            
+            <div class="success" id="success-message" style="display: none;">
+                ✅ <strong>SUCCÈS !</strong> Le script a été appliqué. L'inscription devrait maintenant fonctionner !
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <button class="btn btn-success" onclick="markAsFixed()">✅ J'AI APPLIQUÉ LE SCRIPT</button>
+        </div>
+
+        <div class="warning" style="margin-top: 30px;">
+            <strong>💡 CONSEIL:</strong> Si vous ne voyez pas le bouton "SQL Editor" dans Supabase, 
+            assurez-vous d'être dans le bon projet et que vous avez les permissions d'administrateur.
+        </div>
+    </div>
+
+    <script>
+        function copyScript() {
+            const script = document.getElementById('fix-script').textContent;
+            navigator.clipboard.writeText(script).then(() => {
+                alert('✅ Script copié ! Maintenant collez-le dans Supabase SQL Editor.');
+            }).catch(() => {
+                // Fallback pour navigateurs plus anciens
+                const textArea = document.createElement('textarea');
+                textArea.value = script;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('✅ Script copié ! Maintenant collez-le dans Supabase SQL Editor.');
+            });
+        }
+
+        function markAsFixed() {
+            document.getElementById('success-message').style.display = 'block';
+            setTimeout(() => {
+                alert('🎉 PARFAIT ! Maintenant testez l\'inscription dans votre application. L\'erreur 500 devrait être résolue !');
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

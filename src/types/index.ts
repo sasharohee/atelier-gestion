@@ -414,3 +414,40 @@ export interface QuoteItem {
   unitPrice: number;
   totalPrice: number;
 }
+
+// Types pour les dépenses
+export interface Expense {
+  id: string;
+  title: string;
+  description?: string;
+  amount: number;
+  category: ExpenseCategory;
+  supplier?: string;
+  invoiceNumber?: string;
+  paymentMethod: 'cash' | 'card' | 'transfer' | 'check';
+  status: 'pending' | 'paid' | 'cancelled';
+  expenseDate: Date;
+  dueDate?: Date;
+  receiptPath?: string;
+  tags?: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ExpenseStats {
+  total: number;
+  byCategory: Record<string, number>;
+  monthly: number;
+  pending: number;
+  paid: number;
+}

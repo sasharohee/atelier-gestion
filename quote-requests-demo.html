@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Demandes de Devis - Atelier Gestion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .tabs {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+        
+        .tab-button.active {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .tab-button:hover {
+            background: #f8f9fa;
+        }
+        
+        .tab-content {
+            padding: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-card h3 {
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .stat-card.secondary {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+        }
+        
+        .stat-card.warning {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        }
+        
+        .stat-card.danger {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+        
+        .requests-table {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .table-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .table-header h3 {
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table th,
+        .table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-in-review {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .status-quoted {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .urgency-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .urgency-low {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .urgency-medium {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        
+        .urgency-high {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .urls-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .url-card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .url-info h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .url-info p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .url-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+        
+        .add-url-form {
+            background: #f8f9fa;
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .table {
+                font-size: 14px;
+            }
+            
+            .table th,
+            .table td {
+                padding: 10px 8px;
+            }
+            
+            .url-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .url-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📋 Gestion des Demandes de Devis</h1>
+            <p>Gérez vos demandes de devis et vos URLs personnalisées</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="showTab(0)">📊 Tableau de Bord</button>
+                <button class="tab-button" onclick="showTab(1)">📝 Demandes de Devis</button>
+                <button class="tab-button" onclick="showTab(2)">🔗 URLs Personnalisées</button>
+            </div>
+
+            <!-- Tab 0: Tableau de Bord -->
+            <div class="tab-content" id="tab-0">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>3</h3>
+                        <p>Total des demandes</p>
+                    </div>
+                    <div class="stat-card secondary">
+                        <h3>1</h3>
+                        <p>En attente</p>
+                    </div>
+                    <div class="stat-card warning">
+                        <h3>1</h3>
+                        <p>En cours d'étude</p>
+                    </div>
+                    <div class="stat-card danger">
+                        <h3>1</h3>
+                        <p>Devis envoyés</p>
+                    </div>
+                </div>
+
+                <div class="requests-table">
+                    <div class="table-header">
+                        <h3>📈 Aperçu des Demandes Récentes</h3>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Appareil</th>
+                                <th>Urgence</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Marie Martin</td>
+                                <td>iPhone 14</td>
+                                <td><span class="urgency-badge urgency-high">Élevée</span></td>
+                                <td><span class="status-badge status-pending">En attente</span></td>
+                                <td>01/12/2024</td>
+                            </tr>
+                            <tr>
+                                <td>Pierre Durand</td>
+                                <td>Galaxy S23</td>
+                                <td><span class="urgency-badge urgency-medium">Moyenne</span></td>
+                                <td><span class="status-badge status-in-review">En cours d'étude</span></td>
+                                <td>01/12/2024</td>
+                            </tr>
+                            <tr>
+                                <td>Sophie Bernard</td>
+                                <td>Dell XPS 13</td>
+                                <td><span class="urgency-badge urgency-low">Faible</span></td>
+                                <td><span class="status-badge status-quoted">Devis envoyé</span></td>
+                                <td>30/11/2024</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 1: Demandes de Devis -->
+            <div class="tab-content" id="tab-1" style="display: none;">
+                <div class="requests-table">
+                    <div class="table-header">
+                        <h3>📝 Toutes les Demandes de Devis</h3>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>N° Demande</th>
+                                <th>Client</th>
+                                <th>Contact</th>
+                                <th>Appareil</th>
+                                <th>Problème</th>
+                                <th>Urgence</th>
+                                <th>Statut</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>QR-20241201-0001</td>
+                                <td>Marie Martin</td>
+                                <td>marie.martin@email.com<br>06 12 34 56 78</td>
+                                <td>iPhone 14<br>Apple</td>
+                                <td>Écran fissuré</td>
+                                <td><span class="urgency-badge urgency-high">Élevée</span></td>
+                                <td><span class="status-badge status-pending">En attente</span></td>
+                                <td>01/12/2024 10:30</td>
+                                <td>
+                                    <button class="btn btn-primary" onclick="viewRequest('1')">Voir</button>
+                                    <button class="btn btn-success" onclick="respondRequest('1')">Répondre</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>QR-20241201-0002</td>
+                                <td>Pierre Durand</td>
+                                <td>pierre.durand@email.com<br>06 98 76 54 32</td>
+                                <td>Galaxy S23<br>Samsung</td>
+                                <td>Problème de batterie</td>
+                                <td><span class="urgency-badge urgency-medium">Moyenne</span></td>
+                                <td><span class="status-badge status-in-review">En cours d'étude</span></td>
+                                <td>01/12/2024 14:15</td>
+                                <td>
+                                    <button class="btn btn-primary" onclick="viewRequest('2')">Voir</button>
+                                    <button class="btn btn-warning" onclick="updateRequest('2')">Modifier</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>QR-20241201-0003</td>
+                                <td>Sophie Bernard</td>
+                                <td>sophie.bernard@email.com<br>06 55 44 33 22</td>
+                                <td>XPS 13<br>Dell</td>
+                                <td>Ne démarre plus</td>
+                                <td><span class="urgency-badge urgency-low">Faible</span></td>
+                                <td><span class="status-badge status-quoted">Devis envoyé</span></td>
+                                <td>30/11/2024 16:45</td>
+                                <td>
+                                    <button class="btn btn-primary" onclick="viewRequest('3')">Voir</button>
+                                    <button class="btn btn-secondary" onclick="trackRequest('3')">Suivre</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: URLs Personnalisées -->
+            <div class="tab-content" id="tab-2" style="display: none;">
+                <div class="urls-section">
+                    <h3>🔗 Vos URLs Personnalisées</h3>
+                    <p style="color: #666; margin-bottom: 20px;">
+                        Gérez vos URLs personnalisées pour recevoir des demandes de devis directement.
+                    </p>
+
+                    <!-- URLs existantes -->
+                    <div class="url-card">
+                        <div class="url-info">
+                            <h4>repphone</h4>
+                            <p>http://localhost:3002/quote/repphone • Actif • Créé le 01/11/2024</p>
+                        </div>
+                        <div class="url-actions">
+                            <button class="btn btn-primary" onclick="copyUrl('repphone')">Copier</button>
+                            <button class="btn btn-warning" onclick="editUrl('1')">Modifier</button>
+                            <button class="btn btn-secondary" onclick="toggleUrl('1')">Désactiver</button>
+                        </div>
+                    </div>
+
+                    <div class="url-card">
+                        <div class="url-info">
+                            <h4>atelier-express</h4>
+                            <p>http://localhost:3002/quote/atelier-express • Actif • Créé le 15/11/2024</p>
+                        </div>
+                        <div class="url-actions">
+                            <button class="btn btn-primary" onclick="copyUrl('atelier-express')">Copier</button>
+                            <button class="btn btn-warning" onclick="editUrl('2')">Modifier</button>
+                            <button class="btn btn-secondary" onclick="toggleUrl('2')">Désactiver</button>
+                        </div>
+                    </div>
+
+                    <div class="url-card">
+                        <div class="url-info">
+                            <h4>reparation-rapide</h4>
+                            <p>http://localhost:3002/quote/reparation-rapide • Inactif • Créé le 20/11/2024</p>
+                        </div>
+                        <div class="url-actions">
+                            <button class="btn btn-primary" onclick="copyUrl('reparation-rapide')">Copier</button>
+                            <button class="btn btn-warning" onclick="editUrl('3')">Modifier</button>
+                            <button class="btn btn-success" onclick="toggleUrl('3')">Activer</button>
+                            <button class="btn btn-danger" onclick="deleteUrl('3')">Supprimer</button>
+                        </div>
+                    </div>
+
+                    <!-- Formulaire d'ajout -->
+                    <div class="add-url-form">
+                        <h4>➕ Ajouter une nouvelle URL</h4>
+                        <div class="form-group">
+                            <label for="newUrl">URL personnalisée :</label>
+                            <input type="text" id="newUrl" placeholder="ex: mon-atelier" />
+                        </div>
+                        <button class="btn btn-primary" onclick="addUrl()">Créer l'URL</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gestion des onglets
+        function showTab(index) {
+            // Masquer tous les contenus d'onglets
+            for (let i = 0; i < 3; i++) {
+                document.getElementById(`tab-${i}`).style.display = 'none';
+                document.querySelectorAll('.tab-button')[i].classList.remove('active');
+            }
+            
+            // Afficher l'onglet sélectionné
+            document.getElementById(`tab-${index}`).style.display = 'block';
+            document.querySelectorAll('.tab-button')[index].classList.add('active');
+        }
+
+        // Actions pour les demandes
+        function viewRequest(id) {
+            alert(`Voir la demande ${id}`);
+        }
+
+        function respondRequest(id) {
+            alert(`Répondre à la demande ${id}`);
+        }
+
+        function updateRequest(id) {
+            alert(`Modifier la demande ${id}`);
+        }
+
+        function trackRequest(id) {
+            alert(`Suivre la demande ${id}`);
+        }
+
+        // Actions pour les URLs
+        function copyUrl(url) {
+            const fullUrl = `http://localhost:3002/quote/${url}`;
+            navigator.clipboard.writeText(fullUrl).then(() => {
+                alert(`URL copiée : ${fullUrl}`);
+            });
+        }
+
+        function editUrl(id) {
+            const newUrl = prompt('Nouvelle URL personnalisée :');
+            if (newUrl) {
+                alert(`URL ${id} modifiée en : ${newUrl}`);
+            }
+        }
+
+        function toggleUrl(id) {
+            alert(`Statut de l'URL ${id} modifié`);
+        }
+
+        function deleteUrl(id) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette URL ?')) {
+                alert(`URL ${id} supprimée`);
+            }
+        }
+
+        function addUrl() {
+            const newUrl = document.getElementById('newUrl').value;
+            if (newUrl) {
+                alert(`Nouvelle URL créée : ${newUrl}`);
+                document.getElementById('newUrl').value = '';
+            } else {
+                alert('Veuillez saisir une URL');
+            }
+        }
+
+        // Simulation du chargement initial
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page de gestion des demandes de devis chargée');
+        });
+    </script>
+</body>
+</html>
+

@@ -20,7 +20,10 @@ import {
   StockAlert,
   Notification,
   DashboardStats,
-  RepairFilters
+  RepairFilters,
+  Expense,
+  ExpenseCategory,
+  ExpenseStats
 } from '../types';
 import { DeviceCategory, DeviceBrand, DeviceModel } from '../types/deviceManagement';
 import {
@@ -36,7 +39,9 @@ import {
   serviceService,
   saleService,
   appointmentService,
-  dashboardService
+  dashboardService,
+  expenseService,
+  expenseCategoryService
 } from '../services/supabaseService';
 
 // Helper function to convert Supabase user to app user
@@ -73,6 +78,9 @@ interface AppState {
   quotes: Quote[];
   stockAlerts: StockAlert[];
   notifications: Notification[];
+  expenses: Expense[];
+  expenseCategories: ExpenseCategory[];
+  expenseStats: ExpenseStats | null;
   
   // Données de gestion des appareils (centralisées)
   deviceCategories: DeviceCategory[];
@@ -186,6 +194,16 @@ interface AppActions {
   updateQuote: (id: string, updates: Partial<Quote>) => Promise<void>;
   deleteQuote: (id: string) => Promise<void>;
   
+  // Gestion des dépenses
+  addExpense: (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
+  
+  // Gestion des catégories de dépenses
+  addExpenseCategory: (category: Omit<ExpenseCategory, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateExpenseCategory: (id: string, updates: Partial<ExpenseCategory>) => Promise<void>;
+  deleteExpenseCategory: (id: string) => Promise<void>;
+  
   // Gestion des alertes de stock
   addStockAlert: (alert: Omit<StockAlert, 'id' | 'createdAt'>) => Promise<void>;
   updateStockAlert: (id: string, updates: Partial<StockAlert>) => Promise<void>;
@@ -204,6 +222,9 @@ interface AppActions {
   loadSales: () => Promise<void>;
   loadAppointments: () => Promise<void>;
   loadStockAlerts: () => Promise<void>;
+  loadExpenses: () => Promise<void>;
+  loadExpenseCategories: () => Promise<void>;
+  loadExpenseStats: () => Promise<void>;
   
   // Filtres et recherche
   setRepairFilters: (filters: RepairFilters) => void;
@@ -235,6 +256,8 @@ interface AppActions {
   getUnreadMessagesCount: () => number;
   getUnreadNotificationsCount: () => number;
   getActiveStockAlerts: () => StockAlert[];
+  getExpenseById: (id: string) => Expense | undefined;
+  getExpenseCategoryById: (id: string) => ExpenseCategory | undefined;
 }
 
 type AppStore = AppState & AppActions;
@@ -377,6 +400,9 @@ export const useAppStore = create<AppStore>()(
     quotes: [],
     stockAlerts: [],
     notifications: [],
+    expenses: [],
+    expenseCategories: [],
+    expenseStats: null,
       
       repairFilters: {},
       searchQuery: '',
@@ -1508,6 +1534,92 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
+      // Gestion des dépenses
+      addExpense: async (expense) => {
+        try {
+          const result = await expenseService.create(expense);
+          if (result.success && 'data' in result && result.data) {
+            set((state) => ({ expenses: [result.data, ...state.expenses] }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de l\'ajout de la dépense:', error);
+          throw error;
+        }
+      },
+      
+      updateExpense: async (id, updates) => {
+        try {
+          const result = await expenseService.update(id, updates);
+          if (result.success && 'data' in result && result.data) {
+            set((state) => ({
+              expenses: state.expenses.map(expense => 
+                expense.id === id ? result.data : expense
+              )
+            }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour de la dépense:', error);
+          throw error;
+        }
+      },
+      
+      deleteExpense: async (id) => {
+        try {
+          const result = await expenseService.delete(id);
+          if (result.success) {
+            set((state) => ({
+              expenses: state.expenses.filter(expense => expense.id !== id)
+            }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de la suppression de la dépense:', error);
+          throw error;
+        }
+      },
+      
+      // Gestion des catégories de dépenses
+      addExpenseCategory: async (category) => {
+        try {
+          const result = await expenseCategoryService.create(category);
+          if (result.success && 'data' in result && result.data) {
+            set((state) => ({ expenseCategories: [...state.expenseCategories, result.data] }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de l\'ajout de la catégorie:', error);
+          throw error;
+        }
+      },
+      
+      updateExpenseCategory: async (id, updates) => {
+        try {
+          const result = await expenseCategoryService.update(id, updates);
+          if (result.success && 'data' in result && result.data) {
+            set((state) => ({
+              expenseCategories: state.expenseCategories.map(category => 
+                category.id === id ? result.data : category
+              )
+            }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour de la catégorie:', error);
+          throw error;
+        }
+      },
+      
+      deleteExpenseCategory: async (id) => {
+        try {
+          const result = await expenseCategoryService.delete(id);
+          if (result.success) {
+            set((state) => ({
+              expenseCategories: state.expenseCategories.filter(category => category.id !== id)
+            }));
+          }
+        } catch (error) {
+          console.error('Erreur lors de la suppression de la catégorie:', error);
+          throw error;
+        }
+      },
+      
       updateSale: async (id, updates) => {
         try {
           const result = await saleService.update(id, updates);
@@ -1924,6 +2036,39 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
+      loadExpenses: async () => {
+        try {
+          const result = await expenseService.getAll();
+          if (result.success && 'data' in result && result.data) {
+            set({ expenses: result.data });
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement des dépenses:', error);
+        }
+      },
+      
+      loadExpenseCategories: async () => {
+        try {
+          const result = await expenseCategoryService.getAll();
+          if (result.success && 'data' in result && result.data) {
+            set({ expenseCategories: result.data });
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement des catégories de dépenses:', error);
+        }
+      },
+      
+      loadExpenseStats: async () => {
+        try {
+          const result = await expenseService.getStats();
+          if (result.success && 'data' in result && result.data) {
+            set({ expenseStats: result.data });
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement des statistiques de dépenses:', error);
+        }
+      },
+      
       // Filtres et recherche
       setRepairFilters: (filters) => set({ repairFilters: filters }),
       setSearchQuery: (query) => set({ searchQuery: query }),
@@ -2230,6 +2375,16 @@ export const useAppStore = create<AppStore>()(
       getActiveStockAlerts: () => {
         const state = get();
         return state.stockAlerts.filter(alert => !alert.isResolved);
+      },
+      
+      getExpenseById: (id) => {
+        const state = get();
+        return state.expenses.find(expense => expense.id === id);
+      },
+      
+      getExpenseCategoryById: (id) => {
+        const state = get();
+        return state.expenseCategories.find(category => category.id === id);
       },
     }),
     {

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Isolation des Données Marques</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196f3; }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #2196f3;
+            background-color: #f8f9fa;
+        }
+        .code {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Test - Isolation des Données Marques</h1>
+        
+        <div class="step">
+            <h3>🚨 Problème Identifié</h3>
+            <p>L'isolation des données ne fonctionnait pas dans les marques car :</p>
+            <ul>
+                <li class="error">❌ <strong>Pas de filtrage par user_id</strong> : Le service récupérait toutes les marques</li>
+                <li class="error">❌ <strong>Pas de colonne user_id</strong> : La table n'avait pas de colonne d'isolation</li>
+                <li class="error">❌ <strong>Pas de politiques RLS</strong> : Aucune restriction d'accès</li>
+                <li class="error">❌ <strong>Données partagées</strong> : Tous les utilisateurs voyaient toutes les marques</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>✅ Corrections Appliquées</h3>
+            <p>J'ai corrigé le problème en :</p>
+            <ul>
+                <li class="success">✅ <strong>Modifié brandService</strong> : Ajout du filtrage par user_id dans toutes les fonctions</li>
+                <li class="success">✅ <strong>Ajouté l'isolation</strong> : getAll(), getById(), delete(), search(), etc.</li>
+                <li class="success">✅ <strong>Vérification utilisateur</strong> : Chaque fonction vérifie l'authentification</li>
+                <li class="success">✅ <strong>Filtrage automatique</strong> : Seules les marques de l'utilisateur connecté sont visibles</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>📋 Prérequis SQL</h3>
+            <p><strong>Avant de tester, exécutez ce script SQL :</strong></p>
+            <div class="code">
+                -- Dans Supabase SQL Editor :
+                fix_brand_isolation.sql
+            </div>
+            <p>Ce script va :</p>
+            <ul>
+                <li>✅ Ajouter les colonnes <code>user_id</code>, <code>created_by</code>, <code>updated_by</code></li>
+                <li>✅ Activer Row Level Security (RLS)</li>
+                <li>✅ Créer les politiques d'isolation</li>
+                <li>✅ Assigner les marques existantes à un utilisateur</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🧪 Comment Tester l'Isolation</h3>
+            <ol>
+                <li><strong>Exécutez le script SQL</strong> <code>fix_brand_isolation.sql</code></li>
+                <li><strong>Rechargez l'application</strong> (F5)</li>
+                <li><strong>Connectez-vous avec un utilisateur</strong></li>
+                <li><strong>Créez une marque</strong> :
+                    <ul>
+                        <li>Nom : "Marque Test User 1"</li>
+                        <li>Description : "Test d'isolation"</li>
+                        <li>Catégories : Sélectionnez une catégorie</li>
+                    </ul>
+                </li>
+                <li><strong>Vérifiez</strong> que la marque apparaît dans la liste</li>
+                <li><strong>Déconnectez-vous</strong> et <strong>connectez-vous avec un autre utilisateur</strong></li>
+                <li><strong>Vérifiez</strong> que la marque de l'utilisateur précédent n'est PAS visible</li>
+                <li><strong>Créez une nouvelle marque</strong> avec le second utilisateur</li>
+                <li><strong>Vérifiez</strong> que chaque utilisateur ne voit que ses propres marques</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🔍 Vérifications Spécifiques</h3>
+            <ul>
+                <li class="success">✅ <strong>Création isolée</strong> : Chaque utilisateur crée ses propres marques</li>
+                <li class="success">✅ <strong>Lecture isolée</strong> : Chaque utilisateur ne voit que ses marques</li>
+                <li class="success">✅ <strong>Modification isolée</strong> : Impossible de modifier les marques d'autres utilisateurs</li>
+                <li class="success">✅ <strong>Suppression isolée</strong> : Impossible de supprimer les marques d'autres utilisateurs</li>
+                <li class="success">✅ <strong>Recherche isolée</strong> : La recherche ne retourne que les marques de l'utilisateur</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🔒 Sécurité Appliquée</h3>
+            <p>Les politiques RLS créées :</p>
+            <ul>
+                <li class="info">🔐 <strong>SELECT</strong> : <code>auth.uid() = user_id</code></li>
+                <li class="info">🔐 <strong>INSERT</strong> : <code>auth.uid() = user_id</code></li>
+                <li class="info">🔐 <strong>UPDATE</strong> : <code>auth.uid() = user_id</code></li>
+                <li class="info">🔐 <strong>DELETE</strong> : <code>auth.uid() = user_id</code></li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🚨 Si le Problème Persiste</h3>
+            <p>Si vous voyez encore des marques d'autres utilisateurs :</p>
+            <ol>
+                <li>Vérifiez que le script SQL a été exécuté sans erreur</li>
+                <li>Vérifiez que RLS est activé : <code>SELECT relrowsecurity FROM pg_class WHERE relname = 'device_brands';</code></li>
+                <li>Vérifiez les politiques : <code>SELECT * FROM pg_policies WHERE tablename = 'device_brands';</code></li>
+                <li>Rechargez l'application (Ctrl+F5)</li>
+                <li>Vérifiez la console pour les erreurs d'authentification</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🎉 Résultat Attendu</h3>
+            <p>Après la correction, vous devriez voir :</p>
+            <ul class="success">
+                <li>✅ Chaque utilisateur ne voit que ses propres marques</li>
+                <li>✅ Impossible de créer/modifier/supprimer les marques d'autres utilisateurs</li>
+                <li>✅ La recherche ne retourne que les marques de l'utilisateur connecté</li>
+                <li>✅ Aucune erreur dans la console</li>
+                <li>✅ Données complètement isolées entre utilisateurs</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.open('http://localhost:3000/app/catalog/device-management', '_blank')">
+                🚀 Tester l'Isolation des Marques
+            </button>
+        </div>
+    </div>
+</body>
+</html>

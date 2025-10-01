@@ -1,11 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration Supabase
-const supabaseUrl = 'https://wlqyrmntfxwdvkzzsujv.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscXlybW50Znh3ZHZrenpzdWp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjUyMDAsImV4cCI6MjA3MTAwMTIwMH0.9XvA_8VtPhBdF80oycWefBgY9nIyvqQUPHDGlw3f2D8';
+// Configuration Supabase - DÉVELOPPEMENT LOCAL
+// Priorité aux variables d'environnement, sinon fallback sur les valeurs locales
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+
+// UTILISER L'URL DE DÉVELOPPEMENT LOCAL
+const finalSupabaseUrl = supabaseUrl;
+
+// Log de la configuration utilisée
+console.log('🔧 Configuration Supabase:', {
+  url: finalSupabaseUrl,
+  keyPreview: supabaseAnonKey.substring(0, 20) + '...',
+  env: import.meta.env.MODE,
+  isLocalDev: finalSupabaseUrl.includes('127.0.0.1') || finalSupabaseUrl.includes('localhost'),
+  forceLocalDb: import.meta.env.VITE_FORCE_LOCAL_DB === 'true',
+  envVars: {
+    VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+    VITE_FORCE_LOCAL_DB: import.meta.env.VITE_FORCE_LOCAL_DB
+  }
+});
 
 // Création du client Supabase
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(finalSupabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -24,11 +41,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Configuration pour la connexion directe PostgreSQL (optionnel)
 export const postgresConfig = {
-  host: 'db.wlqyrmntfxwdvkzzsujv.supabase.co',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password: 'EGQUN6paP21OlNUu'
+  host: import.meta.env.VITE_POSTGRES_HOST || 'db.olrihggkxyksuofkesnk.supabase.co',
+  port: parseInt(import.meta.env.VITE_POSTGRES_PORT || '5432'),
+  database: import.meta.env.VITE_POSTGRES_DB || 'postgres',
+  user: import.meta.env.VITE_POSTGRES_USER || 'postgres.olrihggkxyksuofkesnk',
+  password: import.meta.env.VITE_POSTGRES_PASSWORD || 'ubazddRhIBL17UQr'
 };
 
 // Types pour les réponses Supabase

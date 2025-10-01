@@ -85,7 +85,7 @@ const CGV: React.FC = () => {
                 <strong>Téléphone :</strong> +33 1 23 45 67 89
               </Typography>
               <Typography variant="body1">
-                <strong>Site web :</strong> https://atelier-gestion.com
+                <strong>Site web :</strong> http://localhost:3002
               </Typography>
             </Box>
           </Box>

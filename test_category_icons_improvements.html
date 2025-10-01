@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Améliorations Icônes Catégories</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196f3; }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #2196f3;
+            background-color: #f8f9fa;
+        }
+        .code {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+        .icon-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .icon-item {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Test - Améliorations Icônes Catégories</h1>
+        
+        <div class="step">
+            <h3>✅ Améliorations Appliquées</h3>
+            <ul>
+                <li class="success">✅ <strong>Plus de choix d'icônes</strong> : Ajout de 5 nouvelles icônes</li>
+                <li class="success">✅ <strong>Affichage correct</strong> : Les icônes sélectionnées s'affichent maintenant</li>
+                <li class="success">✅ <strong>Fonction améliorée</strong> : getCategoryIcon utilise maintenant la valeur de l'icône</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🎯 Nouvelles Icônes Disponibles</h3>
+            <div class="icon-list">
+                <div class="icon-item">📱 <strong>Smartphone</strong> - phone</div>
+                <div class="icon-item">📱 <strong>Tablette</strong> - tablet</div>
+                <div class="icon-item">💻 <strong>Ordinateur portable</strong> - laptop</div>
+                <div class="icon-item">🖥️ <strong>Ordinateur de bureau</strong> - computer</div>
+                <div class="icon-item">🎧 <strong>Casque/Audio</strong> - headphones</div>
+                <div class="icon-item">📷 <strong>Appareil photo</strong> - camera</div>
+                <div class="icon-item">⌚ <strong>Montre connectée</strong> - watch</div>
+                <div class="icon-item">🎮 <strong>Gaming</strong> - gaming</div>
+                <div class="icon-item">📺 <strong>Télévision</strong> - tv</div>
+                <div class="icon-item">🔧 <strong>Accessoire</strong> - accessory</div>
+                <div class="icon-item">📂 <strong>Autre</strong> - category</div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🧪 Comment Tester</h3>
+            <ol>
+                <li><strong>Rechargez l'application</strong> (F5)</li>
+                <li><strong>Allez dans</strong> "Gestion des Appareils" > "Catégories"</li>
+                <li><strong>Créez une nouvelle catégorie</strong> :
+                    <ul>
+                        <li>Nom : "Test Icône"</li>
+                        <li>Description : "Test des nouvelles icônes"</li>
+                        <li><strong>Icône : Sélectionnez "Casque/Audio"</strong></li>
+                    </ul>
+                </li>
+                <li><strong>Cliquez sur "Créer"</strong></li>
+                <li><strong>Vérifiez dans le tableau</strong> que l'icône 🎧 s'affiche</li>
+                <li><strong>Modifiez la catégorie</strong> :
+                    <ul>
+                        <li>Cliquez sur l'icône crayon (✏️)</li>
+                        <li><strong>Changez l'icône</strong> en "Appareil photo" 📷</li>
+                        <li>Cliquez sur "Modifier"</li>
+                    </ul>
+                </li>
+                <li><strong>Vérifiez</strong> que l'icône 📷 s'affiche maintenant</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🔍 Tests Spécifiques</h3>
+            <p><strong>Test 1 : Création avec différentes icônes</strong></p>
+            <ul>
+                <li>Créez plusieurs catégories avec des icônes différentes</li>
+                <li>Vérifiez que chaque icône s'affiche correctement</li>
+            </ul>
+            
+            <p><strong>Test 2 : Modification d'icône</strong></p>
+            <ul>
+                <li>Modifiez une catégorie existante</li>
+                <li>Changez son icône</li>
+                <li>Vérifiez que la nouvelle icône s'affiche</li>
+            </ul>
+            
+            <p><strong>Test 3 : Affichage dans les marques</strong></p>
+            <ul>
+                <li>Allez dans l'onglet "Marques"</li>
+                <li>Vérifiez que les icônes des catégories s'affichent dans les puces</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🚨 Résolution de Problèmes</h3>
+            <p><strong>Si l'icône ne change pas :</strong></p>
+            <ul>
+                <li>✅ Vérifiez que l'application a été rechargée (F5)</li>
+                <li>✅ Vérifiez que la catégorie a été sauvegardée</li>
+                <li>✅ Vérifiez la console du navigateur pour les erreurs</li>
+            </ul>
+            
+            <p><strong>Si l'icône reste "Autre" :</strong></p>
+            <ul>
+                <li>L'ancienne fonction getCategoryIcon ne prenait pas en compte la valeur de l'icône</li>
+                <li>Maintenant elle utilise category.icon au lieu de category.name</li>
+                <li>Rechargez l'application pour voir les changements</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🎉 Résultat Attendu</h3>
+            <p>Après les améliorations, vous devriez voir :</p>
+            <ul class="success">
+                <li>✅ 11 choix d'icônes au lieu de 6</li>
+                <li>✅ L'icône sélectionnée s'affiche dans le tableau</li>
+                <li>✅ L'icône change quand vous modifiez une catégorie</li>
+                <li>✅ Les icônes s'affichent dans les puces des marques</li>
+                <li>✅ Les icônes s'affichent dans les modèles</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.open('http://localhost:3000/app/catalog/device-management', '_blank')">
+                🚀 Tester les Améliorations
+            </button>
+        </div>
+    </div>
+</body>
+</html>

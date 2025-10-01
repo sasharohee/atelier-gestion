@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 CORRECTION URGENTE - Erreur 500</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #ff4444;
+            color: white;
+        }
+        .container {
+            background: white;
+            color: black;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #ff4444;
+            text-align: center;
+            font-size: 2.5em;
+        }
+        .urgent {
+            background: #ffebee;
+            border: 3px solid #f44336;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        .step {
+            background: #f0f8ff;
+            border-left: 5px solid #2196F3;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            margin: 10px;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background: #45a049;
+        }
+        .copy-btn {
+            background: #2196F3;
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+        .copy-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 CORRECTION URGENTE</h1>
+        
+        <div class="urgent">
+            <h2>❌ ERREUR 500 - INSCRIPTION IMPOSSIBLE</h2>
+            <p>Votre application ne peut pas créer de comptes à cause d'un trigger défaillant dans Supabase.</p>
+        </div>
+
+        <div class="step">
+            <h3>🔗 ÉTAPE 1: Ouvrir Supabase</h3>
+            <p>Cliquez sur ce lien : <a href="https://supabase.com/dashboard" target="_blank" class="btn">🚀 Ouvrir Supabase</a></p>
+        </div>
+
+        <div class="step">
+            <h3>📝 ÉTAPE 2: SQL Editor</h3>
+            <p>1. Cliquez sur <strong>"SQL Editor"</strong> dans le menu de gauche</p>
+            <p>2. Cliquez sur <strong>"New query"</strong></p>
+        </div>
+
+        <div class="step">
+            <h3>⚡ ÉTAPE 3: Copier ce script</h3>
+            <p>Copiez EXACTEMENT ceci et collez-le dans l'éditeur :</p>
+            <div class="code" id="script">
+DROP TRIGGER IF EXISTS handle_new_user ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+SELECT 'FIXED' as status;
+            </div>
+            <button class="btn copy-btn" onclick="copyScript()">📋 COPIER LE SCRIPT</button>
+        </div>
+
+        <div class="step">
+            <h3>▶️ ÉTAPE 4: Exécuter</h3>
+            <p>1. Collez le script dans l'éditeur SQL</p>
+            <p>2. Cliquez sur <strong>"Run"</strong></p>
+            <p>3. Vous devriez voir "FIXED"</p>
+        </div>
+
+        <div class="step">
+            <h3>🧪 ÉTAPE 5: Tester</h3>
+            <p>Retournez sur votre application et essayez de créer un compte. L'erreur 500 devrait être résolue !</p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn" onclick="markAsDone()">✅ J'AI APPLIQUÉ LA CORRECTION</button>
+        </div>
+    </div>
+
+    <script>
+        function copyScript() {
+            const script = document.getElementById('script').textContent;
+            navigator.clipboard.writeText(script).then(() => {
+                alert('✅ Script copié ! Maintenant collez-le dans Supabase SQL Editor.');
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = script;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('✅ Script copié ! Maintenant collez-le dans Supabase SQL Editor.');
+            });
+        }
+
+        function markAsDone() {
+            alert('🎉 PARFAIT ! Maintenant testez l\'inscription dans votre application. L\'erreur 500 devrait être résolue !');
+        }
+    </script>
+</body>
+</html>

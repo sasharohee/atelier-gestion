@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demande de Devis - Atelier Réparation Express</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+        
+        .header-text h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header-text p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .status-chip {
+            background: #4caf50;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .form-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .form-header h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .form-header p {
+            opacity: 0.9;
+        }
+        
+        .form-content {
+            padding: 30px;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+        }
+        
+        .form-section h3 {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .urgency-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+        
+        .urgency-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .urgency-option input[type="radio"] {
+            width: auto;
+        }
+        
+        .urgency-chip {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .urgency-low {
+            background: #e8f5e8;
+            color: #2e7d32;
+        }
+        
+        .urgency-medium {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        
+        .urgency-high {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .file-upload {
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .file-upload:hover {
+            border-color: #667eea;
+        }
+        
+        .file-upload input {
+            display: none;
+        }
+        
+        .file-upload-text {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .file-upload-hint {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .submit-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        
+        .submit-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .submit-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .success-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .urgency-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header avec informations du réparateur -->
+        <div class="header">
+            <div class="header-content">
+                <div class="logo">🔧</div>
+                <div class="header-text">
+                    <h1>Atelier Réparation Express</h1>
+                    <p>Demande de devis en ligne</p>
+                </div>
+                <div class="status-chip">Actif</div>
+            </div>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+                <div><strong>Réparateur:</strong> Jean Dupont</div>
+                <div><strong>Téléphone:</strong> 01 23 45 67 89</div>
+            </div>
+            
+            <p style="color: #666; margin: 0;">
+                Remplissez le formulaire ci-dessous pour obtenir un devis personnalisé pour votre réparation.
+                Nous vous contacterons dans les plus brefs délais.
+            </p>
+        </div>
+
+        <!-- Formulaire de demande de devis -->
+        <div class="form-container">
+            <div class="form-header">
+                <h2>Demande de Devis</h2>
+                <p>Remplissez ce formulaire pour obtenir un devis personnalisé</p>
+            </div>
+
+            <div class="form-content">
+                <form id="quoteForm">
+                    <!-- Informations personnelles -->
+                    <div class="form-section">
+                        <h3>👤 Informations personnelles</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="firstName">Prénom *</label>
+                                <input type="text" id="firstName" name="firstName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="lastName">Nom *</label>
+                                <input type="text" id="lastName" name="lastName" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="email">Email *</label>
+                                <input type="email" id="email" name="email" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="phone">Téléphone *</label>
+                                <input type="tel" id="phone" name="phone" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Détails de l'appareil -->
+                    <div class="form-section">
+                        <h3>🔧 Détails de l'appareil</h3>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="deviceType">Type d'appareil</label>
+                                <select id="deviceType" name="deviceType">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="smartphone">Smartphone</option>
+                                    <option value="tablet">Tablette</option>
+                                    <option value="laptop">Ordinateur portable</option>
+                                    <option value="desktop">Ordinateur de bureau</option>
+                                    <option value="console">Console de jeu</option>
+                                    <option value="other">Autre</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="deviceBrand">Marque</label>
+                                <input type="text" id="deviceBrand" name="deviceBrand" placeholder="Ex: Apple, Samsung, HP...">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="deviceModel">Modèle</label>
+                            <input type="text" id="deviceModel" name="deviceModel" placeholder="Ex: iPhone 14, Galaxy S23, MacBook Pro...">
+                        </div>
+                    </div>
+
+                    <!-- Description du problème -->
+                    <div class="form-section">
+                        <h3>📝 Description du problème</h3>
+                        <div class="form-group">
+                            <label for="description">Description générale *</label>
+                            <textarea id="description" name="description" placeholder="Décrivez brièvement votre demande..." required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="issueDescription">Description détaillée du problème *</label>
+                            <textarea id="issueDescription" name="issueDescription" placeholder="Décrivez en détail le problème rencontré, les symptômes, quand cela a commencé..." required></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Niveau d'urgence -->
+                    <div class="form-section">
+                        <h3>⚡ Niveau d'urgence</h3>
+                        <div class="urgency-group">
+                            <div class="urgency-option">
+                                <input type="radio" id="urgency-low" name="urgency" value="low">
+                                <label for="urgency-low">
+                                    <span class="urgency-chip urgency-low">Faible</span>
+                                </label>
+                            </div>
+                            <div class="urgency-option">
+                                <input type="radio" id="urgency-medium" name="urgency" value="medium" checked>
+                                <label for="urgency-medium">
+                                    <span class="urgency-chip urgency-medium">Moyenne</span>
+                                </label>
+                            </div>
+                            <div class="urgency-option">
+                                <input type="radio" id="urgency-high" name="urgency" value="high">
+                                <label for="urgency-high">
+                                    <span class="urgency-chip urgency-high">Élevée</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pièces jointes -->
+                    <div class="form-section">
+                        <h3>📎 Pièces jointes (optionnel)</h3>
+                        <div class="file-upload" onclick="document.getElementById('files').click()">
+                            <input type="file" id="files" name="files" multiple accept="image/*,.pdf">
+                            <div class="file-upload-text">📁 Cliquez pour ajouter des fichiers</div>
+                            <div class="file-upload-hint">Formats acceptés: JPG, PNG, GIF, PDF (max 10MB par fichier)</div>
+                        </div>
+                    </div>
+
+                    <!-- Bouton d'envoi -->
+                    <button type="submit" class="submit-button">
+                        📤 Envoyer la demande
+                    </button>
+                </form>
+
+                <!-- Message de succès -->
+                <div class="success-message" id="successMessage">
+                    <div class="success-icon">✅</div>
+                    <h3>Demande envoyée !</h3>
+                    <p>Votre demande de devis a été transmise avec succès à Jean Dupont</p>
+                    <p>Vous recevrez une réponse dans les plus brefs délais. Une confirmation vous a été envoyée par email.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('quoteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Simuler l'envoi de la demande
+            const submitButton = document.querySelector('.submit-button');
+            const successMessage = document.getElementById('successMessage');
+            
+            submitButton.disabled = true;
+            submitButton.textContent = '⏳ Envoi en cours...';
+            
+            setTimeout(() => {
+                submitButton.style.display = 'none';
+                successMessage.classList.add('show');
+                
+                // Scroll vers le message de succès
+                successMessage.scrollIntoView({ behavior: 'smooth' });
+            }, 2000);
+        });
+        
+        // Gestion de l'upload de fichiers
+        document.getElementById('files').addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                const fileUpload = document.querySelector('.file-upload-text');
+                fileUpload.textContent = `📁 ${files.length} fichier(s) sélectionné(s)`;
+            }
+        });
+    </script>
+</body>
+</html>
+

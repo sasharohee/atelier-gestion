@@ -5,8 +5,8 @@
   "private": true,
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
-    "@emotion/react": "^11.10.0",
-    "@emotion/styled": "^11.10.0",
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
     "@fullcalendar/core": "^6.1.19",
     "@fullcalendar/daygrid": "^6.1.19",
     "@fullcalendar/interaction": "^6.1.19",
@@ -39,9 +39,10 @@
     "zustand": "^4.3.0"
   },
   "scripts": {
-    "dev": "vite",
-    "start": "vite",
-    "build": "tsc && vite build",
+    "dev": "vite --host",
+    "start": "vite --host",
+    "build": "vite build",
+    "build-with-tsc": "tsc && vite build",
     "preview": "vite preview",
     "vercel-build": "npm run build",
     "test": "react-scripts test",

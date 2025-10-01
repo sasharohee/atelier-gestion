@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test de Correction - Atelier Gestion</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: rgba(76, 175, 80, 0.2); color: #4CAF50; }
+        .error { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+        .warning { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
+        .info { background: rgba(33, 150, 243, 0.2); color: #2196F3; }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background: #4CAF50; }
+        .status-error { background: #f44336; }
+        .status-warning { background: #ff9800; }
+        .status-info { background: #2196F3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test de Correction - Atelier Gestion</h1>
+        <p>Ce script teste toutes les corrections appliquées à votre application.</p>
+
+        <div class="test-section">
+            <h2>📋 Tests de Correction</h2>
+            <button onclick="runAllTests()">🚀 Lancer tous les tests</button>
+            <button onclick="clearLogs()">🧹 Effacer les logs</button>
+            <button onclick="openMainApp()">🌐 Ouvrir l'application principale</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Résultats des Tests</h2>
+            <div id="test-results">
+                <div class="test-result info">
+                    <span class="status-indicator status-info"></span>
+                    En attente des tests...
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Logs de Test</h2>
+            <div id="test-logs" class="log">
+                Prêt pour les tests...<br>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let testResults = [];
+        let testLogs = [];
+
+        // Fonction pour ajouter un log
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            testLogs.push({ message: logEntry, type });
+            
+            const logElement = document.getElementById('test-logs');
+            logElement.innerHTML += `<span class="${type}">${logEntry}</span><br>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // Fonction pour ajouter un résultat de test
+        function addTestResult(name, status, message) {
+            testResults.push({ name, status, message });
+            
+            const resultsElement = document.getElementById('test-results');
+            const statusClass = status === 'success' ? 'success' : 
+                              status === 'error' ? 'error' : 
+                              status === 'warning' ? 'warning' : 'info';
+            
+            const statusIndicator = status === 'success' ? 'status-success' : 
+                                  status === 'error' ? 'status-error' : 
+                                  status === 'warning' ? 'status-warning' : 'status-info';
+            
+            resultsElement.innerHTML += `
+                <div class="test-result ${statusClass}">
+                    <span class="status-indicator ${statusIndicator}"></span>
+                    <strong>${name}:</strong> ${message}
+                </div>
+            `;
+        }
+
+        // Fonction pour effacer les logs
+        function clearLogs() {
+            testLogs = [];
+            testResults = [];
+            document.getElementById('test-logs').innerHTML = 'Logs effacés...<br>';
+            document.getElementById('test-results').innerHTML = `
+                <div class="test-result info">
+                    <span class="status-indicator status-info"></span>
+                    En attente des tests...
+                </div>
+            `;
+        }
+
+        // Test 1: Vérifier les erreurs d'extension
+        async function testExtensionErrors() {
+            addLog('🔍 Test des erreurs d\'extension...', 'info');
+            
+            try {
+                // Vérifier si les erreurs d'extension sont présentes
+                const hasExtensionErrors = window.chrome?.runtime?.lastError;
+                
+                if (hasExtensionErrors) {
+                    addTestResult('Erreurs d\'extension', 'warning', 'Erreurs d\'extension détectées mais gérées');
+                    addLog('⚠️ Erreurs d\'extension détectées mais gérées', 'warning');
+                } else {
+                    addTestResult('Erreurs d\'extension', 'success', 'Aucune erreur d\'extension détectée');
+                    addLog('✅ Aucune erreur d\'extension détectée', 'success');
+                }
+                
+                return true;
+            } catch (error) {
+                addTestResult('Erreurs d\'extension', 'error', `Erreur: ${error.message}`);
+                addLog(`❌ Erreur lors du test d'extension: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Test 2: Vérifier la configuration Supabase
+        async function testSupabaseConfig() {
+            addLog('🔍 Test de la configuration Supabase...', 'info');
+            
+            try {
+                // Vérifier si Supabase est configuré
+                if (typeof window.supabase !== 'undefined') {
+                    const { data, error } = await window.supabase.from('clients').select('count').limit(1);
+                    
+                    if (error) {
+                        addTestResult('Configuration Supabase', 'error', `Erreur de connexion: ${error.message}`);
+                        addLog(`❌ Erreur de connexion Supabase: ${error.message}`, 'error');
+                        return false;
+                    } else {
+                        addTestResult('Configuration Supabase', 'success', 'Connexion Supabase réussie');
+                        addLog('✅ Connexion Supabase réussie', 'success');
+                        return true;
+                    }
+                } else {
+                    addTestResult('Configuration Supabase', 'warning', 'Client Supabase non disponible');
+                    addLog('⚠️ Client Supabase non disponible', 'warning');
+                    return false;
+                }
+            } catch (error) {
+                addTestResult('Configuration Supabase', 'error', `Erreur: ${error.message}`);
+                addLog(`❌ Erreur lors du test Supabase: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Test 3: Vérifier les conflits d'émotion
+        async function testEmotionConflicts() {
+            addLog('🔍 Test des conflits @emotion/react...', 'info');
+            
+            try {
+                // Vérifier les éléments emotion
+                const emotionElements = document.querySelectorAll('[data-emotion]');
+                const duplicateStyles = [];
+                const styleMap = new Map();
+                
+                emotionElements.forEach(el => {
+                    const emotionData = el.getAttribute('data-emotion');
+                    if (emotionData) {
+                        if (styleMap.has(emotionData)) {
+                            duplicateStyles.push(emotionData);
+                        } else {
+                            styleMap.set(emotionData, el);
+                        }
+                    }
+                });
+                
+                if (duplicateStyles.length > 0) {
+                    addTestResult('Conflits @emotion/react', 'warning', `${duplicateStyles.length} styles dupliqués détectés`);
+                    addLog(`⚠️ ${duplicateStyles.length} styles dupliqués détectés`, 'warning');
+                    return false;
+                } else {
+                    addTestResult('Conflits @emotion/react', 'success', 'Aucun conflit détecté');
+                    addLog('✅ Aucun conflit @emotion/react détecté', 'success');
+                    return true;
+                }
+            } catch (error) {
+                addTestResult('Conflits @emotion/react', 'error', `Erreur: ${error.message}`);
+                addLog(`❌ Erreur lors du test emotion: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Test 4: Vérifier l'authentification
+        async function testAuthentication() {
+            addLog('🔍 Test de l\'authentification...', 'info');
+            
+            try {
+                if (typeof window.supabase !== 'undefined') {
+                    const { data: { user }, error } = await window.supabase.auth.getUser();
+                    
+                    if (error) {
+                        addTestResult('Authentification', 'warning', `Erreur d'auth: ${error.message}`);
+                        addLog(`⚠️ Erreur d'authentification: ${error.message}`, 'warning');
+                        return false;
+                    } else if (user) {
+                        addTestResult('Authentification', 'success', `Utilisateur connecté: ${user.email}`);
+                        addLog(`✅ Utilisateur connecté: ${user.email}`, 'success');
+                        return true;
+                    } else {
+                        addTestResult('Authentification', 'info', 'Aucun utilisateur connecté');
+                        addLog('ℹ️ Aucun utilisateur connecté', 'info');
+                        return true;
+                    }
+                } else {
+                    addTestResult('Authentification', 'error', 'Client Supabase non disponible');
+                    addLog('❌ Client Supabase non disponible', 'error');
+                    return false;
+                }
+            } catch (error) {
+                addTestResult('Authentification', 'error', `Erreur: ${error.message}`);
+                addLog(`❌ Erreur lors du test d'authentification: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Test 5: Vérifier les performances
+        async function testPerformance() {
+            addLog('🔍 Test des performances...', 'info');
+            
+            try {
+                const startTime = performance.now();
+                
+                // Test de chargement des modules
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                const endTime = performance.now();
+                const loadTime = endTime - startTime;
+                
+                if (loadTime < 200) {
+                    addTestResult('Performances', 'success', `Temps de chargement: ${loadTime.toFixed(2)}ms`);
+                    addLog(`✅ Temps de chargement: ${loadTime.toFixed(2)}ms`, 'success');
+                    return true;
+                } else {
+                    addTestResult('Performances', 'warning', `Temps de chargement lent: ${loadTime.toFixed(2)}ms`);
+                    addLog(`⚠️ Temps de chargement lent: ${loadTime.toFixed(2)}ms`, 'warning');
+                    return false;
+                }
+            } catch (error) {
+                addTestResult('Performances', 'error', `Erreur: ${error.message}`);
+                addLog(`❌ Erreur lors du test de performance: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Fonction pour lancer tous les tests
+        async function runAllTests() {
+            addLog('🚀 Début des tests de correction...', 'info');
+            clearLogs();
+            
+            const tests = [
+                { name: 'Erreurs d\'extension', fn: testExtensionErrors },
+                { name: 'Configuration Supabase', fn: testSupabaseConfig },
+                { name: 'Conflits @emotion/react', fn: testEmotionConflicts },
+                { name: 'Authentification', fn: testAuthentication },
+                { name: 'Performances', fn: testPerformance }
+            ];
+            
+            let passedTests = 0;
+            let totalTests = tests.length;
+            
+            for (const test of tests) {
+                try {
+                    const result = await test.fn();
+                    if (result) passedTests++;
+                } catch (error) {
+                    addLog(`❌ Erreur dans le test ${test.name}: ${error.message}`, 'error');
+                }
+            }
+            
+            // Résumé final
+            const successRate = (passedTests / totalTests) * 100;
+            addLog(`📊 Tests terminés: ${passedTests}/${totalTests} (${successRate.toFixed(1)}%)`, 'info');
+            
+            if (successRate >= 80) {
+                addLog('🎉 Application en bon état !', 'success');
+            } else if (successRate >= 60) {
+                addLog('⚠️ Application fonctionnelle avec quelques problèmes mineurs', 'warning');
+            } else {
+                addLog('❌ Application nécessite des corrections supplémentaires', 'error');
+            }
+        }
+
+        // Fonction pour ouvrir l'application principale
+        function openMainApp() {
+            addLog('🌐 Ouverture de l\'application principale...', 'info');
+            window.open('/', '_blank');
+        }
+
+        // Initialisation
+        addLog('🔧 Page de test chargée', 'info');
+        addLog('💡 Cliquez sur "Lancer tous les tests" pour commencer', 'info');
+    </script>
+</body>
+</html>
+

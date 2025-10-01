@@ -46,6 +46,8 @@ import {
   Description as DescriptionIcon,
   Star as StarIcon,
   LocalShipping as ShippingIcon,
+  AttachMoney as ExpensesIcon,
+  RequestQuote as RequestQuoteIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
@@ -117,6 +119,18 @@ const menuItems = [
     icon: <StarIcon />,
     path: '/app/loyalty',
     color: '#f59e0b',
+  },
+  {
+    text: 'Dépenses',
+    icon: <ExpensesIcon />,
+    path: '/app/expenses',
+    color: '#dc2626',
+  },
+  {
+    text: 'Demandes de Devis',
+    icon: <RequestQuoteIcon />,
+    path: '/app/quote-requests',
+    color: '#7c3aed',
   },
   {
     text: 'Administration',

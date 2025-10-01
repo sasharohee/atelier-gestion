@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { CssBaseline, Box, Alert, Button, Typography } from '@mui/material';
+import { CssBaseline, Box, Alert, Button, Typography, CircularProgress } from '@mui/material';
 import { Toaster } from 'react-hot-toast';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -23,25 +23,32 @@ import Layout from './components/Layout/Layout';
 // import { OnboardingNotification } from './components/OnboardingNotification'; // MASQUÉ
 import AuthGuard from './components/AuthGuard';
 import AdminGuard from './components/AdminGuard';
+import AdminPasswordGuard from './components/AdminPasswordGuard';
 
-// Pages
+// Pages - Lazy loading pour les pages lourdes
 import Landing from './pages/Landing/Landing';
 import Auth from './pages/Auth/Auth';
-import Dashboard from './pages/Dashboard/Dashboard';
-import Kanban from './pages/Kanban/Kanban';
-import Archive from './pages/Archive/Archive';
-import Calendar from './pages/Calendar/Calendar';
 
-import Catalog from './pages/Catalog/Catalog';
-import Transaction from './pages/Transaction/Transaction';
+// Lazy loading des pages lourdes
+const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
+const Kanban = lazy(() => import('./pages/Kanban/Kanban'));
+const Calendar = lazy(() => import('./pages/Calendar/Calendar'));
+const Catalog = lazy(() => import('./pages/Catalog/Catalog'));
+const Transaction = lazy(() => import('./pages/Transaction/Transaction'));
+const Statistics = lazy(() => import('./pages/Statistics/Statistics'));
+const Archive = lazy(() => import('./pages/Archive/Archive'));
+const Loyalty = lazy(() => import('./pages/Loyalty/Loyalty'));
+const Expenses = lazy(() => import('./pages/Expenses/Expenses'));
+const QuoteRequests = lazy(() => import('./pages/QuoteRequests/QuoteRequestsManagement'));
+const Administration = lazy(() => import('./pages/Administration/Administration'));
+const Settings = lazy(() => import('./pages/Settings/Settings'));
+const SubscriptionBlocked = lazy(() => import('./pages/Auth/SubscriptionBlocked'));
+
+// Pages légères - import direct
 import Sales from './pages/Sales/Sales';
-import Statistics from './pages/Statistics/Statistics';
-import Administration from './pages/Administration/Administration';
 import SubscriptionManagement from './pages/Administration/SubscriptionManagement';
 import UserAccessManagement from './pages/Administration/UserAccessManagement';
 import AdminAccess from './pages/AdminAccess/AdminAccess';
-import Settings from './pages/Settings/Settings';
-import Loyalty from './pages/Loyalty/Loyalty';
 import PrivacyPolicy from './pages/Legal/PrivacyPolicy';
 import TermsOfService from './pages/Legal/TermsOfService';
 import CGV from './pages/Legal/CGV';
@@ -50,6 +57,7 @@ import Support from './pages/Support/Support';
 import FAQ from './pages/Support/FAQ';
 import RepairTracking from './pages/RepairTracking/RepairTracking';
 import RepairHistory from './pages/RepairTracking/RepairHistory';
+import QuoteRequestPageFixed from './pages/QuoteRequest/QuoteRequestPageFixed';
 
 // Services
 import { demoDataService } from './services/demoDataService';
@@ -66,7 +74,7 @@ const ErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ err
   </Box>
 );
 
-// Composant de chargement
+// Composant de chargement pour l'application
 const LoadingComponent: React.FC = () => (
   <Box sx={{ 
     display: 'flex', 
@@ -75,11 +83,28 @@ const LoadingComponent: React.FC = () => (
     height: '100vh',
     flexDirection: 'column'
   }}>
-    <Typography variant="h6" sx={{ mb: 2 }}>
+    <CircularProgress size={40} sx={{ mb: 2 }} />
+    <Typography variant="h6" sx={{ mb: 1 }}>
       Chargement de l'application...
     </Typography>
     <Typography variant="body2" color="text.secondary">
       Initialisation en cours
+    </Typography>
+  </Box>
+);
+
+// Composant de chargement pour les pages lazy-loaded
+const PageLoadingComponent: React.FC = () => (
+  <Box sx={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '50vh',
+    flexDirection: 'column'
+  }}>
+    <CircularProgress size={30} sx={{ mb: 1 }} />
+    <Typography variant="body2" color="text.secondary">
+      Chargement de la page...
     </Typography>
   </Box>
 );
@@ -92,21 +117,26 @@ function App() {
   const { setCurrentUser, setAuthenticated } = useAppStore();
   const { isDataLoaded, isLoading: isDataLoading, error: dataError } = useAuthenticatedData();
 
-  // Initialisation de l'application avec gestion d'erreur
+  // Initialisation rapide de l'application
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // S'assurer que les données de démonstration sont chargées
-        await demoDataService.ensureDemoData();
+        // Initialisation immédiate - pas d'attente
+        setIsLoading(false);
         
-        // Exposer les objets globaux pour le débogage
+        // Exposer les objets globaux pour le débogage (en arrière-plan)
         if (typeof window !== 'undefined') {
           window.useAppStore = useAppStore;
           window.repairService = repairService;
           console.log('🔧 Objets de débogage exposés globalement');
         }
         
-        setIsLoading(false);
+        // Charger les données de démonstration en arrière-plan (non bloquant)
+        demoDataService.ensureDemoData().then(() => {
+          console.log('✅ Données de démonstration chargées en arrière-plan');
+        }).catch(err => {
+          console.warn('⚠️ Erreur lors du chargement des données de démonstration:', err);
+        });
         
         // Vérifier si le guide d'intégration doit être affiché - MASQUÉ
         // if (!demoDataService.isOnboardingCompleted()) {
@@ -168,7 +198,11 @@ function App() {
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/admin" element={<AdminAccess />} />
+                <Route path="/admin" element={
+                  <AdminPasswordGuard>
+                    <AdminAccess />
+                  </AdminPasswordGuard>
+                } />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms-of-service" element={<TermsOfService />} />
                 <Route path="/cgv" element={<CGV />} />
@@ -177,26 +211,31 @@ function App() {
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/repair-tracking" element={<RepairTracking />} />
                 <Route path="/repair-history" element={<RepairHistory />} />
+                <Route path="/quote/:customUrl" element={<QuoteRequestPageFixed />} />
                 <Route path="/app/*" element={
                   <AuthGuard>
                     <Layout>
-                      <Routes>
-                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/kanban" element={<Kanban />} />
-                        <Route path="/archive" element={<Archive />} />
-                        <Route path="/calendar" element={<Calendar />} />
+                      <Suspense fallback={<PageLoadingComponent />}>
+                        <Routes>
+                          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                          <Route path="/dashboard" element={<Dashboard />} />
+                          <Route path="/kanban" element={<Kanban />} />
+                          <Route path="/archive" element={<Archive />} />
+                          <Route path="/calendar" element={<Calendar />} />
 
-                        <Route path="/catalog/*" element={<Catalog />} />
-                        <Route path="/transaction/*" element={<Transaction />} />
-                        <Route path="/sales" element={<Sales />} />
-                        <Route path="/statistics" element={<Statistics />} />
-                        <Route path="/administration" element={<Administration />} />
-                        <Route path="/administration/subscriptions" element={<SubscriptionManagement />} />
-                        <Route path="/administration/user-access" element={<UserAccessManagement />} />
-                        <Route path="/loyalty" element={<Loyalty />} />
-                        <Route path="/settings" element={<Settings />} />
-                      </Routes>
+                          <Route path="/catalog/*" element={<Catalog />} />
+                          <Route path="/transaction/*" element={<Transaction />} />
+                          <Route path="/sales" element={<Sales />} />
+                          <Route path="/statistics" element={<Statistics />} />
+                          <Route path="/administration" element={<Administration />} />
+                          <Route path="/administration/subscriptions" element={<SubscriptionManagement />} />
+                          <Route path="/administration/user-access" element={<UserAccessManagement />} />
+                          <Route path="/loyalty" element={<Loyalty />} />
+                          <Route path="/expenses" element={<Expenses />} />
+                          <Route path="/quote-requests" element={<QuoteRequests />} />
+                          <Route path="/settings" element={<Settings />} />
+                        </Routes>
+                      </Suspense>
                       
                       {/* Guide d'intégration - MASQUÉ */}
                       {/* {showOnboarding && (

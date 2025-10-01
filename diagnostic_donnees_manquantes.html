@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Données Manquantes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .data-display {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .count {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnostic Données Manquantes</h1>
+        
+        <div class="info">
+            <strong>Objectif :</strong> Vérifier pourquoi les données créées ne sont plus visibles.
+        </div>
+
+        <div id="status-container">
+            <div class="status info">
+                <strong>En attente...</strong> Cliquez sur "Diagnostiquer" pour commencer.
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="diagnoseMissingData()">🔍 Diagnostiquer</button>
+            <button onclick="restoreDefaultData()">🔄 Restaurer les Données</button>
+            <button onclick="clearResults()">🗑️ Effacer</button>
+        </div>
+
+        <div id="results"></div>
+
+        <div class="section">
+            <h3>📊 Résultats du Diagnostic</h3>
+            <div id="data-display"></div>
+        </div>
+    </div>
+
+    <!-- Import de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Configuration Supabase
+        const SUPABASE_URL = 'https://olrihggkxyksuofkesnk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9scmloZ2dreXZrc3VvZmtlc25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NTQ4MDQsImV4cCI6MjA1MDUzMDgwNH0.7nXqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqK';
+
+        let supabase;
+
+        function updateStatus(message, type = 'info') {
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = `<div class="status ${type}"><strong>${message}</strong></div>`;
+        }
+
+        function addResult(message, type = 'info') {
+            const resultsContainer = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `status ${type}`;
+            resultDiv.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            resultsContainer.appendChild(resultDiv);
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        }
+
+        function displayData(data) {
+            const dataContainer = document.getElementById('data-display');
+            dataContainer.textContent = JSON.stringify(data, null, 2);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('data-display').textContent = '';
+            updateStatus('Résultats effacés. Prêt pour un nouveau diagnostic.', 'info');
+        }
+
+        async function diagnoseMissingData() {
+            updateStatus('🔍 Diagnostic en cours...', 'info');
+            addResult('Début du diagnostic des données manquantes...');
+
+            const diagnosticResults = {
+                connection: { success: false, error: null },
+                categories: { count: 0, data: [], error: null },
+                brands: { count: 0, data: [], error: null },
+                models: { count: 0, data: [], error: null },
+                brandCategories: { count: 0, data: [], error: null }
+            };
+
+            try {
+                // Test 1: Initialiser Supabase
+                addResult('Test 1: Initialisation de Supabase...');
+                try {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    diagnosticResults.connection.success = true;
+                    addResult('✅ Supabase initialisé avec succès');
+                } catch (error) {
+                    diagnosticResults.connection.error = error.message;
+                    addResult(`❌ Erreur lors de l'initialisation: ${error.message}`);
+                    displayData(diagnosticResults);
+                    return;
+                }
+
+                // Test 2: Vérifier les catégories
+                addResult('Test 2: Vérification des catégories...');
+                try {
+                    const { data, error } = await supabase.from('device_categories').select('*');
+                    if (error) {
+                        diagnosticResults.categories.error = error.message;
+                        addResult(`❌ Erreur catégories: ${error.message}`);
+                    } else {
+                        diagnosticResults.categories.count = data.length;
+                        diagnosticResults.categories.data = data;
+                        addResult(`✅ ${data.length} catégories trouvées`);
+                    }
+                } catch (error) {
+                    diagnosticResults.categories.error = error.message;
+                    addResult(`❌ Erreur catégories: ${error.message}`);
+                }
+
+                // Test 3: Vérifier les marques
+                addResult('Test 3: Vérification des marques...');
+                try {
+                    const { data, error } = await supabase.from('device_brands').select('*');
+                    if (error) {
+                        diagnosticResults.brands.error = error.message;
+                        addResult(`❌ Erreur marques: ${error.message}`);
+                    } else {
+                        diagnosticResults.brands.count = data.length;
+                        diagnosticResults.brands.data = data;
+                        addResult(`✅ ${data.length} marques trouvées`);
+                    }
+                } catch (error) {
+                    diagnosticResults.brands.error = error.message;
+                    addResult(`❌ Erreur marques: ${error.message}`);
+                }
+
+                // Test 4: Vérifier les modèles
+                addResult('Test 4: Vérification des modèles...');
+                try {
+                    const { data, error } = await supabase.from('device_models').select('*');
+                    if (error) {
+                        diagnosticResults.models.error = error.message;
+                        addResult(`❌ Erreur modèles: ${error.message}`);
+                    } else {
+                        diagnosticResults.models.count = data.length;
+                        diagnosticResults.models.data = data;
+                        addResult(`✅ ${data.length} modèles trouvés`);
+                    }
+                } catch (error) {
+                    diagnosticResults.models.error = error.message;
+                    addResult(`❌ Erreur modèles: ${error.message}`);
+                }
+
+                // Test 5: Vérifier les relations marque-catégorie
+                addResult('Test 5: Vérification des relations marque-catégorie...');
+                try {
+                    const { data, error } = await supabase.from('brand_categories').select('*');
+                    if (error) {
+                        diagnosticResults.brandCategories.error = error.message;
+                        addResult(`❌ Erreur relations: ${error.message}`);
+                    } else {
+                        diagnosticResults.brandCategories.count = data.length;
+                        diagnosticResults.brandCategories.data = data;
+                        addResult(`✅ ${data.length} relations marque-catégorie trouvées`);
+                    }
+                } catch (error) {
+                    diagnosticResults.brandCategories.error = error.message;
+                    addResult(`❌ Erreur relations: ${error.message}`);
+                }
+
+                // Afficher les résultats
+                displayData(diagnosticResults);
+
+                // Résumé
+                const totalData = diagnosticResults.categories.count + diagnosticResults.brands.count + diagnosticResults.models.count;
+                if (totalData === 0) {
+                    updateStatus('❌ Aucune donnée trouvée - Base de données vide', 'error');
+                    addResult('❌ Aucune donnée trouvée. La base de données est vide.', 'error');
+                    addResult('💡 Cliquez sur "Restaurer les Données" pour recréer les données par défaut.', 'warning');
+                } else if (totalData < 10) {
+                    updateStatus('⚠️ Peu de données trouvées', 'warning');
+                    addResult(`⚠️ Seulement ${totalData} éléments trouvés. Certaines données peuvent être manquantes.`, 'warning');
+                } else {
+                    updateStatus('✅ Données trouvées', 'success');
+                    addResult(`✅ ${totalData} éléments trouvés. Les données semblent correctes.`, 'success');
+                }
+
+            } catch (error) {
+                updateStatus('❌ Erreur lors du diagnostic', 'error');
+                addResult(`❌ Erreur: ${error.message}`);
+                displayData({ error: error.message });
+            }
+        }
+
+        async function restoreDefaultData() {
+            updateStatus('🔄 Restauration des données...', 'info');
+            addResult('Début de la restauration des données par défaut...');
+
+            try {
+                // Initialiser Supabase si pas déjà fait
+                if (!supabase) {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
+
+                // 1. Créer une catégorie par défaut
+                addResult('Création d\'une catégorie par défaut...');
+                const { data: categoryData, error: categoryError } = await supabase
+                    .from('device_categories')
+                    .insert([{
+                        name: 'Électronique',
+                        description: 'Catégorie par défaut pour les appareils électroniques',
+                        icon: 'smartphone',
+                        is_active: true,
+                        user_id: null,
+                        created_by: null
+                    }])
+                    .select()
+                    .single();
+
+                if (categoryError) {
+                    addResult(`⚠️ Erreur création catégorie: ${categoryError.message}`, 'warning');
+                } else {
+                    addResult(`✅ Catégorie créée: ${categoryData.name}`);
+                }
+
+                // 2. Créer les marques par défaut
+                addResult('Création des marques par défaut...');
+                const defaultBrands = [
+                    { id: '1', name: 'Apple', description: 'Fabricant américain de produits électroniques premium' },
+                    { id: '2', name: 'Samsung', description: 'Fabricant sud-coréen d\'électronique grand public' },
+                    { id: '3', name: 'Google', description: 'Entreprise américaine de technologie' },
+                    { id: '4', name: 'Microsoft', description: 'Entreprise américaine de technologie' },
+                    { id: '5', name: 'Sony', description: 'Conglomérat japonais d\'électronique' }
+                ];
+
+                for (const brand of defaultBrands) {
+                    const { error: brandError } = await supabase
+                        .from('device_brands')
+                        .upsert([{
+                            id: brand.id,
+                            name: brand.name,
+                            description: brand.description,
+                            logo: '',
+                            is_active: true,
+                            user_id: null,
+                            created_by: null
+                        }]);
+
+                    if (brandError) {
+                        addResult(`⚠️ Erreur création marque ${brand.name}: ${brandError.message}`, 'warning');
+                    } else {
+                        addResult(`✅ Marque créée: ${brand.name}`);
+                    }
+                }
+
+                // 3. Créer les relations marque-catégorie
+                if (categoryData) {
+                    addResult('Création des relations marque-catégorie...');
+                    for (const brand of defaultBrands) {
+                        const { error: relationError } = await supabase
+                            .from('brand_categories')
+                            .upsert([{
+                                brand_id: brand.id,
+                                category_id: categoryData.id
+                            }]);
+
+                        if (relationError) {
+                            addResult(`⚠️ Erreur relation ${brand.name}: ${relationError.message}`, 'warning');
+                        } else {
+                            addResult(`✅ Relation créée: ${brand.name} - Électronique`);
+                        }
+                    }
+                }
+
+                updateStatus('✅ Restauration terminée', 'success');
+                addResult('🎉 Restauration des données terminée !', 'success');
+                addResult('💡 Rechargez l\'application pour voir les données restaurées.', 'info');
+
+            } catch (error) {
+                updateStatus('❌ Erreur lors de la restauration', 'error');
+                addResult(`❌ Erreur: ${error.message}`);
+            }
+        }
+
+        // Diagnostic automatique au chargement
+        window.addEventListener('load', () => {
+            addResult('📄 Page de diagnostic chargée');
+            addResult('💡 Cliquez sur "Diagnostiquer" pour commencer');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Affichage Modèles</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .instruction {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .checklist {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .checklist li {
+            margin: 5px 0;
+        }
+        .checklist .done {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .checklist .pending {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Affichage Modèles</h1>
+        
+        <div class="info">
+            <strong>Objectif :</strong> Vérifier que la section "Modèles" s'affiche correctement.
+        </div>
+
+        <div class="instruction">
+            <h3>📋 Instructions de Test</h3>
+            <ol>
+                <li>Ouvrez l'application dans votre navigateur</li>
+                <li>Allez dans "Gestion des Appareils"</li>
+                <li>Cliquez sur l'onglet "Modèles"</li>
+                <li>Vérifiez que la section s'affiche avec le contenu</li>
+                <li>Cochez les éléments de la liste ci-dessous</li>
+            </ol>
+        </div>
+
+        <div class="checklist">
+            <h3>✅ Checklist de Vérification</h3>
+            <ul>
+                <li class="pending" id="check-1">L'onglet "Modèles" est visible et cliquable</li>
+                <li class="pending" id="check-2">La section "Modèles" s'affiche quand on clique dessus</li>
+                <li class="pending" id="check-3">Le titre "Modèles (X)" s'affiche avec le bon nombre</li>
+                <li class="pending" id="check-4">Le bouton "Ajouter un modèle" est visible</li>
+                <li class="pending" id="check-5">Les filtres (recherche, marque, catégorie) sont visibles</li>
+                <li class="pending" id="check-6">Le tableau des modèles s'affiche (même s'il est vide)</li>
+                <li class="pending" id="check-7">Pas d'erreur dans la console du navigateur</li>
+                <li class="pending" id="check-8">Les autres onglets (Marques, Catégories) fonctionnent toujours</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="openApplication()">🚀 Ouvrir l'Application</button>
+            <button onclick="resetChecklist()">🔄 Réinitialiser</button>
+        </div>
+
+        <div id="status-container">
+            <div class="status info">
+                <strong>En attente...</strong> Suivez les instructions et cochez les éléments de la checklist.
+            </div>
+        </div>
+
+        <div class="container">
+            <h3>🔧 En cas de Problème</h3>
+            <div class="warning">
+                <strong>Si la section "Modèles" ne s'affiche toujours pas :</strong>
+                <ol>
+                    <li>Vérifiez que le serveur de développement est démarré</li>
+                    <li>Ouvrez la console du navigateur (F12) et regardez les erreurs</li>
+                    <li>Vérifiez que le script SQL a été exécuté dans Supabase</li>
+                    <li>Redémarrez l'application avec <code>./fix_connection_error.sh</code></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = `<div class="status ${type}"><strong>${message}</strong></div>`;
+        }
+
+        function openApplication() {
+            window.open('http://localhost:3000/app/catalog/device-management', '_blank');
+            updateStatus('🚀 Application ouverte dans un nouvel onglet', 'info');
+        }
+
+        function resetChecklist() {
+            const checks = document.querySelectorAll('.checklist li');
+            checks.forEach(check => {
+                check.className = 'pending';
+            });
+            updateStatus('🔄 Checklist réinitialisée', 'info');
+        }
+
+        // Fonction pour cocher un élément (à appeler manuellement)
+        function checkItem(itemNumber) {
+            const item = document.getElementById(`check-${itemNumber}`);
+            if (item) {
+                item.className = 'done';
+                item.innerHTML = item.innerHTML.replace('❌', '✅');
+                
+                // Vérifier si tous les éléments sont cochés
+                const allChecks = document.querySelectorAll('.checklist li');
+                const allDone = Array.from(allChecks).every(check => check.className === 'done');
+                
+                if (allDone) {
+                    updateStatus('🎉 Tous les tests sont passés ! La section Modèles fonctionne correctement.', 'success');
+                }
+            }
+        }
+
+        // Instructions pour l'utilisateur
+        console.log(`
+🧪 Test de la section Modèles
+
+Instructions :
+1. Ouvrez l'application dans votre navigateur
+2. Allez dans "Gestion des Appareils"
+3. Cliquez sur l'onglet "Modèles"
+4. Vérifiez que la section s'affiche
+5. Dans la console, tapez : checkItem(1), checkItem(2), etc. pour cocher les éléments
+
+Fonctions disponibles :
+- checkItem(1) : Coche l'élément 1
+- checkItem(2) : Coche l'élément 2
+- etc.
+        `);
+
+        // Exporter les fonctions pour l'utilisateur
+        window.checkItem = checkItem;
+        window.openApplication = openApplication;
+        window.resetChecklist = resetChecklist;
+
+        // Test automatique au chargement
+        window.addEventListener('load', () => {
+            updateStatus('📄 Page de test chargée', 'info');
+            updateStatus('💡 Ouvrez l\'application et testez la section Modèles', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Correction Mise à Jour Modèles</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196f3; }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #2196f3;
+            background-color: #f8f9fa;
+        }
+        .code {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test - Correction Mise à Jour Modèles</h1>
+        
+        <div class="step">
+            <h3>🐛 Problème Identifié</h3>
+            <p class="error"><strong>Erreur :</strong> <code>Could not find the 'brandId' column of 'device_models' in the schema cache</code></p>
+            <p><strong>Cause :</strong> Le service essayait de mettre à jour à la fois les colonnes camelCase (<code>brandId</code>) et snake_case (<code>brand_id</code>), causant un conflit.</p>
+        </div>
+
+        <div class="step">
+            <h3>✅ Correction Appliquée</h3>
+            <p>J'ai corrigé le service <code>deviceModelService.ts</code> pour :</p>
+            <ul>
+                <li class="success">✅ Mapper correctement camelCase → snake_case</li>
+                <li class="success">✅ Éviter les conflits de colonnes</li>
+                <li class="success">✅ Utiliser seulement les colonnes de la base de données</li>
+            </ul>
+            
+            <div class="code">
+                // AVANT (problématique) :
+                .update({
+                  ...updates,           // brandId, categoryId
+                  brand_id: updates.brandId,    // brand_id
+                  category_id: updates.categoryId, // category_id
+                })
+
+                // APRÈS (corrigé) :
+                const dbUpdates = {
+                  name: updates.name,
+                  brand_id: updates.brandId,    // Seulement snake_case
+                  category_id: updates.categoryId,
+                  updated_at: new Date().toISOString()
+                };
+                .update(dbUpdates)
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🎯 Comment Tester la Correction</h3>
+            <ol>
+                <li><strong>Rechargez l'application</strong> (F5)</li>
+                <li><strong>Allez dans</strong> "Gestion des Appareils" > "Modèles"</li>
+                <li><strong>Créez un modèle</strong> si vous n'en avez pas :
+                    <ul>
+                        <li>Nom : "Test Model"</li>
+                        <li>Marque : Sélectionnez une marque</li>
+                        <li>Catégorie : Sélectionnez une catégorie</li>
+                        <li>Spécifications : <code>{"test": "value"}</code></li>
+                    </ul>
+                </li>
+                <li><strong>Modifiez le modèle</strong> :
+                    <ul>
+                        <li>Cliquez sur l'icône crayon (✏️)</li>
+                        <li>Changez le nom ou la description</li>
+                        <li>Cliquez sur "Modifier"</li>
+                    </ul>
+                </li>
+                <li><strong>Vérifiez</strong> qu'il n'y a plus d'erreur <code>PGRST204</code></li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🔍 Vérification de la Structure de la Base</h3>
+            <p>Si vous voulez vérifier la structure de votre table <code>device_models</code> :</p>
+            <div class="code">
+                -- Exécuter dans Supabase SQL Editor :
+                check_device_models_schema.sql
+            </div>
+            <p>Cela vous montrera les colonnes exactes de votre table.</p>
+        </div>
+
+        <div class="step">
+            <h3>🚨 Si le Problème Persiste</h3>
+            <p><strong>Vérifiez que :</strong></p>
+            <ul>
+                <li>✅ Le fichier <code>deviceModelService.ts</code> a été sauvegardé</li>
+                <li>✅ L'application a été rechargée (F5)</li>
+                <li>✅ Vous avez des données de test (marques et catégories)</li>
+                <li>✅ Les politiques RLS sont correctes</li>
+            </ul>
+            
+            <p><strong>Scripts SQL à exécuter si nécessaire :</strong></p>
+            <div class="code">
+                1. fix_rls_policies.sql
+                2. diagnostic_and_fix_data_uuid_fixed.sql
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🎉 Résultat Attendu</h3>
+            <p>Après la correction, vous devriez pouvoir :</p>
+            <ul class="success">
+                <li>✅ Créer des modèles sans erreur</li>
+                <li>✅ Modifier des modèles existants</li>
+                <li>✅ Voir les modèles avec leurs marques et catégories</li>
+                <li>✅ Supprimer des modèles</li>
+                <li>✅ Aucune erreur <code>PGRST204</code> dans la console</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.open('http://localhost:3000/app/catalog/device-management', '_blank')">
+                🚀 Tester l'Application
+            </button>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📧 Diagnostic Emails Final</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 10px;
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .step h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .copy-btn:hover {
+            background: #5a6fd8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Diagnostic Emails Final</h1>
+            <p><strong>Problème :</strong> Pas d'emails de confirmation reçus</p>
+            <p><strong>Solution :</strong> Diagnostic complet et correction</p>
+        </div>
+
+        <div class="error">
+            <h3>❌ Problème Identifié</h3>
+            <p>Dans votre capture d'écran Supabase, je vois que :</p>
+            <ul>
+                <li>✅ 7 utilisateurs créés avec succès</li>
+                <li>❌ Tous sont confirmés automatiquement ("Confirmed at: 28 Sep, 2025 21:21")</li>
+                <li>❌ Aucun email de confirmation envoyé</li>
+                <li>🔍 La fonction RPC confirme automatiquement au lieu d'envoyer un email</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>📋 Étape 1 : Diagnostic dans Supabase</h3>
+            <p>Exécutez ce script de diagnostic dans Supabase SQL Editor :</p>
+            
+            <div class="code-block" id="diagnosticScript">
+-- 📧 DIAGNOSTIC ET CORRECTION DES EMAILS SUPABASE
+-- Script pour diagnostiquer pourquoi les emails ne sont pas envoyés
+
+-- 1. DIAGNOSTIC - Vérifier les utilisateurs non confirmés
+SELECT 'DIAGNOSTIC: Utilisateurs non confirmés' as info;
+SELECT 
+    id,
+    email,
+    email_confirmed_at,
+    confirmation_sent_at,
+    created_at
+FROM auth.users 
+WHERE email_confirmed_at IS NULL
+ORDER BY created_at DESC;
+
+-- 2. DIAGNOSTIC - Vérifier tous les utilisateurs récents
+SELECT 'DIAGNOSTIC: Utilisateurs récents' as info;
+SELECT 
+    id,
+    email,
+    email_confirmed_at,
+    confirmation_sent_at,
+    created_at,
+    CASE 
+        WHEN email_confirmed_at IS NOT NULL THEN 'Confirmé automatiquement'
+        WHEN confirmation_sent_at IS NOT NULL THEN 'Email envoyé, en attente de confirmation'
+        ELSE 'Pas d''email envoyé'
+    END as status_email
+FROM auth.users 
+ORDER BY created_at DESC
+LIMIT 10;
+
+-- 3. CORRECTION - Créer une fonction qui ne confirme PAS automatiquement
+CREATE OR REPLACE FUNCTION public.create_user_with_email_required(
+    user_email TEXT,
+    user_password TEXT,
+    first_name TEXT DEFAULT 'Utilisateur',
+    last_name TEXT DEFAULT '',
+    user_role TEXT DEFAULT 'technician'
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    new_user_id UUID;
+    result JSON;
+    confirmation_token TEXT;
+BEGIN
+    -- Vérifier que l'email n'existe pas déjà
+    IF EXISTS (SELECT 1 FROM auth.users WHERE email = user_email) THEN
+        result := json_build_object(
+            'success', false,
+            'error', 'Email already exists',
+            'message', 'Un compte avec cet email existe déjà. Veuillez vous connecter.'
+        );
+        RETURN result;
+    END IF;
+    
+    -- Générer un UUID pour l'utilisateur
+    new_user_id := gen_random_uuid();
+    
+    -- Générer un token de confirmation
+    confirmation_token := encode(gen_random_bytes(32), 'hex');
+    
+    -- Insérer dans auth.users SANS confirmer l'email
+    INSERT INTO auth.users (
+        id,
+        instance_id,
+        email,
+        encrypted_password,
+        email_confirmed_at,
+        created_at,
+        updated_at,
+        raw_app_meta_data,
+        raw_user_meta_data,
+        is_super_admin,
+        role,
+        aud,
+        confirmation_token,
+        confirmation_sent_at
+    ) VALUES (
+        new_user_id,
+        '00000000-0000-0000-0000-000000000000',
+        user_email,
+        crypt(user_password, gen_salt('bf')),
+        NULL, -- Email PAS confirmé - nécessitera validation
+        NOW(),
+        NOW(),
+        '{"provider": "email", "providers": ["email"]}',
+        json_build_object('firstName', first_name, 'lastName', last_name, 'role', user_role),
+        false,
+        'authenticated',
+        'authenticated',
+        confirmation_token,
+        NOW()
+    );
+    
+    -- Créer l'utilisateur dans public.users
+    INSERT INTO public.users (
+        id,
+        first_name,
+        last_name,
+        email,
+        role,
+        created_at,
+        updated_at
+    ) VALUES (
+        new_user_id,
+        first_name,
+        last_name,
+        user_email,
+        user_role,
+        NOW(),
+        NOW()
+    );
+    
+    -- Retourner le résultat
+    result := json_build_object(
+        'success', true,
+        'user_id', new_user_id,
+        'email', user_email,
+        'message', 'Utilisateur créé avec succès. Email de confirmation requis.',
+        'confirmation_sent', false,
+        'needs_email_confirmation', true,
+        'confirmation_token', confirmation_token
+    );
+    
+    RETURN result;
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        result := json_build_object(
+            'success', false,
+            'error', SQLERRM,
+            'message', 'Erreur lors de la création de l''utilisateur: ' || SQLERRM
+        );
+        RETURN result;
+END;
+$$;
+
+-- 4. TEST DE LA NOUVELLE FONCTION
+SELECT 'TEST: Test de la fonction avec email requis' as info;
+SELECT public.create_user_with_email_required(
+    'test-email@yopmail.com',
+    'motdepasse123',
+    'Test',
+    'Email',
+    'technician'
+) as test_result;
+
+-- 5. VÉRIFICATION - L'utilisateur test doit être non confirmé
+SELECT 'VÉRIFICATION: Utilisateur test non confirmé' as info;
+SELECT 
+    id,
+    email,
+    email_confirmed_at,
+    confirmation_sent_at,
+    created_at
+FROM auth.users 
+WHERE email = 'test-email@yopmail.com';
+
+-- 6. NETTOYAGE - Supprimer l'utilisateur test
+DELETE FROM auth.users WHERE email = 'test-email@yopmail.com';
+DELETE FROM public.users WHERE email = 'test-email@yopmail.com';
+
+-- 7. MESSAGE FINAL
+SELECT '✅ Diagnostic terminé - Fonction avec email requis créée' as status;
+            </div>
+            
+            <button class="copy-btn" onclick="copyToClipboard('diagnosticScript')">🔍 EXÉCUTER LE DIAGNOSTIC</button>
+        </div>
+
+        <div class="step">
+            <h3>📋 Étape 2 : Configuration Email dans Supabase</h3>
+            <p>Pour que les emails fonctionnent, vous devez configurer :</p>
+            <ol>
+                <li><strong>Allez dans Supabase Dashboard</strong> → Authentication → Emails</li>
+                <li><strong>Activez les notifications email</strong></li>
+                <li><strong>Configurez les templates d'email</strong></li>
+                <li><strong>Testez l'envoi d'emails</strong> depuis le dashboard</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>📋 Étape 3 : Test de l'Inscription</h3>
+            <p>Après avoir exécuté le script et configuré les emails :</p>
+            <ol>
+                <li><strong>Rechargez votre application</strong> (Ctrl+F5)</li>
+                <li><strong>Testez l'inscription</strong> avec un nouvel email</li>
+                <li><strong>Vérifiez dans Supabase</strong> que l'utilisateur est créé mais NON confirmé</li>
+                <li><strong>Vérifiez votre boîte email</strong> (incluant les spams)</li>
+            </ol>
+        </div>
+
+        <div class="success">
+            <h3>✅ Résultats Attendus</h3>
+            <ul>
+                <li>✅ Diagnostic complet des utilisateurs existants</li>
+                <li>✅ Nouvelle fonction qui ne confirme pas automatiquement</li>
+                <li>✅ Utilisateur créé mais non confirmé</li>
+                <li>✅ Email de confirmation requis</li>
+                <li>✅ Configuration email dans Supabase</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>🔍 Points Importants</h3>
+            <ul>
+                <li><strong>L'API Supabase Auth native</strong> doit être utilisée pour l'envoi d'emails</li>
+                <li><strong>La fonction RPC</strong> ne peut pas envoyer d'emails automatiquement</li>
+                <li><strong>La configuration email</strong> dans Supabase est obligatoire</li>
+                <li><strong>Les templates d'email</strong> doivent être configurés</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(function() {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '✅ SCRIPT COPIÉ !';
+                button.style.background = '#28a745';
+                
+                setTimeout(function() {
+                    button.textContent = originalText;
+                    button.style.background = '#667eea';
+                }, 3000);
+            }).catch(function(err) {
+                console.error('Erreur lors de la copie: ', err);
+                alert('Erreur lors de la copie. Veuillez sélectionner et copier manuellement.');
+            });
+        }
+    </script>
+</body>
+</html>

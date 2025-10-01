@@ -1,0 +1,97 @@
+-- Script corrigé pour restaurer les données par défaut (avec type JSONB)
+-- À exécuter dans Supabase SQL Editor
+
+-- 1. Désactiver temporairement RLS pour permettre l'insertion
+ALTER TABLE public.device_categories DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.device_brands DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.device_models DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.brand_categories DISABLE ROW LEVEL SECURITY;
+
+-- 2. Créer une catégorie par défaut
+INSERT INTO public.device_categories (name, description, icon, is_active, user_id, created_by)
+VALUES ('Électronique', 'Catégorie par défaut pour les appareils électroniques', 'smartphone', true, NULL, NULL)
+ON CONFLICT DO NOTHING;
+
+-- 3. Récupérer l'ID de la catégorie créée et créer les marques
+DO $$
+DECLARE
+    v_category_id UUID;
+BEGIN
+    -- Récupérer l'ID de la catégorie Électronique
+    SELECT id INTO v_category_id FROM public.device_categories 
+    WHERE name = 'Électronique' LIMIT 1;
+    
+    -- Créer les marques par défaut
+    INSERT INTO public.device_brands (id, name, description, logo, is_active, user_id, created_by)
+    VALUES 
+        ('1', 'Apple', 'Fabricant américain de produits électroniques premium', '', true, NULL, NULL),
+        ('2', 'Samsung', 'Fabricant sud-coréen d''électronique grand public', '', true, NULL, NULL),
+        ('3', 'Google', 'Entreprise américaine de technologie', '', true, NULL, NULL),
+        ('4', 'Microsoft', 'Entreprise américaine de technologie', '', true, NULL, NULL),
+        ('5', 'Sony', 'Conglomérat japonais d''électronique', '', true, NULL, NULL)
+    ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        logo = EXCLUDED.logo,
+        updated_at = NOW();
+    
+    -- Créer les relations marque-catégorie
+    IF v_category_id IS NOT NULL THEN
+        INSERT INTO public.brand_categories (brand_id, category_id)
+        VALUES 
+            ('1', v_category_id),
+            ('2', v_category_id),
+            ('3', v_category_id),
+            ('4', v_category_id),
+            ('5', v_category_id)
+        ON CONFLICT (brand_id, category_id) DO NOTHING;
+        
+        RAISE NOTICE '✅ Relations marque-catégorie créées';
+    END IF;
+    
+    RAISE NOTICE '✅ Données par défaut restaurées avec succès';
+END $$;
+
+-- 4. Créer quelques modèles d'exemple (avec specifications en JSONB)
+INSERT INTO public.device_models (name, specifications, brand_id, category_id, is_active, user_id, created_by)
+SELECT 
+    model_name,
+    model_specifications::jsonb,
+    brand_id,
+    (SELECT id FROM public.device_categories WHERE name = 'Électronique' LIMIT 1),
+    true,
+    NULL,
+    NULL
+FROM (VALUES 
+    ('iPhone 15', '{"ecran": "6.1 pouces", "processeur": "A17 Pro", "stockage": "128GB", "couleur": "Noir"}', '1'),
+    ('Galaxy S24', '{"ecran": "6.2 pouces", "processeur": "Snapdragon 8 Gen 3", "stockage": "256GB", "couleur": "Blanc"}', '2'),
+    ('Pixel 8', '{"ecran": "6.2 pouces", "processeur": "Tensor G3", "stockage": "128GB", "couleur": "Bleu"}', '3'),
+    ('Surface Pro 9', '{"ecran": "13 pouces", "processeur": "Intel i7", "stockage": "512GB", "type": "Tablette 2-en-1"}', '4'),
+    ('WH-1000XM5', '{"type": "Casque audio", "autonomie": "30h", "reduction_bruit": "Active", "connectivite": "Bluetooth"}', '5')
+) AS models(model_name, model_specifications, brand_id)
+ON CONFLICT DO NOTHING;
+
+-- 5. Vérifier les données créées
+SELECT 'Vérification des catégories:' as info;
+SELECT id, name, description FROM public.device_categories;
+
+SELECT 'Vérification des marques:' as info;
+SELECT id, name, description FROM public.device_brands ORDER BY name;
+
+SELECT 'Vérification des modèles:' as info;
+SELECT 
+    dm.name, 
+    dm.specifications, 
+    db.name as brand_name, 
+    dc.name as category_name 
+FROM public.device_models dm
+LEFT JOIN public.device_brands db ON dm.brand_id = db.id
+LEFT JOIN public.device_categories dc ON dm.category_id = dc.id;
+
+SELECT 'Vérification des relations marque-catégorie:' as info;
+SELECT db.name as brand_name, dc.name as category_name
+FROM public.brand_categories bc
+LEFT JOIN public.device_brands db ON bc.brand_id = db.id
+LEFT JOIN public.device_categories dc ON bc.category_id = dc.id;
+
+SELECT '✅ Script exécuté avec succès !' as result;

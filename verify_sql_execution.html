@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification SQL</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .sql-script {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .instruction {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Vérification de l'Exécution SQL</h1>
+        
+        <div class="info">
+            <strong>Objectif :</strong> Vérifier si le script SQL a été exécuté dans Supabase.
+        </div>
+
+        <div class="instruction">
+            <h3>📋 Instructions</h3>
+            <ol>
+                <li>Cliquez sur "Vérifier l'État SQL"</li>
+                <li>Si des erreurs apparaissent, exécutez le script SQL dans Supabase</li>
+                <li>Copiez le script ci-dessous dans Supabase SQL Editor</li>
+                <li>Cliquez sur "Run"</li>
+                <li>Revenez ici et cliquez à nouveau sur "Vérifier"</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button onclick="verifySQLState()">🔍 Vérifier l'État SQL</button>
+            <button onclick="copySQLScript()">📋 Copier le Script SQL</button>
+        </div>
+
+        <div id="status-container">
+            <div class="status info">
+                <strong>En attente...</strong> Cliquez sur "Vérifier l'État SQL" pour commencer.
+            </div>
+        </div>
+
+        <div id="results"></div>
+
+        <div class="container">
+            <h3>📄 Script SQL à Exécuter</h3>
+            <div class="sql-script" id="sql-script">
+                <!-- Le script SQL sera affiché ici -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Import de Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // Configuration Supabase
+        const SUPABASE_URL = 'https://olrihggkxyksuofkesnk.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9scmloZ2dreXZrc3VvZmtlc25rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NTQ4MDQsImV4cCI6MjA1MDUzMDgwNH0.7nXqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqKqK';
+
+        let supabase;
+
+        // Script SQL complet
+        const SQL_SCRIPT = `-- SUPPRIMER LES FONCTIONS EXISTANTES
+DROP FUNCTION IF EXISTS public.update_brand_categories(text, uuid[]) CASCADE;
+DROP FUNCTION IF EXISTS public.upsert_brand(text, text, text, text, uuid[]) CASCADE;
+
+-- SUPPRIMER LES VUES
+DROP VIEW IF EXISTS public.brand_with_categories CASCADE;
+
+-- SUPPRIMER LES CONTRAINTES
+ALTER TABLE public.brand_categories DROP CONSTRAINT IF EXISTS brand_categories_brand_id_fkey;
+ALTER TABLE public.device_models DROP CONSTRAINT IF EXISTS device_models_brand_id_fkey;
+ALTER TABLE public.device_brands DROP CONSTRAINT IF EXISTS device_brands_pkey;
+ALTER TABLE public.brand_categories DROP CONSTRAINT IF EXISTS brand_categories_pkey;
+
+-- MODIFIER LES TYPES DE COLONNES
+ALTER TABLE public.device_brands ALTER COLUMN id TYPE TEXT;
+ALTER TABLE public.brand_categories ALTER COLUMN brand_id TYPE TEXT;
+ALTER TABLE public.device_models ALTER COLUMN brand_id TYPE TEXT;
+
+-- RECRÉER LES CONTRAINTES
+ALTER TABLE public.device_brands ADD CONSTRAINT device_brands_pkey PRIMARY KEY (id);
+ALTER TABLE public.brand_categories ADD CONSTRAINT brand_categories_pkey PRIMARY KEY (id);
+ALTER TABLE public.brand_categories ADD CONSTRAINT brand_categories_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.device_brands(id) ON DELETE CASCADE;
+ALTER TABLE public.device_models ADD CONSTRAINT device_models_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.device_brands(id) ON DELETE CASCADE;
+
+-- CRÉER LA VUE
+CREATE VIEW public.brand_with_categories AS
+SELECT 
+    db.id,
+    db.name,
+    db.description,
+    db.logo,
+    db.is_active,
+    db.user_id,
+    db.created_by,
+    db.created_at,
+    db.updated_at,
+    COALESCE(
+        json_agg(
+            json_build_object(
+                'id', dc.id,
+                'name', dc.name,
+                'description', dc.description,
+                'icon', dc.icon
+            )
+        ) FILTER (WHERE dc.id IS NOT NULL),
+        '[]'::json
+    ) as categories
+FROM public.device_brands db
+LEFT JOIN public.brand_categories bc ON db.id = bc.brand_id
+LEFT JOIN public.device_categories dc ON bc.category_id = dc.id
+GROUP BY db.id, db.name, db.description, db.logo, db.is_active, db.user_id, db.created_by, db.created_at, db.updated_at;
+
+ALTER VIEW public.brand_with_categories SET (security_invoker = true);
+
+-- CRÉER LES FONCTIONS
+CREATE OR REPLACE FUNCTION public.update_brand_categories(
+    p_brand_id TEXT,
+    p_category_ids UUID[]
+) RETURNS JSON AS $$
+DECLARE
+    v_user_id UUID;
+    v_result JSON;
+    v_category_id UUID;
+BEGIN
+    BEGIN
+        v_user_id := auth.uid();
+    EXCEPTION WHEN OTHERS THEN
+        v_user_id := NULL;
+    END;
+    
+    IF v_user_id IS NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM device_brands WHERE id = p_brand_id) THEN
+            RAISE EXCEPTION 'Marque non trouvée';
+        END IF;
+        
+        DELETE FROM brand_categories WHERE brand_id = p_brand_id;
+        
+        IF p_category_ids IS NOT NULL AND array_length(p_category_ids, 1) > 0 THEN
+            FOREACH v_category_id IN ARRAY p_category_ids
+            LOOP
+                IF EXISTS (SELECT 1 FROM device_categories WHERE id = v_category_id) THEN
+                    INSERT INTO brand_categories (brand_id, category_id)
+                    VALUES (p_brand_id, v_category_id)
+                    ON CONFLICT (brand_id, category_id) DO NOTHING;
+                END IF;
+            END LOOP;
+        END IF;
+    ELSE
+        IF NOT EXISTS (SELECT 1 FROM device_brands WHERE id = p_brand_id AND user_id = v_user_id) THEN
+            RAISE EXCEPTION 'Marque non trouvée ou non autorisée';
+        END IF;
+        
+        DELETE FROM brand_categories WHERE brand_id = p_brand_id;
+        
+        IF p_category_ids IS NOT NULL AND array_length(p_category_ids, 1) > 0 THEN
+            FOREACH v_category_id IN ARRAY p_category_ids
+            LOOP
+                IF EXISTS (SELECT 1 FROM device_categories WHERE id = v_category_id AND user_id = v_user_id) THEN
+                    INSERT INTO brand_categories (brand_id, category_id)
+                    VALUES (p_brand_id, v_category_id)
+                    ON CONFLICT (brand_id, category_id) DO NOTHING;
+                END IF;
+            END LOOP;
+        END IF;
+    END IF;
+    
+    SELECT json_build_object(
+        'id', db.id,
+        'name', db.name,
+        'description', db.description,
+        'logo', db.logo,
+        'is_active', db.is_active,
+        'categories', COALESCE(
+            json_agg(
+                json_build_object(
+                    'id', dc.id,
+                    'name', dc.name,
+                    'description', dc.description,
+                    'icon', dc.icon
+                )
+            ) FILTER (WHERE dc.id IS NOT NULL),
+            '[]'::json
+        )
+    ) INTO v_result
+    FROM device_brands db
+    LEFT JOIN brand_categories bc ON db.id = bc.brand_id
+    LEFT JOIN device_categories dc ON bc.category_id = dc.id
+    WHERE db.id = p_brand_id
+    GROUP BY db.id, db.name, db.description, db.logo, db.is_active;
+    
+    RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.upsert_brand(
+    p_id TEXT,
+    p_name TEXT,
+    p_description TEXT DEFAULT '',
+    p_logo TEXT DEFAULT '',
+    p_category_ids UUID[] DEFAULT NULL
+) RETURNS JSON AS $$
+DECLARE
+    v_user_id UUID;
+    v_result JSON;
+BEGIN
+    BEGIN
+        v_user_id := auth.uid();
+    EXCEPTION WHEN OTHERS THEN
+        v_user_id := NULL;
+    END;
+    
+    IF v_user_id IS NULL THEN
+        INSERT INTO device_brands (id, name, description, logo, user_id, created_by)
+        VALUES (p_id, p_name, p_description, p_logo, NULL, NULL)
+        ON CONFLICT (id) DO UPDATE SET
+            name = EXCLUDED.name,
+            description = EXCLUDED.description,
+            logo = EXCLUDED.logo,
+            updated_at = NOW();
+    ELSE
+        INSERT INTO device_brands (id, name, description, logo, user_id, created_by)
+        VALUES (p_id, p_name, p_description, p_logo, v_user_id, v_user_id)
+        ON CONFLICT (id) DO UPDATE SET
+            name = EXCLUDED.name,
+            description = EXCLUDED.description,
+            logo = EXCLUDED.logo,
+            updated_at = NOW()
+        WHERE device_brands.user_id = v_user_id;
+    END IF;
+    
+    IF p_category_ids IS NOT NULL THEN
+        PERFORM public.update_brand_categories(p_id, p_category_ids);
+    END IF;
+    
+    SELECT json_build_object(
+        'id', db.id,
+        'name', db.name,
+        'description', db.description,
+        'logo', db.logo,
+        'is_active', db.is_active,
+        'categories', COALESCE(
+            json_agg(
+                json_build_object(
+                    'id', dc.id,
+                    'name', dc.name,
+                    'description', dc.description,
+                    'icon', dc.icon
+                )
+            ) FILTER (WHERE dc.id IS NOT NULL),
+            '[]'::json
+        )
+    ) INTO v_result
+    FROM device_brands db
+    LEFT JOIN brand_categories bc ON db.id = bc.brand_id
+    LEFT JOIN device_categories dc ON bc.category_id = dc.id
+    WHERE db.id = p_id
+    GROUP BY db.id, db.name, db.description, db.logo, db.is_active;
+    
+    RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- CRÉER LES MARQUES PAR DÉFAUT
+INSERT INTO device_categories (name, description, icon, is_active, user_id, created_by)
+VALUES ('Électronique', 'Catégorie par défaut', 'smartphone', true, NULL, NULL)
+ON CONFLICT DO NOTHING;
+
+DO $$
+DECLARE
+    v_category_id UUID;
+BEGIN
+    SELECT id INTO v_category_id FROM device_categories 
+    WHERE name = 'Électronique' LIMIT 1;
+    
+    INSERT INTO device_brands (id, name, description, logo, is_active, user_id, created_by)
+    VALUES 
+        ('1', 'Apple', 'Fabricant américain de produits électroniques premium', '', true, NULL, NULL),
+        ('2', 'Samsung', 'Fabricant sud-coréen d''électronique grand public', '', true, NULL, NULL),
+        ('3', 'Google', 'Entreprise américaine de technologie', '', true, NULL, NULL),
+        ('4', 'Microsoft', 'Entreprise américaine de technologie', '', true, NULL, NULL),
+        ('5', 'Sony', 'Conglomérat japonais d''électronique', '', true, NULL, NULL)
+    ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        logo = EXCLUDED.logo,
+        updated_at = NOW();
+    
+    IF v_category_id IS NOT NULL THEN
+        INSERT INTO brand_categories (brand_id, category_id)
+        VALUES 
+            ('1', v_category_id),
+            ('2', v_category_id),
+            ('3', v_category_id),
+            ('4', v_category_id),
+            ('5', v_category_id)
+        ON CONFLICT (brand_id, category_id) DO NOTHING;
+    END IF;
+    
+    RAISE NOTICE '✅ Marques par défaut créées avec succès';
+END $$;
+
+-- VÉRIFICATION
+SELECT 'Vérification des marques créées:' as info;
+SELECT id, name, description FROM device_brands ORDER BY name;
+
+SELECT 'Test de la fonction upsert_brand:' as info;
+SELECT public.upsert_brand('test', 'Test', 'Description test', '', ARRAY[(SELECT id FROM device_categories LIMIT 1)]) as result;
+
+DELETE FROM device_brands WHERE id = 'test';
+
+SELECT '✅ Script exécuté avec succès !' as result;`;
+
+        function updateStatus(message, type = 'info') {
+            const statusContainer = document.getElementById('status-container');
+            statusContainer.innerHTML = `<div class="status ${type}"><strong>${message}</strong></div>`;
+        }
+
+        function addResult(message, type = 'info') {
+            const resultsContainer = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `status ${type}`;
+            resultDiv.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            resultsContainer.appendChild(resultDiv);
+            resultsContainer.scrollTop = resultsContainer.scrollHeight;
+        }
+
+        function copySQLScript() {
+            navigator.clipboard.writeText(SQL_SCRIPT).then(() => {
+                addResult('✅ Script SQL copié dans le presse-papiers', 'success');
+            }).catch(() => {
+                addResult('❌ Impossible de copier le script', 'error');
+            });
+        }
+
+        async function verifySQLState() {
+            updateStatus('🔍 Vérification en cours...', 'info');
+            addResult('Début de la vérification de l\'état SQL...');
+
+            try {
+                // Initialiser Supabase
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                addResult('✅ Supabase initialisé');
+
+                // Vérifier les tables
+                const tables = ['device_categories', 'device_brands', 'device_models', 'brand_categories'];
+                let allTablesExist = true;
+
+                for (const table of tables) {
+                    try {
+                        const { data, error } = await supabase.from(table).select('count').limit(1);
+                        if (error) {
+                            addResult(`❌ Table ${table}: ${error.message}`, 'error');
+                            allTablesExist = false;
+                        } else {
+                            addResult(`✅ Table ${table}: accessible`, 'success');
+                        }
+                    } catch (error) {
+                        addResult(`❌ Table ${table}: ${error.message}`, 'error');
+                        allTablesExist = false;
+                    }
+                }
+
+                // Vérifier la vue
+                try {
+                    const { data, error } = await supabase.from('brand_with_categories').select('count').limit(1);
+                    if (error) {
+                        addResult(`❌ Vue brand_with_categories: ${error.message}`, 'error');
+                    } else {
+                        addResult(`✅ Vue brand_with_categories: accessible`, 'success');
+                    }
+                } catch (error) {
+                    addResult(`❌ Vue brand_with_categories: ${error.message}`, 'error');
+                }
+
+                // Vérifier les fonctions
+                try {
+                    const { data, error } = await supabase.rpc('upsert_brand', {
+                        p_id: 'test-verification',
+                        p_name: 'Test Verification',
+                        p_description: 'Test',
+                        p_logo: '',
+                        p_category_ids: []
+                    });
+                    if (error) {
+                        addResult(`❌ Fonction upsert_brand: ${error.message}`, 'error');
+                    } else {
+                        addResult(`✅ Fonction upsert_brand: accessible`, 'success');
+                        // Nettoyer
+                        await supabase.from('device_brands').delete().eq('id', 'test-verification');
+                    }
+                } catch (error) {
+                    addResult(`❌ Fonction upsert_brand: ${error.message}`, 'error');
+                }
+
+                // Résumé
+                if (allTablesExist) {
+                    updateStatus('✅ Vérification terminée - Tout semble correct', 'success');
+                    addResult('🎉 L\'état SQL semble correct !', 'success');
+                } else {
+                    updateStatus('⚠️ Vérification terminée - Des problèmes détectés', 'warning');
+                    addResult('⚠️ Des problèmes ont été détectés. Exécutez le script SQL.', 'warning');
+                }
+
+            } catch (error) {
+                updateStatus('❌ Erreur lors de la vérification', 'error');
+                addResult(`❌ Erreur: ${error.message}`, 'error');
+            }
+        }
+
+        // Charger le script SQL au chargement de la page
+        window.addEventListener('load', () => {
+            document.getElementById('sql-script').textContent = SQL_SCRIPT;
+            addResult('📄 Page de vérification chargée');
+            addResult('💡 Cliquez sur "Vérifier l\'État SQL" pour commencer');
+        });
+    </script>
+</body>
+</html>

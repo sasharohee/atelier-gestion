@@ -12,7 +12,10 @@ import {
   Sale,
   StockAlert,
   Notification,
-  DashboardStats
+  DashboardStats,
+  Expense,
+  ExpenseCategory,
+  ExpenseStats
 } from '../types';
 
 // Service pour les paramètres système
@@ -456,9 +459,9 @@ export const userService = {
 
   async signUp(email: string, password: string, userData: Partial<User>) {
     try {
-      console.log('🔧 Tentative d\'inscription via Supabase Auth:', { email });
+      console.log('🔧 Inscription simple via Supabase Auth:', { email });
       
-      // Utiliser directement l'API Supabase Auth pour l'envoi d'emails
+      // Inscription simple avec Supabase Auth uniquement
       const { data, error } = await supabase.auth.signUp({
         email: email,
         password: password,
@@ -467,58 +470,40 @@ export const userService = {
             first_name: userData.firstName || 'Utilisateur',
             last_name: userData.lastName || 'Test',
             role: userData.role || 'technician'
-          },
-          emailRedirectTo: `${window.location.origin}/auth?tab=confirm`
+          }
         }
       });
       
       if (error) {
         console.error('❌ Erreur lors de l\'inscription:', error);
         
-        // Si c'est une erreur de doublon, proposer de se connecter
-        if (error.message.includes('already registered')) {
+        // Gestion des erreurs spécifiques
+        if (error.message.includes('already registered') || error.message.includes('User already registered')) {
           return handleSupabaseError({
             message: 'Un compte avec cet email existe déjà. Veuillez vous connecter.',
             code: 'ACCOUNT_EXISTS'
           });
         }
         
+        if (error.message.includes('Database error saving new user') || error.message.includes('500')) {
+          return handleSupabaseError({
+            message: 'Erreur de base de données. Veuillez exécuter le script de correction SQL dans Supabase.',
+            code: 'DATABASE_ERROR'
+          });
+        }
+        
         return handleSupabaseError({
-          message: 'Erreur lors de l\'inscription. Veuillez réessayer.',
+          message: error.message || 'Erreur lors de l\'inscription. Veuillez réessayer.',
           code: 'SIGNUP_ERROR'
         });
       }
       
       console.log('✅ Inscription réussie:', data);
       
-      // Si l'utilisateur a été créé, tenter de synchroniser avec subscription_status via RPC
-      if (data.user) {
-        try {
-          console.log('🔄 Tentative de synchronisation avec subscription_status via RPC...');
-          
-          // Utiliser la fonction RPC pour créer les données par défaut
-          const { data: rpcData, error: rpcError } = await supabase.rpc('create_user_default_data', {
-            p_user_id: data.user.id
-          });
-
-          if (rpcError) {
-            console.log('⚠️ Erreur lors de la synchronisation RPC:', rpcError);
-          } else {
-            console.log('✅ Synchronisation avec subscription_status réussie via RPC:', rpcData);
-          }
-        } catch (syncErr) {
-          console.log('⚠️ Exception lors de la synchronisation RPC:', syncErr);
-        }
-      }
-      
-      // Stocker les données pour vérification du statut
-      localStorage.setItem('pendingSignupEmail', email);
-      
       return handleSupabaseSuccess({
         message: 'Inscription réussie ! Vérifiez votre email pour confirmer votre compte.',
-        status: 'pending',
         data: data.user,
-        emailSent: true
+        emailSent: data.user?.email_confirmed_at ? false : true
       });
     } catch (err) {
       console.error('💥 Exception lors de l\'inscription:', err);
@@ -2107,6 +2092,491 @@ export const saleService = {
     
     if (error) return handleSupabaseError(error);
     return handleSupabaseSuccess(true);
+  }
+};
+
+// Service pour les catégories de dépenses
+export const expenseCategoryService = {
+  async getAll() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseSuccess([]);
+      }
+
+      const { data, error } = await supabase
+        .from('expense_categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('name', { ascending: true });
+      
+      if (error) return handleSupabaseError(error);
+      
+      const convertedData = data?.map(category => ({
+        id: category.id,
+        name: category.name,
+        description: category.description,
+        color: category.color,
+        isActive: category.is_active,
+        createdAt: new Date(category.created_at),
+        updatedAt: new Date(category.updated_at)
+      })) || [];
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  },
+
+  async create(category: Omit<ExpenseCategory, 'id' | 'createdAt' | 'updatedAt'>) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Utilisateur non connecté');
+      }
+
+      const { data, error } = await supabase
+        .from('expense_categories')
+        .insert({
+          user_id: user.id,
+          name: category.name,
+          description: category.description,
+          color: category.color,
+          is_active: category.isActive,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      const convertedData = {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        isActive: data.is_active,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  },
+
+  async update(id: string, updates: Partial<ExpenseCategory>) {
+    try {
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+      
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.color !== undefined) updateData.color = updates.color;
+      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+
+      const { data, error } = await supabase
+        .from('expense_categories')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      const convertedData = {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        isActive: data.is_active,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      const { error } = await supabase
+        .from('expense_categories')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      
+      if (error) return handleSupabaseError(error);
+      
+      return handleSupabaseSuccess(true);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  }
+};
+
+// Service pour les dépenses
+export const expenseService = {
+  async getAll() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseSuccess([]);
+      }
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .select(`
+          *,
+          category:expense_categories(*)
+        `)
+        .eq('user_id', user.id)
+        .order('expense_date', { ascending: false });
+      
+      if (error) return handleSupabaseError(error);
+      
+      const convertedData = data?.map(expense => ({
+        id: expense.id,
+        title: expense.title,
+        description: expense.description,
+        amount: expense.amount,
+        category: {
+          id: expense.category.id,
+          name: expense.category.name,
+          description: expense.category.description,
+          color: expense.category.color,
+          isActive: expense.category.is_active,
+          createdAt: new Date(expense.category.created_at),
+          updatedAt: new Date(expense.category.updated_at)
+        },
+        supplier: expense.supplier,
+        invoiceNumber: expense.invoice_number,
+        paymentMethod: expense.payment_method,
+        status: expense.status,
+        expenseDate: new Date(expense.expense_date),
+        dueDate: expense.due_date ? new Date(expense.due_date) : undefined,
+        receiptPath: expense.receipt_path,
+        tags: expense.tags || [],
+        createdAt: new Date(expense.created_at),
+        updatedAt: new Date(expense.updated_at)
+      })) || [];
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  },
+
+  async getById(id: string) {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select(`
+          *,
+          category:expense_categories(*)
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      const convertedData = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        amount: data.amount,
+        category: {
+          id: data.category.id,
+          name: data.category.name,
+          description: data.category.description,
+          color: data.category.color,
+          isActive: data.category.is_active,
+          createdAt: new Date(data.category.created_at),
+          updatedAt: new Date(data.category.updated_at)
+        },
+        supplier: data.supplier,
+        invoiceNumber: data.invoice_number,
+        paymentMethod: data.payment_method,
+        status: data.status,
+        expenseDate: new Date(data.expense_date),
+        dueDate: data.due_date ? new Date(data.due_date) : undefined,
+        receiptPath: data.receipt_path,
+        tags: data.tags || [],
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  },
+
+  async create(expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Utilisateur non connecté');
+      }
+
+      // Créer ou récupérer la catégorie par défaut
+      let categoryId;
+      
+      try {
+        // Essayer de créer la catégorie par défaut
+        const { data: newCategory, error: categoryError } = await supabase
+          .from('expense_categories')
+          .insert({
+            user_id: user.id,
+            name: expense.category.name,
+            description: expense.category.description,
+            color: expense.category.color,
+            is_active: expense.category.isActive,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+          
+        if (categoryError && categoryError.code !== '23505') {
+          // Si ce n'est pas une erreur de doublon, propager l'erreur
+          throw new Error(`Erreur lors de la création de la catégorie: ${categoryError.message}`);
+        }
+        
+        if (newCategory) {
+          categoryId = newCategory.id;
+        } else {
+          // Si la catégorie existe déjà, la récupérer
+          const { data: existingCategory } = await supabase
+            .from('expense_categories')
+            .select('id')
+            .eq('name', expense.category.name)
+            .eq('user_id', user.id)
+            .single();
+            
+          categoryId = existingCategory?.id;
+        }
+      } catch (error) {
+        // En cas d'erreur, récupérer la catégorie existante
+        const { data: existingCategory } = await supabase
+          .from('expense_categories')
+          .select('id')
+          .eq('name', expense.category.name)
+          .eq('user_id', user.id)
+          .single();
+          
+        categoryId = existingCategory?.id;
+      }
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert({
+          user_id: user.id,
+          title: expense.title,
+          description: expense.description,
+          amount: expense.amount,
+          category_id: categoryId,
+          supplier: expense.supplier,
+          invoice_number: expense.invoiceNumber,
+          payment_method: expense.paymentMethod,
+          status: expense.status,
+          expense_date: expense.expenseDate.toISOString(),
+          due_date: expense.dueDate?.toISOString(),
+          receipt_path: expense.receiptPath,
+          tags: expense.tags,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select(`
+          *,
+          category:expense_categories(*)
+        `)
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      const convertedData = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        amount: data.amount,
+        category: {
+          id: data.category.id,
+          name: data.category.name,
+          description: data.category.description,
+          color: data.category.color,
+          isActive: data.category.is_active,
+          createdAt: new Date(data.category.created_at),
+          updatedAt: new Date(data.category.updated_at)
+        },
+        supplier: data.supplier,
+        invoiceNumber: data.invoice_number,
+        paymentMethod: data.payment_method,
+        status: data.status,
+        expenseDate: new Date(data.expense_date),
+        dueDate: data.due_date ? new Date(data.due_date) : undefined,
+        receiptPath: data.receipt_path,
+        tags: data.tags || [],
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  },
+
+  async update(id: string, updates: Partial<Expense>) {
+    try {
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+      
+      if (updates.title !== undefined) updateData.title = updates.title;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.amount !== undefined) updateData.amount = updates.amount;
+      if (updates.category !== undefined) updateData.category_id = updates.category.id;
+      if (updates.supplier !== undefined) updateData.supplier = updates.supplier;
+      if (updates.invoiceNumber !== undefined) updateData.invoice_number = updates.invoiceNumber;
+      if (updates.paymentMethod !== undefined) updateData.payment_method = updates.paymentMethod;
+      if (updates.status !== undefined) updateData.status = updates.status;
+      if (updates.expenseDate !== undefined) updateData.expense_date = updates.expenseDate.toISOString();
+      if (updates.dueDate !== undefined) updateData.due_date = updates.dueDate?.toISOString();
+      if (updates.receiptPath !== undefined) updateData.receipt_path = updates.receiptPath;
+      if (updates.tags !== undefined) updateData.tags = updates.tags;
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .update(updateData)
+        .eq('id', id)
+        .select(`
+          *,
+          category:expense_categories(*)
+        `)
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      const convertedData = {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        amount: data.amount,
+        category: {
+          id: data.category.id,
+          name: data.category.name,
+          description: data.category.description,
+          color: data.category.color,
+          isActive: data.category.is_active,
+          createdAt: new Date(data.category.created_at),
+          updatedAt: new Date(data.category.updated_at)
+        },
+        supplier: data.supplier,
+        invoiceNumber: data.invoice_number,
+        paymentMethod: data.payment_method,
+        status: data.status,
+        expenseDate: new Date(data.expense_date),
+        dueDate: data.due_date ? new Date(data.due_date) : undefined,
+        receiptPath: data.receipt_path,
+        tags: data.tags || [],
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id);
+      
+      if (error) return handleSupabaseError(error);
+      
+      return handleSupabaseSuccess(true);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
+  },
+
+  async getStats() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseSuccess({
+          total: 0,
+          byCategory: {},
+          monthly: 0,
+          pending: 0,
+          paid: 0
+        });
+      }
+
+      // Récupérer toutes les dépenses
+      const { data: expenses, error } = await supabase
+        .from('expenses')
+        .select(`
+          amount,
+          status,
+          expense_date,
+          category:expense_categories(name)
+        `)
+        .eq('user_id', user.id);
+      
+      if (error) return handleSupabaseError(error);
+
+      const stats: ExpenseStats = {
+        total: 0,
+        byCategory: {},
+        monthly: 0,
+        pending: 0,
+        paid: 0
+      };
+
+      const currentMonth = new Date();
+      currentMonth.setDate(1);
+
+      expenses?.forEach(expense => {
+        stats.total += expense.amount;
+        
+        if (expense.status === 'pending') {
+          stats.pending += expense.amount;
+        } else if (expense.status === 'paid') {
+          stats.paid += expense.amount;
+        }
+
+        const expenseDate = new Date(expense.expense_date);
+        if (expenseDate >= currentMonth) {
+          stats.monthly += expense.amount;
+        }
+
+        const categoryName = expense.category?.name || 'Non catégorisé';
+        if (!stats.byCategory[categoryName]) {
+          stats.byCategory[categoryName] = 0;
+        }
+        stats.byCategory[categoryName] += expense.amount;
+      });
+
+      return handleSupabaseSuccess(stats);
+    } catch (error) {
+      return handleSupabaseError(error);
+    }
   }
 };
 

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Icônes Spécialisées Réparation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196f3; }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #2196f3;
+            background-color: #f8f9fa;
+        }
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+        .icon-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .icon-item {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test - Icônes Spécialisées Réparation</h1>
+        
+        <div class="step">
+            <h3>✅ Catégories Optimisées</h3>
+            <p>J'ai supprimé toutes les catégories non pertinentes pour un atelier de réparation et gardé seulement :</p>
+            <ul>
+                <li class="success">✅ <strong>Téléphonie et Communication</strong> : Appareils mobiles et connectés</li>
+                <li class="success">✅ <strong>Audio et Vidéo</strong> : Équipements audio/vidéo</li>
+                <li class="success">✅ <strong>Périphériques</strong> : Accessoires informatiques</li>
+                <li class="success">✅ <strong>Gaming</strong> : Consoles de jeux</li>
+                <li class="success">✅ <strong>Mémoire et Stockage</strong> : Composants informatiques</li>
+                <li class="success">✅ <strong>Imprimantes et Scan</strong> : Équipements bureautiques</li>
+                <li class="success">✅ <strong>Outils et Réparation</strong> : Outils spécialisés</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🗑️ Catégories Supprimées</h3>
+            <p>J'ai retiré les catégories non pertinentes pour la réparation :</p>
+            <ul>
+                <li class="warning">❌ <strong>Domotique et Maison</strong> : Trop spécialisé, pas de réparation courante</li>
+                <li class="warning">❌ <strong>Médical et Santé</strong> : Équipements médicaux spécialisés</li>
+                <li class="warning">❌ <strong>Éducation et Travail</strong> : Pas de réparation directe</li>
+                <li class="warning">❌ <strong>Sécurité</strong> : Équipements de sécurité spécialisés</li>
+                <li class="warning">❌ <strong>Transport</strong> : Automobile et construction</li>
+                <li class="warning">❌ <strong>Lifestyle</strong> : Éléments de style de vie</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🎯 Icônes Disponibles (40 icônes)</h3>
+            <div class="icon-list">
+                <div class="icon-item">📱 <strong>Téléphonie</strong> : Smartphone, Téléphone, Tablette, Laptop, Computer, Montre, Routeur, Bluetooth, WiFi</div>
+                <div class="icon-item">🎵 <strong>Audio & Vidéo</strong> : Casque, Haut-parleur, Volume, Micro, Appareil photo, Caméra, TV, Écran</div>
+                <div class="icon-item">🖱️ <strong>Périphériques</strong> : Clavier, Souris, USB, Câble, Alimentation, Batterie</div>
+                <div class="icon-item">🎮 <strong>Gaming</strong> : Console Gaming</div>
+                <div class="icon-item">💾 <strong>Mémoire</strong> : Mémoire, Stockage</div>
+                <div class="icon-item">🖨️ <strong>Imprimantes</strong> : Imprimante, Scanner</div>
+                <div class="icon-item">🔧 <strong>Outils</strong> : Outils, Bricolage, Ingénierie, Réparation auto, Précision, Industrie</div>
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🧪 Comment Tester</h3>
+            <ol>
+                <li><strong>Rechargez</strong> l'application (F5)</li>
+                <li><strong>Allez dans</strong> "Gestion des Appareils" > "Catégories"</li>
+                <li><strong>Cliquez sur</strong> "Ajouter une catégorie"</li>
+                <li><strong>Vérifiez</strong> que seules les catégories de réparation s'affichent</li>
+                <li><strong>Sélectionnez</strong> une icône pertinente (ex: 🔧 Outils)</li>
+                <li><strong>Créez</strong> une catégorie "Réparation écran"</li>
+                <li><strong>Vérifiez</strong> que l'icône s'affiche correctement</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🔍 Vérifications Spécifiques</h3>
+            <ul>
+                <li class="success">✅ <strong>7 catégories</strong> au lieu de 13</li>
+                <li class="success">✅ <strong>40 icônes</strong> au lieu de 70+</li>
+                <li class="success">✅ <strong>Focus réparation</strong> : Toutes les icônes sont pertinentes</li>
+                <li class="success">✅ <strong>Interface simplifiée</strong> : Moins de choix, plus clair</li>
+                <li class="success">✅ <strong>Navigation rapide</strong> : Trouver l'icône plus facilement</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>💡 Avantages de cette Optimisation</h3>
+            <ul>
+                <li class="info">🎯 <strong>Plus pertinent</strong> : Toutes les icônes sont liées à la réparation</li>
+                <li class="info">⚡ <strong>Plus rapide</strong> : Moins de choix, décision plus rapide</li>
+                <li class="info">🎨 <strong>Plus clair</strong> : Interface moins encombrée</li>
+                <li class="info">🔧 <strong>Plus professionnel</strong> : Focus sur l'activité principale</li>
+                <li class="info">📱 <strong>Plus pratique</strong> : Catégories adaptées à l'atelier</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🚨 Si vous voulez ajouter d'autres icônes</h3>
+            <p>Si vous avez besoin d'icônes spécifiques pour votre atelier :</p>
+            <ol>
+                <li>Dites-moi quelle catégorie d'appareil vous réparez</li>
+                <li>Je peux ajouter des icônes spécifiques</li>
+                <li>Ou créer une catégorie personnalisée</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.open('http://localhost:3000/app/catalog/device-management', '_blank')">
+                🚀 Tester les Icônes de Réparation
+            </button>
+        </div>
+    </div>
+</body>
+</html>

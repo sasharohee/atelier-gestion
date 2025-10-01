@@ -1,5 +1,6 @@
 drop extension if exists "pg_net";
 
+
 create type "public"."alert_severity_type" as enum ('info', 'warning', 'error', 'critical');
 
 create type "public"."device_type" as enum ('smartphone', 'tablet', 'laptop', 'desktop', 'other');
@@ -21,7 +22,7 @@ create type "public"."transaction_type_enum" as enum ('repair', 'sale', 'refund'
 create type "public"."user_role" as enum ('admin', 'technician', 'client');
 
 
-  create table "public"."activity_logs" (
+  create table if not exists "public"."activity_logs" (
     "id" uuid not null default gen_random_uuid(),
     "user_id" uuid,
     "action" character varying(100) not null,
@@ -40,7 +41,7 @@ create type "public"."user_role" as enum ('admin', 'technician', 'client');
 alter table "public"."activity_logs" enable row level security;
 
 
-  create table "public"."advanced_alerts" (
+  create table if not exists "public"."advanced_alerts" (
     "id" uuid not null default gen_random_uuid(),
     "alert_type" character varying(100) not null,
     "title" character varying(200) not null,
@@ -61,7 +62,7 @@ alter table "public"."activity_logs" enable row level security;
 alter table "public"."advanced_alerts" enable row level security;
 
 
-  create table "public"."advanced_settings" (
+  create table if not exists "public"."advanced_settings" (
     "id" uuid not null default gen_random_uuid(),
     "setting_key" character varying(100) not null,
     "setting_value" jsonb not null,
@@ -78,7 +79,7 @@ alter table "public"."advanced_alerts" enable row level security;
 alter table "public"."advanced_settings" enable row level security;
 
 
-  create table "public"."appointments" (
+  create table if not exists "public"."appointments" (
     "id" uuid not null default gen_random_uuid(),
     "client_id" uuid,
     "title" text not null,
@@ -101,7 +102,7 @@ alter table "public"."advanced_settings" enable row level security;
 alter table "public"."appointments" enable row level security;
 
 
-  create table "public"."client_loyalty_points" (
+  create table if not exists "public"."client_loyalty_points" (
     "id" uuid not null default gen_random_uuid(),
     "client_id" uuid not null,
     "total_points" integer default 0,
@@ -118,7 +119,7 @@ alter table "public"."appointments" enable row level security;
 alter table "public"."client_loyalty_points" enable row level security;
 
 
-  create table "public"."clients" (
+  create table if not exists "public"."clients" (
     "id" uuid not null default gen_random_uuid(),
     "first_name" text not null,
     "last_name" text not null,
@@ -165,7 +166,7 @@ alter table "public"."client_loyalty_points" enable row level security;
 alter table "public"."clients" enable row level security;
 
 
-  create table "public"."clients_backup" (
+  create table if not exists "public"."clients_backup" (
     "id" uuid,
     "first_name" character varying(255),
     "last_name" character varying(255),
@@ -208,7 +209,7 @@ alter table "public"."clients" enable row level security;
 alter table "public"."clients_backup" enable row level security;
 
 
-  create table "public"."confirmation_emails" (
+  create table if not exists "public"."confirmation_emails" (
     "id" uuid not null default gen_random_uuid(),
     "user_email" text not null,
     "token" text not null,
@@ -223,7 +224,7 @@ alter table "public"."clients_backup" enable row level security;
 alter table "public"."confirmation_emails" enable row level security;
 
 
-  create table "public"."custom_users" (
+  create table if not exists "public"."custom_users" (
     "id" text not null,
     "email" text not null,
     "first_name" text not null,
@@ -239,7 +240,7 @@ alter table "public"."confirmation_emails" enable row level security;
 alter table "public"."custom_users" enable row level security;
 
 
-  create table "public"."device_brands" (
+  create table if not exists "public"."device_brands" (
     "id" uuid not null default gen_random_uuid(),
     "name" text not null,
     "category_id" uuid,
@@ -256,7 +257,7 @@ alter table "public"."custom_users" enable row level security;
 alter table "public"."device_brands" enable row level security;
 
 
-  create table "public"."device_categories" (
+  create table if not exists "public"."device_categories" (
     "id" uuid not null default gen_random_uuid(),
     "name" text not null,
     "description" text,
@@ -272,7 +273,7 @@ alter table "public"."device_brands" enable row level security;
 alter table "public"."device_categories" enable row level security;
 
 
-  create table "public"."device_models" (
+  create table if not exists "public"."device_models" (
     "id" uuid not null default gen_random_uuid(),
     "brand" text not null,
     "model" text not null,
@@ -298,7 +299,7 @@ alter table "public"."device_categories" enable row level security;
 alter table "public"."device_models" enable row level security;
 
 
-  create table "public"."devices" (
+  create table if not exists "public"."devices" (
     "id" uuid not null default gen_random_uuid(),
     "brand" character varying(255) not null,
     "model" character varying(255) not null,
@@ -322,7 +323,7 @@ alter table "public"."device_models" enable row level security;
 alter table "public"."devices" enable row level security;
 
 
-  create table "public"."intervention_forms" (
+  create table if not exists "public"."intervention_forms" (
     "id" uuid not null default gen_random_uuid(),
     "repair_id" uuid not null,
     "intervention_date" date not null default CURRENT_DATE,
@@ -365,7 +366,7 @@ alter table "public"."devices" enable row level security;
 alter table "public"."intervention_forms" enable row level security;
 
 
-  create table "public"."loyalty_config" (
+  create table if not exists "public"."loyalty_config" (
     "id" uuid not null default gen_random_uuid(),
     "key" text not null,
     "value" text not null,
@@ -379,7 +380,7 @@ alter table "public"."intervention_forms" enable row level security;
 alter table "public"."loyalty_config" enable row level security;
 
 
-  create table "public"."loyalty_points_history" (
+  create table if not exists "public"."loyalty_points_history" (
     "id" uuid not null default gen_random_uuid(),
     "client_id" uuid not null,
     "points_change" integer not null,
@@ -399,7 +400,7 @@ alter table "public"."loyalty_config" enable row level security;
 alter table "public"."loyalty_points_history" enable row level security;
 
 
-  create table "public"."loyalty_rules" (
+  create table if not exists "public"."loyalty_rules" (
     "id" uuid not null default gen_random_uuid(),
     "rule_name" text not null,
     "points_per_referral" integer default 100,
@@ -416,7 +417,7 @@ alter table "public"."loyalty_points_history" enable row level security;
 alter table "public"."loyalty_rules" enable row level security;
 
 
-  create table "public"."loyalty_tiers" (
+  create table if not exists "public"."loyalty_tiers" (
     "id" uuid not null default gen_random_uuid(),
     "name" text not null,
     "description" text,
@@ -434,7 +435,7 @@ alter table "public"."loyalty_rules" enable row level security;
 alter table "public"."loyalty_tiers" enable row level security;
 
 
-  create table "public"."loyalty_tiers_advanced" (
+  create table if not exists "public"."loyalty_tiers_advanced" (
     "id" uuid not null default gen_random_uuid(),
     "name" text not null,
     "description" text,
@@ -452,7 +453,7 @@ alter table "public"."loyalty_tiers" enable row level security;
 alter table "public"."loyalty_tiers_advanced" enable row level security;
 
 
-  create table "public"."messages" (
+  create table if not exists "public"."messages" (
     "id" uuid not null default gen_random_uuid(),
     "sender_id" uuid,
     "recipient_id" uuid,
@@ -470,7 +471,7 @@ alter table "public"."loyalty_tiers_advanced" enable row level security;
 alter table "public"."messages" enable row level security;
 
 
-  create table "public"."notifications" (
+  create table if not exists "public"."notifications" (
     "id" uuid not null default uuid_generate_v4(),
     "user_id" uuid,
     "type" character varying(50) not null,
@@ -486,7 +487,7 @@ alter table "public"."messages" enable row level security;
 alter table "public"."notifications" enable row level security;
 
 
-  create table "public"."order_items" (
+  create table if not exists "public"."order_items" (
     "id" uuid not null default gen_random_uuid(),
     "order_id" uuid not null,
     "product_name" character varying(255) not null,
@@ -504,7 +505,7 @@ alter table "public"."notifications" enable row level security;
 alter table "public"."order_items" enable row level security;
 
 
-  create table "public"."orders" (
+  create table if not exists "public"."orders" (
     "id" uuid not null default gen_random_uuid(),
     "order_number" character varying(50) not null,
     "supplier_name" character varying(255) not null,
@@ -527,7 +528,7 @@ alter table "public"."order_items" enable row level security;
 alter table "public"."orders" enable row level security;
 
 
-  create table "public"."parts" (
+  create table if not exists "public"."parts" (
     "id" uuid not null default gen_random_uuid(),
     "name" character varying(255) not null,
     "description" text,
@@ -551,7 +552,7 @@ alter table "public"."orders" enable row level security;
 alter table "public"."parts" enable row level security;
 
 
-  create table "public"."pending_signups" (
+  create table if not exists "public"."pending_signups" (
     "id" uuid not null default gen_random_uuid(),
     "email" text not null,
     "first_name" text,
@@ -567,7 +568,7 @@ alter table "public"."parts" enable row level security;
 alter table "public"."pending_signups" enable row level security;
 
 
-  create table "public"."performance_metrics" (
+  create table if not exists "public"."performance_metrics" (
     "id" uuid not null default gen_random_uuid(),
     "metric_name" character varying(100) not null,
     "metric_value" numeric(10,2) not null,
@@ -584,7 +585,7 @@ alter table "public"."pending_signups" enable row level security;
 alter table "public"."performance_metrics" enable row level security;
 
 
-  create table "public"."product_categories" (
+  create table if not exists "public"."product_categories" (
     "id" uuid not null default gen_random_uuid(),
     "name" text not null,
     "description" text,
@@ -602,7 +603,7 @@ alter table "public"."performance_metrics" enable row level security;
 alter table "public"."product_categories" enable row level security;
 
 
-  create table "public"."products" (
+  create table if not exists "public"."products" (
     "id" uuid not null default gen_random_uuid(),
     "name" text not null,
     "description" text,
@@ -622,7 +623,7 @@ alter table "public"."product_categories" enable row level security;
 alter table "public"."products" enable row level security;
 
 
-  create table "public"."quote_items" (
+  create table if not exists "public"."quote_items" (
     "id" uuid not null default gen_random_uuid(),
     "quote_id" uuid,
     "type" text not null,
@@ -639,7 +640,7 @@ alter table "public"."products" enable row level security;
 alter table "public"."quote_items" enable row level security;
 
 
-  create table "public"."quotes" (
+  create table if not exists "public"."quotes" (
     "id" uuid not null default gen_random_uuid(),
     "client_id" uuid,
     "items" jsonb not null default '[]'::jsonb,
@@ -661,7 +662,7 @@ alter table "public"."quote_items" enable row level security;
 alter table "public"."quotes" enable row level security;
 
 
-  create table "public"."referrals" (
+  create table if not exists "public"."referrals" (
     "id" uuid not null default gen_random_uuid(),
     "referrer_client_id" uuid not null,
     "referred_client_id" uuid not null,
@@ -680,7 +681,7 @@ alter table "public"."quotes" enable row level security;
 alter table "public"."referrals" enable row level security;
 
 
-  create table "public"."repair_parts" (
+  create table if not exists "public"."repair_parts" (
     "id" uuid not null default gen_random_uuid(),
     "repair_id" uuid not null,
     "part_id" uuid not null,
@@ -696,7 +697,7 @@ alter table "public"."referrals" enable row level security;
 alter table "public"."repair_parts" enable row level security;
 
 
-  create table "public"."repair_services" (
+  create table if not exists "public"."repair_services" (
     "id" uuid not null default gen_random_uuid(),
     "repair_id" uuid not null,
     "service_id" uuid not null,
@@ -711,7 +712,7 @@ alter table "public"."repair_parts" enable row level security;
 alter table "public"."repair_services" enable row level security;
 
 
-  create table "public"."repairs" (
+  create table if not exists "public"."repairs" (
     "id" uuid not null default gen_random_uuid(),
     "device_id" uuid,
     "client_id" uuid,
@@ -752,7 +753,7 @@ alter table "public"."repair_services" enable row level security;
 alter table "public"."repairs" enable row level security;
 
 
-  create table "public"."reports" (
+  create table if not exists "public"."reports" (
     "id" uuid not null default gen_random_uuid(),
     "report_name" character varying(200) not null,
     "report_type" character varying(100) not null,
@@ -771,7 +772,7 @@ alter table "public"."repairs" enable row level security;
 alter table "public"."reports" enable row level security;
 
 
-  create table "public"."sale_items" (
+  create table if not exists "public"."sale_items" (
     "id" uuid not null default gen_random_uuid(),
     "sale_id" uuid,
     "user_id" uuid,
@@ -790,7 +791,7 @@ alter table "public"."reports" enable row level security;
 alter table "public"."sale_items" enable row level security;
 
 
-  create table "public"."sales" (
+  create table if not exists "public"."sales" (
     "id" uuid not null default gen_random_uuid(),
     "client_id" uuid,
     "product_id" uuid,
@@ -820,7 +821,7 @@ alter table "public"."sale_items" enable row level security;
 alter table "public"."sales" enable row level security;
 
 
-  create table "public"."services" (
+  create table if not exists "public"."services" (
     "id" uuid not null default gen_random_uuid(),
     "name" character varying(255) not null,
     "description" text,
@@ -840,7 +841,7 @@ alter table "public"."sales" enable row level security;
 alter table "public"."services" enable row level security;
 
 
-  create table "public"."stock_alerts" (
+  create table if not exists "public"."stock_alerts" (
     "id" uuid not null default gen_random_uuid(),
     "part_id" uuid not null,
     "type" text not null,
@@ -856,7 +857,7 @@ alter table "public"."services" enable row level security;
 alter table "public"."stock_alerts" enable row level security;
 
 
-  create table "public"."subscription_audit" (
+  create table if not exists "public"."subscription_audit" (
     "id" uuid not null default gen_random_uuid(),
     "user_id" uuid,
     "action" text not null,
@@ -870,7 +871,7 @@ alter table "public"."stock_alerts" enable row level security;
 alter table "public"."subscription_audit" enable row level security;
 
 
-  create table "public"."subscription_payments" (
+  create table if not exists "public"."subscription_payments" (
     "id" uuid not null default gen_random_uuid(),
     "subscription_id" uuid not null,
     "amount" numeric(10,2) not null,
@@ -888,7 +889,7 @@ alter table "public"."subscription_audit" enable row level security;
 alter table "public"."subscription_payments" enable row level security;
 
 
-  create table "public"."subscription_plans" (
+  create table if not exists "public"."subscription_plans" (
     "id" uuid not null default gen_random_uuid(),
     "name" character varying(100) not null,
     "description" text,
@@ -908,7 +909,7 @@ alter table "public"."subscription_payments" enable row level security;
 alter table "public"."subscription_plans" enable row level security;
 
 
-  create table "public"."subscription_status" (
+  create table if not exists "public"."subscription_status" (
     "id" uuid not null default gen_random_uuid(),
     "user_id" uuid not null,
     "first_name" text not null,
@@ -932,7 +933,7 @@ alter table "public"."subscription_plans" enable row level security;
 alter table "public"."subscription_status" enable row level security;
 
 
-  create table "public"."suppliers" (
+  create table if not exists "public"."suppliers" (
     "id" uuid not null default gen_random_uuid(),
     "name" character varying(255) not null,
     "email" character varying(255),
@@ -955,6 +956,9 @@ alter table "public"."subscription_status" enable row level security;
 alter table "public"."suppliers" enable row level security;
 
 
+  -- Supprimer la table si elle existe pour la recréer proprement
+  DROP TABLE IF EXISTS "public"."system_settings" CASCADE;
+  
   create table "public"."system_settings" (
     "id" uuid not null default gen_random_uuid(),
     "user_id" uuid,
@@ -962,14 +966,14 @@ alter table "public"."suppliers" enable row level security;
     "value" text,
     "created_at" timestamp with time zone default now(),
     "updated_at" timestamp with time zone default now(),
-    "category" character varying(100)
+    "description" text
       );
 
 
 alter table "public"."system_settings" enable row level security;
 
 
-  create table "public"."technician_performance" (
+  create table if not exists "public"."technician_performance" (
     "id" uuid not null default gen_random_uuid(),
     "technician_id" uuid not null,
     "period_start" date not null,
@@ -990,7 +994,7 @@ alter table "public"."system_settings" enable row level security;
 alter table "public"."technician_performance" enable row level security;
 
 
-  create table "public"."transactions" (
+  create table if not exists "public"."transactions" (
     "id" uuid not null default gen_random_uuid(),
     "type" text not null,
     "amount" numeric(10,2) not null,
@@ -1007,7 +1011,7 @@ alter table "public"."technician_performance" enable row level security;
 alter table "public"."transactions" enable row level security;
 
 
-  create table "public"."user_preferences" (
+  create table if not exists "public"."user_preferences" (
     "id" uuid not null default gen_random_uuid(),
     "user_id" uuid,
     "notifications_email" boolean default true,
@@ -1032,7 +1036,7 @@ alter table "public"."transactions" enable row level security;
 alter table "public"."user_preferences" enable row level security;
 
 
-  create table "public"."user_profiles" (
+  create table if not exists "public"."user_profiles" (
     "id" uuid not null default gen_random_uuid(),
     "user_id" uuid,
     "first_name" character varying(100) not null,
@@ -1050,7 +1054,7 @@ alter table "public"."user_preferences" enable row level security;
 alter table "public"."user_profiles" enable row level security;
 
 
-  create table "public"."user_subscriptions" (
+  create table if not exists "public"."user_subscriptions" (
     "id" uuid not null default gen_random_uuid(),
     "user_id" uuid not null,
     "plan_id" uuid not null,
@@ -1071,7 +1075,7 @@ alter table "public"."user_profiles" enable row level security;
 alter table "public"."user_subscriptions" enable row level security;
 
 
-  create table "public"."users" (
+  create table if not exists "public"."users" (
     "id" uuid not null default gen_random_uuid(),
     "first_name" text,
     "last_name" text,
@@ -1086,419 +1090,439 @@ alter table "public"."user_subscriptions" enable row level security;
 
 alter table "public"."users" enable row level security;
 
-CREATE UNIQUE INDEX activity_logs_pkey ON public.activity_logs USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS activity_logs_pkey ON public.activity_logs USING btree (id);
 
-CREATE UNIQUE INDEX advanced_alerts_pkey ON public.advanced_alerts USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS advanced_alerts_pkey ON public.advanced_alerts USING btree (id);
 
-CREATE UNIQUE INDEX advanced_settings_pkey ON public.advanced_settings USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS advanced_settings_pkey ON public.advanced_settings USING btree (id);
 
-CREATE UNIQUE INDEX advanced_settings_setting_key_key ON public.advanced_settings USING btree (setting_key);
+CREATE UNIQUE INDEX IF NOT EXISTS advanced_settings_setting_key_key ON public.advanced_settings USING btree (setting_key);
 
-CREATE UNIQUE INDEX appointments_pkey ON public.appointments USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS appointments_pkey ON public.appointments USING btree (id);
 
-CREATE UNIQUE INDEX client_loyalty_points_pkey ON public.client_loyalty_points USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS client_loyalty_points_pkey ON public.client_loyalty_points USING btree (id);
 
-CREATE UNIQUE INDEX clients_email_key ON public.clients USING btree (email);
+CREATE UNIQUE INDEX IF NOT EXISTS clients_email_key ON public.clients USING btree (email);
 
-CREATE UNIQUE INDEX clients_pkey ON public.clients USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS clients_pkey ON public.clients USING btree (id);
 
-CREATE UNIQUE INDEX confirmation_emails_pkey ON public.confirmation_emails USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS confirmation_emails_pkey ON public.confirmation_emails USING btree (id);
 
-CREATE UNIQUE INDEX confirmation_emails_token_key ON public.confirmation_emails USING btree (token);
+CREATE UNIQUE INDEX IF NOT EXISTS confirmation_emails_token_key ON public.confirmation_emails USING btree (token);
 
-CREATE UNIQUE INDEX confirmation_emails_user_email_key ON public.confirmation_emails USING btree (user_email);
+CREATE UNIQUE INDEX IF NOT EXISTS confirmation_emails_user_email_key ON public.confirmation_emails USING btree (user_email);
 
-CREATE UNIQUE INDEX custom_users_email_key ON public.custom_users USING btree (email);
+CREATE UNIQUE INDEX IF NOT EXISTS custom_users_email_key ON public.custom_users USING btree (email);
 
-CREATE UNIQUE INDEX custom_users_pkey ON public.custom_users USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS custom_users_pkey ON public.custom_users USING btree (id);
 
-CREATE UNIQUE INDEX device_brands_pkey ON public.device_brands USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS device_brands_pkey ON public.device_brands USING btree (id);
 
-CREATE UNIQUE INDEX device_categories_pkey ON public.device_categories USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS device_categories_pkey ON public.device_categories USING btree (id);
 
-CREATE UNIQUE INDEX device_models_pkey ON public.device_models USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS device_models_pkey ON public.device_models USING btree (id);
 
-CREATE UNIQUE INDEX devices_pkey ON public.devices USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS devices_pkey ON public.devices USING btree (id);
 
-CREATE UNIQUE INDEX devices_serial_number_key ON public.devices USING btree (serial_number);
+CREATE UNIQUE INDEX IF NOT EXISTS devices_serial_number_key ON public.devices USING btree (serial_number);
 
-CREATE INDEX idx_activity_logs_action ON public.activity_logs USING btree (action);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON public.activity_logs USING btree (action);
 
-CREATE INDEX idx_activity_logs_date ON public.activity_logs USING btree (created_at);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_date ON public.activity_logs USING btree (created_at);
 
-CREATE INDEX idx_activity_logs_entity ON public.activity_logs USING btree (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON public.activity_logs USING btree (entity_type, entity_id);
 
-CREATE INDEX idx_activity_logs_user ON public.activity_logs USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user ON public.activity_logs USING btree (user_id);
 
-CREATE INDEX idx_activity_logs_workshop ON public.activity_logs USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_workshop ON public.activity_logs USING btree (workshop_id);
 
-CREATE INDEX idx_advanced_alerts_read ON public.advanced_alerts USING btree (is_read);
+CREATE INDEX IF NOT EXISTS idx_advanced_alerts_read ON public.advanced_alerts USING btree (is_read);
 
-CREATE INDEX idx_advanced_alerts_type ON public.advanced_alerts USING btree (alert_type);
+CREATE INDEX IF NOT EXISTS idx_advanced_alerts_type ON public.advanced_alerts USING btree (alert_type);
 
-CREATE INDEX idx_advanced_alerts_user ON public.advanced_alerts USING btree (target_user_id);
+CREATE INDEX IF NOT EXISTS idx_advanced_alerts_user ON public.advanced_alerts USING btree (target_user_id);
 
-CREATE INDEX idx_advanced_alerts_workshop ON public.advanced_alerts USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_advanced_alerts_workshop ON public.advanced_alerts USING btree (workshop_id);
 
-CREATE INDEX idx_advanced_settings_workshop ON public.advanced_settings USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_advanced_settings_workshop ON public.advanced_settings USING btree (workshop_id);
 
-CREATE INDEX idx_appointments_end_date ON public.appointments USING btree (end_date);
+CREATE INDEX IF NOT EXISTS idx_appointments_end_date ON public.appointments USING btree (end_date);
 
-CREATE INDEX idx_appointments_start_date ON public.appointments USING btree (start_date);
+CREATE INDEX IF NOT EXISTS idx_appointments_start_date ON public.appointments USING btree (start_date);
 
-CREATE INDEX idx_appointments_user_id ON public.appointments USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_user_id ON public.appointments USING btree (user_id);
 
-CREATE INDEX idx_catalog_parts_user_id ON public.parts USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_parts_user_id ON public.parts USING btree (user_id);
 
-CREATE INDEX idx_catalog_services_user_id ON public.services USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_services_user_id ON public.services USING btree (user_id);
 
-CREATE INDEX idx_client_loyalty_points_user_id ON public.client_loyalty_points USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_client_loyalty_points_user_id ON public.client_loyalty_points USING btree (user_id);
 
-CREATE INDEX idx_clients_category ON public.clients USING btree (category);
+CREATE INDEX IF NOT EXISTS idx_clients_category ON public.clients USING btree (category);
 
-CREATE INDEX idx_clients_created_at ON public.clients USING btree (created_at);
+CREATE INDEX IF NOT EXISTS idx_clients_created_at ON public.clients USING btree (created_at);
 
-CREATE INDEX idx_clients_email ON public.clients USING btree (email);
+CREATE INDEX IF NOT EXISTS idx_clients_email ON public.clients USING btree (email);
 
-CREATE INDEX idx_clients_status ON public.clients USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_clients_status ON public.clients USING btree (status);
 
-CREATE INDEX idx_clients_user_id ON public.clients USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_clients_user_id ON public.clients USING btree (user_id);
 
-CREATE INDEX idx_clients_workshop_id ON public.clients USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_clients_workshop_id ON public.clients USING btree (workshop_id);
 
-CREATE INDEX idx_custom_users_email ON public.custom_users USING btree (email);
+CREATE INDEX IF NOT EXISTS idx_custom_users_email ON public.custom_users USING btree (email);
 
-CREATE INDEX idx_device_brands_category_id ON public.device_brands USING btree (category_id);
+CREATE INDEX IF NOT EXISTS idx_device_brands_category_id ON public.device_brands USING btree (category_id);
 
-CREATE INDEX idx_device_brands_created_by ON public.device_brands USING btree (created_by);
+CREATE INDEX IF NOT EXISTS idx_device_brands_created_by ON public.device_brands USING btree (created_by);
 
-CREATE INDEX idx_device_brands_name ON public.device_brands USING btree (name);
+CREATE INDEX IF NOT EXISTS idx_device_brands_name ON public.device_brands USING btree (name);
 
-CREATE INDEX idx_device_brands_user_id ON public.device_brands USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_device_brands_user_id ON public.device_brands USING btree (user_id);
 
-CREATE INDEX idx_device_categories_created_by ON public.device_categories USING btree (created_by);
+CREATE INDEX IF NOT EXISTS idx_device_categories_created_by ON public.device_categories USING btree (created_by);
 
-CREATE INDEX idx_device_categories_name ON public.device_categories USING btree (name);
+CREATE INDEX IF NOT EXISTS idx_device_categories_name ON public.device_categories USING btree (name);
 
-CREATE INDEX idx_device_categories_user_id ON public.device_categories USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_device_categories_user_id ON public.device_categories USING btree (user_id);
 
-CREATE INDEX idx_device_models_brand ON public.device_models USING btree (brand);
+CREATE INDEX IF NOT EXISTS idx_device_models_brand ON public.device_models USING btree (brand);
 
-CREATE INDEX idx_device_models_brand_id ON public.device_models USING btree (brand_id);
+CREATE INDEX IF NOT EXISTS idx_device_models_brand_id ON public.device_models USING btree (brand_id);
 
-CREATE INDEX idx_device_models_category_id ON public.device_models USING btree (category_id);
+-- CREATE INDEX IF NOT EXISTS idx_device_models_category_id ON public.device_models USING btree (category_id);
 
-CREATE INDEX idx_device_models_created_by ON public.device_models USING btree (created_by);
+CREATE INDEX IF NOT EXISTS idx_device_models_created_by ON public.device_models USING btree (created_by);
 
-CREATE INDEX idx_device_models_is_active ON public.device_models USING btree (is_active);
+CREATE INDEX IF NOT EXISTS idx_device_models_is_active ON public.device_models USING btree (is_active);
 
-CREATE INDEX idx_device_models_name ON public.device_models USING btree (name);
+CREATE INDEX IF NOT EXISTS idx_device_models_name ON public.device_models USING btree (name);
 
-CREATE INDEX idx_device_models_type ON public.device_models USING btree (type);
+CREATE INDEX IF NOT EXISTS idx_device_models_type ON public.device_models USING btree (type);
 
-CREATE INDEX idx_device_models_user_id ON public.device_models USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_device_models_user_id ON public.device_models USING btree (user_id);
 
-CREATE INDEX idx_intervention_forms_date ON public.intervention_forms USING btree (intervention_date);
+CREATE INDEX IF NOT EXISTS idx_intervention_forms_date ON public.intervention_forms USING btree (intervention_date);
 
-CREATE INDEX idx_intervention_forms_repair_id ON public.intervention_forms USING btree (repair_id);
+CREATE INDEX IF NOT EXISTS idx_intervention_forms_repair_id ON public.intervention_forms USING btree (repair_id);
 
-CREATE INDEX idx_intervention_forms_technician ON public.intervention_forms USING btree (technician_name);
+CREATE INDEX IF NOT EXISTS idx_intervention_forms_technician ON public.intervention_forms USING btree (technician_name);
 
-CREATE INDEX idx_loyalty_config_workshop_id ON public.loyalty_config USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_loyalty_config_workshop_id ON public.loyalty_config USING btree (workshop_id);
 
-CREATE INDEX idx_loyalty_points_client ON public.client_loyalty_points USING btree (client_id);
+CREATE INDEX IF NOT EXISTS idx_loyalty_points_client ON public.client_loyalty_points USING btree (client_id);
 
-CREATE INDEX idx_loyalty_points_history_client_id ON public.loyalty_points_history USING btree (client_id);
+CREATE INDEX IF NOT EXISTS idx_loyalty_points_history_client_id ON public.loyalty_points_history USING btree (client_id);
 
-CREATE INDEX idx_loyalty_points_history_workshop_id ON public.loyalty_points_history USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_loyalty_points_history_workshop_id ON public.loyalty_points_history USING btree (workshop_id);
 
-CREATE INDEX idx_loyalty_rules_user_id ON public.loyalty_rules USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_loyalty_rules_user_id ON public.loyalty_rules USING btree (user_id);
 
-CREATE INDEX idx_loyalty_tiers_workshop_id ON public.loyalty_tiers_advanced USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_loyalty_tiers_workshop_id ON public.loyalty_tiers_advanced USING btree (workshop_id);
 
-CREATE INDEX idx_notifications_is_read ON public.notifications USING btree (is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON public.notifications USING btree (is_read);
 
-CREATE INDEX idx_notifications_user_id ON public.notifications USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications USING btree (user_id);
 
-CREATE INDEX idx_order_items_created_by ON public.order_items USING btree (created_by);
+CREATE INDEX IF NOT EXISTS idx_order_items_created_by ON public.order_items USING btree (created_by);
 
-CREATE INDEX idx_order_items_order_id ON public.order_items USING btree (order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items USING btree (order_id);
 
-CREATE INDEX idx_order_items_workshop_id ON public.order_items USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_workshop_id ON public.order_items USING btree (workshop_id);
 
-CREATE INDEX idx_orders_created_by ON public.orders USING btree (created_by);
+CREATE INDEX IF NOT EXISTS idx_orders_created_by ON public.orders USING btree (created_by);
 
-CREATE INDEX idx_orders_order_date ON public.orders USING btree (order_date);
+CREATE INDEX IF NOT EXISTS idx_orders_order_date ON public.orders USING btree (order_date);
 
-CREATE INDEX idx_orders_status ON public.orders USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders USING btree (status);
 
-CREATE INDEX idx_orders_workshop_date ON public.orders USING btree (workshop_id, order_date);
+CREATE INDEX IF NOT EXISTS idx_orders_workshop_date ON public.orders USING btree (workshop_id, order_date);
 
-CREATE INDEX idx_orders_workshop_id ON public.orders USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_orders_workshop_id ON public.orders USING btree (workshop_id);
 
-CREATE UNIQUE INDEX idx_orders_workshop_order_number_unique ON public.orders USING btree (workshop_id, order_number);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_workshop_order_number_unique ON public.orders USING btree (workshop_id, order_number);
 
-CREATE INDEX idx_orders_workshop_status ON public.orders USING btree (workshop_id, status);
+CREATE INDEX IF NOT EXISTS idx_orders_workshop_status ON public.orders USING btree (workshop_id, status);
 
-CREATE INDEX idx_parts_user_id ON public.parts USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_parts_user_id ON public.parts USING btree (user_id);
 
-CREATE INDEX idx_performance_metrics_category ON public.performance_metrics USING btree (category);
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_category ON public.performance_metrics USING btree (category);
 
-CREATE INDEX idx_performance_metrics_period ON public.performance_metrics USING btree (period_start, period_end);
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_period ON public.performance_metrics USING btree (period_start, period_end);
 
-CREATE INDEX idx_performance_metrics_workshop ON public.performance_metrics USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_workshop ON public.performance_metrics USING btree (workshop_id);
 
-CREATE INDEX idx_product_categories_active ON public.product_categories USING btree (is_active);
+CREATE INDEX IF NOT EXISTS idx_product_categories_active ON public.product_categories USING btree (is_active);
 
-CREATE INDEX idx_product_categories_name ON public.product_categories USING btree (name);
+CREATE INDEX IF NOT EXISTS idx_product_categories_name ON public.product_categories USING btree (name);
 
-CREATE INDEX idx_product_categories_user_id ON public.product_categories USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_product_categories_user_id ON public.product_categories USING btree (user_id);
 
-CREATE INDEX idx_product_categories_workshop_id ON public.product_categories USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_product_categories_workshop_id ON public.product_categories USING btree (workshop_id);
 
-CREATE INDEX idx_products_category ON public.products USING btree (category);
+CREATE INDEX IF NOT EXISTS idx_products_category ON public.products USING btree (category);
 
-CREATE INDEX idx_products_is_active ON public.products USING btree (is_active);
+CREATE INDEX IF NOT EXISTS idx_products_is_active ON public.products USING btree (is_active);
 
-CREATE INDEX idx_products_min_stock_level ON public.products USING btree (min_stock_level);
+CREATE INDEX IF NOT EXISTS idx_products_min_stock_level ON public.products USING btree (min_stock_level);
 
-CREATE INDEX idx_products_stock_quantity ON public.products USING btree (stock_quantity);
+CREATE INDEX IF NOT EXISTS idx_products_stock_quantity ON public.products USING btree (stock_quantity);
 
-CREATE INDEX idx_products_user_id ON public.products USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_products_user_id ON public.products USING btree (user_id);
 
-CREATE INDEX idx_quote_items_quote_id ON public.quote_items USING btree (quote_id);
+CREATE INDEX IF NOT EXISTS idx_quote_items_quote_id ON public.quote_items USING btree (quote_id);
 
-CREATE INDEX idx_quotes_client_id ON public.quotes USING btree (client_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_client_id ON public.quotes USING btree (client_id);
 
-CREATE INDEX idx_quotes_status ON public.quotes USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_quotes_status ON public.quotes USING btree (status);
 
-CREATE INDEX idx_quotes_user_id ON public.quotes USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_user_id ON public.quotes USING btree (user_id);
 
-CREATE INDEX idx_quotes_valid_until ON public.quotes USING btree (valid_until);
+CREATE INDEX IF NOT EXISTS idx_quotes_valid_until ON public.quotes USING btree (valid_until);
 
-CREATE INDEX idx_referrals_referred ON public.referrals USING btree (referred_client_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referred ON public.referrals USING btree (referred_client_id);
 
-CREATE INDEX idx_referrals_referrer ON public.referrals USING btree (referrer_client_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON public.referrals USING btree (referrer_client_id);
 
-CREATE INDEX idx_referrals_status ON public.referrals USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_referrals_status ON public.referrals USING btree (status);
 
-CREATE INDEX idx_referrals_user_id ON public.referrals USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_user_id ON public.referrals USING btree (user_id);
 
-CREATE INDEX idx_repair_parts_user_id ON public.repair_parts USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_repair_parts_user_id ON public.repair_parts USING btree (user_id);
 
-CREATE INDEX idx_repair_services_user_id ON public.repair_services USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_repair_services_user_id ON public.repair_services USING btree (user_id);
 
-CREATE INDEX idx_repairs_client_email ON public.repairs USING btree (client_id) INCLUDE (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_repairs_client_email ON public.repairs USING btree (client_id) INCLUDE (status, created_at);
 
-CREATE INDEX idx_repairs_client_id ON public.repairs USING btree (client_id);
+CREATE INDEX IF NOT EXISTS idx_repairs_client_id ON public.repairs USING btree (client_id);
 
-CREATE INDEX idx_repairs_device_id ON public.repairs USING btree (device_id);
+CREATE INDEX IF NOT EXISTS idx_repairs_device_id ON public.repairs USING btree (device_id);
 
-CREATE INDEX idx_repairs_is_paid ON public.repairs USING btree (is_paid);
+CREATE INDEX IF NOT EXISTS idx_repairs_is_paid ON public.repairs USING btree (is_paid);
 
-CREATE INDEX idx_repairs_loyalty_discount ON public.repairs USING btree (loyalty_discount_percentage);
+CREATE INDEX IF NOT EXISTS idx_repairs_loyalty_discount ON public.repairs USING btree (loyalty_discount_percentage);
 
-CREATE INDEX idx_repairs_repair_number ON public.repairs USING btree (repair_number);
+CREATE INDEX IF NOT EXISTS idx_repairs_repair_number ON public.repairs USING btree (repair_number);
 
-CREATE INDEX idx_repairs_status ON public.repairs USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_repairs_status ON public.repairs USING btree (status);
 
-CREATE INDEX idx_repairs_status_updated_at ON public.repairs USING btree (status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_repairs_status_updated_at ON public.repairs USING btree (status, updated_at DESC);
 
-CREATE INDEX idx_repairs_user_id ON public.repairs USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_repairs_user_id ON public.repairs USING btree (user_id);
 
-CREATE INDEX idx_reports_created_by ON public.reports USING btree (generated_by);
+CREATE INDEX IF NOT EXISTS idx_reports_created_by ON public.reports USING btree (generated_by);
 
-CREATE INDEX idx_reports_status ON public.reports USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON public.reports USING btree (status);
 
-CREATE INDEX idx_reports_type ON public.reports USING btree (report_type);
+CREATE INDEX IF NOT EXISTS idx_reports_type ON public.reports USING btree (report_type);
 
-CREATE INDEX idx_reports_workshop ON public.reports USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_reports_workshop ON public.reports USING btree (workshop_id);
 
-CREATE INDEX idx_sale_items_category ON public.sale_items USING btree (category);
+CREATE INDEX IF NOT EXISTS idx_sale_items_category ON public.sale_items USING btree (category);
 
-CREATE INDEX idx_sales_category ON public.sales USING btree (category);
+CREATE INDEX IF NOT EXISTS idx_sales_category ON public.sales USING btree (category);
 
-CREATE INDEX idx_sales_user_id ON public.sales USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_sales_user_id ON public.sales USING btree (user_id);
 
-CREATE INDEX idx_services_user_id ON public.services USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_services_user_id ON public.services USING btree (user_id);
 
-CREATE INDEX idx_stock_alerts_created_at ON public.stock_alerts USING btree (created_at);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_created_at ON public.stock_alerts USING btree (created_at);
 
-CREATE INDEX idx_stock_alerts_is_resolved ON public.stock_alerts USING btree (is_resolved);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_is_resolved ON public.stock_alerts USING btree (is_resolved);
 
-CREATE INDEX idx_stock_alerts_part_id ON public.stock_alerts USING btree (part_id);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_part_id ON public.stock_alerts USING btree (part_id);
 
-CREATE INDEX idx_stock_alerts_type ON public.stock_alerts USING btree (type);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_type ON public.stock_alerts USING btree (type);
 
-CREATE INDEX idx_stock_alerts_user_id ON public.stock_alerts USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_stock_alerts_user_id ON public.stock_alerts USING btree (user_id);
 
-CREATE INDEX idx_stripe_price ON public.subscription_plans USING btree (stripe_price_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_price ON public.subscription_plans USING btree (stripe_price_id);
 
-CREATE INDEX idx_subscription_audit_performed_at ON public.subscription_audit USING btree (performed_at);
+CREATE INDEX IF NOT EXISTS idx_subscription_audit_performed_at ON public.subscription_audit USING btree (performed_at);
 
-CREATE INDEX idx_subscription_payments_status ON public.subscription_payments USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_subscription_payments_status ON public.subscription_payments USING btree (status);
 
-CREATE INDEX idx_subscription_payments_subscription_id ON public.subscription_payments USING btree (subscription_id);
+CREATE INDEX IF NOT EXISTS idx_subscription_payments_subscription_id ON public.subscription_payments USING btree (subscription_id);
 
-CREATE INDEX idx_subscription_status_email ON public.subscription_status USING btree (email);
+CREATE INDEX IF NOT EXISTS idx_subscription_status_email ON public.subscription_status USING btree (email);
 
-CREATE INDEX idx_subscription_status_is_active ON public.subscription_status USING btree (is_active);
+CREATE INDEX IF NOT EXISTS idx_subscription_status_is_active ON public.subscription_status USING btree (is_active);
 
-CREATE INDEX idx_subscription_status_subscription_type ON public.subscription_status USING btree (subscription_type);
+CREATE INDEX IF NOT EXISTS idx_subscription_status_subscription_type ON public.subscription_status USING btree (subscription_type);
 
-CREATE INDEX idx_subscription_status_user_id ON public.subscription_status USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_subscription_status_user_id ON public.subscription_status USING btree (user_id);
 
-CREATE INDEX idx_subscription_status_workshop_id ON public.subscription_status USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_subscription_status_workshop_id ON public.subscription_status USING btree (workshop_id);
 
-CREATE INDEX idx_suppliers_created_by ON public.suppliers USING btree (created_by);
+CREATE INDEX IF NOT EXISTS idx_suppliers_created_by ON public.suppliers USING btree (created_by);
 
-CREATE INDEX idx_suppliers_name ON public.suppliers USING btree (name);
+CREATE INDEX IF NOT EXISTS idx_suppliers_name ON public.suppliers USING btree (name);
 
-CREATE INDEX idx_suppliers_workshop_id ON public.suppliers USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_suppliers_workshop_id ON public.suppliers USING btree (workshop_id);
 
-CREATE INDEX idx_system_settings_key ON public.system_settings USING btree (key);
+CREATE INDEX IF NOT EXISTS idx_system_settings_key ON public.system_settings USING btree (key);
 
-CREATE INDEX idx_system_settings_user_id ON public.system_settings USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_system_settings_user_id ON public.system_settings USING btree (user_id);
 
-CREATE INDEX idx_system_settings_user_key ON public.system_settings USING btree (user_id, key);
+CREATE INDEX IF NOT EXISTS idx_system_settings_user_key ON public.system_settings USING btree (user_id, key);
 
-CREATE INDEX idx_technician_performance_period ON public.technician_performance USING btree (period_start, period_end);
+CREATE INDEX IF NOT EXISTS idx_technician_performance_period ON public.technician_performance USING btree (period_start, period_end);
 
-CREATE INDEX idx_technician_performance_tech ON public.technician_performance USING btree (technician_id);
+CREATE INDEX IF NOT EXISTS idx_technician_performance_tech ON public.technician_performance USING btree (technician_id);
 
-CREATE INDEX idx_technician_performance_workshop ON public.technician_performance USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_technician_performance_workshop ON public.technician_performance USING btree (workshop_id);
 
-CREATE INDEX idx_user_preferences_user_id ON public.user_preferences USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON public.user_preferences USING btree (user_id);
 
-CREATE INDEX idx_user_preferences_workshop ON public.user_preferences USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_user_preferences_workshop ON public.user_preferences USING btree (workshop_id);
 
-CREATE INDEX idx_user_profiles_is_locked ON public.user_profiles USING btree (is_locked);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_is_locked ON public.user_profiles USING btree (is_locked);
 
-CREATE INDEX idx_user_profiles_user_id ON public.user_profiles USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_user_id ON public.user_profiles USING btree (user_id);
 
-CREATE INDEX idx_user_profiles_workshop ON public.user_profiles USING btree (workshop_id);
+CREATE INDEX IF NOT EXISTS idx_user_profiles_workshop ON public.user_profiles USING btree (workshop_id);
 
-CREATE INDEX idx_user_subscriptions_end_date ON public.user_subscriptions USING btree (end_date);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_end_date ON public.user_subscriptions USING btree (end_date);
 
-CREATE INDEX idx_user_subscriptions_status ON public.user_subscriptions USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON public.user_subscriptions USING btree (status);
 
-CREATE INDEX idx_user_subscriptions_user_id ON public.user_subscriptions USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user_id ON public.user_subscriptions USING btree (user_id);
 
-CREATE UNIQUE INDEX intervention_forms_pkey ON public.intervention_forms USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS intervention_forms_pkey ON public.intervention_forms USING btree (id);
 
-CREATE UNIQUE INDEX loyalty_config_pkey ON public.loyalty_config USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS loyalty_config_pkey ON public.loyalty_config USING btree (id);
 
-CREATE UNIQUE INDEX loyalty_config_workshop_key_unique ON public.loyalty_config USING btree (workshop_id, key);
+CREATE UNIQUE INDEX IF NOT EXISTS loyalty_config_workshop_key_unique ON public.loyalty_config USING btree (workshop_id, key);
 
-CREATE UNIQUE INDEX loyalty_points_history_pkey ON public.loyalty_points_history USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS loyalty_points_history_pkey ON public.loyalty_points_history USING btree (id);
 
-CREATE UNIQUE INDEX loyalty_rules_pkey ON public.loyalty_rules USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS loyalty_rules_pkey ON public.loyalty_rules USING btree (id);
 
-CREATE UNIQUE INDEX loyalty_rules_rule_name_key ON public.loyalty_rules USING btree (rule_name);
+CREATE UNIQUE INDEX IF NOT EXISTS loyalty_rules_rule_name_key ON public.loyalty_rules USING btree (rule_name);
 
-CREATE UNIQUE INDEX loyalty_tiers_advanced_pkey ON public.loyalty_tiers_advanced USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS loyalty_tiers_advanced_pkey ON public.loyalty_tiers_advanced USING btree (id);
 
-CREATE UNIQUE INDEX loyalty_tiers_name_key ON public.loyalty_tiers USING btree (name);
+CREATE UNIQUE INDEX IF NOT EXISTS loyalty_tiers_name_key ON public.loyalty_tiers USING btree (name);
 
-CREATE UNIQUE INDEX loyalty_tiers_pkey ON public.loyalty_tiers USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS loyalty_tiers_pkey ON public.loyalty_tiers USING btree (id);
 
-CREATE UNIQUE INDEX loyalty_tiers_workshop_name_unique ON public.loyalty_tiers_advanced USING btree (workshop_id, name);
+CREATE UNIQUE INDEX IF NOT EXISTS loyalty_tiers_workshop_name_unique ON public.loyalty_tiers_advanced USING btree (workshop_id, name);
 
-CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS messages_pkey ON public.messages USING btree (id);
 
-CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS notifications_pkey ON public.notifications USING btree (id);
 
-CREATE UNIQUE INDEX order_items_pkey ON public.order_items USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS order_items_pkey ON public.order_items USING btree (id);
 
-CREATE UNIQUE INDEX orders_pkey ON public.orders USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS orders_pkey ON public.orders USING btree (id);
 
-CREATE UNIQUE INDEX orders_workshop_id_order_number_key ON public.orders USING btree (workshop_id, order_number);
+CREATE UNIQUE INDEX IF NOT EXISTS orders_workshop_id_order_number_key ON public.orders USING btree (workshop_id, order_number);
 
-CREATE UNIQUE INDEX parts_pkey ON public.parts USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS parts_pkey ON public.parts USING btree (id);
 
-CREATE UNIQUE INDEX pending_signups_email_key ON public.pending_signups USING btree (email);
+CREATE UNIQUE INDEX IF NOT EXISTS pending_signups_email_key ON public.pending_signups USING btree (email);
 
-CREATE UNIQUE INDEX pending_signups_pkey ON public.pending_signups USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS pending_signups_pkey ON public.pending_signups USING btree (id);
 
-CREATE UNIQUE INDEX performance_metrics_pkey ON public.performance_metrics USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS performance_metrics_pkey ON public.performance_metrics USING btree (id);
 
-CREATE UNIQUE INDEX product_categories_name_global_unique ON public.product_categories USING btree (name) WHERE (user_id IS NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS product_categories_name_global_unique ON public.product_categories USING btree (name) WHERE (user_id IS NULL);
 
-CREATE UNIQUE INDEX product_categories_name_user_unique ON public.product_categories USING btree (name, user_id) WHERE (user_id IS NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS product_categories_name_user_unique ON public.product_categories USING btree (name, user_id) WHERE (user_id IS NOT NULL);
 
-CREATE UNIQUE INDEX product_categories_pkey ON public.product_categories USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS product_categories_pkey ON public.product_categories USING btree (id);
 
-CREATE UNIQUE INDEX products_pkey ON public.products USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS products_pkey ON public.products USING btree (id);
 
-CREATE UNIQUE INDEX quote_items_pkey ON public.quote_items USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS quote_items_pkey ON public.quote_items USING btree (id);
 
-CREATE UNIQUE INDEX quotes_pkey ON public.quotes USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS quotes_pkey ON public.quotes USING btree (id);
 
-CREATE UNIQUE INDEX referrals_pkey ON public.referrals USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS referrals_pkey ON public.referrals USING btree (id);
 
-CREATE UNIQUE INDEX referrals_referrer_client_id_referred_client_id_key ON public.referrals USING btree (referrer_client_id, referred_client_id);
+CREATE UNIQUE INDEX IF NOT EXISTS referrals_referrer_client_id_referred_client_id_key ON public.referrals USING btree (referrer_client_id, referred_client_id);
 
-CREATE UNIQUE INDEX repair_parts_pkey ON public.repair_parts USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS repair_parts_pkey ON public.repair_parts USING btree (id);
 
-CREATE UNIQUE INDEX repair_services_pkey ON public.repair_services USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS repair_services_pkey ON public.repair_services USING btree (id);
 
-CREATE UNIQUE INDEX repairs_pkey ON public.repairs USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS repairs_pkey ON public.repairs USING btree (id);
 
-CREATE UNIQUE INDEX repairs_repair_number_key ON public.repairs USING btree (repair_number);
+CREATE UNIQUE INDEX IF NOT EXISTS repairs_repair_number_key ON public.repairs USING btree (repair_number);
 
-CREATE UNIQUE INDEX reports_pkey ON public.reports USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS reports_pkey ON public.reports USING btree (id);
 
-CREATE UNIQUE INDEX sale_items_pkey ON public.sale_items USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS sale_items_pkey ON public.sale_items USING btree (id);
 
-CREATE UNIQUE INDEX sales_pkey ON public.sales USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS sales_pkey ON public.sales USING btree (id);
 
-CREATE UNIQUE INDEX services_pkey ON public.services USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS services_pkey ON public.services USING btree (id);
 
-CREATE UNIQUE INDEX stock_alerts_pkey ON public.stock_alerts USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS stock_alerts_pkey ON public.stock_alerts USING btree (id);
 
-CREATE UNIQUE INDEX subscription_audit_pkey ON public.subscription_audit USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS subscription_audit_pkey ON public.subscription_audit USING btree (id);
 
-CREATE UNIQUE INDEX subscription_payments_pkey ON public.subscription_payments USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS subscription_payments_pkey ON public.subscription_payments USING btree (id);
 
-CREATE UNIQUE INDEX subscription_plans_pkey ON public.subscription_plans USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS subscription_plans_pkey ON public.subscription_plans USING btree (id);
 
-CREATE UNIQUE INDEX subscription_status_pkey ON public.subscription_status USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS subscription_status_pkey ON public.subscription_status USING btree (id);
 
-CREATE UNIQUE INDEX subscription_status_user_id_key ON public.subscription_status USING btree (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS subscription_status_user_id_key ON public.subscription_status USING btree (user_id);
 
-CREATE UNIQUE INDEX suppliers_pkey ON public.suppliers USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS suppliers_pkey ON public.suppliers USING btree (id);
 
-CREATE UNIQUE INDEX suppliers_workshop_id_name_key ON public.suppliers USING btree (workshop_id, name);
+CREATE UNIQUE INDEX IF NOT EXISTS suppliers_workshop_id_name_key ON public.suppliers USING btree (workshop_id, name);
 
-CREATE UNIQUE INDEX system_settings_pkey ON public.system_settings USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS system_settings_pkey ON public.system_settings USING btree (id);
 
-CREATE UNIQUE INDEX system_settings_user_id_key_unique ON public.system_settings USING btree (user_id, key);
+CREATE UNIQUE INDEX IF NOT EXISTS system_settings_user_id_key_unique ON public.system_settings USING btree (user_id, key);
 
-CREATE UNIQUE INDEX technician_performance_pkey ON public.technician_performance USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS technician_performance_pkey ON public.technician_performance USING btree (id);
 
-CREATE UNIQUE INDEX transactions_pkey ON public.transactions USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS transactions_pkey ON public.transactions USING btree (id);
 
-CREATE UNIQUE INDEX user_preferences_pkey ON public.user_preferences USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS user_preferences_pkey ON public.user_preferences USING btree (id);
 
-CREATE UNIQUE INDEX user_preferences_user_id_key ON public.user_preferences USING btree (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS user_preferences_user_id_key ON public.user_preferences USING btree (user_id);
 
-CREATE UNIQUE INDEX user_profiles_pkey ON public.user_profiles USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS user_profiles_pkey ON public.user_profiles USING btree (id);
 
-CREATE UNIQUE INDEX user_profiles_user_id_key ON public.user_profiles USING btree (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS user_profiles_user_id_key ON public.user_profiles USING btree (user_id);
 
-CREATE UNIQUE INDEX user_subscriptions_pkey ON public.user_subscriptions USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS user_subscriptions_pkey ON public.user_subscriptions USING btree (id);
 
-CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id);
+CREATE UNIQUE INDEX IF NOT EXISTS users_pkey ON public.users USING btree (id);
 
-alter table "public"."activity_logs" add constraint "activity_logs_pkey" PRIMARY KEY using index "activity_logs_pkey";
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'activity_logs_pkey') THEN
+        ALTER TABLE "public"."activity_logs" ADD CONSTRAINT "activity_logs_pkey" PRIMARY KEY USING INDEX "activity_logs_pkey";
+    END IF;
+END $$;
 
-alter table "public"."advanced_alerts" add constraint "advanced_alerts_pkey" PRIMARY KEY using index "advanced_alerts_pkey";
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'advanced_alerts_pkey') THEN
+        ALTER TABLE "public"."advanced_alerts" ADD CONSTRAINT "advanced_alerts_pkey" PRIMARY KEY USING INDEX "advanced_alerts_pkey";
+    END IF;
+END $$;
 
-alter table "public"."advanced_settings" add constraint "advanced_settings_pkey" PRIMARY KEY using index "advanced_settings_pkey";
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'advanced_settings_pkey') THEN
+        ALTER TABLE "public"."advanced_settings" ADD CONSTRAINT "advanced_settings_pkey" PRIMARY KEY USING INDEX "advanced_settings_pkey";
+    END IF;
+END $$;
 
-alter table "public"."appointments" add constraint "appointments_pkey" PRIMARY KEY using index "appointments_pkey";
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'appointments_pkey') THEN
+        ALTER TABLE "public"."appointments" ADD CONSTRAINT "appointments_pkey" PRIMARY KEY USING INDEX "appointments_pkey";
+    END IF;
+END $$;
 
-alter table "public"."client_loyalty_points" add constraint "client_loyalty_points_pkey" PRIMARY KEY using index "client_loyalty_points_pkey";
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'client_loyalty_points_pkey') THEN
+        ALTER TABLE "public"."client_loyalty_points" ADD CONSTRAINT "client_loyalty_points_pkey" PRIMARY KEY USING INDEX "client_loyalty_points_pkey";
+    END IF;
+END $$;
 
 alter table "public"."clients" add constraint "clients_pkey" PRIMARY KEY using index "clients_pkey";
 
@@ -1656,9 +1680,9 @@ alter table "public"."device_models" add constraint "device_models_brand_id_fkey
 
 alter table "public"."device_models" validate constraint "device_models_brand_id_fkey";
 
-alter table "public"."device_models" add constraint "device_models_category_id_fkey" FOREIGN KEY (category_id) REFERENCES device_categories(id) ON DELETE CASCADE not valid;
+-- alter table "public"."device_models" add constraint "device_models_category_id_fkey" FOREIGN KEY (category_id) REFERENCES device_categories(id) ON DELETE CASCADE not valid;
 
-alter table "public"."device_models" validate constraint "device_models_category_id_fkey";
+-- alter table "public"."device_models" validate constraint "device_models_category_id_fkey";
 
 alter table "public"."device_models" add constraint "device_models_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE not valid;
 
@@ -5117,27 +5141,32 @@ CREATE OR REPLACE FUNCTION public.create_default_system_settings(p_user_id uuid)
  SECURITY DEFINER
 AS $function$
 BEGIN
+    -- S'assurer que la colonne description existe
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'system_settings' AND column_name = 'description') THEN
+        ALTER TABLE public.system_settings ADD COLUMN description text;
+    END IF;
+    
     -- Paramètres utilisateur par défaut
-    INSERT INTO system_settings (user_id, key, value, description, category, created_at, updated_at)
+    INSERT INTO system_settings (user_id, key, value, description, created_at, updated_at)
     VALUES 
-        (p_user_id, 'user_first_name', '', 'Prénom de l''utilisateur', 'user', NOW(), NOW()),
-        (p_user_id, 'user_last_name', '', 'Nom de l''utilisateur', 'user', NOW(), NOW()),
-        (p_user_id, 'user_email', '', 'Email de l''utilisateur', 'user', NOW(), NOW()),
-        (p_user_id, 'user_phone', '', 'Téléphone de l''utilisateur', 'user', NOW(), NOW()),
+        (p_user_id, 'user_first_name', '', 'Prénom de l''utilisateur', NOW(), NOW()),
+        (p_user_id, 'user_last_name', '', 'Nom de l''utilisateur', NOW(), NOW()),
+        (p_user_id, 'user_email', '', 'Email de l''utilisateur', NOW(), NOW()),
+        (p_user_id, 'user_phone', '', 'Téléphone de l''utilisateur', NOW(), NOW()),
         
         -- Paramètres atelier par défaut
-        (p_user_id, 'workshop_name', 'Mon Atelier', 'Nom de l''atelier', 'workshop', NOW(), NOW()),
-        (p_user_id, 'workshop_address', '', 'Adresse de l''atelier', 'workshop', NOW(), NOW()),
-        (p_user_id, 'workshop_phone', '', 'Téléphone de l''atelier', 'workshop', NOW(), NOW()),
-        (p_user_id, 'workshop_email', '', 'Email de l''atelier', 'workshop', NOW(), NOW()),
-        (p_user_id, 'workshop_siret', '', 'Numéro SIRET', 'workshop', NOW(), NOW()),
-        (p_user_id, 'workshop_vat_number', '', 'Numéro de TVA', 'workshop', NOW(), NOW()),
-        (p_user_id, 'vat_rate', '20', 'Taux de TVA (%)', 'workshop', NOW(), NOW()),
-        (p_user_id, 'currency', 'EUR', 'Devise', 'workshop', NOW(), NOW()),
+        (p_user_id, 'workshop_name', 'Mon Atelier', 'Nom de l''atelier', NOW(), NOW()),
+        (p_user_id, 'workshop_address', '', 'Adresse de l''atelier', NOW(), NOW()),
+        (p_user_id, 'workshop_phone', '', 'Téléphone de l''atelier', NOW(), NOW()),
+        (p_user_id, 'workshop_email', '', 'Email de l''atelier', NOW(), NOW()),
+        (p_user_id, 'workshop_siret', '', 'Numéro SIRET', NOW(), NOW()),
+        (p_user_id, 'workshop_vat_number', '', 'Numéro de TVA', NOW(), NOW()),
+        (p_user_id, 'vat_rate', '20', 'Taux de TVA (%)', NOW(), NOW()),
+        (p_user_id, 'currency', 'EUR', 'Devise', NOW(), NOW()),
         
         -- Paramètres système par défaut
-        (p_user_id, 'language', 'fr', 'Langue de l''interface', 'system', NOW(), NOW()),
-        (p_user_id, 'theme', 'light', 'Thème de l''interface', 'system', NOW(), NOW())
+        (p_user_id, 'language', 'fr', 'Langue de l''interface', NOW(), NOW()),
+        (p_user_id, 'theme', 'light', 'Thème de l''interface', NOW(), NOW())
     ON CONFLICT (user_id, key) DO NOTHING;
 END;
 $function$
@@ -5766,6 +5795,11 @@ DECLARE
     user_email TEXT;
     is_admin BOOLEAN;
 BEGIN
+    -- S'assurer que la colonne description existe
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'system_settings' AND column_name = 'description') THEN
+        ALTER TABLE public.system_settings ADD COLUMN description text;
+    END IF;
+    
     -- Récupérer l'email de l'utilisateur
     SELECT email INTO user_email FROM auth.users WHERE id = p_user_id;
     
@@ -5796,18 +5830,18 @@ BEGIN
     ) ON CONFLICT (user_id) DO NOTHING;
     
     -- Insérer les paramètres système par défaut
-    INSERT INTO system_settings (user_id, category, key, value, description)
+    INSERT INTO system_settings (user_id, key, value, description)
     VALUES 
-        (p_user_id, 'general', 'workshop_name', 'Mon Atelier', 'Nom de l''atelier'),
-        (p_user_id, 'general', 'workshop_address', '', 'Adresse de l''atelier'),
-        (p_user_id, 'general', 'workshop_phone', '', 'Téléphone de l''atelier'),
-        (p_user_id, 'general', 'workshop_email', '', 'Email de l''atelier'),
+        (p_user_id, 'workshop_name', 'Mon Atelier', 'Nom de l''atelier'),
+        (p_user_id, 'workshop_address', '', 'Adresse de l''atelier'),
+        (p_user_id, 'workshop_phone', '', 'Téléphone de l''atelier'),
+        (p_user_id, 'workshop_email', '', 'Email de l''atelier'),
         (p_user_id, 'notifications', 'email_notifications', 'true', 'Activer les notifications par email'),
         (p_user_id, 'notifications', 'sms_notifications', 'false', 'Activer les notifications par SMS'),
         (p_user_id, 'appointments', 'appointment_duration', '60', 'Durée par défaut des rendez-vous (minutes)'),
         (p_user_id, 'appointments', 'working_hours_start', '08:00', 'Heure de début de travail'),
         (p_user_id, 'appointments', 'working_hours_end', '18:00', 'Heure de fin de travail')
-    ON CONFLICT (user_id, category, key) DO NOTHING;
+    ON CONFLICT (user_id, key) DO NOTHING;
     
     RETURN json_build_object(
         'success', true,
@@ -5832,23 +5866,28 @@ CREATE OR REPLACE FUNCTION public.create_user_default_data_permissive(p_user_id 
  SECURITY DEFINER
 AS $function$
 BEGIN
+    -- S'assurer que la colonne description existe
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'system_settings' AND column_name = 'description') THEN
+        ALTER TABLE public.system_settings ADD COLUMN description text;
+    END IF;
+    
     -- Insérer sans aucune vérification
     INSERT INTO subscription_status (user_id, first_name, last_name, email, is_active, subscription_type, notes)
     VALUES (p_user_id, 'Utilisateur', '', '', FALSE, 'free', 'Compte créé automatiquement')
     ON CONFLICT (user_id) DO NOTHING;
     
-    INSERT INTO system_settings (user_id, category, key, value, description)
+    INSERT INTO system_settings (user_id, key, value, description)
     VALUES 
-        (p_user_id, 'general', 'workshop_name', 'Mon Atelier', 'Nom de l''atelier'),
-        (p_user_id, 'general', 'workshop_address', '', 'Adresse de l''atelier'),
-        (p_user_id, 'general', 'workshop_phone', '', 'Téléphone de l''atelier'),
-        (p_user_id, 'general', 'workshop_email', '', 'Email de l''atelier'),
+        (p_user_id, 'workshop_name', 'Mon Atelier', 'Nom de l''atelier'),
+        (p_user_id, 'workshop_address', '', 'Adresse de l''atelier'),
+        (p_user_id, 'workshop_phone', '', 'Téléphone de l''atelier'),
+        (p_user_id, 'workshop_email', '', 'Email de l''atelier'),
         (p_user_id, 'notifications', 'email_notifications', 'true', 'Activer les notifications par email'),
         (p_user_id, 'notifications', 'sms_notifications', 'false', 'Activer les notifications par SMS'),
         (p_user_id, 'appointments', 'appointment_duration', '60', 'Durée par défaut des rendez-vous (minutes)'),
         (p_user_id, 'appointments', 'working_hours_start', '08:00', 'Heure de début de travail'),
         (p_user_id, 'appointments', 'working_hours_end', '18:00', 'Heure de fin de travail')
-    ON CONFLICT (user_id, category, key) DO NOTHING;
+    ON CONFLICT (user_id, key) DO NOTHING;
 
     RETURN json_build_object('success', true, 'message', 'Données créées avec succès');
 EXCEPTION WHEN OTHERS THEN

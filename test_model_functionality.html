@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Fonctionnalité Modèles</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        .info { color: #2196f3; }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #2196f3;
+            background-color: #f8f9fa;
+        }
+        .code {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test - Fonctionnalité Modèles</h1>
+        
+        <div class="step">
+            <h3>✅ Fonctionnalités Implémentées</h3>
+            <ul>
+                <li class="success">✅ Création de modèles avec formulaire modal complet</li>
+                <li class="success">✅ Modification des modèles existants</li>
+                <li class="success">✅ Suppression des modèles avec confirmation</li>
+                <li class="success">✅ Sélection de marque et catégorie pour les modèles</li>
+                <li class="success">✅ Gestion des spécifications techniques (JSON)</li>
+                <li class="success">✅ Statut actif/inactif pour les modèles</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🎯 Comment Tester</h3>
+            <ol>
+                <li><strong>Ouvrir l'application</strong> : <a href="http://localhost:3000/app/catalog/device-management" target="_blank">http://localhost:3000/app/catalog/device-management</a></li>
+                <li><strong>Cliquer sur l'onglet "Modèles"</strong></li>
+                <li><strong>Cliquer sur "Ajouter un modèle"</strong></li>
+                <li><strong>Remplir le formulaire</strong> :
+                    <ul>
+                        <li>Nom : "iPhone 15 Pro"</li>
+                        <li>Description : "Smartphone Apple haut de gamme"</li>
+                        <li>Marque : Sélectionner "Apple"</li>
+                        <li>Catégorie : Sélectionner "Électronique"</li>
+                        <li>Spécifications : <code>{"processeur": "A17 Pro", "mémoire": "8GB", "stockage": "256GB"}</code></li>
+                        <li>Statut : Laisser "Actif"</li>
+                    </ul>
+                </li>
+                <li><strong>Cliquer sur "Créer"</strong></li>
+                <li><strong>Vérifier</strong> que le modèle apparaît dans le tableau</li>
+                <li><strong>Tester la modification</strong> : Cliquer sur l'icône crayon</li>
+                <li><strong>Tester la suppression</strong> : Cliquer sur l'icône poubelle</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>🔧 Fonctions Ajoutées</h3>
+            <div class="code">
+                // Nouvelles fonctions dans DeviceManagement.tsx :
+                - handleCreateModel()
+                - handleUpdateModel()
+                - handleDeleteModel()
+                - openModelEditDialog()
+                - resetModelForm()
+                
+                // Nouveaux états :
+                - newModel (interface NewModelForm)
+                
+                // Nouveau dialogue :
+                - Formulaire complet avec nom, description, marque, catégorie, spécifications, statut
+                - Sélection de marque et catégorie avec dropdowns
+                - Champ JSON pour les spécifications techniques
+                - Boutons Créer/Modifier/Annuler
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>📋 Prérequis</h3>
+            <p>Pour que les modèles fonctionnent, vous devez avoir :</p>
+            <ul>
+                <li>✅ <strong>Des marques</strong> : Exécutez d'abord le script SQL pour créer des marques</li>
+                <li>✅ <strong>Des catégories</strong> : Exécutez d'abord le script SQL pour créer des catégories</li>
+                <li>✅ <strong>Les politiques RLS</strong> : Exécutez le script <code>fix_rls_policies.sql</code></li>
+            </ul>
+            
+            <p><strong>Scripts SQL à exécuter dans l'ordre :</strong></p>
+            <div class="code">
+                1. fix_rls_policies.sql (pour les permissions)
+                2. diagnostic_and_fix_data_uuid_fixed.sql (pour les données de test)
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🚨 Résolution de Problèmes</h3>
+            <p><strong>Si le bouton ne fonctionne pas :</strong></p>
+            <ul>
+                <li>Vérifiez que le fichier <code>DeviceManagement.tsx</code> a été sauvegardé</li>
+                <li>Rechargez la page (F5)</li>
+                <li>Vérifiez la console du navigateur pour les erreurs</li>
+            </ul>
+            
+            <p><strong>Si les dropdowns de marque/catégorie sont vides :</strong></p>
+            <ul>
+                <li>Exécutez les scripts SQL pour créer des données de test</li>
+                <li>Vérifiez que les onglets "Marques" et "Catégories" affichent des données</li>
+            </ul>
+            
+            <p><strong>Si vous avez une erreur 403/RLS :</strong></p>
+            <ul>
+                <li>Exécutez le script <code>fix_rls_policies.sql</code></li>
+                <li>Vérifiez que vous êtes connecté avec le bon utilisateur</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h3>🎉 Résultat Attendu</h3>
+            <p>Après avoir testé, vous devriez pouvoir :</p>
+            <ul class="success">
+                <li>✅ Créer de nouveaux modèles</li>
+                <li>✅ Modifier les modèles existants</li>
+                <li>✅ Supprimer les modèles</li>
+                <li>✅ Voir les modèles dans le tableau avec marque et catégorie</li>
+                <li>✅ Gérer les spécifications techniques en JSON</li>
+                <li>✅ Filtrer les modèles par marque et catégorie</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <button onclick="window.open('http://localhost:3000/app/catalog/device-management', '_blank')">
+                🚀 Ouvrir l'Application
+            </button>
+        </div>
+    </div>
+</body>
+</html>

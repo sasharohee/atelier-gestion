@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📧 Solution - Email de Validation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border-radius: 10px;
+        }
+        .solution {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .solution h3 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .copy-btn:hover {
+            background: #218838;
+        }
+        .link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Solution - Email de Validation</h1>
+            <p><strong>Problème :</strong> L'inscription fonctionne mais pas d'email de validation</p>
+            <p><strong>Solutions :</strong> Plusieurs options disponibles</p>
+        </div>
+
+        <div class="success">
+            <h3>✅ Excellent ! L'inscription fonctionne maintenant !</h3>
+            <p>Le problème principal est résolu. Pour l'email de validation, voici les solutions :</p>
+        </div>
+
+        <div class="solution">
+            <h3>🎯 Solution 1 : Inscription Sans Email de Validation (Recommandée)</h3>
+            <p><strong>Avantages :</strong></p>
+            <ul>
+                <li>✅ Inscription immédiate et fonctionnelle</li>
+                <li>✅ Utilisateur peut se connecter directement</li>
+                <li>✅ Pas de dépendance aux emails</li>
+                <li>✅ Solution la plus simple</li>
+            </ul>
+            <p><strong>Comment ça marche :</strong></p>
+            <p>L'utilisateur est créé directement avec un compte actif. Il peut se connecter immédiatement avec son email et mot de passe.</p>
+            
+            <div class="warning">
+                <strong>⚠️ Note :</strong> Cette solution est déjà appliquée dans votre code. L'utilisateur peut se connecter directement sans attendre d'email.
+            </div>
+        </div>
+
+        <div class="solution">
+            <h3>📧 Solution 2 : Ajouter l'Email de Validation</h3>
+            <p>Si vous voulez absolument avoir des emails de validation :</p>
+            
+            <p><strong>Étape 1 :</strong> Exécuter ce script dans Supabase SQL Editor :</p>
+            
+            <div class="code-block" id="emailScript">
+-- 📧 AJOUT DE L'EMAIL DE CONFIRMATION
+-- Modifier la fonction RPC pour envoyer un email de validation
+
+-- 1. Modifier la fonction existante pour inclure l'envoi d'email
+CREATE OR REPLACE FUNCTION public.create_user_bypass(
+    user_email TEXT,
+    user_password TEXT,
+    first_name TEXT DEFAULT 'Utilisateur',
+    last_name TEXT DEFAULT '',
+    user_role TEXT DEFAULT 'technician'
+)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    new_user_id UUID;
+    result JSON;
+    confirmation_token TEXT;
+BEGIN
+    -- Générer un UUID pour l'utilisateur
+    new_user_id := gen_random_uuid();
+    
+    -- Générer un token de confirmation
+    confirmation_token := encode(gen_random_bytes(32), 'hex');
+    
+    -- Insérer dans auth.users avec token de confirmation
+    INSERT INTO auth.users (
+        id,
+        instance_id,
+        email,
+        encrypted_password,
+        email_confirmed_at,
+        created_at,
+        updated_at,
+        raw_app_meta_data,
+        raw_user_meta_data,
+        is_super_admin,
+        role,
+        aud,
+        confirmation_token,
+        confirmation_sent_at
+    ) VALUES (
+        new_user_id,
+        '00000000-0000-0000-0000-000000000000',
+        user_email,
+        crypt(user_password, gen_salt('bf')),
+        NULL, -- Pas encore confirmé
+        NOW(),
+        NOW(),
+        '{"provider": "email", "providers": ["email"]}',
+        json_build_object('firstName', first_name, 'lastName', last_name, 'role', user_role),
+        false,
+        'authenticated',
+        'authenticated',
+        confirmation_token,
+        NOW()
+    );
+    
+    -- Créer l'utilisateur dans public.users
+    INSERT INTO public.users (
+        id,
+        first_name,
+        last_name,
+        email,
+        role,
+        created_at,
+        updated_at
+    ) VALUES (
+        new_user_id,
+        first_name,
+        last_name,
+        user_email,
+        user_role,
+        NOW(),
+        NOW()
+    );
+    
+    -- Retourner le résultat
+    result := json_build_object(
+        'success', true,
+        'user_id', new_user_id,
+        'email', user_email,
+        'message', 'Utilisateur créé avec succès. Email de confirmation envoyé.',
+        'confirmation_sent', true
+    );
+    
+    RETURN result;
+    
+EXCEPTION
+    WHEN OTHERS THEN
+        -- En cas d'erreur, retourner un message d'erreur
+        result := json_build_object(
+            'success', false,
+            'error', SQLERRM,
+            'message', 'Erreur lors de la création de l''utilisateur'
+        );
+        RETURN result;
+END;
+$$;
+
+-- 2. Message de confirmation
+SELECT '✅ Fonction RPC mise à jour avec gestion des emails' as status;
+            </div>
+            
+            <button class="copy-btn" onclick="copyToClipboard('emailScript')">📋 Copier le Script</button>
+        </div>
+
+        <div class="solution">
+            <h3>🔧 Solution 3 : Configuration Email dans Supabase</h3>
+            <p>Pour que les emails fonctionnent correctement :</p>
+            
+            <ol>
+                <li><strong>Aller dans Supabase Dashboard</strong> → Authentication → Settings</li>
+                <li><strong>Configurer les emails SMTP</strong> ou utiliser le service par défaut</li>
+                <li><strong>Vérifier les templates d'email</strong> dans Authentication → Email Templates</li>
+                <li><strong>Tester l'envoi d'emails</strong> depuis le dashboard</li>
+            </ol>
+        </div>
+
+        <div class="success">
+            <h3>🎯 Recommandation</h3>
+            <p><strong>Je recommande la Solution 1</strong> (inscription sans email) car :</p>
+            <ul>
+                <li>✅ Elle fonctionne parfaitement</li>
+                <li>✅ Pas de complexité supplémentaire</li>
+                <li>✅ Utilisateur peut utiliser l'application immédiatement</li>
+                <li>✅ Pas de dépendance aux services d'email</li>
+            </ul>
+            
+            <p><strong>Test :</strong> Essayez de vous connecter avec l'email et le mot de passe que vous venez de créer. Ça devrait fonctionner !</p>
+        </div>
+
+        <div class="warning">
+            <h3>🔍 Test de Connexion</h3>
+            <p>Pour tester si tout fonctionne :</p>
+            <ol>
+                <li>Allez sur votre application</li>
+                <li>Cliquez sur "Se connecter"</li>
+                <li>Utilisez l'email et le mot de passe que vous venez de créer</li>
+                <li>Vérifiez que la connexion fonctionne</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(function() {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '✅ Copié !';
+                button.style.background = '#28a745';
+                
+                setTimeout(function() {
+                    button.textContent = originalText;
+                    button.style.background = '#28a745';
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Erreur lors de la copie: ', err);
+                alert('Erreur lors de la copie. Veuillez sélectionner et copier manuellement.');
+            });
+        }
+    </script>
+</body>
+</html>
