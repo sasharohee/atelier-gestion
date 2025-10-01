@@ -1,0 +1,22 @@
+# Configuration Flyway pour l'environnement de production
+databaseType = "PostgreSQL"
+id = "prod-atelier"
+name = "Atelier Gestion - Production"
+
+[flyway]
+url = "postgresql://postgres:EGQUN6paP21OlNUu@db.gggoqnxrspviuxadvkbh.supabase.co:5432/postgres"
+user = "postgres"
+password = "EGQUN6paP21OlNUu"
+callbackLocations = [ "filesystem:callbacks" ]
+defaultSchema = "public"
+locations = [ "filesystem:migrations" ]
+mixed = true
+outOfOrder = true
+validateMigrationNaming = true
+baselineOnMigrate = true
+baselineVersion = "0"
+
+[flyway.check]
+majorTolerance = 0
+
+# Configuration clean supprimée - non supportée par Flyway Desktop

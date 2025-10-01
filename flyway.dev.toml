@@ -1,0 +1,22 @@
+# Configuration Flyway pour l'environnement de développement
+databaseType = "PostgreSQL"
+id = "dev-atelier"
+name = "Atelier Gestion - Développement"
+
+[flyway]
+url = "postgresql://postgres:postgres@localhost:54322/postgres"
+user = "postgres"
+password = "postgres"
+callbackLocations = [ "filesystem:callbacks" ]
+defaultSchema = "public"
+locations = [ "filesystem:migrations" ]
+mixed = true
+outOfOrder = true
+validateMigrationNaming = true
+baselineOnMigrate = true
+baselineVersion = "0"
+
+[flyway.check]
+majorTolerance = 0
+
+# Configuration clean supprimée - non supportée par Flyway Desktop

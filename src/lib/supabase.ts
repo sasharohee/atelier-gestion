@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration Supabase - DÉVELOPPEMENT LOCAL
-// Priorité aux variables d'environnement, sinon fallback sur les valeurs locales
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+// Configuration Supabase - PRODUCTION
+// Priorité aux variables d'environnement, sinon fallback sur les valeurs de production
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://wlqyrmntfxwdvkzzsujv.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscXlybW50Znh3ZHZrenpzdWp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjUyMDAsImV4cCI6MjA3MTAwMTIwMH0.9XvA_8VtPhBdF80oycWefBgY9nIyvqQUPHDGlw3f2D8';
 
-// UTILISER L'URL DE DÉVELOPPEMENT LOCAL
+// UTILISER L'URL DE PRODUCTION
 const finalSupabaseUrl = supabaseUrl;
 
 // Log de la configuration utilisée
@@ -39,13 +39,13 @@ export const supabase = createClient(finalSupabaseUrl, supabaseAnonKey, {
   }
 });
 
-// Configuration pour la connexion directe PostgreSQL (optionnel)
+// Configuration pour la connexion directe PostgreSQL (optionnel) - PRODUCTION
 export const postgresConfig = {
-  host: import.meta.env.VITE_POSTGRES_HOST || 'db.olrihggkxyksuofkesnk.supabase.co',
+  host: import.meta.env.VITE_POSTGRES_HOST || 'db.wlqyrmntfxwdvkzzsujv.supabase.co',
   port: parseInt(import.meta.env.VITE_POSTGRES_PORT || '5432'),
   database: import.meta.env.VITE_POSTGRES_DB || 'postgres',
-  user: import.meta.env.VITE_POSTGRES_USER || 'postgres.olrihggkxyksuofkesnk',
-  password: import.meta.env.VITE_POSTGRES_PASSWORD || 'ubazddRhIBL17UQr'
+  user: import.meta.env.VITE_POSTGRES_USER || 'postgres',
+  password: import.meta.env.VITE_POSTGRES_PASSWORD || 'EGQUN6paP21OlNUu'
 };
 
 // Types pour les réponses Supabase

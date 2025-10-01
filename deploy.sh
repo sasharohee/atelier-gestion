@@ -1,53 +1,66 @@
 #!/bin/bash
 
-# Script de déploiement pour Atelier Gestion
-# Usage: ./deploy.sh [VOTRE_USERNAME_GITHUB]
+echo "🚀 Déploiement Atelier Gestion avec Flyway"
 
-echo "🚀 Déploiement de Atelier Gestion sur GitHub Pages"
-echo "=================================================="
-
-# Vérifier si un nom d'utilisateur est fourni
-if [ -z "$1" ]; then
-    echo "❌ Erreur: Veuillez fournir votre nom d'utilisateur GitHub"
-    echo "Usage: ./deploy.sh [VOTRE_USERNAME_GITHUB]"
-    echo ""
-    echo "Exemple: ./deploy.sh john-doe"
+# Vérification des prérequis
+if ! command -v flyway &> /dev/null; then
+    echo "❌ Flyway CLI n'est pas installé"
+    echo "💡 Installez-le avec: brew install flyway"
     exit 1
 fi
 
-USERNAME=$1
-
-echo "👤 Nom d'utilisateur GitHub: $USERNAME"
-echo ""
-
-# Mettre à jour l'URL dans package.json
-echo "📝 Mise à jour de l'URL GitHub Pages..."
-sed -i '' "s/\[VOTRE_USERNAME\]/$USERNAME/g" package.json
-
-# Ajouter le remote GitHub s'il n'existe pas déjà
-if ! git remote | grep -q origin; then
-    echo "🔗 Ajout du remote GitHub..."
-    git remote add origin https://github.com/$USERNAME/atelier-gestion.git
-else
-    echo "✅ Remote GitHub déjà configuré"
+# Vérification des fichiers de configuration
+if [ ! -f "flyway.dev.toml" ] || [ ! -f "flyway.prod.toml" ]; then
+    echo "❌ Fichiers de configuration Flyway manquants"
+    exit 1
 fi
 
-# Pousser les changements
-echo "📤 Poussée des changements vers GitHub..."
-git add .
-git commit -m "Configuration finale pour GitHub Pages"
-git push -u origin main
+# Sauvegarde de la production
+echo "📦 Sauvegarde de la production..."
+BACKUP_FILE="backup_prod_$(date +%Y%m%d_%H%M%S).sql"
+pg_dump "postgresql://postgres:EGQUN6paP21OlNUu@db.gggoqnxrspviuxadvkbh.supabase.co:5432/postgres" > "$BACKUP_FILE"
 
+if [ $? -eq 0 ]; then
+    echo "✅ Sauvegarde créée: $BACKUP_FILE"
+else
+    echo "❌ Échec de la sauvegarde"
+    exit 1
+fi
+
+# Test en développement
+echo "🧪 Test des migrations en développement..."
+flyway -configFiles=flyway.dev.toml migrate
+
+if [ $? -eq 0 ]; then
+    echo "✅ Migrations de développement réussies"
+else
+    echo "❌ Échec des migrations de développement"
+    exit 1
+fi
+
+# Demande de confirmation pour la production
 echo ""
-echo "✅ Déploiement terminé !"
-echo ""
-echo "📋 Prochaines étapes :"
-echo "1. Allez sur https://github.com/$USERNAME/atelier-gestion"
-echo "2. Dans Settings > Pages, configurez :"
-echo "   - Source: Deploy from a branch"
-echo "   - Branch: gh-pages"
-echo "   - Folder: / (root)"
-echo "3. Votre application sera accessible à :"
-echo "   https://$USERNAME.github.io/atelier-gestion"
-echo ""
-echo "🎉 Bonne chance avec votre atelier de réparation !"
+echo "⚠️  Vous êtes sur le point de déployer en PRODUCTION"
+echo "📦 Sauvegarde créée: $BACKUP_FILE"
+read -p "Continuer le déploiement en production ? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "❌ Déploiement annulé"
+    exit 1
+fi
+
+# Déploiement en production
+echo "🚀 Déploiement en production..."
+flyway -configFiles=flyway.prod.toml migrate
+
+if [ $? -eq 0 ]; then
+    echo "✅ Déploiement réussi !"
+    echo ""
+    echo "📊 État final de la production :"
+    flyway -configFiles=flyway.prod.toml info
+else
+    echo "❌ Échec du déploiement"
+    echo "💡 Vérifiez les logs et restaurez depuis la sauvegarde si nécessaire"
+    echo "🔄 Pour restaurer: psql -f $BACKUP_FILE"
+    exit 1
+fi
