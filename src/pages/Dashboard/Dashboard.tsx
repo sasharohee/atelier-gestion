@@ -1282,11 +1282,11 @@ const Dashboard: React.FC = () => {
                               </React.Fragment>
                             }
                             secondary={
-                              <React.Fragment>
-                                <Typography variant="body2" color="text.secondary" component="div">
+                              <Box>
+                                <Typography variant="body2" color="text.secondary">
                                   {device?.brand} {device?.model} - {repair.description}
                                 </Typography>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
                                   <Chip
                                     label={repairStatuses.find(s => s.id === repair.status)?.name || repair.status}
                                     size="small"
@@ -1295,11 +1295,11 @@ const Dashboard: React.FC = () => {
                                       color: 'white',
                                     }}
                                   />
-                                  <Typography variant="caption" color="text.secondary" component="span">
+                                  <Typography variant="caption" color="text.secondary">
                                     {safeFormatDate(repair.createdAt, 'dd/MM/yyyy HH:mm')}
                                   </Typography>
-                                </div>
-                              </React.Fragment>
+                                </Box>
+                              </Box>
                             }
                           />
                           <Typography variant="h6" color="primary">

@@ -598,16 +598,6 @@ const Administration: React.FC = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Prénom :</strong> {(authUser as any).user_metadata?.firstName || 'Non défini'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Nom :</strong> {(authUser as any).user_metadata?.lastName || 'Non défini'}
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" color="text.secondary">
                   <strong>Rôle :</strong> {(authUser as any).user_metadata?.role || 'Non défini'}
                 </Typography>
               </Grid>

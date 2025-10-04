@@ -167,93 +167,104 @@ class BrandService {
   // Créer une nouvelle marque
   async create(brandData: CreateBrandData): Promise<BrandWithCategories> {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('Utilisateur non authentifié');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Utilisateur non authentifié');
 
       // Générer un ID unique pour la nouvelle marque
       const brandId = `brand_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Essayer d'abord la fonction upsert_brand
-      try {
-        const { data, error } = await supabase.rpc('upsert_brand', {
-          p_id: brandId,
-          p_name: brandData.name,
-          p_description: brandData.description || '',
-          p_logo: brandData.logo || '',
-          p_category_ids: brandData.categoryIds || null
-        });
+      // Créer la marque directement avec une requête SQL
+      const { data: brandData_result, error: brandError } = await supabase
+        .from('device_brands')
+        .insert([{
+          id: brandId,
+          name: brandData.name,
+          description: brandData.description || '',
+          logo: brandData.logo || '',
+          is_active: true,
+          user_id: user.id,
+          created_by: user.id
+        }])
+        .select()
+        .single();
 
-        if (error) throw error;
+      if (brandError) throw brandError;
 
-        // La fonction upsert_brand retourne un tableau, prendre le premier élément
-        const brandResult = Array.isArray(data) ? data[0] : data;
-        
-        if (!brandResult) {
-          throw new Error('Aucune donnée retournée par la fonction upsert_brand');
-        }
+      // Associer les catégories si fournies
+      if (brandData.categoryIds && brandData.categoryIds.length > 0) {
+        const categoryInserts = brandData.categoryIds.map(categoryId => ({
+          brand_id: brandId,
+          category_id: categoryId,
+          user_id: user.id
+        }));
 
-        return {
-          id: brandResult.id,
-          name: brandResult.name,
-          description: brandResult.description || '',
-          logo: brandResult.logo || '',
-          isActive: brandResult.is_active,
-          categories: brandResult.categories || [],
-          createdAt: new Date(brandResult.created_at),
-          updatedAt: new Date(brandResult.updated_at)
-        };
-      } catch (rpcError) {
-        console.warn('⚠️ Erreur avec upsert_brand, tentative avec upsert_brand_simple:', rpcError);
-        
-        try {
-          // Fallback vers la fonction simple
-          const { data: simpleData, error: simpleError } = await supabase.rpc('upsert_brand_simple', {
-            p_id: brandId,
-            p_name: brandData.name,
-            p_description: brandData.description || '',
-            p_logo: brandData.logo || '',
-            p_category_ids: brandData.categoryIds || null
-          });
+        const { error: categoryError } = await supabase
+          .from('brand_categories')
+          .insert(categoryInserts);
 
-          if (simpleError) throw simpleError;
-
-          // La fonction simple retourne un JSON
-          return {
-            id: simpleData.id,
-            name: simpleData.name,
-            description: simpleData.description || '',
-            logo: simpleData.logo || '',
-            isActive: simpleData.is_active,
-            categories: [], // La fonction simple ne retourne pas les catégories
-            createdAt: new Date(simpleData.created_at),
-            updatedAt: new Date(simpleData.updated_at)
-          };
-        } catch (simpleError) {
-          console.warn('⚠️ Erreur avec upsert_brand_simple, tentative avec create_brand_basic:', simpleError);
-          
-          // Dernier recours : fonction ultra-basique
-          const { data: basicData, error: basicError } = await supabase.rpc('create_brand_basic', {
-            p_id: brandId,
-            p_name: brandData.name,
-            p_description: brandData.description || '',
-            p_logo: brandData.logo || ''
-          });
-
-          if (basicError) throw basicError;
-
-          // La fonction basique retourne un JSON
-          return {
-            id: basicData.id,
-            name: basicData.name,
-            description: basicData.description || '',
-            logo: basicData.logo || '',
-            isActive: basicData.is_active,
-            categories: [], // La fonction basique ne gère pas les catégories
-            createdAt: new Date(basicData.created_at),
-            updatedAt: new Date(basicData.updated_at)
-          };
+        if (categoryError) {
+          console.warn('⚠️ Erreur lors de l\'association des catégories:', categoryError);
+          // Ne pas faire échouer la création de la marque pour une erreur de catégorie
         }
       }
+
+      // Récupérer la marque avec ses catégories
+      const { data: brandWithCategories, error: fetchError } = await supabase
+        .from('device_brands')
+        .select(`
+          *,
+          brand_categories (
+            device_categories (
+              id,
+              name,
+              description,
+              icon,
+              is_active,
+              created_at,
+              updated_at
+            )
+          )
+        `)
+        .eq('id', brandId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) {
+        console.warn('⚠️ Erreur lors de la récupération des catégories:', fetchError);
+        // Retourner la marque sans catégories en cas d'erreur
+        return {
+          id: brandData_result.id,
+          name: brandData_result.name,
+          description: brandData_result.description || '',
+          logo: brandData_result.logo || '',
+          isActive: brandData_result.is_active,
+          categories: [],
+          createdAt: new Date(brandData_result.created_at),
+          updatedAt: new Date(brandData_result.updated_at)
+        };
+      }
+
+      // Transformer les catégories
+      const categories = (brandWithCategories.brand_categories || []).map(bc => ({
+        id: bc.device_categories.id,
+        name: bc.device_categories.name,
+        description: bc.device_categories.description || '',
+        icon: bc.device_categories.icon || 'category',
+        isActive: bc.device_categories.is_active,
+        createdAt: bc.device_categories.created_at,
+        updatedAt: bc.device_categories.updated_at
+      }));
+
+      return {
+        id: brandWithCategories.id,
+        name: brandWithCategories.name,
+        description: brandWithCategories.description || '',
+        logo: brandWithCategories.logo || '',
+        isActive: brandWithCategories.is_active,
+        categories,
+        createdAt: new Date(brandWithCategories.created_at),
+        updatedAt: new Date(brandWithCategories.updated_at)
+      };
     } catch (error) {
       console.error('❌ Erreur lors de la création de la marque:', error);
       throw error;
@@ -263,36 +274,115 @@ class BrandService {
   // Mettre à jour une marque existante
   async update(id: string, updates: UpdateBrandData): Promise<BrandWithCategories> {
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error('Utilisateur non authentifié');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Utilisateur non authentifié');
 
-      // Utiliser la fonction RPC upsert_brand pour la mise à jour
-      const { data, error } = await supabase.rpc('upsert_brand', {
-        p_id: id,
-        p_name: updates.name,
-        p_description: updates.description,
-        p_logo: updates.logo,
-        p_category_ids: updates.categoryIds || null
-      });
+      // Mettre à jour la marque directement
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
 
-      if (error) throw error;
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.logo !== undefined) updateData.logo = updates.logo;
 
-      // La fonction upsert_brand retourne un tableau, prendre le premier élément
-      const brandResult = Array.isArray(data) ? data[0] : data;
-      
-      if (!brandResult) {
-        throw new Error('Aucune donnée retournée par la fonction upsert_brand');
+      const { data: brandData_result, error: brandError } = await supabase
+        .from('device_brands')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (brandError) throw brandError;
+
+      // Mettre à jour les catégories si fournies
+      if (updates.categoryIds !== undefined) {
+        // Supprimer les anciennes associations
+        const { error: deleteError } = await supabase
+          .from('brand_categories')
+          .delete()
+          .eq('brand_id', id)
+          .eq('user_id', user.id);
+
+        if (deleteError) {
+          console.warn('⚠️ Erreur lors de la suppression des anciennes catégories:', deleteError);
+        }
+
+        // Ajouter les nouvelles associations
+        if (updates.categoryIds.length > 0) {
+          const categoryInserts = updates.categoryIds.map(categoryId => ({
+            brand_id: id,
+            category_id: categoryId,
+            user_id: user.id
+          }));
+
+          const { error: categoryError } = await supabase
+            .from('brand_categories')
+            .insert(categoryInserts);
+
+          if (categoryError) {
+            console.warn('⚠️ Erreur lors de l\'association des catégories:', categoryError);
+          }
+        }
       }
 
+      // Récupérer la marque avec ses catégories
+      const { data: brandWithCategories, error: fetchError } = await supabase
+        .from('device_brands')
+        .select(`
+          *,
+          brand_categories (
+            device_categories (
+              id,
+              name,
+              description,
+              icon,
+              is_active,
+              created_at,
+              updated_at
+            )
+          )
+        `)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError) {
+        console.warn('⚠️ Erreur lors de la récupération des catégories:', fetchError);
+        // Retourner la marque sans catégories en cas d'erreur
+        return {
+          id: brandData_result.id,
+          name: brandData_result.name,
+          description: brandData_result.description || '',
+          logo: brandData_result.logo || '',
+          isActive: brandData_result.is_active,
+          categories: [],
+          createdAt: new Date(brandData_result.created_at),
+          updatedAt: new Date(brandData_result.updated_at)
+        };
+      }
+
+      // Transformer les catégories
+      const categories = (brandWithCategories.brand_categories || []).map(bc => ({
+        id: bc.device_categories.id,
+        name: bc.device_categories.name,
+        description: bc.device_categories.description || '',
+        icon: bc.device_categories.icon || 'category',
+        isActive: bc.device_categories.is_active,
+        createdAt: bc.device_categories.created_at,
+        updatedAt: bc.device_categories.updated_at
+      }));
+
       return {
-        id: brandResult.id,
-        name: brandResult.name,
-        description: brandResult.description || '',
-        logo: brandResult.logo || '',
-        isActive: brandResult.is_active,
-        categories: brandResult.categories || [],
-        createdAt: new Date(brandResult.created_at),
-        updatedAt: new Date(brandResult.updated_at)
+        id: brandWithCategories.id,
+        name: brandWithCategories.name,
+        description: brandWithCategories.description || '',
+        logo: brandWithCategories.logo || '',
+        isActive: brandWithCategories.is_active,
+        categories,
+        createdAt: new Date(brandWithCategories.created_at),
+        updatedAt: new Date(brandWithCategories.updated_at)
       };
     } catch (error) {
       console.error('❌ Erreur lors de la mise à jour de la marque:', error);

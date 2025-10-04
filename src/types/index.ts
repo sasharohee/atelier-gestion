@@ -421,7 +421,6 @@ export interface Expense {
   title: string;
   description?: string;
   amount: number;
-  category: ExpenseCategory;
   supplier?: string;
   invoiceNumber?: string;
   paymentMethod: 'cash' | 'card' | 'transfer' | 'check';
@@ -434,19 +433,11 @@ export interface Expense {
   updatedAt: Date;
 }
 
-export interface ExpenseCategory {
-  id: string;
-  name: string;
-  description?: string;
-  color: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// ExpenseCategory - SUPPRIMÉ
+// Les catégories ne sont plus utilisées pour les dépenses
 
 export interface ExpenseStats {
   total: number;
-  byCategory: Record<string, number>;
   monthly: number;
   pending: number;
   paid: number;

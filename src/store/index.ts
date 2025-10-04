@@ -22,7 +22,6 @@ import {
   DashboardStats,
   RepairFilters,
   Expense,
-  ExpenseCategory,
   ExpenseStats
 } from '../types';
 import { DeviceCategory, DeviceBrand, DeviceModel } from '../types/deviceManagement';
@@ -41,7 +40,6 @@ import {
   appointmentService,
   dashboardService,
   expenseService,
-  expenseCategoryService
 } from '../services/supabaseService';
 
 // Helper function to convert Supabase user to app user
@@ -79,7 +77,7 @@ interface AppState {
   stockAlerts: StockAlert[];
   notifications: Notification[];
   expenses: Expense[];
-  expenseCategories: ExpenseCategory[];
+  // expenseCategories - SUPPRIMÉ
   expenseStats: ExpenseStats | null;
   
   // Données de gestion des appareils (centralisées)
@@ -199,10 +197,7 @@ interface AppActions {
   updateExpense: (id: string, updates: Partial<Expense>) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   
-  // Gestion des catégories de dépenses
-  addExpenseCategory: (category: Omit<ExpenseCategory, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  updateExpenseCategory: (id: string, updates: Partial<ExpenseCategory>) => Promise<void>;
-  deleteExpenseCategory: (id: string) => Promise<void>;
+  // Gestion des catégories de dépenses - SUPPRIMÉ
   
   // Gestion des alertes de stock
   addStockAlert: (alert: Omit<StockAlert, 'id' | 'createdAt'>) => Promise<void>;
@@ -257,7 +252,7 @@ interface AppActions {
   getUnreadNotificationsCount: () => number;
   getActiveStockAlerts: () => StockAlert[];
   getExpenseById: (id: string) => Expense | undefined;
-  getExpenseCategoryById: (id: string) => ExpenseCategory | undefined;
+  // getExpenseCategoryById - SUPPRIMÉ
 }
 
 type AppStore = AppState & AppActions;
@@ -1578,47 +1573,8 @@ export const useAppStore = create<AppStore>()(
       },
       
       // Gestion des catégories de dépenses
-      addExpenseCategory: async (category) => {
-        try {
-          const result = await expenseCategoryService.create(category);
-          if (result.success && 'data' in result && result.data) {
-            set((state) => ({ expenseCategories: [...state.expenseCategories, result.data] }));
-          }
-        } catch (error) {
-          console.error('Erreur lors de l\'ajout de la catégorie:', error);
-          throw error;
-        }
-      },
-      
-      updateExpenseCategory: async (id, updates) => {
-        try {
-          const result = await expenseCategoryService.update(id, updates);
-          if (result.success && 'data' in result && result.data) {
-            set((state) => ({
-              expenseCategories: state.expenseCategories.map(category => 
-                category.id === id ? result.data : category
-              )
-            }));
-          }
-        } catch (error) {
-          console.error('Erreur lors de la mise à jour de la catégorie:', error);
-          throw error;
-        }
-      },
-      
-      deleteExpenseCategory: async (id) => {
-        try {
-          const result = await expenseCategoryService.delete(id);
-          if (result.success) {
-            set((state) => ({
-              expenseCategories: state.expenseCategories.filter(category => category.id !== id)
-            }));
-          }
-        } catch (error) {
-          console.error('Erreur lors de la suppression de la catégorie:', error);
-          throw error;
-        }
-      },
+      // Gestion des catégories de dépenses - SUPPRIMÉ
+      // Les catégories ne sont plus utilisées pour les dépenses
       
       updateSale: async (id, updates) => {
         try {
@@ -2047,16 +2003,8 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
-      loadExpenseCategories: async () => {
-        try {
-          const result = await expenseCategoryService.getAll();
-          if (result.success && 'data' in result && result.data) {
-            set({ expenseCategories: result.data });
-          }
-        } catch (error) {
-          console.error('Erreur lors du chargement des catégories de dépenses:', error);
-        }
-      },
+      // loadExpenseCategories - SUPPRIMÉ
+      // Les catégories ne sont plus utilisées pour les dépenses
       
       loadExpenseStats: async () => {
         try {
@@ -2382,10 +2330,7 @@ export const useAppStore = create<AppStore>()(
         return state.expenses.find(expense => expense.id === id);
       },
       
-      getExpenseCategoryById: (id) => {
-        const state = get();
-        return state.expenseCategories.find(category => category.id === id);
-      },
+      // getExpenseCategoryById - SUPPRIMÉ
     }),
     {
       name: 'atelier-store',

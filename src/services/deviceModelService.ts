@@ -6,7 +6,6 @@ export interface CreateModelData {
   brandId: string;
   categoryId: string;
   description?: string;
-  specifications?: string;
 }
 
 export interface UpdateModelData {
@@ -14,7 +13,6 @@ export interface UpdateModelData {
   brandId?: string;
   categoryId?: string;
   description?: string;
-  specifications?: string;
 }
 
 class DeviceModelService {
@@ -31,12 +29,12 @@ class DeviceModelService {
         .from('device_models')
         .select(`
           *,
-          device_brands (
+          device_brands!device_models_brand_id_fkey (
             id,
             name,
             description
           ),
-          device_categories (
+          device_categories!device_models_category_id_fkey (
             id,
             name,
             description
@@ -54,8 +52,8 @@ class DeviceModelService {
       const transformedData = (data || []).map(model => ({
         id: model.id,
         name: model.name,
+        model: model.model || '',
         description: model.description || '',
-        specifications: model.specifications || '',
         brandId: model.brand_id,
         categoryId: model.category_id,
         brandName: model.device_brands?.name || 'Marque inconnue',
@@ -85,12 +83,12 @@ class DeviceModelService {
         .from('device_models')
         .select(`
           *,
-          device_brands (
+          device_brands!device_models_brand_id_fkey (
             id,
             name,
             description
           ),
-          device_categories (
+          device_categories!device_models_category_id_fkey (
             id,
             name,
             description
@@ -108,8 +106,8 @@ class DeviceModelService {
       const transformedData = {
         id: data.id,
         name: data.name,
+        model: data.model || '',
         description: data.description || '',
-        specifications: data.specifications || '',
         brandId: data.brand_id,
         categoryId: data.category_id,
         brandName: data.device_brands?.name || 'Marque inconnue',
@@ -139,8 +137,8 @@ class DeviceModelService {
         .from('device_models')
         .insert([{
           name: modelData.name,
+          model: modelData.name, // Utiliser le nom comme modèle
           description: modelData.description || '',
-          specifications: modelData.specifications || '',
           brand_id: modelData.brandId,
           category_id: modelData.categoryId,
           is_active: true,
@@ -159,7 +157,6 @@ class DeviceModelService {
         id: data.id,
         name: data.name,
         description: data.description || '',
-        specifications: data.specifications || '',
         brandId: data.brand_id,
         categoryId: data.category_id,
         brandName: 'Marque', // Sera mis à jour lors du prochain getAll
@@ -191,9 +188,11 @@ class DeviceModelService {
         updated_at: new Date().toISOString()
       };
 
-      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.name !== undefined) {
+        dbUpdates.name = updates.name;
+        dbUpdates.model = updates.name; // Mettre à jour aussi la colonne model
+      }
       if (updates.description !== undefined) dbUpdates.description = updates.description;
-      if (updates.specifications !== undefined) dbUpdates.specifications = updates.specifications;
       if (updates.brandId !== undefined) dbUpdates.brand_id = updates.brandId;
       if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
 
@@ -214,7 +213,6 @@ class DeviceModelService {
         id: data.id,
         name: data.name,
         description: data.description || '',
-        specifications: data.specifications || '',
         brandId: data.brand_id,
         categoryId: data.category_id,
         brandName: 'Marque', // Sera mis à jour lors du prochain getAll

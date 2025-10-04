@@ -90,7 +90,6 @@ interface NewCategoryForm {
 interface NewModelForm {
   name: string;
   description: string;
-  specifications: Record<string, any>;
   brandId: string;
   categoryId: string;
   isActive: boolean;
@@ -135,7 +134,6 @@ const DeviceManagement: React.FC = () => {
   const [newModel, setNewModel] = useState<NewModelForm>({
     name: '',
     description: '',
-    specifications: {},
     brandId: '',
     categoryId: '',
     isActive: true,
@@ -306,7 +304,6 @@ const DeviceManagement: React.FC = () => {
       const result = await deviceModelService.create({
         name: newModel.name,
         description: newModel.description,
-        specifications: newModel.specifications,
         brandId: newModel.brandId,
         categoryId: newModel.categoryId,
       });
@@ -341,7 +338,6 @@ const DeviceManagement: React.FC = () => {
       const result = await deviceModelService.update(selectedModel.id, {
         name: newModel.name,
         description: newModel.description,
-        specifications: newModel.specifications,
         brandId: newModel.brandId,
         categoryId: newModel.categoryId,
       });
@@ -395,7 +391,6 @@ const DeviceManagement: React.FC = () => {
     setNewModel({
       name: model.name,
       description: model.description || '',
-      specifications: model.specifications || {},
       brandId: model.brandId,
       categoryId: model.categoryId,
       isActive: model.isActive,
@@ -408,7 +403,6 @@ const DeviceManagement: React.FC = () => {
     setNewModel({
       name: '',
       description: '',
-      specifications: {},
       brandId: '',
       categoryId: '',
       isActive: true,
@@ -629,7 +623,7 @@ const DeviceManagement: React.FC = () => {
               <FormControl size="small" sx={{ minWidth: 200 }}>
                 <InputLabel>Filtrer par catégorie</InputLabel>
                 <Select
-                  value={selectedCategoryForBrands}
+                  value={selectedCategoryForBrands || ''}
                   onChange={(e) => setSelectedCategoryForBrands(e.target.value)}
                   label="Filtrer par catégorie"
                 >
@@ -880,7 +874,7 @@ const DeviceManagement: React.FC = () => {
               <FormControl size="small" sx={{ minWidth: 200 }}>
                 <InputLabel>Filtrer par marque</InputLabel>
                 <Select
-                  value={selectedBrandForModels}
+                  value={selectedBrandForModels || ''}
                   onChange={(e) => setSelectedBrandForModels(e.target.value)}
                   label="Filtrer par marque"
                 >
@@ -896,7 +890,7 @@ const DeviceManagement: React.FC = () => {
               <FormControl size="small" sx={{ minWidth: 200 }}>
                 <InputLabel>Filtrer par catégorie</InputLabel>
                 <Select
-                  value={selectedCategoryForModels}
+                  value={selectedCategoryForModels || ''}
                   onChange={(e) => setSelectedCategoryForModels(e.target.value)}
                   label="Filtrer par catégorie"
                 >
@@ -1147,6 +1141,7 @@ const DeviceManagement: React.FC = () => {
               onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
               fullWidth
               required
+              placeholder="Ex: iPhone 14, Galaxy S23, etc."
             />
             
             <TextField
@@ -1161,7 +1156,7 @@ const DeviceManagement: React.FC = () => {
             <FormControl fullWidth required>
               <InputLabel>Marque</InputLabel>
               <Select
-                value={newModel.brandId}
+                value={newModel.brandId || ''}
                 onChange={(e) => setNewModel({ ...newModel, brandId: e.target.value })}
                 label="Marque"
               >
@@ -1176,7 +1171,7 @@ const DeviceManagement: React.FC = () => {
             <FormControl fullWidth required>
               <InputLabel>Catégorie</InputLabel>
               <Select
-                value={newModel.categoryId}
+                value={newModel.categoryId || ''}
                 onChange={(e) => setNewModel({ ...newModel, categoryId: e.target.value })}
                 label="Catégorie"
               >
@@ -1191,24 +1186,6 @@ const DeviceManagement: React.FC = () => {
               </Select>
             </FormControl>
             
-            <TextField
-              label="Spécifications (JSON)"
-              value={JSON.stringify(newModel.specifications, null, 2)}
-              onChange={(e) => {
-                try {
-                  const specs = JSON.parse(e.target.value);
-                  setNewModel({ ...newModel, specifications: specs });
-                } catch (error) {
-                  // Garder la valeur textuelle pour permettre l'édition
-                  console.warn('JSON invalide, garde la valeur textuelle');
-                }
-              }}
-              fullWidth
-              multiline
-              rows={4}
-              placeholder='{"processeur": "Intel i5", "mémoire": "8GB", "stockage": "256GB"}'
-              helperText="Format JSON pour les spécifications techniques"
-            />
             
             <FormControlLabel
               control={

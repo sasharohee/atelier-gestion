@@ -214,22 +214,100 @@ export class QuoteRequestServiceReal {
       
       if (authError || !user) {
         console.error('Utilisateur non authentifié:', authError);
-        return null;
+        return this.getDefaultStats();
       }
 
       const { data, error } = await supabase
-        .rpc('get_quote_request_stats', { technician_uuid: user.id }); // Utiliser l'ID de l'utilisateur authentifié
+        .rpc('get_quote_request_stats', { technician_uuid: user.id });
 
       if (error) {
         console.error('Erreur récupération stats:', error);
-        return null;
+        // Fallback: calculer les stats manuellement
+        return await this.calculateStatsManually(user.id);
       }
 
-      return data;
+      return data || this.getDefaultStats();
     } catch (error) {
       console.error('Erreur lors de la récupération des statistiques:', error);
-      return null;
+      return this.getDefaultStats();
     }
+  }
+
+  // Calculer les statistiques manuellement (fallback)
+  private static async calculateStatsManually(technicianId: string): Promise<any> {
+    try {
+      const { data, error } = await supabase
+        .from('quote_requests')
+        .select('status, urgency, created_at')
+        .eq('technician_id', technicianId);
+
+      if (error) {
+        console.error('Erreur calcul stats manuel:', error);
+        return this.getDefaultStats();
+      }
+
+      const requests = data || [];
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+      const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+
+      const stats = {
+        total: requests.length,
+        pending: requests.filter(r => r.status === 'pending').length,
+        inReview: requests.filter(r => r.status === 'in_review').length,
+        quoted: requests.filter(r => r.status === 'quoted').length,
+        accepted: requests.filter(r => r.status === 'accepted').length,
+        rejected: requests.filter(r => r.status === 'rejected').length,
+        byUrgency: {
+          low: requests.filter(r => r.urgency === 'low').length,
+          medium: requests.filter(r => r.urgency === 'medium').length,
+          high: requests.filter(r => r.urgency === 'high').length,
+        },
+        byStatus: {
+          pending: requests.filter(r => r.status === 'pending').length,
+          in_review: requests.filter(r => r.status === 'in_review').length,
+          quoted: requests.filter(r => r.status === 'quoted').length,
+          accepted: requests.filter(r => r.status === 'accepted').length,
+          rejected: requests.filter(r => r.status === 'rejected').length,
+          completed: requests.filter(r => r.status === 'completed').length,
+          cancelled: requests.filter(r => r.status === 'cancelled').length,
+        },
+        monthly: requests.filter(r => new Date(r.created_at) >= startOfMonth).length,
+        weekly: requests.filter(r => new Date(r.created_at) >= startOfWeek).length,
+        daily: requests.filter(r => new Date(r.created_at) >= startOfDay).length,
+      };
+
+      return stats;
+    } catch (error) {
+      console.error('Erreur calcul stats manuel:', error);
+      return this.getDefaultStats();
+    }
+  }
+
+  // Statistiques par défaut
+  private static getDefaultStats(): any {
+    return {
+      total: 0,
+      pending: 0,
+      inReview: 0,
+      quoted: 0,
+      accepted: 0,
+      rejected: 0,
+      byUrgency: { low: 0, medium: 0, high: 0 },
+      byStatus: {
+        pending: 0,
+        in_review: 0,
+        quoted: 0,
+        accepted: 0,
+        rejected: 0,
+        completed: 0,
+        cancelled: 0,
+      },
+      monthly: 0,
+      weekly: 0,
+      daily: 0,
+    };
   }
 
   // Gérer les URLs personnalisées
@@ -246,22 +324,27 @@ export class QuoteRequestServiceReal {
       const { data, error } = await supabase
         .from('technician_custom_urls')
         .select('*')
-        .eq('technician_id', user.id) // Utiliser l'ID de l'utilisateur authentifié
+        .eq('technician_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Erreur récupération URLs:', error);
+        // Si la table n'existe pas, retourner une liste vide
+        if (error.code === 'PGRST205') {
+          console.warn('Table technician_custom_urls n\'existe pas encore. Utilisez le script SQL fourni.');
+          return [];
+        }
         return [];
       }
 
-      return data.map(item => ({
+      return data?.map(item => ({
         id: item.id,
         technicianId: item.technician_id,
         customUrl: item.custom_url,
         isActive: item.is_active,
         createdAt: new Date(item.created_at),
         updatedAt: new Date(item.updated_at),
-      }));
+      })) || [];
     } catch (error) {
       console.error('Erreur lors de la récupération des URLs:', error);
       return [];
