@@ -163,10 +163,28 @@ const Auth: React.FC = () => {
       if (result.success) {
         console.log('✅ Connexion réussie');
         setSuccess('Connexion réussie ! Redirection...');
-        const from = location.state?.from?.pathname || '/app/dashboard';
-        setTimeout(() => {
-          navigate(from, { replace: true });
-        }, 1000);
+        
+        // Attendre que l'état d'authentification soit mis à jour
+        let attempts = 0;
+        const maxAttempts = 50; // Maximum 5 secondes (50 * 100ms)
+        
+        const checkAuth = () => {
+          if (isAuthenticated) {
+            const from = location.state?.from?.pathname || '/app/dashboard';
+            navigate(from, { replace: true });
+          } else if (attempts < maxAttempts) {
+            attempts++;
+            setTimeout(checkAuth, 100);
+          } else {
+            // Timeout - rediriger quand même
+            console.warn('⚠️ Timeout de vérification d\'authentification, redirection forcée');
+            const from = location.state?.from?.pathname || '/app/dashboard';
+            navigate(from, { replace: true });
+          }
+        };
+        
+        // Démarrer la vérification après un court délai
+        setTimeout(checkAuth, 200);
       } else {
         console.error('❌ Erreur de connexion:', result.error);
         setError(result.error || 'Erreur lors de la connexion');
