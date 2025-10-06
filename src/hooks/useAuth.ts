@@ -65,7 +65,7 @@ export const useAuth = () => {
           setAuthError(null);
           
           // Traiter les données utilisateur en attente si l'utilisateur est connecté
-          if (user) {
+          if (user && localStorage.getItem('pendingUserData')) {
             await userService.processPendingUserData();
           }
         }
@@ -111,7 +111,9 @@ export const useAuth = () => {
             setAuthError(null);
             
             // Traiter les données utilisateur en attente lors de la connexion
-            await userService.processPendingUserData();
+            if (localStorage.getItem('pendingUserData')) {
+              await userService.processPendingUserData();
+            }
           } else if (event === 'TOKEN_REFRESHED') {
             console.log('✅ Token rafraîchi avec succès');
             setAuthError(null);

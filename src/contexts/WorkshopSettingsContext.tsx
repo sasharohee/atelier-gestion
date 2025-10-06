@@ -144,7 +144,7 @@ export const WorkshopSettingsProvider: React.FC<WorkshopSettingsProviderProps> =
   // Charger les paramètres au montage
   useEffect(() => {
     loadSettings();
-  }, [loadSettings]);
+  }, []); // Supprimer loadSettings des dépendances pour éviter la boucle infinie
 
   const value = {
     workshopSettings,

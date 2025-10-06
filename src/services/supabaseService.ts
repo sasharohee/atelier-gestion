@@ -655,7 +655,7 @@ export const userService = {
     try {
       const pendingData = localStorage.getItem('pendingUserData');
       if (!pendingData) {
-        console.log('📝 Aucune donnée utilisateur en attente');
+        // Supprimer le log pour éviter les messages répétés
         return;
       }
 
