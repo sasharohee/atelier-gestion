@@ -380,8 +380,6 @@ const SubscriptionBlocked: React.FC = () => {
                         
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           {[
-                            { icon: <EmailIcon />, text: "Contactez notre équipe support", color: theme.palette.primary.main },
-                            { icon: <SupportIcon />, text: "Précisez votre demande d'activation", color: theme.palette.secondary.main },
                             { icon: <ScheduleIcon />, text: "Activation sous 24h par un administrateur", color: theme.palette.success.main },
                             { icon: <CheckIcon />, text: "Confirmation par email", color: theme.palette.info.main }
                           ].map((step, index) => (
@@ -573,7 +571,7 @@ const SubscriptionBlocked: React.FC = () => {
                               WebkitTextFillColor: 'transparent'
                             }}
                           >
-                            19,99
+                            20
                           </Typography>
                           <EuroIcon sx={{ fontSize: 40, ml: 1, color: theme.palette.primary.main }} />
                         </Box>
@@ -584,8 +582,31 @@ const SubscriptionBlocked: React.FC = () => {
                           icon={<TrendingUpIcon />}
                           label="Prix réduit" 
                           color="success"
-                          sx={{ fontWeight: 'bold' }} 
+                          sx={{ fontWeight: 'bold', mb: 3 }} 
                         />
+                        
+                        {/* Bouton paiement mensuel */}
+                        <Button
+                          variant="contained"
+                          size="large"
+                          fullWidth
+                          startIcon={<EuroIcon />}
+                          onClick={() => window.open('https://buy.stripe.com/7sYcN43Vw4cna0S3ii7g400', '_blank')}
+                          sx={{
+                            py: 2,
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                            '&:hover': {
+                              background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                              transform: 'translateY(-3px)',
+                              boxShadow: `0 15px 30px ${alpha(theme.palette.primary.main, 0.4)}`
+                            },
+                            transition: 'all 0.3s ease',
+                            fontSize: '1.1rem',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          S'abonner - 20€/mois
+                        </Button>
                       </Box>
 
                       {/* Option Annuelle avec design amélioré */}
@@ -642,8 +663,31 @@ const SubscriptionBlocked: React.FC = () => {
                           icon={<SpeedIcon />}
                           label="Économie 40€" 
                           color="success"
-                          sx={{ fontWeight: 'bold' }} 
+                          sx={{ fontWeight: 'bold', mb: 3 }} 
                         />
+                        
+                        {/* Bouton paiement annuel */}
+                        <Button
+                          variant="contained"
+                          size="large"
+                          fullWidth
+                          startIcon={<StarIcon />}
+                          onClick={() => window.open('https://buy.stripe.com/7sYaEWeAabEPgpgbOO7g403', '_blank')}
+                          sx={{
+                            py: 2,
+                            background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
+                            '&:hover': {
+                              background: `linear-gradient(135deg, ${theme.palette.success.dark} 0%, ${theme.palette.success.main} 100%)`,
+                              transform: 'translateY(-3px)',
+                              boxShadow: `0 15px 30px ${alpha(theme.palette.success.main, 0.4)}`
+                            },
+                            transition: 'all 0.3s ease',
+                            fontSize: '1.1rem',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          S'abonner - 200€/an (Économie 40€)
+                        </Button>
                       </Box>
 
                       {/* Fonctionnalités complètes avec design moderne */}
@@ -914,27 +958,26 @@ const SubscriptionBlocked: React.FC = () => {
                         </Box>
                       </Box>
 
-                      {/* Bouton d'action premium */}
+                      {/* Bouton contact support */}
                       <Button
-                        variant="contained"
-                        size="large"
+                        variant="outlined"
+                        size="medium"
                         fullWidth
                         startIcon={<EmailIcon />}
                         onClick={handleContactSupport}
                         sx={{
-                          py: 2,
-                          background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.primary.main} 100%)`,
+                          py: 1.5,
+                          borderColor: theme.palette.secondary.main,
+                          color: theme.palette.secondary.main,
                           '&:hover': {
-                            background: `linear-gradient(135deg, ${theme.palette.secondary.dark} 0%, ${theme.palette.primary.dark} 100%)`,
-                            transform: 'translateY(-3px)',
-                            boxShadow: `0 15px 30px ${alpha(theme.palette.secondary.main, 0.4)}`
+                            background: alpha(theme.palette.secondary.main, 0.1),
+                            borderColor: theme.palette.secondary.dark,
+                            color: theme.palette.secondary.dark
                           },
-                          transition: 'all 0.3s ease',
-                          fontSize: '1.1rem',
-                          fontWeight: 'bold'
+                          transition: 'all 0.3s ease'
                         }}
                       >
-                        Activer mon abonnement
+                        Contacter le support
                       </Button>
                     </CardContent>
                   </Card>
