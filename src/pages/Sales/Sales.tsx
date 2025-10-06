@@ -60,6 +60,7 @@ import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../store';
 import { Sale, SaleItem } from '../../types';
 import Invoice from '../../components/Invoice';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 
 interface SaleItemForm {
   type: 'product' | 'service' | 'part';
@@ -82,6 +83,8 @@ const Sales: React.FC = () => {
     addSale,
     updateSale,
   } = useAppStore();
+  
+  const { workshopSettings } = useWorkshopSettings();
 
   const [newSaleDialogOpen, setNewSaleDialogOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -97,13 +100,23 @@ const Sales: React.FC = () => {
   // Calcul des totaux
   const totals = useMemo(() => {
     const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const tax = subtotal * 0.20; // TVA 20%
+    
+    // Gestion du taux de TVA : utiliser la valeur configurée ou 20% par défaut
+    let vatRate = 20; // Valeur par défaut
+    if (workshopSettings.vatRate !== undefined && workshopSettings.vatRate !== null) {
+      const parsedRate = parseFloat(workshopSettings.vatRate);
+      if (!isNaN(parsedRate)) {
+        vatRate = parsedRate;
+      }
+    }
+    
+    const tax = subtotal * (vatRate / 100);
     const totalBeforeDiscount = subtotal + tax;
     const discountAmount = (totalBeforeDiscount * discountPercentage) / 100;
     const total = totalBeforeDiscount - discountAmount;
     
     return { subtotal, tax, totalBeforeDiscount, discountAmount, total };
-  }, [saleItems, discountPercentage]);
+  }, [saleItems, discountPercentage, workshopSettings.vatRate]);
 
   // Filtrage des articles selon le type et la recherche
   const filteredItems = useMemo(() => {
@@ -336,13 +349,13 @@ const Sales: React.FC = () => {
     };
 
     try {
-      // Créer la vente
-      const result = await addSale(newSale);
+      await addSale(newSale);
       setNewSaleDialogOpen(false);
       resetForm();
       
-      // Vente créée avec succès - pas d'ouverture automatique de facture
-      console.log('✅ Vente créée avec succès');
+      // Ouvrir automatiquement la facture de la vente créée
+      const createdSale = { ...newSale, id: newSale.id || 'temp-id' };
+      openInvoice(createdSale);
     } catch (error) {
       console.error('Erreur lors de la création de la vente:', error);
       alert('Erreur lors de la création de la vente.');
@@ -1211,7 +1224,7 @@ const Sales: React.FC = () => {
                     </span>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <span style={{ fontSize: '0.875rem' }}>TVA (20%):</span>
+                    <span style={{ fontSize: '0.875rem' }}>TVA ({workshopSettings.vatRate}%):</span>
                     <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
                       {totals.tax.toLocaleString('fr-FR')} €
                     </span>

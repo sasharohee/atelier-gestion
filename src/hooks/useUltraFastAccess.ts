@@ -10,16 +10,60 @@ const accessCache = new Map<string, {
 }>();
 const ACCESS_CACHE_DURATION = 15000; // 15 secondes
 
+// Protection contre les appels multiples
+let globalCheckInProgress = false;
+let globalHasChecked = false;
+
+// États globaux partagés entre toutes les instances du hook
+let globalUser: User | null = null;
+let globalIsAccessActive: boolean | null = null;
+let globalLoading = true;
+let globalAuthLoading = true;
+let globalSubscriptionLoading = true;
+
 export const useUltraFastAccess = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAccessActive, setIsAccessActive] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  // Initialiser avec les données du cache si disponibles
+  const getInitialState = () => {
+    const cached = accessCache.get('ultra_fast_access');
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < ACCESS_CACHE_DURATION) {
+      return {
+        user: cached.user,
+        isAccessActive: cached.isActive,
+        loading: false,
+        authLoading: false,
+        subscriptionLoading: false
+      };
+    }
+    
+    return {
+      user: null,
+      isAccessActive: null,
+      loading: true,
+      authLoading: true,
+      subscriptionLoading: true
+    };
+  };
+
+  const initialState = getInitialState();
+  const [user, setUser] = useState<User | null>(initialState.user || globalUser);
+  const [isAccessActive, setIsAccessActive] = useState<boolean | null>(initialState.isAccessActive || globalIsAccessActive);
+  const [loading, setLoading] = useState(initialState.loading && globalLoading);
+  const [authLoading, setAuthLoading] = useState(initialState.authLoading && globalAuthLoading);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(initialState.subscriptionLoading && globalSubscriptionLoading);
   const hasChecked = useRef(false);
+  const isChecking = useRef(false);
 
   const checkAccess = async () => {
+    // Éviter les vérifications multiples simultanées
+    if (isChecking.current || globalCheckInProgress) {
+      return;
+    }
+
     try {
+      isChecking.current = true;
+      globalCheckInProgress = true;
       setLoading(true);
       setAuthLoading(true);
       setSubscriptionLoading(true);
@@ -35,6 +79,8 @@ export const useUltraFastAccess = () => {
         setLoading(false);
         setAuthLoading(false);
         setSubscriptionLoading(false);
+        isChecking.current = false;
+        globalCheckInProgress = false;
         return;
       }
 
@@ -68,6 +114,13 @@ export const useUltraFastAccess = () => {
       setAuthLoading(false);
       setSubscriptionLoading(false);
 
+      // Mettre à jour les états globaux
+      globalUser = user;
+      globalIsAccessActive = isActive;
+      globalLoading = false;
+      globalAuthLoading = false;
+      globalSubscriptionLoading = false;
+
       // Mettre en cache le résultat
       accessCache.set('ultra_fast_access', { 
         user, 
@@ -81,20 +134,50 @@ export const useUltraFastAccess = () => {
       console.error('Erreur lors de la vérification ultra-rapide:', err);
       setUser(null);
       setIsAccessActive(false);
+      
+      // Mettre à jour les états globaux en cas d'erreur
+      globalUser = null;
+      globalIsAccessActive = false;
+      globalLoading = false;
+      globalAuthLoading = false;
+      globalSubscriptionLoading = false;
     } finally {
       setLoading(false);
+      isChecking.current = false;
+      globalCheckInProgress = false;
     }
   };
 
   const refreshAccess = async () => {
-    // Invalider le cache
+    // Invalider le cache et réinitialiser les flags
     accessCache.delete('ultra_fast_access');
+    globalHasChecked = false;
+    hasChecked.current = false;
+    
+    // Réinitialiser les états globaux
+    globalUser = null;
+    globalIsAccessActive = null;
+    globalLoading = true;
+    globalAuthLoading = true;
+    globalSubscriptionLoading = true;
+    
     await checkAccess();
   };
 
   useEffect(() => {
-    if (!hasChecked.current) {
+    // Si les données sont déjà en cache et valides, ne pas appeler checkAccess
+    const cached = accessCache.get('ultra_fast_access');
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < ACCESS_CACHE_DURATION) {
       hasChecked.current = true;
+      globalHasChecked = true;
+      return;
+    }
+    
+    if (!hasChecked.current && !isChecking.current && !globalCheckInProgress && !globalHasChecked) {
+      hasChecked.current = true;
+      globalHasChecked = true;
       checkAccess();
     }
   }, []);

@@ -137,21 +137,43 @@ const Auth: React.FC = () => {
     setLoading(true);
     setError(null);
 
+    // Validation des données
+    if (!loginForm.email || !loginForm.password) {
+      setError('Veuillez remplir tous les champs');
+      setLoading(false);
+      return;
+    }
+
+    if (!loginForm.email.includes('@')) {
+      setError('Veuillez saisir une adresse email valide');
+      setLoading(false);
+      return;
+    }
+
+    if (loginForm.password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caractères');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const result = await userService.signIn(loginForm.email, loginForm.password);
+      console.log('🔐 Tentative de connexion pour:', loginForm.email);
+      const result = await userService.signIn(loginForm.email.trim().toLowerCase(), loginForm.password);
       
       if (result.success) {
+        console.log('✅ Connexion réussie');
         setSuccess('Connexion réussie ! Redirection...');
         const from = location.state?.from?.pathname || '/app/dashboard';
         setTimeout(() => {
           navigate(from, { replace: true });
         }, 1000);
       } else {
-        setError('Erreur lors de la connexion');
+        console.error('❌ Erreur de connexion:', result.error);
+        setError(result.error || 'Erreur lors de la connexion');
       }
     } catch (err) {
+      console.error('💥 Exception lors de la connexion:', err);
       setError('Erreur lors de la connexion');
-      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
@@ -241,6 +263,7 @@ const Auth: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   const isPasswordValid = Object.values(passwordValidation).every(Boolean);
 

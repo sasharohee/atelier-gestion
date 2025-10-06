@@ -156,3 +156,4 @@ Après implémentation :
 - **Sauvegardez** votre base de données avant d'implémenter
 - **Testez** d'abord sur un environnement de développement
 - **Surveillez** les logs pour détecter d'éventuels problèmes
+

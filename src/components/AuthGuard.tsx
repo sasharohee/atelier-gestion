@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, memo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { useUltraFastAccess } from '../hooks/useUltraFastAccess';
@@ -10,7 +10,7 @@ interface AuthGuardProps {
   children: React.ReactNode;
 }
 
-const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
+const AuthGuard: React.FC<AuthGuardProps> = memo(({ children }) => {
   const { 
     user, 
     isAuthenticated, 
@@ -21,8 +21,11 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   } = useUltraFastAccess();
   const location = useLocation();
 
+  // Éviter les re-rendus inutiles en mémorisant les valeurs
+  const isLoading = loading || authLoading || subscriptionLoading;
+
   // Si l'authentification ou le statut d'abonnement est en cours de chargement
-  if (loading || authLoading || subscriptionLoading) {
+  if (isLoading) {
     return (
       <Box
         sx={{
@@ -75,6 +78,8 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   }
 
   return <>{children}</>;
-};
+});
+
+AuthGuard.displayName = 'AuthGuard';
 
 export default AuthGuard;

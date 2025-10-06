@@ -169,3 +169,4 @@ ORDER BY au.created_at DESC;
 - **Vérifiez** régulièrement que la synchronisation fonctionne
 
 Cette solution garantit que tous les nouveaux utilisateurs apparaissent automatiquement dans votre interface de gestion des accès ! 🎉
+

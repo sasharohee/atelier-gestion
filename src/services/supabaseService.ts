@@ -448,12 +448,48 @@ export const userService = {
   },
 
   async signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    if (error) return handleSupabaseError(error);
-    return handleSupabaseSuccess(data);
+    try {
+      console.log('🔐 Tentative de connexion Supabase pour:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password
+      });
+      
+      if (error) {
+        console.error('❌ Erreur Supabase Auth:', error);
+        
+        // Gestion spécifique des erreurs d'authentification
+        if (error.message.includes('Invalid login credentials')) {
+          return handleSupabaseError({
+            message: 'Email ou mot de passe incorrect',
+            code: 'INVALID_CREDENTIALS'
+          });
+        }
+        
+        if (error.message.includes('Email not confirmed')) {
+          return handleSupabaseError({
+            message: 'Veuillez confirmer votre email avant de vous connecter',
+            code: 'EMAIL_NOT_CONFIRMED'
+          });
+        }
+        
+        if (error.message.includes('Too many requests')) {
+          return handleSupabaseError({
+            message: 'Trop de tentatives de connexion. Veuillez patienter quelques minutes',
+            code: 'TOO_MANY_REQUESTS'
+          });
+        }
+        
+        return handleSupabaseError(error);
+      }
+      
+      console.log('✅ Connexion Supabase réussie');
+      return handleSupabaseSuccess(data);
+    } catch (err) {
+      console.error('💥 Exception lors de la connexion:', err);
+      return handleSupabaseError(err as any);
+    }
   },
 
   async signUp(email: string, password: string, userData: Partial<User>) {
