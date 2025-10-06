@@ -533,3 +533,4 @@ SELECT '✅ Correction du type ID avec gestion des vues et contraintes terminée
 SELECT '=== CORRECTION TERMINÉE ===' as section;
 
 
+

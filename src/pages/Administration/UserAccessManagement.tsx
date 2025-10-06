@@ -57,6 +57,7 @@ import {
 import { subscriptionService } from '../../services/supabaseService';
 import { useAuth } from '../../hooks/useAuth';
 import { SubscriptionStatus } from '../../types';
+import { supabase } from '../../lib/supabase';
 
 const UserAccessManagement: React.FC = () => {
   const { user: authUser } = useAuth();
@@ -98,13 +99,35 @@ const UserAccessManagement: React.FC = () => {
       setSuccess(null);
       
       console.log('🔄 Rechargement des utilisateurs...', forceRefresh ? '(force refresh)' : '');
+      
+      // D'abord synchroniser les utilisateurs manquants
+      try {
+        console.log('🔄 Synchronisation des utilisateurs manquants...');
+        const { data: syncResult, error: syncError } = await supabase.rpc('sync_missing_users_to_subscription');
+        
+        if (syncError) {
+          console.warn('⚠️ Erreur lors de la synchronisation:', syncError);
+        } else if (syncResult && syncResult.length > 0) {
+          const syncData = syncResult[0];
+          console.log(`✅ ${syncData.synchronized_count} utilisateurs synchronisés`);
+          if (syncData.users_added && syncData.users_added.length > 0) {
+            setSuccess(`${syncData.synchronized_count} utilisateurs synchronisés automatiquement`);
+          }
+        }
+      } catch (syncErr) {
+        console.warn('⚠️ Erreur lors de la synchronisation automatique:', syncErr);
+      }
+      
+      // Ensuite charger les données
       const result = await subscriptionService.getAllSubscriptionStatuses();
       
       if (result.success && 'data' in result) {
         setSubscriptions(result.data || []);
         setLastRefresh(new Date());
         console.log(`✅ ${result.data?.length || 0} utilisateurs chargés`);
-        setSuccess(`Liste actualisée : ${result.data?.length || 0} utilisateurs`);
+        if (!success) {
+          setSuccess(`Liste actualisée : ${result.data?.length || 0} utilisateurs`);
+        }
       } else if ('error' in result) {
         console.error('❌ Erreur lors du chargement:', result.error);
         setError(result.error);
@@ -263,15 +286,42 @@ const UserAccessManagement: React.FC = () => {
             </Typography>
           )}
         </Box>
-        <Button
-          variant="contained"
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <RefreshIcon />}
-          onClick={() => loadSubscriptions(true)}
-          disabled={loading}
-          sx={{ minWidth: 120 }}
-        >
-          {loading ? 'Actualisation...' : 'Actualiser'}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={async () => {
+              try {
+                console.log('🔄 Synchronisation manuelle...');
+                const { data: syncResult, error: syncError } = await supabase.rpc('sync_missing_users_to_subscription');
+                
+                if (syncError) {
+                  setError('Erreur lors de la synchronisation: ' + syncError.message);
+                } else if (syncResult && syncResult.length > 0) {
+                  const syncData = syncResult[0];
+                  setSuccess(`${syncData.synchronized_count} utilisateurs synchronisés`);
+                  loadSubscriptions(true);
+                } else {
+                  setSuccess('Tous les utilisateurs sont déjà synchronisés');
+                }
+              } catch (err) {
+                setError('Erreur lors de la synchronisation');
+              }
+            }}
+            disabled={loading}
+          >
+            Synchroniser
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <RefreshIcon />}
+            onClick={() => loadSubscriptions(true)}
+            disabled={loading}
+            sx={{ minWidth: 120 }}
+          >
+            {loading ? 'Actualisation...' : 'Actualiser'}
+          </Button>
+        </Box>
       </Box>
 
       {/* Messages d'alerte */}

@@ -544,3 +544,4 @@ SELECT '✅ Correction finale du type ID avec gestion complète terminée avec s
 SELECT '=== CORRECTION FINALE TERMINÉE ===' as section;
 
 
+

@@ -103,3 +103,4 @@ AND table_schema = 'public';
 - Fonction non accessible → Vérifier les permissions SECURITY DEFINER
 
 
+

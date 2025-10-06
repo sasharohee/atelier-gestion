@@ -447,3 +447,4 @@ SELECT '✅ Correction du type ID avec gestion des contraintes terminée avec su
 SELECT '=== CORRECTION TERMINÉE ===' as section;
 
 
+

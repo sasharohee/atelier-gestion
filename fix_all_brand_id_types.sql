@@ -575,3 +575,4 @@ SELECT '✅ Correction complète de tous les types brand_id terminée avec succ�
 SELECT '=== CORRECTION COMPLÈTE TERMINÉE ===' as section;
 
 
+

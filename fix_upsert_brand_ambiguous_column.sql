@@ -146,3 +146,4 @@ SELECT '✅ Correction de l''ambiguïté de colonne terminée avec succès' as s
 SELECT '=== CORRECTION TERMINÉE ===' as section;
 
 
+

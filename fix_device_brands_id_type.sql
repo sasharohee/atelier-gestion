@@ -359,3 +359,4 @@ SELECT '✅ Correction du type ID terminée avec succès' as status;
 SELECT '=== CORRECTION TERMINÉE ===' as section;
 
 
+

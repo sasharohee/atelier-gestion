@@ -185,3 +185,4 @@ Si des erreurs persistent après l'exécution du script :
 4. Vérifiez que les permissions sont correctes
 
 
+

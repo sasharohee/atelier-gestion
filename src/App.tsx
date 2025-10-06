@@ -46,7 +46,6 @@ const SubscriptionBlocked = lazy(() => import('./pages/Auth/SubscriptionBlocked'
 
 // Pages légères - import direct
 import Sales from './pages/Sales/Sales';
-import SubscriptionManagement from './pages/Administration/SubscriptionManagement';
 import UserAccessManagement from './pages/Administration/UserAccessManagement';
 import AdminAccess from './pages/AdminAccess/AdminAccess';
 import PrivacyPolicy from './pages/Legal/PrivacyPolicy';
@@ -228,7 +227,7 @@ function App() {
                           <Route path="/sales" element={<Sales />} />
                           <Route path="/statistics" element={<Statistics />} />
                           <Route path="/administration" element={<Administration />} />
-                          <Route path="/administration/subscriptions" element={<SubscriptionManagement />} />
+                          <Route path="/administration/subscriptions" element={<UserAccessManagement />} />
                           <Route path="/administration/user-access" element={<UserAccessManagement />} />
                           <Route path="/loyalty" element={<Loyalty />} />
                           <Route path="/expenses" element={<Expenses />} />

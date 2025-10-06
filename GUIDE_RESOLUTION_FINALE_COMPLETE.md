@@ -250,3 +250,4 @@ Si des erreurs persistent après l'exécution du script :
 - Les permissions sont automatiquement accordées aux utilisateurs authentifiés
 
 
+
