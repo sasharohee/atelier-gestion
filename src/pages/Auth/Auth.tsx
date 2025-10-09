@@ -29,10 +29,10 @@ import {
   Error,
   Home
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { userService } from '../../services/supabaseService';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -59,7 +59,6 @@ function TabPanel(props: TabPanelProps) {
 const Auth: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   
@@ -95,14 +94,6 @@ const Auth: React.FC = () => {
     number: false,
     special: false
   });
-
-  useEffect(() => {
-    // Rediriger si l'utilisateur est déjà connecté
-    if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/app/dashboard';
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, location.state]);
 
   // Validation du mot de passe
   useEffect(() => {
@@ -164,10 +155,9 @@ const Auth: React.FC = () => {
         console.log('✅ Connexion réussie');
         setSuccess('Connexion réussie ! Redirection...');
         
-        // Redirection immédiate après connexion réussie
-        console.log('🔄 Redirection immédiate vers l\'atelier...');
-        const from = location.state?.from?.pathname || '/app/dashboard';
-        navigate(from, { replace: true });
+        // La redirection se fera automatiquement via le <Navigate> conditionnel
+        // quand isAuthenticated deviendra true
+        console.log('🔄 La redirection se fera automatiquement...');
       } else {
         console.error('❌ Erreur de connexion:', result.error);
         setError(result.error || 'Erreur lors de la connexion');
@@ -267,6 +257,9 @@ const Auth: React.FC = () => {
 
 
   const isPasswordValid = Object.values(passwordValidation).every(Boolean);
+
+  // Note: La redirection après connexion est gérée par AuthGuard
+  // Ne pas rediriger ici pour éviter les boucles
 
   return (
     <Box

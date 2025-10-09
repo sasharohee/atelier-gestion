@@ -170,3 +170,5 @@ ORDER BY au.created_at DESC;
 
 Cette solution garantit que tous les nouveaux utilisateurs apparaissent automatiquement dans votre interface de gestion des accès ! 🎉
 
+
+

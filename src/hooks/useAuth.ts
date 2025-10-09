@@ -3,6 +3,10 @@ import { supabase } from '../lib/supabase';
 import { userService } from '../services/supabaseService';
 import { User } from '@supabase/supabase-js';
 
+// Variable GLOBALE pour tracker l'état d'authentification (partagée entre toutes les instances)
+let globalPreviousAuthState = false;
+let globalUserId: string | null = null;
+
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,6 +19,29 @@ export const useAuth = () => {
   const clearAuthState = () => {
     localStorage.removeItem('pendingUserData');
     localStorage.removeItem('pendingSignupEmail');
+    // Réinitialiser les variables globales
+    globalPreviousAuthState = false;
+    globalUserId = null;
+  };
+
+  // Fonction pour mettre à jour l'utilisateur seulement si l'état change vraiment
+  const updateUser = (newUser: User | null) => {
+    const newAuthState = !!newUser;
+    const newUserId = newUser?.id || null;
+    
+    // Ne mettre à jour que si l'état d'authentification CHANGE ou si l'utilisateur change
+    if (newAuthState !== globalPreviousAuthState) {
+      console.log(`🔄 État d'authentification changé: ${globalPreviousAuthState ? 'connecté' : 'déconnecté'} → ${newAuthState ? 'connecté' : 'déconnecté'}`);
+      globalPreviousAuthState = newAuthState;
+      globalUserId = newUserId;
+      setUser(newUser);
+    } else if (newUserId && newUserId !== globalUserId) {
+      // Utilisateur différent mais toujours authentifié
+      console.log(`🔄 Utilisateur changé: ${globalUserId} → ${newUserId}`);
+      globalUserId = newUserId;
+      setUser(newUser);
+    }
+    // Sinon, ne rien faire (éviter les mises à jour inutiles)
   };
 
   useEffect(() => {
@@ -42,7 +69,19 @@ export const useAuth = () => {
         if (error) {
           // Gérer spécifiquement l'erreur de session manquante sans la logger
           if (error.message.includes('Auth session missing')) {
-            setUser(null);
+            updateUser(null);
+            setAuthError(null);
+            setLoading(false);
+            return;
+          }
+          
+          // Gérer les erreurs CORS/réseau sans les afficher à l'utilisateur
+          if (error.message.includes('Failed to fetch') || 
+              error.message.includes('CORS') ||
+              error.message.includes('502')) {
+            console.warn('⚠️ Erreur réseau temporaire lors de la récupération de l\'utilisateur');
+            // Ne pas afficher d'erreur à l'utilisateur, simplement considérer comme non connecté
+            updateUser(null);
             setAuthError(null);
             setLoading(false);
             return;
@@ -55,13 +94,13 @@ export const useAuth = () => {
               error.message.includes('Refresh Token Not Found')) {
             console.log('🔄 Token invalide, nettoyage de l\'état...');
             clearAuthState();
-            setUser(null);
+            updateUser(null);
             setAuthError('Session expirée. Veuillez vous reconnecter.');
           } else {
             setAuthError(error.message);
           }
         } else {
-          setUser(user);
+          updateUser(user);
           setAuthError(null);
           
           // Traiter les données utilisateur en attente si l'utilisateur est connecté
@@ -69,11 +108,20 @@ export const useAuth = () => {
             await userService.processPendingUserData();
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         if (isMounted.current) {
-          console.error('💥 Exception lors de la récupération de l\'utilisateur:', error);
-          setUser(null);
-          setAuthError('Erreur inattendue lors de l\'authentification');
+          // Gérer les erreurs réseau sans les afficher à l'utilisateur
+          if (error?.message?.includes('Failed to fetch') || 
+              error?.message?.includes('CORS') ||
+              error?.message?.includes('502')) {
+            console.warn('⚠️ Erreur réseau temporaire lors de la récupération de l\'utilisateur');
+            updateUser(null);
+            setAuthError(null);
+          } else {
+            console.error('💥 Exception lors de la récupération de l\'utilisateur:', error);
+            updateUser(null);
+            setAuthError('Erreur inattendue lors de l\'authentification');
+          }
         }
       } finally {
         if (isMounted.current) {
@@ -107,7 +155,7 @@ export const useAuth = () => {
         try {
           if (event === 'SIGNED_IN' && session?.user) {
             console.log('✅ Utilisateur connecté:', session.user.email);
-            setUser(session.user);
+            updateUser(session.user);
             setAuthError(null);
             
             // Traiter les données utilisateur en attente lors de la connexion
@@ -115,11 +163,12 @@ export const useAuth = () => {
               await userService.processPendingUserData();
             }
           } else if (event === 'TOKEN_REFRESHED') {
-            console.log('✅ Token rafraîchi avec succès');
+            // Ne rien faire - pas besoin de mettre à jour l'utilisateur
+            console.log('✅ Token rafraîchi avec succès (pas de mise à jour de l\'état)');
             setAuthError(null);
           } else if (event === 'SIGNED_OUT') {
             console.log('👋 Utilisateur déconnecté');
-            setUser(null);
+            updateUser(null);
             setAuthError(null);
             // Nettoyer les données en attente
             clearAuthState();
@@ -150,7 +199,7 @@ export const useAuth = () => {
     try {
       await supabase.auth.signOut();
       clearAuthState();
-      setUser(null);
+      updateUser(null);
       setAuthError(null);
       window.location.reload();
     } catch (error) {

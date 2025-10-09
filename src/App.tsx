@@ -24,6 +24,8 @@ import Layout from './components/Layout/Layout';
 import AuthGuard from './components/AuthGuard';
 import AdminGuard from './components/AdminGuard';
 import AdminPasswordGuard from './components/AdminPasswordGuard';
+import GuestGuard from './components/GuestGuard';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Pages - Lazy loading pour les pages lourdes
 import Landing from './pages/Landing/Landing';
@@ -192,11 +194,16 @@ function App() {
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <WorkshopSettingsProvider>
-            <AuthErrorHandler>
+          <AuthProvider>
+            <WorkshopSettingsProvider>
+              <AuthErrorHandler>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/auth" element={<Auth />} />
+                <Route path="/auth" element={
+                  <GuestGuard>
+                    <Auth />
+                  </GuestGuard>
+                } />
                 <Route path="/admin" element={
                   <AdminPasswordGuard>
                     <AdminAccess />
@@ -246,8 +253,9 @@ function App() {
                   </AuthGuard>
                 } />
               </Routes>
-            </AuthErrorHandler>
-          </WorkshopSettingsProvider>
+              </AuthErrorHandler>
+            </WorkshopSettingsProvider>
+          </AuthProvider>
         </Router>
       </LocalizationProvider>
       <Toaster position="top-right" />

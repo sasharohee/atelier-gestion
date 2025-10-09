@@ -52,6 +52,7 @@ export const useUltraFastAccess = () => {
   const [loading, setLoading] = useState(initialState.loading && globalLoading);
   const [authLoading, setAuthLoading] = useState(initialState.authLoading && globalAuthLoading);
   const [subscriptionLoading, setSubscriptionLoading] = useState(initialState.subscriptionLoading && globalSubscriptionLoading);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const hasChecked = useRef(false);
   const isChecking = useRef(false);
 
@@ -68,10 +69,11 @@ export const useUltraFastAccess = () => {
       setAuthLoading(true);
       setSubscriptionLoading(true);
 
-      // Vérifier le cache d'abord
+      // Vérifier le cache d'abord (sauf si on force le refresh)
       const cached = accessCache.get('ultra_fast_access');
       const now = Date.now();
       
+      // Ne pas utiliser le cache si l'utilisateur vient juste de se connecter
       if (cached && (now - cached.timestamp) < ACCESS_CACHE_DURATION) {
         console.log('⚡ Accès vérifié depuis le cache ultra-rapide');
         setUser(cached.user);
@@ -79,6 +81,11 @@ export const useUltraFastAccess = () => {
         setLoading(false);
         setAuthLoading(false);
         setSubscriptionLoading(false);
+        globalUser = cached.user;
+        globalIsAccessActive = cached.isActive;
+        globalLoading = false;
+        globalAuthLoading = false;
+        globalSubscriptionLoading = false;
         isChecking.current = false;
         globalCheckInProgress = false;
         return;
@@ -86,6 +93,23 @@ export const useUltraFastAccess = () => {
 
       // Vérification ultra-rapide en une seule requête
       const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      // Gérer les erreurs CORS/réseau
+      if (authError && (
+        authError.message.includes('Failed to fetch') || 
+        authError.message.includes('CORS') ||
+        authError.message.includes('502')
+      )) {
+        console.warn('⚠️ Erreur réseau temporaire lors de la vérification d\'accès');
+        setUser(null);
+        setIsAccessActive(false);
+        setLoading(false);
+        setAuthLoading(false);
+        setSubscriptionLoading(false);
+        isChecking.current = false;
+        globalCheckInProgress = false;
+        return;
+      }
       
       let isActive = false;
       
@@ -130,8 +154,16 @@ export const useUltraFastAccess = () => {
 
       console.log(`✅ Vérification ultra-rapide terminée: ${user?.email} - ${isActive ? 'ACTIF' : 'RESTREINT'}`);
 
-    } catch (err) {
-      console.error('Erreur lors de la vérification ultra-rapide:', err);
+    } catch (err: any) {
+      // Gérer les erreurs réseau sans les afficher à l'utilisateur
+      if (err?.message?.includes('Failed to fetch') || 
+          err?.message?.includes('CORS') ||
+          err?.message?.includes('502')) {
+        console.warn('⚠️ Erreur réseau temporaire lors de la vérification ultra-rapide');
+      } else {
+        console.error('Erreur lors de la vérification ultra-rapide:', err);
+      }
+      
       setUser(null);
       setIsAccessActive(false);
       
@@ -164,7 +196,32 @@ export const useUltraFastAccess = () => {
     await checkAccess();
   };
 
+  // Invalider le cache après connexion/déconnexion
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+        console.log('🔄 Invalidation du cache suite à:', event);
+        accessCache.delete('ultra_fast_access');
+        globalHasChecked = false;
+        hasChecked.current = false;
+        
+        // Déclencher une nouvelle vérification
+        setRefreshTrigger(prev => prev + 1);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    // Réinitialiser les flags quand refreshTrigger change (sauf au montage initial)
+    if (refreshTrigger > 0) {
+      hasChecked.current = false;
+      globalHasChecked = false;
+    }
+    
     // Si les données sont déjà en cache et valides, ne pas appeler checkAccess
     const cached = accessCache.get('ultra_fast_access');
     const now = Date.now();
@@ -180,7 +237,7 @@ export const useUltraFastAccess = () => {
       globalHasChecked = true;
       checkAccess();
     }
-  }, []);
+  }, [refreshTrigger]); // Se déclenche au montage ET quand refreshTrigger change
 
   return {
     user,
