@@ -180,7 +180,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                       <div class="invoice-number">#${data.id.slice(0, 8)}</div>
                       <div><strong>Date :</strong> ${format(new Date(data.createdAt), 'dd/MM/yyyy', { locale: fr })}</div>
                       <div><strong>Statut :</strong> ${getStatusLabel(isRepair ? (data as Repair).status : (data as Sale).status)}</div>
-                      ${!isRepair ? `<div><strong>Paiement :</strong> ${getPaymentMethodLabel((data as Sale).paymentMethod)}</div>` : ''}
+                      ${isRepair ? `<div><strong>Paiement :</strong> ${(data as Repair).isPaid ? 'Payé' : 'Non payé'}</div>` : `<div><strong>Paiement :</strong> ${getPaymentMethodLabel((data as Sale).paymentMethod)}</div>`}
                     </div>
                   </div>
                 </div>
@@ -400,11 +400,9 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                 <Typography sx={{ fontSize: '14px', mb: 0.5, color: '#666' }}>
                   <strong>Statut :</strong> {getStatusLabel(isRepair ? (data as Repair).status : (data as Sale).status)}
                 </Typography>
-                {!isRepair && (
-                  <Typography sx={{ fontSize: '14px', color: '#666' }}>
-                    <strong>Paiement :</strong> {getPaymentMethodLabel((data as Sale).paymentMethod)}
-                  </Typography>
-                )}
+                <Typography sx={{ fontSize: '14px', color: '#666' }}>
+                  <strong>Paiement :</strong> {isRepair ? ((data as Repair).isPaid ? 'Payé' : 'Non payé') : getPaymentMethodLabel((data as Sale).paymentMethod)}
+                </Typography>
               </Box>
             </Box>
 

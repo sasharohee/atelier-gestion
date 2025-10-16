@@ -2102,28 +2102,7 @@ const Kanban: React.FC = () => {
           <DialogContent>
             <Invoice
               open={invoiceOpen}
-              sale={{
-                id: selectedRepairForInvoice.id,
-                clientId: selectedRepairForInvoice.clientId,
-                                  items: [
-                    {
-                      id: '1',
-                      type: 'service',
-                      itemId: selectedRepairForInvoice.id,
-                      name: `Réparation - ${selectedRepairForInvoice.description}`,
-                      quantity: 1,
-                      unitPrice: selectedRepairForInvoice.totalPrice / (1 + getVatRate()), // Prix HT
-                      totalPrice: selectedRepairForInvoice.totalPrice / (1 + getVatRate()), // Prix HT
-                    }
-                  ],
-                subtotal: selectedRepairForInvoice.totalPrice / (1 + getVatRate()), // Prix HT calculé depuis le prix TTC
-                tax: selectedRepairForInvoice.totalPrice - (selectedRepairForInvoice.totalPrice / (1 + getVatRate())), // TVA calculée
-                total: selectedRepairForInvoice.totalPrice, // Prix TTC (prix affiché)
-                paymentMethod: 'card',
-                status: 'completed',
-                createdAt: selectedRepairForInvoice.createdAt,
-                updatedAt: selectedRepairForInvoice.updatedAt,
-              }}
+              repair={selectedRepairForInvoice}
               client={getClientById(selectedRepairForInvoice.clientId)}
               onClose={closeInvoice}
             />
