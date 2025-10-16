@@ -87,6 +87,7 @@ const Kanban: React.FC = () => {
     addDeviceModel,
     addClient,
     loadUsers,
+    loadDeviceModels,
     loadSystemSettings,
     loadRepairs,
   } = useAppStore();
@@ -324,57 +325,16 @@ const Kanban: React.FC = () => {
     console.log('🔍 getFilteredModels appelé avec:', { selectedCategory, selectedBrand, totalModels: deviceModels.length });
     
     const filtered = deviceModels.filter(model => {
-      const brandMatch = !selectedBrand || (model as any).brand === selectedBrand;
+      // Filtrage par marque - utiliser la propriété brand du modèle
+      const brandMatch = !selectedBrand || model.brand === selectedBrand;
       
-      // Pour la catégorie, utiliser une approche plus flexible
-      let categoryMatch = true;
-      if (selectedCategory) {
-        const modelType = (model as any).type;
-        
-        // Approche 1: Mapping direct
-        const typeToCategoryMap: { [key: string]: string } = {
-          'smartphone': 'Smartphones',
-          'smartphones': 'Smartphones',
-          'phone': 'Smartphones',
-          'mobile': 'Smartphones',
-          'tablet': 'Tablettes',
-          'tablets': 'Tablettes',
-          'laptop': 'Ordinateurs portables',
-          'laptops': 'Ordinateurs portables',
-          'notebook': 'Ordinateurs portables',
-          'desktop': 'Ordinateurs fixes',
-          'desktops': 'Ordinateurs fixes',
-          'pc': 'Ordinateurs fixes',
-          'computer': 'Ordinateurs fixes',
-          'other': 'Autres',
-          'others': 'Autres'
-        };
-        
-        // Recherche par nom de catégorie dans dbCategories
-        const category = dbCategories.find(cat => cat.name === selectedCategory);
-        let categoryMatchByType = false;
-        
-        if (category) {
-          // Si on trouve la catégorie, vérifier si le type correspond
-          const categoryNameLower = category.name.toLowerCase();
-          const modelTypeLower = modelType.toLowerCase();
-          
-          categoryMatchByType = categoryNameLower.includes(modelTypeLower) || 
-                               modelTypeLower.includes(categoryNameLower) ||
-                               typeToCategoryMap[modelType] === selectedCategory;
-        }
-        
-        categoryMatch = categoryMatchByType;
-        
-        console.log(`📱 Modèle ${(model as any).brand} ${(model as any).model}: type=${modelType}, selectedCategory=${selectedCategory}, categoryMatch=${categoryMatch}`);
-      }
+      // Filtrage par catégorie - utiliser la propriété type du modèle
+      const categoryMatch = !selectedCategory || model.type === selectedCategory;
       
       const isActive = model.isActive;
       const finalMatch = brandMatch && categoryMatch && isActive;
       
-      if (selectedCategory) {
-        console.log(`✅ ${(model as any).brand} ${(model as any).model}: brandMatch=${brandMatch}, categoryMatch=${categoryMatch}, isActive=${isActive}, finalMatch=${finalMatch}`);
-      }
+      console.log(`📱 Modèle ${model.brand} ${model.model}: brandMatch=${brandMatch}, categoryMatch=${categoryMatch}, isActive=${isActive}, finalMatch=${finalMatch}`);
       
       return finalMatch;
     });
@@ -397,6 +357,21 @@ const Kanban: React.FC = () => {
     
     loadUsersData();
   }, [loadUsers]); // Retirer 'users' des dépendances pour éviter la boucle infinie
+
+  // Charger les modèles d'appareils au montage du composant
+  useEffect(() => {
+    const loadModelsData = async () => {
+      try {
+        console.log('🔄 Chargement des modèles d\'appareils dans le suivi des réparations...');
+        await loadDeviceModels();
+        console.log('✅ Modèles d\'appareils chargés dans le suivi des réparations');
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des modèles d\'appareils:', error);
+      }
+    };
+    
+    loadModelsData();
+  }, [loadDeviceModels]);
 
   // Debug: Afficher les informations des utilisateurs quand ils changent (sans recharger)
   useEffect(() => {
@@ -1543,10 +1518,10 @@ const Kanban: React.FC = () => {
                     disabled={getFilteredModels().length === 0}
                   >
                     {getFilteredModels().map((model) => {
-                      // Utiliser directement brand et type du modèle
-                      const brandName = (model as any).brand || 'N/A';
+                      // Utiliser les propriétés correctes du modèle
+                      const brandName = model.brand || 'N/A';
                       const modelName = model.model || 'N/A';
-                      const categoryName = (model as any).type || 'N/A';
+                      const categoryName = model.type || 'N/A';
                       
                       return (
                         <MenuItem key={model.id} value={model.id}>

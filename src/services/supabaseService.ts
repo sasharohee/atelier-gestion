@@ -2874,22 +2874,26 @@ export const deviceModelService = {
       
       console.log('🔒 Récupération des modèles d\'appareils pour l\'utilisateur:', user.id);
       
-      // Utiliser la table avec filtre côté frontend en attendant la vue
+      // Faire une jointure pour récupérer les noms des marques et catégories
       const { data, error } = await supabase
         .from('device_models')
-        .select('*')
+        .select(`
+          *,
+          device_brands!inner(name),
+          device_categories!inner(name)
+        `)
         .eq('created_by', user.id)
-        .order('brand', { ascending: true })
-        .order('model', { ascending: true });
+        .order('brand_id', { ascending: true })
+        .order('name', { ascending: true });
       
       if (error) return handleSupabaseError(error);
       
-      // Convertir les données de snake_case vers camelCase
+      // Convertir les données de snake_case vers camelCase avec les noms des marques et catégories
       const convertedData = (data as any[])?.map((model: any) => ({
         id: model.id,
-        brand: model.brand,
-        model: model.model,
-        type: model.type,
+        brand: model.device_brands?.name || 'N/A',
+        model: model.name,
+        type: model.device_categories?.name || 'N/A',
         year: model.year,
         specifications: model.specifications || {},
         commonIssues: model.common_issues || [],
@@ -2915,22 +2919,26 @@ export const deviceModelService = {
         return handleSupabaseError(new Error('Utilisateur non connecté'));
       }
 
-      // Utiliser la table avec filtre côté frontend en attendant la vue
+      // Faire une jointure pour récupérer les noms des marques et catégories
       const { data, error } = await supabase
         .from('device_models')
-        .select('*')
+        .select(`
+          *,
+          device_brands!inner(name),
+          device_categories!inner(name)
+        `)
         .eq('id', id)
         .eq('created_by', user.id)
         .single();
       
       if (error) return handleSupabaseError(error);
       
-      // Convertir les données
+      // Convertir les données avec les noms des marques et catégories
       const convertedData = {
         id: (data as any).id,
-        brand: (data as any).brand,
-        model: (data as any).model,
-        type: (data as any).type,
+        brand: (data as any).device_brands?.name || 'N/A',
+        model: (data as any).name,
+        type: (data as any).device_categories?.name || 'N/A',
         year: (data as any).year,
         specifications: (data as any).specifications || {},
         commonIssues: (data as any).common_issues || [],
