@@ -71,6 +71,12 @@ const menuItems = [
     color: '#06b6d4',
   },
   {
+    text: 'SAV',
+    icon: <HandymanIcon />,
+    path: '/app/sav',
+    color: '#16a34a',
+  },
+  {
     text: 'Calendrier',
     icon: <CalendarIcon />,
     path: '/app/calendar',

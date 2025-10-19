@@ -25,8 +25,8 @@ CREATE INDEX IF NOT EXISTS "idx_parts_part_number" ON "public"."parts" ("part_nu
 
 -- Index pour la table expenses
 CREATE INDEX IF NOT EXISTS "idx_expenses_workshop_id" ON "public"."expenses" ("workshop_id");
-CREATE INDEX IF NOT EXISTS "idx_expenses_date" ON "public"."expenses" ("date");
-CREATE INDEX IF NOT EXISTS "idx_expenses_category" ON "public"."expenses" ("category");
+CREATE INDEX IF NOT EXISTS "idx_expenses_date" ON "public"."expenses" ("expense_date");
+CREATE INDEX IF NOT EXISTS "idx_expenses_category_id" ON "public"."expenses" ("category_id");
 
 -- Index pour la table users
 CREATE INDEX IF NOT EXISTS "idx_users_email" ON "public"."users" ("email");
@@ -39,7 +39,7 @@ CREATE INDEX IF NOT EXISTS "idx_activity_logs_workshop_id" ON "public"."activity
 CREATE INDEX IF NOT EXISTS "idx_activity_logs_created_at" ON "public"."activity_logs" ("created_at");
 
 -- Index pour la table quote_requests
-CREATE INDEX IF NOT EXISTS "idx_quote_requests_client_id" ON "public"."quote_requests" ("client_id");
+-- CREATE INDEX IF NOT EXISTS "idx_quote_requests_client_id" ON "public"."quote_requests" ("client_id"); -- client_id n'existe pas
 CREATE INDEX IF NOT EXISTS "idx_quote_requests_workshop_id" ON "public"."quote_requests" ("workshop_id");
 CREATE INDEX IF NOT EXISTS "idx_quote_requests_status" ON "public"."quote_requests" ("status");
 

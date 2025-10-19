@@ -562,9 +562,21 @@ const Loyalty: React.FC = () => {
         await loadData();
         setReferralForm({ ...referralForm, referred_client_id: data.id });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la création du client:', error);
-      toast.error('Erreur lors de la création du client');
+      // Gérer l'erreur d'email en doublon
+      let errorMessage = 'Erreur lors de la création du client';
+      if (error?.message) {
+        const errorText = error.message.toLowerCase();
+        if (errorText.includes('duplicate key') && errorText.includes('email')) {
+          errorMessage = 'Un client avec cet email existe déjà. Veuillez utiliser un autre email.';
+        } else if (errorText.includes('unique constraint')) {
+          errorMessage = 'Cette information existe déjà dans le système.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      toast.error(errorMessage);
     }
   };
 

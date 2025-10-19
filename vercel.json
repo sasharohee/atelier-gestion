@@ -1,21 +1,37 @@
 {
+  "version": 2,
   "name": "atelier-gestion",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
-  "headers": [
+  "routes": [
     {
-      "source": "/static/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "VITE_SUPABASE_URL": "https://wlqyrmntfxwdvkzzsujv.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscXlybW50Znh3ZHZrenpzdWp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU0MjUyMDAsImV4cCI6MjA3MTAwMTIwMH0.9XvA_8VtPhBdF80oycWefBgY9nIyvqQUPHDGlw3f2D8",
+    "VITE_EMAILJS_SERVICE_ID": "service_lisw5h9",
+    "VITE_EMAILJS_TEMPLATE_ID": "template_dabl0od",
+    "VITE_EMAILJS_PUBLIC_KEY": "mh5fruIpuHfRxF7YC",
+    "VITE_ADMIN_PASSWORD": "At3l13r@dm1n#2024$ecur3!",
+    "NODE_ENV": "production",
+    "VITE_NODE_ENV": "production"
+  },
+  "functions": {
+    "app/api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "headers": [
     {
       "source": "/(.*)",
       "headers": [
@@ -30,10 +46,18 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
         }
       ]
     }
   ],
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/"
+    }
+  ]
 }

@@ -34,6 +34,7 @@ import Auth from './pages/Auth/Auth';
 // Lazy loading des pages lourdes
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
 const Kanban = lazy(() => import('./pages/Kanban/Kanban'));
+const SAV = lazy(() => import('./pages/SAV/SAV'));
 const Calendar = lazy(() => import('./pages/Calendar/Calendar'));
 const Catalog = lazy(() => import('./pages/Catalog/Catalog'));
 const Transaction = lazy(() => import('./pages/Transaction/Transaction'));
@@ -226,6 +227,7 @@ function App() {
                           <Route path="/" element={<Navigate to="/dashboard" replace />} />
                           <Route path="/dashboard" element={<Dashboard />} />
                           <Route path="/kanban" element={<Kanban />} />
+                          <Route path="/sav" element={<SAV />} />
                           <Route path="/archive" element={<Archive />} />
                           <Route path="/calendar" element={<Calendar />} />
 

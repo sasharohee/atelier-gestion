@@ -47,7 +47,9 @@ import {
   CalendarToday as CalendarIcon,
   Person as PersonIcon,
   DeviceHub as DeviceIcon,
-  Payment as PaymentIcon,
+  CheckCircle as CheckCircleIcon,
+  CheckCircleOutline as CheckCircleOutlineIcon,
+  ErrorOutline as ErrorOutlineIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -76,7 +78,6 @@ const Archive: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [deviceTypeFilter, setDeviceTypeFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('all');
-  const [showPaidOnly, setShowPaidOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
@@ -138,13 +139,9 @@ const Archive: React.FC = () => {
       });
     }
 
-    // Filtre par statut de paiement
-    if (showPaidOnly) {
-      filtered = filtered.filter(repair => repair.isPaid);
-    }
 
     return filtered;
-  }, [archivedRepairs, searchQuery, deviceTypeFilter, dateFilter, showPaidOnly, getClientById, getDeviceById]);
+  }, [archivedRepairs, searchQuery, deviceTypeFilter, dateFilter, getClientById, getDeviceById]);
 
   // Pagination
   const totalPages = Math.ceil(filteredRepairs.length / itemsPerPage);
@@ -209,15 +206,30 @@ const Archive: React.FC = () => {
     await updateRepair(repair.id, { status: 'completed' });
   };
 
-  const handleTogglePaymentStatus = async (repair: Repair) => {
+  const handleTogglePayment = async (repair: Repair, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
     try {
-      await updateRepair(repair.id, { isPaid: !repair.isPaid });
-      alert(`✅ Statut de paiement mis à jour : ${!repair.isPaid ? 'Payée' : 'En attente'}`);
+      const newPaymentStatus = !repair.isPaid;
+      
+      // Mise à jour via le service de réparation
+      const result = await repairService.updatePaymentStatus(repair.id, newPaymentStatus);
+      
+      if (result.success) {
+        // Mettre à jour l'état local
+        await updateRepair(repair.id, { isPaid: newPaymentStatus });
+        
+        // Afficher un message de succès
+        alert(newPaymentStatus ? '✅ Paiement validé avec succès !' : '✅ Validation du paiement annulée !');
+      } else {
+        alert('❌ Erreur lors de la mise à jour du paiement');
+      }
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut de paiement:', error);
-      alert('❌ Erreur lors de la mise à jour du statut de paiement');
+      console.error('Erreur lors de la mise à jour du paiement:', error);
+      alert('❌ Erreur lors de la mise à jour du paiement');
     }
   };
+
 
   return (
     <Box sx={{ p: 3 }}>
@@ -280,17 +292,6 @@ const Archive: React.FC = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} md={2}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showPaidOnly}
-                    onChange={(e) => setShowPaidOnly(e.target.checked)}
-                  />
-                }
-                label="Payées uniquement"
-              />
-            </Grid>
-            <Grid item xs={12} md={2}>
               <Typography variant="body2" color="text.secondary">
                 {filteredRepairs.length} réparation(s) trouvée(s)
               </Typography>
@@ -309,7 +310,7 @@ const Archive: React.FC = () => {
               <TableCell>Description</TableCell>
               <TableCell>Date de restitution</TableCell>
               <TableCell>Prix</TableCell>
-              <TableCell>Statut paiement</TableCell>
+              <TableCell>Statut de paiement</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -380,11 +381,15 @@ const Archive: React.FC = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={repair.isPaid ? 'Payée' : 'En attente'}
-                      color={repair.isPaid ? 'success' : 'warning'}
-                      size="small"
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip
+                        icon={repair.isPaid ? <CheckCircleIcon /> : <ErrorOutlineIcon />}
+                        label={repair.isPaid ? 'Payé' : 'Non payé'}
+                        size="small"
+                        color={repair.isPaid ? 'success' : 'error'}
+                        variant={repair.isPaid ? 'filled' : 'outlined'}
+                      />
+                    </Box>
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 1 }}>
@@ -397,13 +402,21 @@ const Archive: React.FC = () => {
                           <ReceiptIcon />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title={repair.isPaid ? "Marquer comme non payée" : "Marquer comme payée"}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleTogglePaymentStatus(repair)}
-                          color={repair.isPaid ? "warning" : "success"}
+                      <Tooltip title={repair.isPaid ? "Annuler la validation du paiement" : "Valider le paiement"}>
+                        <IconButton 
+                          size="small" 
+                          onClick={(e) => handleTogglePayment(repair, e)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          sx={{ 
+                            color: repair.isPaid ? 'success.main' : 'warning.main',
+                            '&:hover': {
+                              backgroundColor: repair.isPaid ? 'success.light' : 'warning.light',
+                              color: 'white'
+                            }
+                          }}
                         >
-                          <PaymentIcon />
+                          {repair.isPaid ? <CheckCircleIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Restaurer">

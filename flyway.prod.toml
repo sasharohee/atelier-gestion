@@ -4,7 +4,7 @@ id = "prod-atelier"
 name = "Atelier Gestion - Production"
 
 [flyway]
-url = "postgresql://postgres:EGQUN6paP21OlNUu@db.gggoqnxrspviuxadvkbh.supabase.co:5432/postgres"
+url = "jdbc:postgresql://db.wlqyrmntfxwdvkzzsujv.supabase.co:5432/postgres"
 user = "postgres"
 password = "EGQUN6paP21OlNUu"
 callbackLocations = [ "filesystem:callbacks" ]

@@ -43,26 +43,42 @@ class DeviceModelService {
         .eq('user_id', user.id)
         .order('name');
 
+      console.log('🔍 Requête Supabase device_models:', {
+        data: data,
+        error: error,
+        count: data?.length || 0
+      });
+
       if (error) {
         console.error('Erreur lors de la récupération des modèles d\'appareils:', error);
         return { success: false, error: error.message };
       }
 
       // Transformer les données pour correspondre à l'interface DeviceModel
-      const transformedData = (data || []).map(model => ({
-        id: model.id,
-        name: model.name,
-        model: model.model || '',
-        description: model.description || '',
-        brandId: model.brand_id,
-        categoryId: model.category_id,
-        brandName: model.device_brands?.name || 'Marque inconnue',
-        categoryName: model.device_categories?.name || 'Catégorie inconnue',
-        isActive: model.is_active,
-        createdAt: model.created_at,
-        updatedAt: model.updated_at
-      }));
+      const transformedData = (data || []).map(model => {
+        const transformed = {
+          id: model.id,
+          name: model.name,
+          model: model.model || '',
+          description: model.description || '',
+          brandId: model.brand_id,
+          categoryId: model.category_id,
+          brandName: model.device_brands?.name || 'Marque inconnue',
+          categoryName: model.device_categories?.name || 'Catégorie inconnue',
+          isActive: model.is_active,
+          createdAt: model.created_at,
+          updatedAt: model.updated_at
+        };
+        
+        console.log('🔍 Modèle transformé:', {
+          original: model,
+          transformed: transformed
+        });
+        
+        return transformed;
+      });
 
+      console.log('📊 Tous les modèles transformés:', transformedData);
       return { success: true, data: transformedData };
     } catch (error) {
       console.error('Erreur lors de la récupération des modèles d\'appareils:', error);

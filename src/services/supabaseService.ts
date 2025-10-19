@@ -1460,9 +1460,13 @@ export const repairService = {
       return handleSupabaseError(new Error('Utilisateur non connecté'));
     }
 
+    // Récupérer les réparations avec le statut de paiement depuis la table séparée
     const { data, error } = await supabase
       .from('repairs')
-      .select('*')
+      .select(`
+        *,
+        repair_payment_status!left(is_paid)
+      `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
     
@@ -1493,7 +1497,9 @@ export const repairService = {
         discountPercentage: repair.discount_percentage,
         discountAmount: repair.discount_amount,
         originalPrice: repair.original_price,
-      isPaid: repair.is_paid,
+      // Utiliser le statut de paiement depuis la table séparée
+      isPaid: repair.repair_payment_status?.[0]?.is_paid || false,
+      source: repair.source || 'kanban', // Source par défaut pour les anciennes réparations
       createdAt: repair.created_at,
       updatedAt: repair.updated_at
     })) || [];
@@ -1508,9 +1514,13 @@ export const repairService = {
       return handleSupabaseError(new Error('Utilisateur non connecté'));
     }
 
+    // Récupérer les réparations avec le statut de paiement depuis la table séparée
     const { data, error } = await supabase
       .from('repairs')
-      .select('*')
+      .select(`
+        *,
+        repair_payment_status!left(is_paid)
+      `)
       .eq('id', id)
       .eq('user_id', user.id)
       .single();
@@ -1542,7 +1552,9 @@ export const repairService = {
       discountPercentage: data.discount_percentage,
       discountAmount: data.discount_amount,
       originalPrice: data.original_price,
-      isPaid: data.is_paid,
+      // Utiliser le statut de paiement depuis la table séparée
+      isPaid: data.repair_payment_status?.[0]?.is_paid || false,
+      source: data.source || 'kanban', // Source par défaut pour les anciennes réparations
       createdAt: data.created_at,
       updatedAt: data.updated_at
     } : null;
@@ -1550,7 +1562,7 @@ export const repairService = {
     return handleSupabaseSuccess(convertedData);
   },
 
-  async create(repair: Omit<Repair, 'id' | 'createdAt' | 'updatedAt'>) {
+  async create(repair: Omit<Repair, 'id' | 'createdAt' | 'updatedAt'>, source: 'kanban' | 'sav' = 'kanban') {
     // Obtenir l'utilisateur connecté
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -1599,6 +1611,7 @@ export const repairService = {
         discount_amount: repair.discountAmount || 0,
         original_price: repair.originalPrice || repair.totalPrice,
       is_paid: repair.isPaid,
+      source: source, // Ajouter la source de création
       user_id: user.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -1714,6 +1727,50 @@ export const repairService = {
     
     if (error) return handleSupabaseError(error);
     return handleSupabaseSuccess(data);
+  },
+
+  // Fonction spécialisée pour mettre à jour uniquement le statut de paiement
+  // sans déclencher les triggers de fidélité
+  async updatePaymentStatus(id: string, isPaid: boolean) {
+    console.log('💳 repairService.updatePaymentStatus appelé avec:', { id, isPaid });
+    
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('❌ Erreur d\'authentification:', userError);
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+    
+    console.log('👤 Utilisateur connecté:', user.id);
+
+    try {
+      // Utiliser la nouvelle table séparée pour les statuts de paiement
+      const { data, error } = await supabase.rpc('upsert_repair_payment_status', {
+        repair_id_param: id,
+        is_paid_value: isPaid,
+        user_id_param: user.id
+      });
+      
+      console.log('📥 Réponse de la fonction RPC (table séparée):', { data, error });
+      
+      if (error) {
+        console.error('❌ Erreur RPC:', error);
+        return handleSupabaseError(error);
+      }
+      
+      // Vérifier le résultat de la fonction
+      if (data && data.success) {
+        console.log('✅ Mise à jour du paiement réussie via table séparée:', data);
+        return handleSupabaseSuccess(data.data);
+      } else {
+        console.error('❌ Échec de la fonction RPC:', data?.error);
+        return handleSupabaseError(new Error(data?.error || 'Erreur inconnue'));
+      }
+      
+    } catch (rpcError) {
+      console.error('❌ Erreur lors de l\'appel RPC:', rpcError);
+      return handleSupabaseError(rpcError);
+    }
   }
 };
 
@@ -2874,22 +2931,26 @@ export const deviceModelService = {
       
       console.log('🔒 Récupération des modèles d\'appareils pour l\'utilisateur:', user.id);
       
-      // Utiliser la table avec filtre côté frontend en attendant la vue
+      // Faire une jointure pour récupérer les noms des marques et catégories
       const { data, error } = await supabase
         .from('device_models')
-        .select('*')
+        .select(`
+          *,
+          device_brands!inner(name),
+          device_categories!inner(name)
+        `)
         .eq('created_by', user.id)
-        .order('brand', { ascending: true })
-        .order('model', { ascending: true });
+        .order('brand_id', { ascending: true })
+        .order('name', { ascending: true });
       
       if (error) return handleSupabaseError(error);
       
-      // Convertir les données de snake_case vers camelCase
+      // Convertir les données de snake_case vers camelCase avec les noms des marques et catégories
       const convertedData = (data as any[])?.map((model: any) => ({
         id: model.id,
-        brand: model.brand,
-        model: model.model,
-        type: model.type,
+        brand: model.device_brands?.name || 'N/A',
+        model: model.name,
+        type: model.device_categories?.name || 'N/A',
         year: model.year,
         specifications: model.specifications || {},
         commonIssues: model.common_issues || [],
@@ -2915,22 +2976,26 @@ export const deviceModelService = {
         return handleSupabaseError(new Error('Utilisateur non connecté'));
       }
 
-      // Utiliser la table avec filtre côté frontend en attendant la vue
+      // Faire une jointure pour récupérer les noms des marques et catégories
       const { data, error } = await supabase
         .from('device_models')
-        .select('*')
+        .select(`
+          *,
+          device_brands!inner(name),
+          device_categories!inner(name)
+        `)
         .eq('id', id)
         .eq('created_by', user.id)
         .single();
       
       if (error) return handleSupabaseError(error);
       
-      // Convertir les données
+      // Convertir les données avec les noms des marques et catégories
       const convertedData = {
         id: (data as any).id,
-        brand: (data as any).brand,
-        model: (data as any).model,
-        type: (data as any).type,
+        brand: (data as any).device_brands?.name || 'N/A',
+        model: (data as any).name,
+        type: (data as any).device_categories?.name || 'N/A',
         year: (data as any).year,
         specifications: (data as any).specifications || {},
         commonIssues: (data as any).common_issues || [],

@@ -45,9 +45,10 @@ import {
   PersonAdd as PersonAddIcon,
   DeviceHub as DeviceHubIcon,
   Archive as ArchiveIcon,
-  Payment as PaymentIcon,
-  CheckCircle as CheckCircleIcon,
   Category as CategoryIcon,
+  CheckCircle as CheckCircleIcon,
+  CheckCircleOutline as CheckCircleOutlineIcon,
+  ErrorOutline as ErrorOutlineIcon,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
@@ -55,15 +56,17 @@ import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store';
 import { deviceTypeColors, repairStatusColors } from '../../theme';
-import { Repair, RepairStatus, Device, Client } from '../../types';
+import { Repair, RepairStatus, Device, Client, DeviceType } from '../../types';
 import Invoice from '../../components/Invoice';
 import InterventionForm from '../../components/InterventionForm';
 import { getRepairEligibleUsers, getRepairUserDisplayName } from '../../utils/userUtils';
 import ClientForm from '../../components/ClientForm';
 import { supabase } from '../../lib/supabase';
 import { repairService } from '../../services/supabaseService';
-import { deviceCategoryService, DeviceCategory } from '../../services/deviceCategoryService';
+import { deviceCategoryService } from '../../services/deviceCategoryService';
+import { DeviceCategory } from '../../types/deviceManagement';
 import { brandService, BrandWithCategories } from '../../services/brandService';
+import { deviceModelServiceService } from '../../services/deviceModelServiceService';
 
 const Kanban: React.FC = () => {
   const navigate = useNavigate();
@@ -75,6 +78,7 @@ const Kanban: React.FC = () => {
     deviceCategories,
     deviceBrands,
     deviceModels,
+    deviceModelServices,
     users,
     systemSettings,
     getClientById,
@@ -87,12 +91,65 @@ const Kanban: React.FC = () => {
     addDeviceModel,
     addClient,
     loadUsers,
+    loadDeviceModels,
+    loadDeviceModelServices,
     loadSystemSettings,
     loadRepairs,
+    updateRepairPaymentStatus,
+    loadDevices,
+    getServicesForModel,
   } = useAppStore();
 
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
+  // État pour le formulaire de modification (comme newRepair mais pour l'édition)
+  const [editRepair, setEditRepair] = useState({
+    clientId: '' as string,
+    deviceId: '' as string,
+    description: '',
+    issue: '',
+    status: 'new' as string,
+    isUrgent: false,
+    totalPrice: 0,
+    discountPercentage: 0,
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    assignedTechnicianId: '' as string,
+    selectedServices: [] as string[],
+  });
+
+  // État pour le bon d'intervention dans le formulaire de modification
+  const [editInterventionData, setEditInterventionData] = useState({
+    technicianName: '',
+    deviceCondition: '',
+    visibleDamages: '',
+    missingParts: '',
+    passwordProvided: false,
+    dataBackup: false,
+    accessConfirmed: false,
+    clientAuthorizesRepair: false,
+    clientAuthorizesDataAccess: false,
+    clientAuthorizesReplacement: false,
+    initialDiagnosis: '',
+    proposedSolution: '',
+    estimatedDuration: '',
+    dataLossRisk: false,
+    dataLossRiskDetails: '',
+    cosmeticChanges: false,
+    cosmeticChangesDetails: '',
+    warrantyVoid: false,
+    warrantyVoidDetails: '',
+    additionalNotes: '',
+    specialInstructions: '',
+    termsAccepted: false,
+    liabilityAccepted: false,
+    authType: '',
+    accessCode: '',
+    patternPoints: [] as number[],
+    patternDescription: '',
+    securityInfo: '',
+    backupBeforeAccess: false,
+  });
   const [newRepairDialogOpen, setNewRepairDialogOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [selectedRepairForInvoice, setSelectedRepairForInvoice] = useState<Repair | null>(null);
@@ -204,6 +261,7 @@ const Kanban: React.FC = () => {
     discountPercentage: 0,
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 jours par défaut
     assignedTechnicianId: '' as string,
+    selectedServices: [] as string[], // Services sélectionnés pour le modèle
   });
 
   // États pour la sélection de marque et catégorie
@@ -324,63 +382,63 @@ const Kanban: React.FC = () => {
     console.log('🔍 getFilteredModels appelé avec:', { selectedCategory, selectedBrand, totalModels: deviceModels.length });
     
     const filtered = deviceModels.filter(model => {
-      const brandMatch = !selectedBrand || (model as any).brand === selectedBrand;
+      // Debug: Afficher la structure du modèle pour le filtrage
+      console.log('🔍 Modèle pour filtrage:', model);
       
-      // Pour la catégorie, utiliser une approche plus flexible
-      let categoryMatch = true;
-      if (selectedCategory) {
-        const modelType = (model as any).type;
-        
-        // Approche 1: Mapping direct
-        const typeToCategoryMap: { [key: string]: string } = {
-          'smartphone': 'Smartphones',
-          'smartphones': 'Smartphones',
-          'phone': 'Smartphones',
-          'mobile': 'Smartphones',
-          'tablet': 'Tablettes',
-          'tablets': 'Tablettes',
-          'laptop': 'Ordinateurs portables',
-          'laptops': 'Ordinateurs portables',
-          'notebook': 'Ordinateurs portables',
-          'desktop': 'Ordinateurs fixes',
-          'desktops': 'Ordinateurs fixes',
-          'pc': 'Ordinateurs fixes',
-          'computer': 'Ordinateurs fixes',
-          'other': 'Autres',
-          'others': 'Autres'
-        };
-        
-        // Recherche par nom de catégorie dans dbCategories
-        const category = dbCategories.find(cat => cat.name === selectedCategory);
-        let categoryMatchByType = false;
-        
-        if (category) {
-          // Si on trouve la catégorie, vérifier si le type correspond
-          const categoryNameLower = category.name.toLowerCase();
-          const modelTypeLower = modelType.toLowerCase();
-          
-          categoryMatchByType = categoryNameLower.includes(modelTypeLower) || 
-                               modelTypeLower.includes(categoryNameLower) ||
-                               typeToCategoryMap[modelType] === selectedCategory;
-        }
-        
-        categoryMatch = categoryMatchByType;
-        
-        console.log(`📱 Modèle ${(model as any).brand} ${(model as any).model}: type=${modelType}, selectedCategory=${selectedCategory}, categoryMatch=${categoryMatch}`);
-      }
+      // Filtrage par marque - essayer les deux propriétés possibles
+      const brandMatch = !selectedBrand || model.brandName === selectedBrand || (model as any).brand === selectedBrand;
+      
+      // Filtrage par catégorie - essayer les deux propriétés possibles
+      const categoryMatch = !selectedCategory || model.categoryName === selectedCategory || (model as any).type === selectedCategory;
       
       const isActive = model.isActive;
       const finalMatch = brandMatch && categoryMatch && isActive;
       
-      if (selectedCategory) {
-        console.log(`✅ ${(model as any).brand} ${(model as any).model}: brandMatch=${brandMatch}, categoryMatch=${categoryMatch}, isActive=${isActive}, finalMatch=${finalMatch}`);
-      }
+      console.log(`📱 Modèle ${model.brandName || (model as any).brand} ${model.model}: brandMatch=${brandMatch}, categoryMatch=${categoryMatch}, isActive=${isActive}, finalMatch=${finalMatch}`);
       
       return finalMatch;
     });
     
     console.log(`🎯 Modèles filtrés: ${filtered.length}/${deviceModels.length}`);
     return filtered;
+  };
+
+  // Fonction pour récupérer les services associés au modèle sélectionné
+  const getServicesForSelectedModel = () => {
+    if (!newRepair.deviceId) {
+      console.log('🔍 getServicesForSelectedModel: Pas de deviceId sélectionné');
+      return [];
+    }
+    
+    console.log('🔍 getServicesForSelectedModel: deviceId =', newRepair.deviceId);
+    console.log('🔍 Services locaux disponibles:', localDeviceModelServices.length);
+    
+    // Utiliser les services locaux chargés
+    // Debug: Afficher la structure des services pour voir les propriétés disponibles
+    console.log('🔍 Premier service pour debug:', localDeviceModelServices[0]);
+    
+    const filteredServices = localDeviceModelServices.filter(service => 
+      service.device_model_id === newRepair.deviceId || service.deviceModelId === newRepair.deviceId
+    );
+    console.log('🔍 Services filtrés par deviceModelId:', filteredServices);
+    
+    return filteredServices;
+  };
+
+  const getServicesForEditModel = () => {
+    if (!editRepair.deviceId) {
+      console.log('🔍 getServicesForEditModel: Pas de deviceId sélectionné');
+      return [];
+    }
+    
+    console.log('🔍 getServicesForEditModel: deviceId =', editRepair.deviceId);
+    console.log('🔍 Services locaux disponibles:', localDeviceModelServices.length);
+    
+    const filteredServices = localDeviceModelServices.filter(service => 
+      service.device_model_id === editRepair.deviceId || service.deviceModelId === editRepair.deviceId
+    );
+    console.log('🔍 Services filtrés par deviceModelId pour édition:', filteredServices);
+    return filteredServices;
   };
 
   // Charger les utilisateurs au montage du composant
@@ -398,6 +456,46 @@ const Kanban: React.FC = () => {
     loadUsersData();
   }, [loadUsers]); // Retirer 'users' des dépendances pour éviter la boucle infinie
 
+  // Charger les modèles d'appareils au montage du composant
+  useEffect(() => {
+    const loadModelsData = async () => {
+      try {
+        console.log('🔄 Chargement des modèles d\'appareils dans le suivi des réparations...');
+        await loadDeviceModels();
+        console.log('✅ Modèles d\'appareils chargés dans le suivi des réparations');
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des modèles d\'appareils:', error);
+      }
+    };
+    
+    loadModelsData();
+  }, [loadDeviceModels]);
+
+  // État local pour les services par modèle
+  const [localDeviceModelServices, setLocalDeviceModelServices] = useState([]);
+
+  // Charger les services par modèle au montage du composant
+  useEffect(() => {
+    const loadServicesData = async () => {
+      try {
+        console.log('🔄 Chargement des services par modèle dans le suivi des réparations...');
+        const result = await deviceModelServiceService.getAll();
+        if (result.success && result.data) {
+          console.log('✅ Services par modèle chargés:', result.data.length);
+          setLocalDeviceModelServices(result.data);
+        } else {
+          console.warn('⚠️ Aucun service par modèle trouvé ou erreur:', result.error);
+          setLocalDeviceModelServices([]);
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des services par modèle:', error);
+        setLocalDeviceModelServices([]);
+      }
+    };
+    
+    loadServicesData();
+  }, []);
+
   // Debug: Afficher les informations des utilisateurs quand ils changent (sans recharger)
   useEffect(() => {
     if (users.length > 0) {
@@ -408,6 +506,60 @@ const Kanban: React.FC = () => {
       });
     }
   }, [users]);
+
+  // Mettre à jour automatiquement le prix estimé quand les services sélectionnés changent
+  useEffect(() => {
+    if (newRepair.selectedServices.length > 0) {
+      const selectedServicesData = getServicesForSelectedModel().filter(service => 
+        newRepair.selectedServices.includes(service.id)
+      );
+      const servicesTotalPrice = selectedServicesData.reduce((sum, service) => 
+        sum + (service.effective_price || service.effectivePrice || 0), 0);
+      
+      // Mettre à jour le prix estimé avec le prix des services
+      setNewRepair(prev => ({
+        ...prev,
+        totalPrice: servicesTotalPrice
+      }));
+    } else {
+      // Si aucun service sélectionné, remettre le prix à 0
+      setNewRepair(prev => ({
+        ...prev,
+        totalPrice: 0
+      }));
+    }
+  }, [newRepair.selectedServices, newRepair.deviceId]);
+
+  // Mettre à jour automatiquement le prix estimé pour le formulaire de modification
+  useEffect(() => {
+    if (editRepair.selectedServices.length > 0) {
+      const selectedServicesData = getServicesForEditModel().filter(service => 
+        editRepair.selectedServices.includes(service.id)
+      );
+      const servicesTotalPrice = selectedServicesData.reduce((sum, service) => 
+        sum + (service.effective_price || service.effectivePrice || 0), 0);
+      
+      // Mettre à jour le prix estimé avec le prix des services
+      setEditRepair(prev => ({
+        ...prev,
+        totalPrice: servicesTotalPrice
+      }));
+    }
+    // Ne pas remettre le prix à 0 si aucun service n'est sélectionné
+    // Garder le prix existant de la réparation
+  }, [editRepair.selectedServices, editRepair.deviceId]);
+
+  // Calculer le prix total (prix de base + services) pour l'affichage
+  const calculateTotalPrice = () => {
+    const basePrice = newRepair.totalPrice; // Prix saisi manuellement ou prix des services
+    const selectedServicesData = getServicesForSelectedModel().filter(service => 
+      newRepair.selectedServices.includes(service.id)
+    );
+    const servicesTotalPrice = selectedServicesData.reduce((sum, service) => 
+      sum + (service.effective_price || service.effectivePrice || 0), 0);
+    
+    return basePrice + servicesTotalPrice;
+  };
 
   // Debug: Afficher les modèles d'appareils
   useEffect(() => {
@@ -493,8 +645,25 @@ const Kanban: React.FC = () => {
     }
   };
 
-  const handleEditRepair = (repair: Repair) => {
+  const handleEditRepair = async (repair: Repair) => {
     setSelectedRepair(repair);
+    
+    // S'assurer que les données sont chargées avant d'initialiser le formulaire
+    if (deviceModels.length === 0) {
+      console.log('🔍 Chargement des modèles d\'appareils...');
+      await loadDeviceModels();
+    }
+    
+    if (deviceModelServices.length === 0) {
+      console.log('🔍 Chargement des services des modèles...');
+      await loadDeviceModelServices();
+    }
+    
+    // Attendre un tick pour que les données soient mises à jour
+    setTimeout(() => {
+      initializeEditForm(repair);
+    }, 100);
+    
     setEditDialogOpen(true);
   };
 
@@ -502,33 +671,42 @@ const Kanban: React.FC = () => {
     if (selectedRepair) {
       try {
         console.log('🔄 Sauvegarde de la réparation:', selectedRepair);
+        console.log('🔄 Données du formulaire de modification:', editRepair);
         
-        // Récupérer les valeurs des champs du formulaire
-        const form = document.querySelector('#edit-repair-form') as HTMLFormElement;
-        const formData = new FormData(form);
+        // Calculer le prix final avec réduction
+        const totalBeforeDiscount = editRepair.totalPrice;
+        const discountAmount = (totalBeforeDiscount * editRepair.discountPercentage) / 100;
+        const finalPrice = totalBeforeDiscount - discountAmount;
         
-        // Récupérer les valeurs des champs contrôlés
-        const description = (form.querySelector('[name="description"]') as HTMLInputElement)?.value || selectedRepair.description;
-        const status = selectedRepair.status; // Utiliser la valeur du state
-        const assignedTechnicianId = selectedRepair.assignedTechnicianId; // Utiliser la valeur du state
-        const totalPrice = parseFloat((form.querySelector('[name="totalPrice"]') as HTMLInputElement)?.value || '0');
-        const issue = (form.querySelector('[name="issue"]') as HTMLInputElement)?.value || selectedRepair.issue;
-        const dueDate = (form.querySelector('[name="dueDate"]') as HTMLInputElement)?.value || selectedRepair.dueDate?.toISOString().split('T')[0];
-        const isUrgent = (form.querySelector('[name="isUrgent"]') as HTMLInputElement)?.checked || selectedRepair.isUrgent;
+        // Préparer les services pour la réparation
+        const selectedServicesData = getServicesForEditModel().filter(service => 
+          editRepair.selectedServices.includes(service.id)
+        );
+        const repairServices = selectedServicesData.map(service => ({
+          id: crypto.randomUUID(),
+          serviceId: service.service_id || service.serviceId,
+          quantity: 1,
+          price: service.effective_price || service.effectivePrice || 0,
+        }));
         
         // Préparer les mises à jour de base
         const updates: any = {
-          description,
-          status,
-          assignedTechnicianId,
-          totalPrice,
-          issue,
-          dueDate: dueDate ? new Date(dueDate) : selectedRepair.dueDate,
-          isUrgent,
+          clientId: editRepair.clientId,
+          deviceId: selectedRepair.deviceId, // Garder l'ID de l'appareil existant
+          description: editRepair.description,
+          status: editRepair.status,
+          assignedTechnicianId: editRepair.assignedTechnicianId || undefined,
+          totalPrice: finalPrice,
+          issue: editRepair.issue,
+          dueDate: new Date(editRepair.dueDate),
+          isUrgent: editRepair.isUrgent,
+          discountPercentage: editRepair.discountPercentage,
+          discountAmount: discountAmount,
+          services: repairServices,
         };
         
         // Si la réparation passe en "terminé" ou "restitué", retirer l'urgence et le retard
-        if (status === 'completed' || status === 'returned') {
+        if (editRepair.status === 'completed' || editRepair.status === 'returned') {
           console.log('✅ Réparation terminée/restituée - Retrait automatique de l\'urgence et du retard');
           updates.isUrgent = false;
           // Pour le retard, mettre la date d'échéance à aujourd'hui si elle est en retard
@@ -558,6 +736,41 @@ const Kanban: React.FC = () => {
     setDeleteDialogOpen(true);
   };
 
+  const handleTogglePayment = async (repair: Repair, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const newPaymentStatus = !repair.isPaid;
+      
+      // Mise à jour optimiste immédiate de l'interface utilisateur
+      // Mettre à jour directement l'état des réparations dans le store
+      updateRepairPaymentStatus(repair.id, newPaymentStatus);
+      
+      // Afficher un message de succès immédiatement
+      alert(newPaymentStatus ? '✅ Paiement validé avec succès !' : '✅ Validation du paiement annulée !');
+      
+      // Essayer la mise à jour via le service en arrière-plan (optionnel)
+      try {
+        const result = await repairService.updatePaymentStatus(repair.id, newPaymentStatus);
+        
+        if (result.success) {
+          console.log('✅ Mise à jour réussie en arrière-plan');
+        } else {
+          console.log('⚠️ Mise à jour échouée en arrière-plan, mais l\'interface est mise à jour');
+        }
+      } catch (backgroundError) {
+        console.log('⚠️ Erreur en arrière-plan ignorée, l\'interface reste mise à jour');
+      }
+      
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du paiement:', error);
+      
+      // En cas d'erreur, restaurer l'état précédent
+      await loadRepairs();
+      alert('❌ Erreur lors de la mise à jour du paiement');
+    }
+  };
+
   const confirmDeleteRepair = async () => {
     if (repairToDelete) {
       try {
@@ -579,62 +792,101 @@ const Kanban: React.FC = () => {
         return;
       }
 
-      // Récupérer les informations du modèle sélectionné
+      // Vérifier que le modèle sélectionné existe
       const selectedModel = deviceModels.find(m => m.id === newRepair.deviceId);
       if (!selectedModel) {
         throw new Error('Modèle sélectionné non trouvé');
       }
 
-      // Créer un appareil temporaire basé sur le modèle
+      // Créer un appareil à partir du modèle sélectionné
       const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
-        brand: (selectedModel as any).brand,
-        model: (selectedModel as any).model || (selectedModel as any).name,
-        serialNumber: undefined,
-        type: (selectedModel as any).type as any,
+        brand: selectedModel.brandName || (selectedModel as any).brand || 'Unknown',
+        model: selectedModel.model || 'Unknown',
+        serialNumber: `REPAIR-${Date.now()}`, // Numéro de série temporaire pour la réparation
+        type: (selectedModel.categoryName || (selectedModel as any).type || 'other') as DeviceType,
         specifications: {},
       };
 
-      // Créer l'appareil dans Supabase
-      await addDevice(deviceData as Device);
-
-      // Trouver l'appareil créé
-      const createdDevice = devices.find(d => 
-        d.brand === deviceData.brand && 
-        d.model === deviceData.model
-      );
-
-      if (!createdDevice) {
-        throw new Error('Impossible de créer l\'appareil');
+      console.log('🔍 Création de l\'appareil à partir du modèle:', deviceData);
+      
+      // Utiliser directement deviceService.create pour obtenir l'ID créé
+      const { deviceService } = await import('../../services/supabaseService');
+      const deviceResult = await deviceService.create(deviceData);
+      
+      if (!deviceResult.success || !('data' in deviceResult)) {
+        throw new Error('Erreur lors de la création de l\'appareil');
       }
+      
+      const createdDeviceId = deviceResult.data.id;
+      console.log('🔍 Appareil créé avec ID:', createdDeviceId);
+      
+      // Ajouter l'appareil au store local pour qu'il soit immédiatement disponible
+      const createdDevice: Device = {
+        id: deviceResult.data.id,
+        brand: deviceResult.data.brand,
+        model: deviceResult.data.model,
+        serialNumber: deviceResult.data.serial_number,
+        type: deviceResult.data.type,
+        specifications: deviceResult.data.specifications,
+        createdAt: new Date(deviceResult.data.created_at),
+        updatedAt: new Date(deviceResult.data.updated_at),
+      };
+      
+      // Ajouter l'appareil au store local
+      await addDevice(createdDevice);
 
-      // Calculer le prix final après réduction
-      const originalPrice = newRepair.totalPrice;
-      const discountAmount = (originalPrice * newRepair.discountPercentage) / 100;
-      const finalPrice = originalPrice - discountAmount;
+      // Calculer le prix des services sélectionnés
+      const selectedServicesData = getServicesForSelectedModel().filter(service => 
+        newRepair.selectedServices.includes(service.id)
+      );
+      const servicesTotalPrice = selectedServicesData.reduce((sum, service) => 
+        sum + (service.effective_price || service.effectivePrice || 0), 0);
+      
+      // Calculer le prix final (prix estimé + réduction)
+      // newRepair.totalPrice contient déjà le prix des services (mis à jour par useEffect)
+      const totalBeforeDiscount = newRepair.totalPrice;
+      const discountAmount = (totalBeforeDiscount * newRepair.discountPercentage) / 100;
+      const finalPrice = totalBeforeDiscount - discountAmount;
+
+      // Préparer les services pour la réparation
+      const repairServices = selectedServicesData.map(service => ({
+        id: crypto.randomUUID(),
+        serviceId: service.service_id || service.serviceId,
+        quantity: 1,
+        price: service.effective_price || service.effectivePrice || 0,
+      }));
 
       // Préparer les données pour Supabase (sans id, createdAt, updatedAt)
       const repairData: Omit<Repair, 'id' | 'createdAt' | 'updatedAt'> = {
         clientId: newRepair.clientId,
-        deviceId: createdDevice.id,
+        deviceId: createdDeviceId, // Utiliser l'ID de l'appareil créé
         description: newRepair.description,
         issue: newRepair.issue,
         status: newRepair.status,
         assignedTechnicianId: newRepair.assignedTechnicianId || undefined,
         estimatedDuration: 0,
         isUrgent: newRepair.isUrgent,
-        totalPrice: finalPrice, // Prix final après réduction
+        totalPrice: finalPrice, // Prix final après services et réduction
         discountPercentage: newRepair.discountPercentage,
         discountAmount: discountAmount,
         dueDate: new Date(newRepair.dueDate),
-        services: [],
+        services: repairServices, // Services sélectionnés
         parts: [],
         isPaid: false,
       };
 
-      await addRepair(repairData as Repair);
+      console.log('🔍 Données de la réparation à créer:', repairData);
       
-      // Recharger les réparations pour mettre à jour l'affichage
+      const createdRepair = await addRepair(repairData as Repair, 'kanban'); // Marquer comme créé depuis Kanban
+      console.log('🔍 Réparation créée:', createdRepair);
+      
+      // Recharger les réparations et les appareils pour mettre à jour l'affichage
       await loadRepairs();
+      await loadDevices();
+      
+      // Vérifier que la réparation a bien été ajoutée au store
+      console.log('🔍 Réparations dans le store après création:', repairs.length);
+      console.log('🔍 Appareils dans le store après création:', devices.length);
       
       // Réinitialiser le formulaire
       resetNewRepairForm();
@@ -654,6 +906,83 @@ const Kanban: React.FC = () => {
     }));
   };
 
+  const handleEditRepairChange = (field: string, value: any) => {
+    setEditRepair(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Initialiser le formulaire de modification avec les données de la réparation
+  const initializeEditForm = (repair: Repair) => {
+    const client = getClientById(repair.clientId);
+    const device = getDeviceById(repair.deviceId);
+    
+    console.log('🔍 Initialisation du formulaire de modification:');
+    console.log('🔍 Réparation:', repair);
+    console.log('🔍 Appareil:', device);
+    console.log('🔍 Tous les modèles disponibles:', deviceModels);
+    
+    // Trouver le modèle d'appareil correspondant à l'appareil créé
+    // Essayer plusieurs méthodes de comparaison
+    let deviceModel = null;
+    
+    if (device) {
+      // Méthode 1: Comparaison exacte brandName/model
+      deviceModel = deviceModels.find(model => 
+        model.brandName === device.brand && model.model === device.model
+      );
+      
+      // Méthode 2: Comparaison avec fallbacks
+      if (!deviceModel) {
+        deviceModel = deviceModels.find(model => 
+          (model.brandName || (model as any).brand) === device.brand && 
+          model.model === device.model
+        );
+      }
+      
+      // Méthode 3: Comparaison insensible à la casse
+      if (!deviceModel) {
+        deviceModel = deviceModels.find(model => 
+          (model.brandName || (model as any).brand)?.toLowerCase() === device.brand?.toLowerCase() && 
+          model.model?.toLowerCase() === device.model?.toLowerCase()
+        );
+      }
+    }
+    
+    console.log('🔍 Modèle trouvé:', deviceModel);
+    console.log('🔍 Services de la réparation:', repair.services);
+    console.log('🔍 Services du modèle disponibles:', deviceModelServices);
+    
+    // Mapper les services existants
+    const mappedServices = repair.services ? repair.services.map(s => {
+      console.log('🔍 Mapping service:', s);
+      // Trouver l'ID du service dans deviceModelServices à partir du serviceId
+      const serviceInModel = deviceModelServices.find(dms => 
+        dms.serviceId === s.serviceId || 
+        (dms as any).serviceId === s.serviceId
+      );
+      console.log('🔍 Service trouvé dans le modèle:', serviceInModel);
+      return serviceInModel?.id || s.serviceId;
+    }) : [];
+    
+    console.log('🔍 Services mappés:', mappedServices);
+    
+    setEditRepair({
+      clientId: repair.clientId,
+      deviceId: deviceModel?.id || '', // Utiliser l'ID du modèle, pas de l'appareil
+      description: repair.description,
+      issue: repair.issue || '',
+      status: repair.status,
+      isUrgent: repair.isUrgent,
+      totalPrice: repair.totalPrice,
+      discountPercentage: repair.discountPercentage || 0,
+      dueDate: repair.dueDate ? new Date(repair.dueDate).toISOString().split('T')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      assignedTechnicianId: repair.assignedTechnicianId || '',
+      selectedServices: mappedServices,
+    });
+  };
+
 
 
   const resetNewRepairForm = () => {
@@ -668,6 +997,7 @@ const Kanban: React.FC = () => {
       discountPercentage: 0,
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       assignedTechnicianId: '' as string,
+      selectedServices: [] as string[], // Réinitialiser les services sélectionnés
     });
     // Réinitialiser les filtres de marque et catégorie
     setSelectedBrand('');
@@ -685,7 +1015,7 @@ const Kanban: React.FC = () => {
 
       // Vérifier si le modèle existe déjà pour cette marque
       const existingModel = deviceModels.find(m => 
-                m.brand === newDevice.brandId &&
+                m.brandId === newDevice.brandId &&
         m.model.toLowerCase() === newDevice.model.trim().toLowerCase()
       );
       
@@ -980,34 +1310,146 @@ const Kanban: React.FC = () => {
     }
   };
 
-  const handlePaymentValidation = async (repair: Repair, event: React.MouseEvent) => {
-    // Empêcher la propagation et le comportement par défaut
-    event.preventDefault();
-    event.stopPropagation();
-    
+  // Fonction pour générer le bon d'intervention depuis l'onglet de modification
+  const handleGenerateInterventionFromEditTab = async () => {
     try {
-      console.log('🔄 Validation du paiement pour la réparation:', repair.id);
+      console.log('🔍 Début de la génération du bon d\'intervention depuis l\'édition');
+      console.log('📋 Données de réparation en édition:', editRepair);
+      console.log('📋 Données d\'intervention en édition:', editInterventionData);
       
-      // Appeler updateRepair avec l'ID et les mises à jour
-      await updateRepair(repair.id, { isPaid: !repair.isPaid });
+      // Vérifier que les informations de base sont remplies
+      if (!editRepair.clientId || !editRepair.deviceId || !editRepair.description) {
+        alert('❌ Veuillez d\'abord remplir les informations de base dans l\'onglet "Réparation" (client, appareil, description).');
+        return;
+      }
+
+      // Vérifier que les conditions légales sont acceptées
+      if (!editInterventionData.termsAccepted || !editInterventionData.liabilityAccepted) {
+        alert('❌ Veuillez accepter les conditions légales pour générer le bon d\'intervention.');
+        return;
+      }
+
+      // Récupérer les informations du client et du modèle
+      const client = getClientById(editRepair.clientId);
+      const selectedModel = deviceModels.find(m => m.id === editRepair.deviceId);
       
-      // Afficher un message de confirmation
-      const message = !repair.isPaid 
-        ? `✅ Paiement validé pour la réparation #${repair.id.slice(0, 8)}`
-        : `❌ Paiement annulé pour la réparation #${repair.id.slice(0, 8)}`;
+      console.log('👤 Client trouvé:', client);
+      console.log('📱 Modèle trouvé:', selectedModel);
       
-      // Vous pouvez ajouter ici une notification ou un toast
-      console.log(message);
+      if (!client || !selectedModel) {
+        alert('❌ Erreur : informations client ou modèle manquantes.');
+        return;
+      }
+
+      // Créer un objet réparation temporaire pour le bon d'intervention
+      const tempRepair: Repair = {
+        id: 'temp-edit-' + Date.now(),
+        clientId: editRepair.clientId,
+        deviceId: editRepair.deviceId,
+        description: editRepair.description,
+        issue: editRepair.issue,
+        status: editRepair.status,
+        estimatedDuration: 0,
+        isUrgent: editRepair.isUrgent,
+        totalPrice: editRepair.totalPrice,
+        dueDate: new Date(editRepair.dueDate),
+        services: [],
+        parts: [],
+        isPaid: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      // Créer les données complètes pour le bon d'intervention
+      const completeInterventionData = {
+        interventionDate: new Date().toISOString().split('T')[0],
+        technicianName: editInterventionData.technicianName,
+        clientName: `${client.firstName} ${client.lastName}`,
+        clientPhone: client.phone || '',
+        clientEmail: client.email || '',
+        deviceBrand: (selectedModel as any).brand,
+        deviceModel: (selectedModel as any).model || (selectedModel as any).name,
+        deviceSerialNumber: '', // Pas de numéro de série pour un modèle
+        deviceType: (selectedModel as any).type,
+        deviceCondition: editInterventionData.deviceCondition,
+        visibleDamages: editInterventionData.visibleDamages,
+        missingParts: editInterventionData.missingParts,
+        passwordProvided: editInterventionData.passwordProvided,
+        dataBackup: editInterventionData.dataBackup,
+        reportedIssue: editRepair.description,
+        initialDiagnosis: editInterventionData.initialDiagnosis,
+        proposedSolution: editInterventionData.proposedSolution,
+        estimatedCost: editRepair.totalPrice,
+        estimatedDuration: editInterventionData.estimatedDuration,
+        dataLossRisk: editInterventionData.dataLossRisk,
+        dataLossRiskDetails: editInterventionData.dataLossRiskDetails,
+        cosmeticChanges: editInterventionData.cosmeticChanges,
+        cosmeticChangesDetails: editInterventionData.cosmeticChangesDetails,
+        warrantyVoid: editInterventionData.warrantyVoid,
+        warrantyVoidDetails: editInterventionData.warrantyVoidDetails,
+        clientAuthorizesRepair: editInterventionData.clientAuthorizesRepair,
+        clientAuthorizesDataAccess: editInterventionData.clientAuthorizesDataAccess,
+        clientAuthorizesReplacement: editInterventionData.clientAuthorizesReplacement,
+        additionalNotes: editInterventionData.additionalNotes,
+        specialInstructions: editInterventionData.specialInstructions,
+        termsAccepted: editInterventionData.termsAccepted,
+        liabilityAccepted: editInterventionData.liabilityAccepted,
+        // Nouveaux champs pour le système de schéma et mots de passe
+        authType: editInterventionData.authType,
+        accessCode: editInterventionData.accessCode,
+        patternPoints: editInterventionData.patternPoints,
+        patternDescription: editInterventionData.patternDescription,
+        securityInfo: editInterventionData.securityInfo,
+        accessConfirmed: editInterventionData.accessConfirmed,
+        backupBeforeAccess: editInterventionData.backupBeforeAccess,
+      };
+
+      console.log('📄 Données complètes pour le PDF:', completeInterventionData);
+
+      // Générer le PDF en utilisant la fonction du composant InterventionForm
+      console.log('🔄 Tentative de génération du PDF...');
+      try {
+        // Import dynamique pour éviter les problèmes de require
+        const InterventionFormModule = await import('../../components/InterventionForm');
+        console.log('✅ Module InterventionForm importé');
+        
+        if (InterventionFormModule.generateInterventionPDF) {
+          // Préparer les paramètres de l'atelier
+          const workshopSettings = {
+            workshop_name: systemSettings.find(s => s.key === 'workshop_name')?.value || 'Atelier de réparation',
+            workshop_address: systemSettings.find(s => s.key === 'workshop_address')?.value || 'Adresse non configurée',
+            workshop_phone: systemSettings.find(s => s.key === 'workshop_phone')?.value || 'Téléphone non configuré',
+            workshop_email: systemSettings.find(s => s.key === 'workshop_email')?.value || 'Email non configuré',
+            workshop_website: systemSettings.find(s => s.key === 'workshop_website')?.value || 'Site web non configuré',
+            workshop_siret: systemSettings.find(s => s.key === 'workshop_siret')?.value || '',
+            workshop_vat: systemSettings.find(s => s.key === 'workshop_vat')?.value || ''
+          };
+          
+          console.log('🏢 Paramètres de l\'atelier:', workshopSettings);
+          InterventionFormModule.generateInterventionPDF(completeInterventionData, tempRepair, workshopSettings);
+          console.log('✅ PDF généré avec succès');
+        
+          alert('✅ Bon d\'intervention généré avec succès !\n\nVous pouvez maintenant sauvegarder la réparation.');
+        } else {
+          throw new Error('Fonction generateInterventionPDF non trouvée');
+        }
+      } catch (pdfError: any) {
+        console.error('❌ Erreur lors de la génération du PDF:', pdfError);
+        throw new Error(`Erreur PDF: ${pdfError.message || 'Erreur inconnue'}`);
+      }
+      
     } catch (error) {
-      console.error('Erreur lors de la validation du paiement:', error);
-      // Vous pouvez ajouter ici une notification d'erreur
+      console.error('❌ Erreur lors de la génération du bon d\'intervention:', error);
+      alert('❌ Erreur lors de la génération du bon d\'intervention. Veuillez réessayer.');
     }
   };
+
 
   const RepairCard: React.FC<{ repair: Repair }> = ({ repair }) => {
     const client = getClientById(repair.clientId);
     const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
     const technician = repair.assignedTechnicianId ? getUserById(repair.assignedTechnicianId) : null;
+    
     
     // Ne pas afficher le retard pour les réparations terminées ou restituées
     const isOverdue = (repair.status === 'completed' || repair.status === 'returned') 
@@ -1081,20 +1523,21 @@ const Kanban: React.FC = () => {
                       <PrintIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title={repair.isPaid ? "Annuler le paiement" : "Valider le paiement"}>
+                  <Tooltip title={repair.isPaid ? "Annuler la validation du paiement" : "Valider le paiement"}>
                     <IconButton 
                       size="small" 
-                      onClick={(e) => handlePaymentValidation(repair, e)}
+                      onClick={(e) => handleTogglePayment(repair, e)}
                       onMouseDown={(e) => e.stopPropagation()}
                       onTouchStart={(e) => e.stopPropagation()}
                       sx={{ 
                         color: repair.isPaid ? 'success.main' : 'warning.main',
                         '&:hover': {
                           backgroundColor: repair.isPaid ? 'success.light' : 'warning.light',
+                          color: 'white'
                         }
                       }}
                     >
-                      {repair.isPaid ? <CheckCircleIcon fontSize="small" /> : <PaymentIcon fontSize="small" />}
+                      {repair.isPaid ? <CheckCircleIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
                     </IconButton>
                   </Tooltip>
                 </>
@@ -1148,6 +1591,15 @@ const Kanban: React.FC = () => {
                 color="error"
               />
             )}
+            {(repair.status === 'completed' || repair.status === 'returned') && (
+              <Chip
+                icon={repair.isPaid ? <CheckCircleIcon /> : <ErrorOutlineIcon />}
+                label={repair.isPaid ? 'Payé' : 'Non payé'}
+                size="small"
+                color={repair.isPaid ? 'success' : 'error'}
+                variant={repair.isPaid ? 'filled' : 'outlined'}
+              />
+            )}
           </Box>
 
           {technician && (
@@ -1166,15 +1618,6 @@ const Kanban: React.FC = () => {
               <Typography variant="h6" color="primary">
                 {repair.totalPrice} € TTC
               </Typography>
-              {(repair.status === 'completed' || repair.status === 'returned') && (
-                <Chip
-                  label={repair.isPaid ? "Payé" : "Non payé"}
-                  size="small"
-                  color={repair.isPaid ? "success" : "warning"}
-                  variant="outlined"
-                  icon={repair.isPaid ? <CheckCircleIcon /> : <PaymentIcon />}
-                />
-              )}
             </Box>
             <Typography variant="caption" color="text.secondary">
               {safeFormatDate(repair.dueDate, 'dd/MM')}
@@ -1218,7 +1661,6 @@ const Kanban: React.FC = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   {status.name}
                 </Typography>
-                <Badge badgeContent={statusRepairs.length} color="primary" />
                 {isOverdue > 0 && (
                   <Badge badgeContent={isOverdue} color="error" />
                 )}
@@ -1321,117 +1763,559 @@ const Kanban: React.FC = () => {
       </DragDropContext>
 
       {/* Dialog d'édition */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="lg" fullWidth>
         <DialogTitle>Modifier la réparation</DialogTitle>
         <DialogContent>
-          {selectedRepair && (
-            <form id="edit-repair-form">
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    name="description"
-                    label="Description"
-                    multiline
-                    rows={3}
-                    defaultValue={selectedRepair.description}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Statut</InputLabel>
-                    <Select
-                      name="status"
-                      value={selectedRepair.status || ''}
-                      label="Statut"
-                      onChange={(e) => {
-                        if (selectedRepair) {
-                          setSelectedRepair({
-                            ...selectedRepair,
-                            status: e.target.value
-                          });
-                        }
-                      }}
-                    >
-                      {repairStatuses.map((status) => (
-                        <MenuItem key={status.id} value={status.id}>
-                          {status.name}
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Modifiez les informations de la réparation. Vous pouvez changer le client, l'appareil, les services et tous les autres paramètres.
+          </Alert>
+          
+          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
+            <Tab label="Réparation" />
+            <Tab label="Nouveau client" />
+            <Tab label="Nouveau modèle" />
+            <Tab label="Bon d'intervention" />
+          </Tabs>
+
+          {activeTab === 0 && (
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Client *</InputLabel>
+                  <Select
+                    label="Client *"
+                    value={editRepair.clientId || ''}
+                    onChange={(e) => handleEditRepairChange('clientId', e.target.value)}
+                  >
+                    {clients.map((client) => (
+                      <MenuItem key={client.id} value={client.id}>
+                        {client.firstName} {client.lastName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Modèle *</InputLabel>
+                  <Select
+                    label="Modèle *"
+                    value={editRepair.deviceId || ''}
+                    onChange={(e) => {
+                      handleEditRepairChange('deviceId', e.target.value);
+                      // Réinitialiser les services sélectionnés quand on change de modèle
+                      setEditRepair(prev => ({ ...prev, selectedServices: [] }));
+                    }}
+                    disabled={getFilteredModels().length === 0}
+                  >
+                    {getFilteredModels().map((model) => {
+                      const brandName = model.brandName || (model as any).brand || 'N/A';
+                      const modelName = model.model || 'N/A';
+                      const categoryName = model.categoryName || (model as any).type || 'N/A';
+                      
+                      return (
+                        <MenuItem key={model.id} value={model.id}>
+                          {brandName} {modelName} ({categoryName})
                         </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <FormControl fullWidth>
-                    <InputLabel>Technicien assigné</InputLabel>
-                    <Select
-                      name="assignedTechnicianId"
-                      value={selectedRepair.assignedTechnicianId || ''}
-                      label="Technicien assigné"
-                      onChange={(e) => {
-                        if (selectedRepair) {
-                          setSelectedRepair({
-                            ...selectedRepair,
-                            assignedTechnicianId: e.target.value || undefined
-                          });
-                        }
-                      }}
-                    >
-                      <MenuItem value="">Aucun</MenuItem>
-                      {users
-                        .filter(user => user.role === 'technician' || user.role === 'admin' || user.role === 'manager')
-                        .map((user) => (
-                          <MenuItem key={user.id} value={user.id}>
-                            {`${user.firstName} ${user.lastName}`}
-                          </MenuItem>
-                        ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    name="totalPrice"
-                    label="Prix total"
-                    type="number"
-                    defaultValue={selectedRepair.totalPrice}
-                    inputProps={{ min: 0, step: 0.01 }}
-                  />
-                </Grid>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Services associés au modèle</InputLabel>
+                  <Select
+                    multiple
+                    label="Services associés au modèle"
+                    value={editRepair.selectedServices}
+                    onChange={(e) => handleEditRepairChange('selectedServices', e.target.value)}
+                    disabled={!editRepair.deviceId || getServicesForEditModel().length === 0}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((serviceId) => {
+                          const service = getServicesForEditModel().find(s => s.id === serviceId);
+                          return service ? (
+                            <Chip 
+                              key={serviceId} 
+                              label={`${service.service_name || service.serviceName || 'Service'} - ${service.effective_price || service.effectivePrice || 0}€`} 
+                              size="small" 
+                            />
+                          ) : null;
+                        })}
+                      </Box>
+                    )}
+                  >
+                    {getServicesForEditModel().map((service) => (
+                      <MenuItem key={service.id} value={service.id}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {service.service_name || service.serviceName || 'Service'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {service.service_description || service.serviceDescription || ''}
+                          </Typography>
+                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
+                            <Typography variant="caption" color="primary">
+                              {service.effective_price || service.effectivePrice || 0}€
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {!editRepair.deviceId && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Sélectionnez d'abord un modèle d'appareil
+                    </Typography>
+                  )}
+                  {editRepair.deviceId && getServicesForEditModel().length === 0 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Aucun service associé à ce modèle
+                    </Typography>
+                  )}
+                  {editRepair.selectedServices.length > 0 && (
+                    <Box sx={{ mt: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Services sélectionnés: {editRepair.selectedServices.length}
+                      </Typography>
+                      <Typography variant="caption" color="primary" sx={{ ml: 1, fontWeight: 'bold' }}>
+                        Total: {getServicesForEditModel()
+                          .filter(s => editRepair.selectedServices.includes(s.id))
+                          .reduce((sum, s) => sum + (s.effective_price || s.effectivePrice || 0), 0)}€
+                      </Typography>
+                    </Box>
+                  )}
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Description du problème *"
+                  multiline
+                  rows={3}
+                  value={editRepair.description}
+                  onChange={(e) => handleEditRepairChange('description', e.target.value)}
+                  placeholder="Décrivez le problème rencontré..."
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Diagnostic initial"
+                  multiline
+                  rows={2}
+                  value={editRepair.issue}
+                  onChange={(e) => handleEditRepairChange('issue', e.target.value)}
+                  placeholder="Diagnostic préliminaire (optionnel)..."
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Prix estimé (€)"
+                  type="number"
+                  value={editRepair.totalPrice}
+                  onChange={(e) => handleEditRepairChange('totalPrice', parseFloat(e.target.value) || 0)}
+                />
+                {editRepair.selectedServices.length > 0 && (
+                  <Typography variant="caption" color="primary" sx={{ mt: 1, display: 'block' }}>
+                    Prix mis à jour automatiquement avec les services sélectionnés
+                  </Typography>
+                )}
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Réduction (%)"
+                  type="number"
+                  value={editRepair.discountPercentage}
+                  onChange={(e) => handleEditRepairChange('discountPercentage', Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                  inputProps={{ 
+                    min: 0,
+                    max: 100,
+                    step: 0.1
+                  }}
+                />
+                {editRepair.discountPercentage > 0 && (
+                  <Typography variant="caption" color="success.main" sx={{ mt: 1, display: 'block' }}>
+                    Prix final: {((editRepair.totalPrice * (100 - editRepair.discountPercentage)) / 100).toFixed(2)} €
+                  </Typography>
+                )}
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label="Date d'échéance"
+                  type="date"
+                  value={editRepair.dueDate}
+                  onChange={(e) => handleEditRepairChange('dueDate', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Statut initial</InputLabel>
+                  <Select
+                    label="Statut initial"
+                    value={editRepair.status || ''}
+                    onChange={(e) => handleEditRepairChange('status', e.target.value)}
+                  >
+                    {repairStatuses.map((status) => (
+                      <MenuItem key={status.id} value={status.id}>
+                        {status.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Technicien assigné</InputLabel>
+                  <Select
+                    label="Technicien assigné"
+                    value={editRepair.assignedTechnicianId || ''}
+                    onChange={(e) => handleEditRepairChange('assignedTechnicianId', e.target.value)}
+                  >
+                    <MenuItem value="">Aucun technicien</MenuItem>
+                    {getRepairEligibleUsers(users).map((user) => (
+                      <MenuItem key={user.id} value={user.id}>
+                        {getRepairUserDisplayName(user)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={editRepair.isUrgent}
+                      onChange={(e) => handleEditRepairChange('isUrgent', e.target.checked)}
+                    />
+                  }
+                  label="Réparation urgente"
+                />
+              </Grid>
+            </Grid>
+          )}
+
+          {/* Autres onglets - même contenu que le formulaire de création */}
+          {activeTab === 1 && (
+            <ClientForm 
+              open={true}
+              onClose={() => setActiveTab(0)}
+              onSubmit={async (newClient) => {
+                // Le client sera créé et l'ID sera disponible après la création
+                // Pour l'instant, on revient à l'onglet principal
+                setActiveTab(0);
+              }}
+              existingEmails={clients.map(c => c.email).filter(Boolean)}
+            />
+          )}
+
+          {activeTab === 2 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Créer un nouveau modèle d'appareil
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Cette fonctionnalité sera disponible prochainement.
+              </Typography>
+              <Button onClick={() => setActiveTab(0)} variant="outlined">
+                Retour à la réparation
+              </Button>
+            </Box>
+          )}
+
+          {activeTab === 3 && (
+            <Grid container spacing={3} sx={{ mt: 1 }}>
+              <Grid item xs={12}>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Configurez le bon d'intervention pour documenter l'état initial de l'appareil et les conditions de réparation.
+                </Alert>
+              </Grid>
+              
+              {/* Informations de base */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Nom du technicien"
+                  value={editInterventionData.technicianName}
+                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, technicianName: e.target.value }))}
+                  required
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Durée estimée"
+                  value={editInterventionData.estimatedDuration}
+                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, estimatedDuration: e.target.value }))}
+                  placeholder="ex: 2-3 jours"
+                />
+              </Grid>
+
+              {/* État de l'appareil */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="État de l'appareil"
+                  value={editInterventionData.deviceCondition}
+                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, deviceCondition: e.target.value }))}
+                  placeholder="Décrivez l'état général, dommages visibles, pièces manquantes..."
+                />
+              </Grid>
+
+              {/* Section Sécurité */}
+              <Grid item xs={12}>
+                <Typography variant="h6" sx={{ mb: 2, color: '#1976d2', borderBottom: '2px solid #1976d2', pb: 1 }}>
+                  🔐 Sécurité et Accès
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Type d'authentification</InputLabel>
+                  <Select
+                    value={editInterventionData.authType || ''}
+                    onChange={(e) => setEditInterventionData(prev => ({ ...prev, authType: e.target.value }))}
+                    label="Type d'authentification"
+                  >
+                    <MenuItem value="password">Mot de passe</MenuItem>
+                    <MenuItem value="pattern">Schéma de déverrouillage</MenuItem>
+                    <MenuItem value="pin">Code PIN</MenuItem>
+                    <MenuItem value="fingerprint">Empreinte digitale</MenuItem>
+                    <MenuItem value="face">Reconnaissance faciale</MenuItem>
+                    <MenuItem value="none">Aucun</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label="Code d'accès"
+                  value={editInterventionData.accessCode || ''}
+                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, accessCode: e.target.value }))}
+                  placeholder="Mot de passe, PIN, ou description"
+                  type="password"
+                />
+              </Grid>
+
+              {/* Schéma interactif */}
+              {editInterventionData.authType === 'pattern' && (
                 <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    name="issue"
-                    label="Problème"
-                    multiline
-                    rows={2}
-                    defaultValue={selectedRepair.issue || ''}
-                  />
+                  <Box sx={{ 
+                    p: 2, 
+                    border: '2px dashed #1976d2', 
+                    borderRadius: 2, 
+                    backgroundColor: '#f8f9fa',
+                    textAlign: 'center'
+                  }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: '#1976d2' }}>
+                      📱 Schéma de déverrouillage
+                    </Typography>
+                    
+                    <Box sx={{ 
+                      width: 150, 
+                      height: 150, 
+                      mx: 'auto',
+                      border: '2px solid #ccc',
+                      borderRadius: 2,
+                      backgroundColor: '#fff',
+                      mb: 2
+                    }}>
+                      <Box sx={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(3, 1fr)', 
+                        gap: 1,
+                        p: 2,
+                        height: '100%'
+                      }}>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((point) => (
+                          <Box
+                            key={point}
+                            sx={{
+                              width: 15,
+                              height: 15,
+                              borderRadius: '50%',
+                              backgroundColor: editInterventionData.patternPoints?.includes(point) ? '#1976d2' : '#e0e0e0',
+                              border: '2px solid #ccc',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '10px',
+                              fontWeight: 'bold',
+                              color: editInterventionData.patternPoints?.includes(point) ? 'white' : '#666',
+                              '&:hover': {
+                                backgroundColor: editInterventionData.patternPoints?.includes(point) ? '#1565c0' : '#f0f0f0',
+                              }
+                            }}
+                            onClick={() => {
+                              const currentPoints = editInterventionData.patternPoints || [];
+                              const newPoints = currentPoints.includes(point) 
+                                ? currentPoints.filter(p => p !== point)
+                                : [...currentPoints, point];
+                              setEditInterventionData(prev => ({ 
+                                ...prev, 
+                                patternPoints: newPoints,
+                                accessCode: `Schéma: ${newPoints.join('-')}`
+                              }));
+                            }}
+                          >
+                            {point}
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                    
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setEditInterventionData(prev => ({ 
+                        ...prev, 
+                        patternPoints: [],
+                        accessCode: '',
+                        patternDescription: ''
+                      }))}
+                    >
+                      Effacer le schéma
+                    </Button>
+                  </Box>
                 </Grid>
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    fullWidth
-                    name="dueDate"
-                    label="Date limite"
-                    type="date"
-                    defaultValue={selectedRepair.dueDate ? new Date(selectedRepair.dueDate).toISOString().split('T')[0] : ''}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
+              )}
+
+              {/* Confirmations */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <FormControlLabel
                     control={
                       <Checkbox
-                        name="isUrgent"
-                        defaultChecked={selectedRepair.isUrgent}
+                        checked={editInterventionData.dataBackup}
+                        onChange={(e) => setEditInterventionData(prev => ({ ...prev, dataBackup: e.target.checked }))}
                       />
                     }
-                    label="Urgent"
+                    label="Sauvegarde des données effectuée"
                   />
-                </Grid>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={editInterventionData.accessConfirmed}
+                        onChange={(e) => setEditInterventionData(prev => ({ ...prev, accessConfirmed: e.target.checked }))}
+                      />
+                    }
+                    label="Accès testé et confirmé"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={editInterventionData.clientAuthorizesRepair}
+                        onChange={(e) => setEditInterventionData(prev => ({ ...prev, clientAuthorizesRepair: e.target.checked }))}
+                      />
+                    }
+                    label="Client autorise la réparation"
+                  />
+                </Box>
               </Grid>
-            </form>
+
+              {/* Diagnostic */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Diagnostic et solution proposée"
+                  value={editInterventionData.initialDiagnosis}
+                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, initialDiagnosis: e.target.value }))}
+                  placeholder="Décrivez le problème et la solution..."
+                />
+              </Grid>
+
+              {/* Notes */}
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={2}
+                  label="Notes additionnelles"
+                  value={editInterventionData.additionalNotes}
+                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, additionalNotes: e.target.value }))}
+                  placeholder="Informations importantes, risques, etc."
+                />
+              </Grid>
+
+              {/* Conditions */}
+              <Grid item xs={12}>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Important :</strong> Le client accepte les conditions de réparation et les risques potentiels.
+                  </Typography>
+                </Alert>
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={editInterventionData.termsAccepted}
+                      onChange={(e) => setEditInterventionData(prev => ({ ...prev, termsAccepted: e.target.checked }))}
+                      required
+                    />
+                  }
+                  label="J'accepte les conditions de réparation"
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={editInterventionData.liabilityAccepted}
+                      onChange={(e) => setEditInterventionData(prev => ({ ...prev, liabilityAccepted: e.target.checked }))}
+                      required
+                    />
+                  }
+                  label="Je comprends et accepte les clauses de responsabilité"
+                />
+              </Grid>
+
+              {/* Bouton de génération */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<PrintIcon />}
+                    onClick={handleGenerateInterventionFromEditTab}
+                    disabled={!editInterventionData.technicianName || !editInterventionData.termsAccepted || !editInterventionData.liabilityAccepted}
+                    sx={{ 
+                      backgroundColor: '#1976d2',
+                      '&:hover': {
+                        backgroundColor: '#1565c0',
+                      },
+                      px: 4,
+                      py: 1.5
+                    }}
+                  >
+                    Générer le Bon d'Intervention
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
           )}
         </DialogContent>
         <DialogActions>
@@ -1539,14 +2423,21 @@ const Kanban: React.FC = () => {
                   <Select 
                     label="Modèle *"
                     value={newRepair.deviceId || ''}
-                    onChange={(e) => handleNewRepairChange('deviceId', e.target.value)}
+                    onChange={(e) => {
+                      handleNewRepairChange('deviceId', e.target.value);
+                      // Réinitialiser les services sélectionnés quand on change de modèle
+                      setNewRepair(prev => ({ ...prev, selectedServices: [] }));
+                    }}
                     disabled={getFilteredModels().length === 0}
                   >
                     {getFilteredModels().map((model) => {
-                      // Utiliser directement brand et type du modèle
-                      const brandName = (model as any).brand || 'N/A';
-                      const modelName = model.model || 'N/A';
-                      const categoryName = (model as any).type || 'N/A';
+                      // Debug: Afficher la structure du modèle
+                      console.log('🔍 Modèle debug:', model);
+                      
+                      // Utiliser les propriétés avec fallbacks pour compatibilité
+                      const brandName = model.brandName || (model as any).brand || 'N/A';
+                      const modelName = model.model || (model as any).name || 'N/A';
+                      const categoryName = model.categoryName || (model as any).type || 'N/A';
                       
                       return (
                         <MenuItem key={model.id} value={model.id}>
@@ -1559,6 +2450,74 @@ const Kanban: React.FC = () => {
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                       Aucun modèle trouvé avec les filtres sélectionnés
                     </Typography>
+                  )}
+                </FormControl>
+              </Grid>
+              
+              {/* Sélection des services associés au modèle */}
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel>Services associés au modèle</InputLabel>
+                  <Select
+                    multiple
+                    label="Services associés au modèle"
+                    value={newRepair.selectedServices}
+                    onChange={(e) => handleNewRepairChange('selectedServices', e.target.value)}
+                    disabled={!newRepair.deviceId || getServicesForSelectedModel().length === 0}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.map((serviceId) => {
+                  const service = getServicesForSelectedModel().find(s => s.id === serviceId);
+                  return service ? (
+                    <Chip 
+                      key={serviceId} 
+                      label={`${service.service_name || service.serviceName || 'Service'} - ${service.effective_price || service.effectivePrice || 0}€`} 
+                      size="small" 
+                    />
+                  ) : null;
+                })}
+                      </Box>
+                    )}
+                  >
+            {getServicesForSelectedModel().map((service) => (
+              <MenuItem key={service.id} value={service.id}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    {service.service_name || service.serviceName || 'Service'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {service.service_description || service.serviceDescription || ''}
+                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
+                    <Typography variant="caption" color="primary">
+                      {service.effective_price || service.effectivePrice || 0}€
+                    </Typography>
+                  </Box>
+                </Box>
+              </MenuItem>
+            ))}
+                  </Select>
+                  {!newRepair.deviceId && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Sélectionnez d'abord un modèle d'appareil
+                    </Typography>
+                  )}
+                  {newRepair.deviceId && getServicesForSelectedModel().length === 0 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Aucun service associé à ce modèle
+                    </Typography>
+                  )}
+                  {newRepair.selectedServices.length > 0 && (
+                    <Box sx={{ mt: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Services sélectionnés: {newRepair.selectedServices.length}
+                      </Typography>
+              <Typography variant="caption" color="primary" sx={{ ml: 1, fontWeight: 'bold' }}>
+                Total: {getServicesForSelectedModel()
+                  .filter(s => newRepair.selectedServices.includes(s.id))
+                  .reduce((sum, s) => sum + (s.effective_price || s.effectivePrice || 0), 0)}€
+              </Typography>
+                    </Box>
                   )}
                 </FormControl>
               </Grid>
@@ -1595,6 +2554,11 @@ const Kanban: React.FC = () => {
                   value={newRepair.totalPrice}
                   onChange={(e) => handleNewRepairChange('totalPrice', parseFloat(e.target.value) || 0)}
                 />
+                {newRepair.selectedServices.length > 0 && (
+                  <Typography variant="caption" color="primary" sx={{ mt: 1, display: 'block' }}>
+                    Prix mis à jour automatiquement avec les services sélectionnés
+                  </Typography>
+                )}
               </Grid>
               
               <Grid item xs={12} md={4}>
@@ -2127,28 +3091,7 @@ const Kanban: React.FC = () => {
           <DialogContent>
             <Invoice
               open={invoiceOpen}
-              sale={{
-                id: selectedRepairForInvoice.id,
-                clientId: selectedRepairForInvoice.clientId,
-                                  items: [
-                    {
-                      id: '1',
-                      type: 'service',
-                      itemId: selectedRepairForInvoice.id,
-                      name: `Réparation - ${selectedRepairForInvoice.description}`,
-                      quantity: 1,
-                      unitPrice: selectedRepairForInvoice.totalPrice / (1 + getVatRate()), // Prix HT
-                      totalPrice: selectedRepairForInvoice.totalPrice / (1 + getVatRate()), // Prix HT
-                    }
-                  ],
-                subtotal: selectedRepairForInvoice.totalPrice / (1 + getVatRate()), // Prix HT calculé depuis le prix TTC
-                tax: selectedRepairForInvoice.totalPrice - (selectedRepairForInvoice.totalPrice / (1 + getVatRate())), // TVA calculée
-                total: selectedRepairForInvoice.totalPrice, // Prix TTC (prix affiché)
-                paymentMethod: 'card',
-                status: 'completed',
-                createdAt: selectedRepairForInvoice.createdAt,
-                updatedAt: selectedRepairForInvoice.updatedAt,
-              }}
+              repair={selectedRepairForInvoice}
               client={getClientById(selectedRepairForInvoice.clientId)}
               onClose={closeInvoice}
             />

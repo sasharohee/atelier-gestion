@@ -176,6 +176,7 @@ export interface Repair {
   discountAmount?: number;
   originalPrice?: number;
   isPaid: boolean;
+  source?: 'kanban' | 'sav'; // Source de création de la réparation
   createdAt: Date;
   updatedAt: Date;
 }
@@ -442,3 +443,61 @@ export interface ExpenseStats {
   pending: number;
   paid: number;
 }
+
+// Types pour le SAV (Service Après-Vente)
+export interface WorkTimer {
+  id: string;
+  repairId: string;
+  startTime: Date;
+  endTime?: Date;
+  pausedTime?: number; // Temps total de pause en millisecondes
+  totalDuration: number; // Durée totale en millisecondes
+  isPaused: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RepairLog {
+  id: string;
+  repairId: string;
+  action: string;
+  description?: string;
+  userId: string;
+  userName: string;
+  timestamp: Date;
+  metadata?: Record<string, any>;
+}
+
+export type PrintTemplateType = 'label' | 'work_order' | 'deposit_receipt' | 'invoice' | 'complete_ticket';
+
+export interface PrintTemplate {
+  type: PrintTemplateType;
+  data: {
+    repair: Repair;
+    client: Client;
+    device?: Device | null;
+    technician?: User | null;
+    workshopInfo?: {
+      name: string;
+      address: string;
+      phone: string;
+      email: string;
+    };
+  };
+}
+
+export interface SAVStats {
+  totalRepairs: number;
+  newRepairs: number;
+  inProgressRepairs: number;
+  waitingPartsRepairs: number;
+  completedRepairs: number;
+  urgentRepairs: number;
+  overdueRepairs: number;
+  averageDuration: number; // en minutes
+  completionRate: number; // en pourcentage
+}
+
+// Re-export des types pour les services par modèle
+export * from './deviceModelService';

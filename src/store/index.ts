@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '../lib/supabase';
 import {
   User,
   SystemSetting,
@@ -25,6 +26,7 @@ import {
   ExpenseStats
 } from '../types';
 import { DeviceCategory, DeviceBrand, DeviceModel } from '../types/deviceManagement';
+import { DeviceModelService, DeviceModelServiceDetailed, CreateDeviceModelServiceData, UpdateDeviceModelServiceData } from '../types/deviceModelService';
 import {
   userService,
   systemSettingsService,
@@ -41,6 +43,7 @@ import {
   dashboardService,
   expenseService,
 } from '../services/supabaseService';
+import { deviceModelServiceService } from '../services/deviceModelServiceService';
 
 // Helper function to convert Supabase user to app user
 const convertSupabaseUser = (supabaseUser: any): User => ({
@@ -85,6 +88,9 @@ interface AppState {
   deviceBrands: DeviceBrand[];
   deviceModels: DeviceModel[];
   
+  // Services par modèle
+  deviceModelServices: DeviceModelServiceDetailed[];
+  
   // Filtres et recherche
   repairFilters: RepairFilters;
   searchQuery: string;
@@ -124,6 +130,14 @@ interface AppActions {
   addDeviceModel: (model: Omit<DeviceModel, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateDeviceModel: (id: string, updates: Partial<DeviceModel>) => Promise<void>;
   deleteDeviceModel: (id: string) => Promise<void>;
+  
+  // Services par modèle
+  loadDeviceModelServices: () => Promise<void>;
+  addDeviceModelService: (data: CreateDeviceModelServiceData) => Promise<void>;
+  updateDeviceModelService: (id: string, data: UpdateDeviceModelServiceData) => Promise<void>;
+  deleteDeviceModelService: (id: string) => Promise<void>;
+  getServicesForModel: (modelId: string) => DeviceModelServiceDetailed[];
+  getServicesForBrandAndCategory: (brandId: string, categoryId: string) => DeviceModelServiceDetailed[];
   
   // Getters utilitaires
   getDeviceCategories: () => DeviceCategory[];
@@ -172,7 +186,7 @@ interface AppActions {
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   
-  addRepair: (repair: Repair) => Promise<void>;
+  addRepair: (repair: Repair, source?: 'kanban' | 'sav') => Promise<void>;
   updateRepair: (id: string, updates: Partial<Repair>) => Promise<void>;
   deleteRepair: (id: string) => Promise<void>;
   
@@ -214,6 +228,7 @@ interface AppActions {
   loadParts: () => Promise<void>;
   loadProducts: () => Promise<void>;
   loadRepairs: () => Promise<void>;
+  updateRepairPaymentStatus: (repairId: string, isPaid: boolean) => Promise<void>;
   loadSales: () => Promise<void>;
   loadAppointments: () => Promise<void>;
   loadStockAlerts: () => Promise<void>;
@@ -275,6 +290,9 @@ export const useAppStore = create<AppStore>()(
       parts: [],
       products: [],
       repairs: [],
+      
+      // Services par modèle
+      deviceModelServices: [],
       
       // Données de gestion des appareils (initialisées avec les données par défaut)
       deviceCategories: [
@@ -773,7 +791,25 @@ export const useAppStore = create<AppStore>()(
             console.log('🎉 STORE - Client ajouté avec succès!');
           } else {
             console.error('❌ STORE - Échec de la création du client:', result);
-            throw new Error('Échec de la création du client');
+            
+            // Extraire le message d'erreur et le rendre plus convivial
+            let errorMessage = 'Échec de la création du client';
+            
+            if (result.error) {
+              const errorText = result.error.toLowerCase();
+              
+              // Détecter l'erreur de duplicate email
+              if (errorText.includes('duplicate key') && errorText.includes('email')) {
+                errorMessage = 'Un client avec cet email existe déjà. Veuillez utiliser un autre email ou modifier le client existant.';
+              } else if (errorText.includes('unique constraint')) {
+                errorMessage = 'Cette information existe déjà dans le système. Veuillez vérifier vos données.';
+              } else {
+                // Utiliser le message d'erreur original s'il est informatif
+                errorMessage = result.error;
+              }
+            }
+            
+            throw new Error(errorMessage);
           }
         } catch (error) {
           console.error('💥 STORE - Erreur lors de l\'ajout du client:', error);
@@ -1171,9 +1207,9 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
-      addRepair: async (repair) => {
+      addRepair: async (repair, source: 'kanban' | 'sav' = 'kanban') => {
         try {
-          const result = await repairService.create(repair);
+          const result = await repairService.create(repair, source);
           if (result.success && 'data' in result && result.data) {
             // Transformer les données de Supabase vers le format de l'application
             const transformedRepair: Repair = {
@@ -1198,6 +1234,7 @@ export const useAppStore = create<AppStore>()(
               totalPrice: result.data.total_price || 0,
               isPaid: result.data.is_paid || false,
               repairNumber: result.data.repair_number, // ✅ Ajout du numéro de réparation
+              source: result.data.source || 'kanban', // Source de création
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
               updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
             };
@@ -1213,11 +1250,38 @@ export const useAppStore = create<AppStore>()(
         try {
           console.log('🔄 updateRepair appelé avec:', { id, updates });
           
-          const result = await repairService.update(id, updates);
-          console.log('📥 Résultat du service:', result);
+          // Vérifier que updates n'est pas undefined
+          if (!updates) {
+            console.error('❌ updates est undefined');
+            return;
+          }
+          
+          // Gérer isPaid séparément si présent
+          const { isPaid, ...updatesWithoutPayment } = updates;
+          
+          // Mettre à jour la réparation avec les champs non-paiement
+          let result;
+          if (Object.keys(updatesWithoutPayment).length > 0) {
+            result = await repairService.update(id, updatesWithoutPayment);
+            console.log('📥 Résultat du service (sans isPaid):', result);
+          } else {
+            // Si seulement isPaid est mis à jour, récupérer les données actuelles
+            const currentRepair = get().repairs.find(r => r.id === id);
+            if (!currentRepair) {
+              console.error('❌ Réparation non trouvée:', id);
+              return;
+            }
+            result = { success: true, data: currentRepair };
+          }
           
           if (result.success && 'data' in result && result.data) {
             console.log('✅ Données reçues du service:', result.data);
+            
+            // Utiliser isPaid des updates s'il est fourni, sinon garder l'actuel
+            const paymentStatus = isPaid !== undefined ? isPaid : (get().repairs.find(r => r.id === id)?.isPaid || false);
+            console.log('💳 Statut de paiement actuel conservé:', paymentStatus);
+            console.log('💳 isPaid des updates:', isPaid);
+            console.log('💳 paymentStatus final:', paymentStatus);
             
             // Transformer les données de Supabase vers le format de l'application
             const transformedRepair: Repair = {
@@ -1240,20 +1304,34 @@ export const useAppStore = create<AppStore>()(
               services: [], // Tableau vide par défaut
               parts: [], // Tableau vide par défaut
               totalPrice: result.data.total_price,
-              isPaid: result.data.is_paid,
+              isPaid: paymentStatus, // Utiliser le statut de paiement récupéré depuis la table séparée
               repairNumber: result.data.repair_number, // ✅ Ajout du numéro de réparation
+              source: result.data.source || 'kanban', // Source de création
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
               updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
             };
             
             console.log('🔄 Réparation transformée:', transformedRepair);
+            console.log('💳 isPaid dans transformedRepair:', transformedRepair.isPaid);
             
             set((state) => {
               console.log('📊 État actuel des réparations:', state.repairs.length);
+              
+              // Vérifier si la réparation existe dans l'état actuel
+              const currentRepair = state.repairs.find(r => r.id === id);
+              console.log('🔍 Réparation actuelle trouvée:', currentRepair ? 'OUI' : 'NON');
+              console.log('🔍 isPaid actuel:', currentRepair?.isPaid);
+              
               const updatedRepairs = state.repairs.map(repair => 
                 repair.id === id ? transformedRepair : repair
               );
               console.log('📊 Nouvelles réparations:', updatedRepairs.length);
+              
+              // Vérifier que la réparation a bien été mise à jour
+              const updatedRepair = updatedRepairs.find(r => r.id === id);
+              console.log('💳 Réparation mise à jour dans le store:', updatedRepair?.isPaid);
+              console.log('💳 Comparaison - Avant:', currentRepair?.isPaid, 'Après:', updatedRepair?.isPaid);
+              
               return { repairs: updatedRepairs };
             });
             
@@ -1781,22 +1859,9 @@ export const useAppStore = create<AppStore>()(
         try {
           const result = await deviceModelService.getAll();
           if (result.success && 'data' in result && result.data) {
-            // Transformer les données de Supabase vers le format de l'application
-            const transformedModels = result.data.map((model: any) => ({
-              id: model.id,
-              brand: model.brand,
-              model: model.model,
-              type: model.type,
-              year: model.year || new Date().getFullYear(),
-              specifications: model.specifications || {},
-              commonIssues: model.commonIssues || [],
-              repairDifficulty: model.repairDifficulty || 'medium',
-              partsAvailability: model.partsAvailability || 'medium',
-              isActive: model.isActive !== undefined ? model.isActive : true,
-              createdAt: model.createdAt ? new Date(model.createdAt) : new Date(),
-              updatedAt: model.updatedAt ? new Date(model.updatedAt) : new Date(),
-            }));
-            set({ deviceModels: transformedModels });
+            // Utiliser directement les données transformées par le service
+            // qui incluent déjà brandName et categoryName
+            set({ deviceModels: result.data });
           }
         } catch (error) {
           console.error('Erreur lors du chargement des modèles:', error);
@@ -1909,6 +1974,28 @@ export const useAppStore = create<AppStore>()(
           }
         } catch (error) {
           console.error('Erreur lors du chargement des réparations:', error);
+        }
+      },
+
+      updateRepairPaymentStatus: async (repairId: string, isPaid: boolean) => {
+        try {
+          // Utiliser la fonction spécialisée qui évite les triggers de fidélité
+          const result = await repairService.updatePaymentStatus(repairId, isPaid);
+          
+          if (result.success) {
+            // Mettre à jour l'état local seulement si la sauvegarde a réussi
+            set((state) => ({
+              repairs: state.repairs.map(repair => 
+                repair.id === repairId ? { ...repair, isPaid, updatedAt: new Date() } : repair
+              )
+            }));
+            console.log('✅ Statut de paiement mis à jour avec succès');
+          } else {
+            throw new Error('Échec de la mise à jour en base de données');
+          }
+        } catch (error) {
+          console.error('Erreur lors de la mise à jour du statut de paiement:', error);
+          throw error;
         }
       },
       
@@ -2331,6 +2418,83 @@ export const useAppStore = create<AppStore>()(
       },
       
       // getExpenseCategoryById - SUPPRIMÉ
+      
+      // Services par modèle
+      loadDeviceModelServices: async () => {
+        try {
+          const result = await deviceModelServiceService.getAll();
+          if (result.success && 'data' in result && result.data) {
+            set({ deviceModelServices: result.data });
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement des services par modèle:', error);
+        }
+      },
+      
+      addDeviceModelService: async (data) => {
+        try {
+          const result = await deviceModelServiceService.create(data);
+          if (result.success && 'data' in result && result.data) {
+            // Recharger toutes les associations pour avoir les données complètes
+            await get().loadDeviceModelServices();
+          } else {
+            throw new Error(result.error || 'Erreur lors de la création');
+          }
+        } catch (error: any) {
+          console.error('Erreur lors de la création de l\'association:', error);
+          throw error;
+        }
+      },
+      
+      updateDeviceModelService: async (id, data) => {
+        try {
+          const result = await deviceModelServiceService.update(id, data);
+          if (result.success && 'data' in result && result.data) {
+            set((state) => ({
+              deviceModelServices: state.deviceModelServices.map(service =>
+                service.id === id ? { ...service, ...result.data } : service
+              )
+            }));
+          } else {
+            throw new Error(result.error || 'Erreur lors de la mise à jour');
+          }
+        } catch (error: any) {
+          console.error('Erreur lors de la mise à jour de l\'association:', error);
+          throw error;
+        }
+      },
+      
+      deleteDeviceModelService: async (id) => {
+        try {
+          const result = await deviceModelServiceService.delete(id);
+          if (result.success) {
+            set((state) => ({
+              deviceModelServices: state.deviceModelServices.filter(service => service.id !== id)
+            }));
+          } else {
+            throw new Error(result.error || 'Erreur lors de la suppression');
+          }
+        } catch (error: any) {
+          console.error('Erreur lors de la suppression de l\'association:', error);
+          throw error;
+        }
+      },
+      
+      getServicesForModel: (modelId) => {
+        const state = get();
+        return state.deviceModelServices.filter(service => 
+          service.deviceModelId === modelId && service.isActive
+        );
+      },
+      
+      getServicesForBrandAndCategory: (brandId, categoryId) => {
+        const state = get();
+        return state.deviceModelServices.filter(service => 
+          service.brandId === brandId && 
+          service.categoryId === categoryId && 
+          service.isActive
+        );
+      }
     }),
     {
       name: 'atelier-store',

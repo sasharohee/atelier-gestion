@@ -15,6 +15,7 @@ import {
   LinearProgress,
   Divider,
   Alert,
+  Badge,
 } from '@mui/material';
 
 import {
@@ -29,6 +30,7 @@ import {
   Laptop as LaptopIcon,
   Tablet as TabletIcon,
   Computer as ComputerIcon,
+  NewReleases as NewReleasesIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -37,6 +39,8 @@ import { deviceTypeColors, repairStatusColors } from '../../theme';
 // import AppStatus from '../../components/AppStatus'; // MASQUÉ
 // import SupabaseTest from '../../components/SupabaseTest'; // MASQUÉ
 import { demoDataService } from '../../services/demoDataService';
+import WhatsNewButton from '../../components/WhatsNewButton';
+import { whatsNewItems } from '../../config/whatsNew';
 
 // Styles CSS pour les animations
 const pulseAnimation = `
@@ -59,6 +63,7 @@ const pulseAnimation = `
 const Dashboard: React.FC = () => {
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [unreadNewsCount, setUnreadNewsCount] = useState(0);
   
   // Ajouter les styles CSS pour l'animation
   useEffect(() => {
@@ -69,6 +74,30 @@ const Dashboard: React.FC = () => {
     return () => {
       document.head.removeChild(style);
     };
+  }, []);
+
+  // Calculer le nombre de nouveautés non lues
+  useEffect(() => {
+    const calculateUnreadCount = () => {
+      try {
+        const lastReadDate = localStorage.getItem('app-atelier-last-read-news');
+        if (!lastReadDate) {
+          setUnreadNewsCount(whatsNewItems.length);
+          return;
+        }
+
+        const lastRead = new Date(lastReadDate);
+        const unreadItems = whatsNewItems.filter(item => 
+          new Date(item.date) > lastRead
+        );
+        setUnreadNewsCount(unreadItems.length);
+      } catch (error) {
+        console.error('Erreur lors du calcul des nouveautés non lues:', error);
+        setUnreadNewsCount(0);
+      }
+    };
+
+    calculateUnreadCount();
   }, []);
 
   const {
@@ -378,18 +407,59 @@ const Dashboard: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Vue d'ensemble de votre atelier - {format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}
         </Typography>
-        <Button 
-          variant="outlined" 
-          size="small"
-          onClick={async () => {
-            console.log('🔄 Rechargement forcé des données...');
-            await loadRepairs();
-            console.log('✅ Données rechargées');
-          }}
-          sx={{ mt: 1 }}
-        >
-          🔄 Recharger les données
-        </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+          <Button 
+            variant="outlined" 
+            size="small"
+            onClick={async () => {
+              console.log('🔄 Rechargement forcé des données...');
+              await loadRepairs();
+              console.log('✅ Données rechargées');
+            }}
+          >
+            🔄 Recharger les données
+          </Button>
+          <Badge
+            badgeContent={unreadNewsCount}
+            color="error"
+            sx={{
+              '& .MuiBadge-badge': {
+                backgroundColor: '#ff4757',
+                color: 'white',
+                fontWeight: 600,
+                fontSize: '0.7rem',
+                minWidth: 18,
+                height: 18,
+                borderRadius: '50%',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              },
+            }}
+          >
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<NewReleasesIcon />}
+              onClick={() => {
+                // Ouvrir la modal des nouveautés
+                const event = new CustomEvent('openWhatsNew');
+                window.dispatchEvent(event);
+              }}
+              sx={{
+                backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                },
+                transition: 'all 0.2s ease-in-out',
+              }}
+            >
+              Nouveautés
+            </Button>
+          </Badge>
+        </Box>
       </Box>
 
       {/* Statistiques principales */}

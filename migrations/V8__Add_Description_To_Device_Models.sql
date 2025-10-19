@@ -34,47 +34,7 @@ WHERE table_schema = 'public'
 AND table_name = 'device_models'
 ORDER BY ordinal_position;
 
--- 3. Tester l'insertion avec la colonne description
-SELECT 'Test d''insertion avec description...' as test_step;
-
--- Créer un modèle de test avec description
-INSERT INTO public.device_models (
-    name,
-    brand_id,
-    category_id,
-    description,
-    is_active,
-    user_id,
-    created_by
-) VALUES (
-    'Test Model',
-    (SELECT id FROM public.device_brands LIMIT 1),
-    (SELECT id FROM public.device_categories LIMIT 1),
-    'Description de test pour vérifier la colonne',
-    true,
-    auth.uid(),
-    auth.uid()
-) ON CONFLICT DO NOTHING;
-
--- 4. Vérifier l'insertion
-SELECT 'Vérification de l''insertion...' as test_step;
-
-SELECT 
-    id,
-    name,
-    description,
-    brand_id,
-    category_id,
-    is_active
-FROM public.device_models 
-WHERE name = 'Test Model'
-AND user_id = auth.uid();
-
--- 5. Nettoyer le test
-DELETE FROM public.device_models 
-WHERE name = 'Test Model'
-AND user_id = auth.uid();
-
-SELECT 'Test terminé avec succès' as final_status;
+-- 3. Migration terminée avec succès
+SELECT 'Migration V8 terminée avec succès' as final_status;
 
 

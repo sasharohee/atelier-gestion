@@ -5,6 +5,8 @@ import { DeviceCategory, DeviceBrand, DeviceModel } from '../../types/deviceMana
 import { deviceCategoryService } from '../../services/deviceCategoryService';
 import { brandService, BrandWithCategories, CreateBrandData, UpdateBrandData } from '../../services/brandService';
 import { deviceModelService } from '../../services/deviceModelService';
+import { deviceModelServiceService } from '../../services/deviceModelServiceService';
+import { DeviceModelServiceDetailed, CreateDeviceModelServiceData, UpdateDeviceModelServiceData } from '../../types/deviceModelService';
 import {
   Box,
   Typography,
@@ -69,6 +71,7 @@ import {
   ModelTraining as ModelIcon,
   Inventory as InventoryIcon,
   Settings as SettingsIcon,
+  Build as BuildIcon,
 } from '@mui/icons-material';
 import CategoryIconDisplay from '../../components/CategoryIconDisplay';
 import CategoryIconGrid from '../../components/CategoryIconGrid';
@@ -100,6 +103,7 @@ const DeviceManagement: React.FC = () => {
   const [allCategories, setAllCategories] = useState<DeviceCategory[]>([]);
   const [allBrands, setAllBrands] = useState<BrandWithCategories[]>([]);
   const [allModels, setAllModels] = useState<DeviceModel[]>([]);
+  const [allDeviceModelServices, setAllDeviceModelServices] = useState<DeviceModelServiceDetailed[]>([]);
   
   // États pour les filtres et recherche
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,13 +111,21 @@ const DeviceManagement: React.FC = () => {
   const [selectedCategoryForModels, setSelectedCategoryForModels] = useState<string>('');
   const [selectedBrandForModels, setSelectedBrandForModels] = useState<string>('');
   
+  // États pour les services par modèle
+  const [selectedCategoryForServices, setSelectedCategoryForServices] = useState<string>('');
+  const [selectedBrandForServices, setSelectedBrandForServices] = useState<string>('');
+  
   // États pour les dialogues
   const [activeTab, setActiveTab] = useState(0);
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteItem, setDeleteItem] = useState<{ type: 'brand' | 'category' | 'model'; item: any } | null>(null);
+  const [deleteItem, setDeleteItem] = useState<{ type: 'brand' | 'category' | 'model' | 'service'; item: any } | null>(null);
+  
+  // États pour les dialogues des services par modèle
+  const [serviceAssociationDialogOpen, setServiceAssociationDialogOpen] = useState(false);
+  const [selectedModelForService, setSelectedModelForService] = useState<DeviceModel | null>(null);
   
   // États pour les formulaires
   const [selectedBrand, setSelectedBrand] = useState<BrandWithCategories | null>(null);
@@ -137,6 +149,14 @@ const DeviceManagement: React.FC = () => {
     brandId: '',
     categoryId: '',
     isActive: true,
+  });
+  
+  // États pour les formulaires des services par modèle
+  const [newServiceAssociation, setNewServiceAssociation] = useState<CreateDeviceModelServiceData>({
+    deviceModelId: '',
+    serviceId: '',
+    customPrice: undefined,
+    customDuration: undefined,
   });
   
   // États pour le chargement
@@ -173,6 +193,33 @@ const DeviceManagement: React.FC = () => {
       } else {
         console.warn('⚠️ Aucun modèle trouvé ou erreur:', modelsResult.error);
         setAllModels([]);
+      }
+      
+      // Charger les services par modèle
+      const servicesResult = await deviceModelServiceService.getAll();
+      if (servicesResult.success && servicesResult.data) {
+        setAllDeviceModelServices(servicesResult.data);
+        console.log('🔍 allDeviceModelServices:', servicesResult.data);
+        console.log('🔍 Premier élément:', servicesResult.data[0]);
+        if (servicesResult.data[0]) {
+          console.log('🔍 Détails du premier élément:');
+          console.log('  - modelName:', servicesResult.data[0].modelName);
+          console.log('  - brandName:', servicesResult.data[0].brandName);
+          console.log('  - categoryName:', servicesResult.data[0].categoryName);
+          console.log('  - serviceName:', servicesResult.data[0].serviceName);
+          console.log('  - effectivePrice:', servicesResult.data[0].effectivePrice);
+          console.log('  - effectiveDuration:', servicesResult.data[0].effectiveDuration);
+          console.log('🔍 Avec underscores:');
+          console.log('  - model_name:', servicesResult.data[0].model_name);
+          console.log('  - brand_name:', servicesResult.data[0].brand_name);
+          console.log('  - category_name:', servicesResult.data[0].category_name);
+          console.log('  - service_name:', servicesResult.data[0].service_name);
+          console.log('  - effective_price:', servicesResult.data[0].effective_price);
+          console.log('  - effective_duration:', servicesResult.data[0].effective_duration);
+        }
+      } else {
+        console.warn('⚠️ Aucun service par modèle trouvé ou erreur:', servicesResult.error);
+        setAllDeviceModelServices([]);
       }
       
       console.log('✅ Données chargées avec succès');
@@ -528,10 +575,72 @@ const DeviceManagement: React.FC = () => {
     setDeleteItem(null);
   };
 
+  // Fonctions pour les services par modèle
+  const handleCreateServiceAssociation = async () => {
+    try {
+      setLoading(true);
+      
+      const result = await deviceModelServiceService.create(newServiceAssociation);
+      if (result.success) {
+        // Recharger les données
+        await loadData();
+        setServiceAssociationDialogOpen(false);
+        resetServiceAssociationForm();
+        console.log('✅ Association service-modèle créée avec succès');
+      } else {
+        throw new Error(result.error || 'Erreur lors de la création');
+      }
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la création de l\'association:', error);
+      setError(error.message || 'Erreur lors de la création de l\'association');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteServiceAssociation = async (association: DeviceModelServiceDetailed) => {
+    try {
+      setLoading(true);
+      
+      await deviceModelServiceService.delete(association.id);
+      
+      // Mettre à jour la liste
+      await loadData();
+      
+      console.log('✅ Association supprimée avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors de la suppression de l\'association:', error);
+      setError('Erreur lors de la suppression de l\'association');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetServiceAssociationForm = () => {
+    setNewServiceAssociation({
+      deviceModelId: '',
+      serviceId: '',
+      customPrice: undefined,
+      customDuration: undefined,
+    });
+    setSelectedModelForService(null);
+  };
+
+  const openServiceAssociationDialog = (model: DeviceModel) => {
+    setSelectedModelForService(model);
+    setNewServiceAssociation({
+      deviceModelId: model.id,
+      serviceId: '',
+      customPrice: undefined,
+      customDuration: undefined,
+    });
+    setServiceAssociationDialogOpen(true);
+  };
+
   // Filtrer les marques
   const filteredBrands = (allBrands || []).filter(brand => {
-    const matchesSearch = brand.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         brand.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (brand.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (brand.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesCategory = !selectedCategoryForBrands || 
                            brand.categories.some(cat => cat.id === selectedCategoryForBrands);
@@ -549,7 +658,7 @@ const DeviceManagement: React.FC = () => {
 
   // Obtenir l'icône pour une catégorie
   const getCategoryIcon = (categoryName: string, iconValue?: string) => {
-    const iconType = iconValue || categoryName.toLowerCase().replace(/\s+/g, '-');
+    const iconType = iconValue || (categoryName || '').toLowerCase().replace(/\s+/g, '-');
     return <CategoryIconDisplay iconType={iconType} size={20} />;
   };
 
@@ -586,6 +695,7 @@ const DeviceManagement: React.FC = () => {
           <Tab label="Marques" icon={<BrandingIcon />} />
           <Tab label="Catégories" icon={<CategoryIcon />} />
           <Tab label="Modèles" icon={<ModelIcon />} />
+          <Tab label="Services par modèle" icon={<BuildIcon />} />
         </Tabs>
       </Paper>
 
@@ -952,19 +1062,32 @@ const DeviceManagement: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => openModelEditDialog(model)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => openDeleteDialog(model, 'model')}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
+                          <Tooltip title="Modifier le modèle">
+                            <IconButton
+                              size="small"
+                              onClick={() => openModelEditDialog(model)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Associer un service">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => openServiceAssociationDialog(model)}
+                            >
+                              <BuildIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Supprimer le modèle">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => openDeleteDialog(model, 'model')}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1234,6 +1357,245 @@ const DeviceManagement: React.FC = () => {
             disabled={loading}
           >
             {loading ? <CircularProgress size={20} /> : 'Supprimer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Onglet Services par modèle */}
+      {activeTab === 3 && (
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Services par modèle ({allDeviceModelServices.length})</Typography>
+            </Box>
+
+            {/* Filtres */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+              <TextField
+                placeholder="Rechercher un modèle ou service..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
+                sx={{ minWidth: 200 }}
+                InputProps={{
+                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                }}
+              />
+              
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Filtrer par catégorie</InputLabel>
+                <Select
+                  value={selectedCategoryForServices || ''}
+                  onChange={(e) => setSelectedCategoryForServices(e.target.value)}
+                  label="Filtrer par catégorie"
+                >
+                  <MenuItem value="">Toutes les catégories</MenuItem>
+                  {(allCategories || []).map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {getCategoryIcon(category.name, category.icon)}
+                        <span>{category.name}</span>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <InputLabel>Filtrer par marque</InputLabel>
+                <Select
+                  value={selectedBrandForServices || ''}
+                  onChange={(e) => setSelectedBrandForServices(e.target.value)}
+                  label="Filtrer par marque"
+                >
+                  <MenuItem value="">Toutes les marques</MenuItem>
+                  {(allBrands || []).map((brand) => (
+                    <MenuItem key={brand.id} value={brand.id}>
+                      {brand.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            {/* Tableau des associations */}
+            <TableContainer component={Paper} variant="outlined">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Modèle</TableCell>
+                    <TableCell>Marque</TableCell>
+                    <TableCell>Catégorie</TableCell>
+                    <TableCell>Service</TableCell>
+                    <TableCell>Prix</TableCell>
+                    <TableCell>Durée</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {allDeviceModelServices
+                    .filter(association => {
+                      const matchesSearch = 
+                        (association.model_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (association.service_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+                      
+                      const matchesCategory = !selectedCategoryForServices || 
+                        association.category_id === selectedCategoryForServices;
+                      
+                      const matchesBrand = !selectedBrandForServices || 
+                        association.brand_id === selectedBrandForServices;
+                      
+                      return matchesSearch && matchesCategory && matchesBrand;
+                    })
+                    .map((association) => (
+                      <TableRow key={association.id}>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {association.model_name || 'N/A'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {association.brand_name || 'N/A'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {getCategoryIcon(association.category_name || '', association.category_icon)}
+                            <Typography variant="body2">
+                              {association.category_name || 'N/A'}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {association.service_name || 'N/A'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body2">
+                              {association.effective_price || 0} €
+                            </Typography>
+                            {association.customPrice && (
+                              <Chip 
+                                label="Personnalisé" 
+                                size="small" 
+                                color="primary" 
+                                variant="outlined"
+                              />
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body2">
+                              {association.effective_duration || 0}h
+                            </Typography>
+                            {association.customDuration && (
+                              <Chip 
+                                label="Personnalisé" 
+                                size="small" 
+                                color="primary" 
+                                variant="outlined"
+                              />
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Tooltip title="Supprimer l'association">
+                              <IconButton 
+                                size="small" 
+                                color="error"
+                                onClick={() => handleDeleteServiceAssociation(association)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {allDeviceModelServices.length === 0 && (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Aucune association service-modèle trouvée
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dialogue pour associer un service à un modèle */}
+      <Dialog open={serviceAssociationDialogOpen} onClose={() => setServiceAssociationDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Associer un service au modèle {selectedModelForService?.name}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <FormControl fullWidth required>
+              <InputLabel>Service</InputLabel>
+              <Select
+                value={newServiceAssociation.serviceId || ''}
+                onChange={(e) => setNewServiceAssociation({ ...newServiceAssociation, serviceId: e.target.value })}
+                label="Service"
+              >
+                {(useAppStore.getState().services || []).map((service) => (
+                  <MenuItem key={service.id} value={service.id}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <span>{service.name}</span>
+                      <Typography variant="caption" color="text.secondary">
+                        {service.price} € - {service.duration}h
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <TextField
+              label="Prix personnalisé (optionnel)"
+              type="number"
+              value={newServiceAssociation.customPrice || ''}
+              onChange={(e) => setNewServiceAssociation({ 
+                ...newServiceAssociation, 
+                customPrice: e.target.value ? parseFloat(e.target.value) : undefined 
+              })}
+              fullWidth
+              placeholder="Laissez vide pour utiliser le prix par défaut"
+              inputProps={{ min: 0, step: 0.01 }}
+            />
+            
+            <TextField
+              label="Durée personnalisée en heures (optionnel)"
+              type="number"
+              value={newServiceAssociation.customDuration || ''}
+              onChange={(e) => setNewServiceAssociation({ 
+                ...newServiceAssociation, 
+                customDuration: e.target.value ? parseInt(e.target.value) : undefined 
+              })}
+              fullWidth
+              placeholder="Laissez vide pour utiliser la durée par défaut"
+              inputProps={{ min: 1, step: 1 }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setServiceAssociationDialogOpen(false)}>
+            Annuler
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreateServiceAssociation}
+            disabled={!newServiceAssociation.serviceId || loading}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Associer'}
           </Button>
         </DialogActions>
       </Dialog>

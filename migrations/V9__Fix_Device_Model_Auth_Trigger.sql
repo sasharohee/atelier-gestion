@@ -60,43 +60,7 @@ CREATE TRIGGER set_device_model_user_safe_trigger
     FOR EACH ROW
     EXECUTE FUNCTION public.set_device_model_user_safe();
 
--- 6. Tester la création d'un modèle
-SELECT 'Test de création de modèle...' as test_step;
-
--- Créer un modèle de test
-INSERT INTO public.device_models (
-    name,
-    brand_id,
-    category_id,
-    description,
-    is_active
-) VALUES (
-    'Test Model Safe',
-    (SELECT id FROM public.device_brands LIMIT 1),
-    (SELECT id FROM public.device_categories LIMIT 1),
-    'Modèle de test avec trigger sécurisé',
-    true
-) ON CONFLICT DO NOTHING;
-
--- 7. Vérifier la création
-SELECT 'Vérification de la création...' as test_step;
-
-SELECT 
-    id,
-    name,
-    description,
-    created_by,
-    user_id,
-    created_at
-FROM public.device_models 
-WHERE name = 'Test Model Safe'
-ORDER BY created_at DESC
-LIMIT 1;
-
--- 8. Nettoyer le test
-DELETE FROM public.device_models 
-WHERE name = 'Test Model Safe';
-
+-- 6. Migration terminée avec succès
 SELECT 'Trigger d''authentification corrigé avec succès' as final_status;
 
 

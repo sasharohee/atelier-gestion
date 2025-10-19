@@ -29,6 +29,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
 import ConnectionStatus from '../ConnectionStatus';
 import Sidebar from './Sidebar';
+import WhatsNewButton from '../WhatsNewButton';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -260,6 +261,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {/* Statut de connexion */}
               <ConnectionStatus />
+              
+              {/* Bouton nouveautés */}
+              <WhatsNewButton />
               
               {/* Profil utilisateur avec redirection vers réglages */}
               <Tooltip title="Réglages" arrow>

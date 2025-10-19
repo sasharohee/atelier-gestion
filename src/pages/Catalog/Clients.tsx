@@ -215,9 +215,12 @@ const Clients: React.FC = () => {
       console.log('✅ CLIENTS PAGE - Client créé avec succès!');
       alert('✅ Client créé avec succès !');
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('💥 CLIENTS PAGE - Erreur lors de la création du client:', err);
-      setError('Erreur lors de la création du client. Veuillez réessayer.');
+      // Afficher le message d'erreur spécifique
+      const errorMessage = err?.message || 'Erreur lors de la création du client. Veuillez réessayer.';
+      setError(errorMessage);
+      alert(`❌ ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
