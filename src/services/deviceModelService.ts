@@ -149,6 +149,18 @@ class DeviceModelService {
         return { success: false, error: 'Utilisateur non connecté' };
       }
 
+      // Récupérer le nom de la catégorie pour définir le type
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('device_categories')
+        .select('name')
+        .eq('id', modelData.categoryId)
+        .single();
+
+      if (categoryError) {
+        console.error('Erreur lors de la récupération de la catégorie:', categoryError);
+        return { success: false, error: 'Erreur lors de la récupération de la catégorie' };
+      }
+
       const { data, error } = await supabase
         .from('device_models')
         .insert([{
@@ -157,6 +169,7 @@ class DeviceModelService {
           description: modelData.description || '',
           brand_id: modelData.brandId,
           category_id: modelData.categoryId,
+          type: categoryData.name, // Utiliser le nom de la catégorie comme type
           is_active: true,
           user_id: user.id,
           created_by: user.id

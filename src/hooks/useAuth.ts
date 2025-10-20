@@ -29,24 +29,29 @@ export const useAuth = () => {
     const newAuthState = !!newUser;
     const newUserId = newUser?.id || null;
     
-    // Ne mettre à jour que si l'état d'authentification CHANGE ou si l'utilisateur change
-    if (newAuthState !== globalPreviousAuthState) {
-      console.log(`🔄 État d'authentification changé: ${globalPreviousAuthState ? 'connecté' : 'déconnecté'} → ${newAuthState ? 'connecté' : 'déconnecté'}`);
+    // Toujours forcer la mise à jour si l'utilisateur change ou si l'état d'authentification change
+    if (newAuthState !== globalPreviousAuthState || 
+        (newUserId && newUserId !== globalUserId) ||
+        (newUser && user?.id !== newUser.id)) {
+      
+      if (newAuthState !== globalPreviousAuthState) {
+        console.log(`🔄 État d'authentification changé: ${globalPreviousAuthState ? 'connecté' : 'déconnecté'} → ${newAuthState ? 'connecté' : 'déconnecté'}`);
+      } else if (newUserId && newUserId !== globalUserId) {
+        console.log(`🔄 Utilisateur changé: ${globalUserId} → ${newUserId}`);
+      } else {
+        console.log(`🔄 Mise à jour forcée de l'utilisateur: ${newUser?.email}`);
+      }
+      
       globalPreviousAuthState = newAuthState;
       globalUserId = newUserId;
       setUser(newUser);
-    } else if (newUserId && newUserId !== globalUserId) {
-      // Utilisateur différent mais toujours authentifié
-      console.log(`🔄 Utilisateur changé: ${globalUserId} → ${newUserId}`);
-      globalUserId = newUserId;
-      setUser(newUser);
     }
-    // Sinon, ne rien faire (éviter les mises à jour inutiles)
   };
 
   useEffect(() => {
     isMounted.current = true;
     hasCheckedSession.current = false;
+    authStateRef.current = 'stable';
     
     // Nettoyer le timeout précédent s'il existe
     if (sessionCheckTimeout.current) {
@@ -54,14 +59,29 @@ export const useAuth = () => {
     }
     
     const getCurrentUser = async () => {
-      // Éviter les vérifications multiples
-      if (hasCheckedSession.current) {
+      // Éviter les vérifications multiples seulement si on est en train de vérifier
+      if (authStateRef.current === 'changing') {
         return;
       }
       
-      hasCheckedSession.current = true;
+      authStateRef.current = 'changing';
       
       try {
+        // Vérifier d'abord la session existante
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.log('⚠️ Erreur de session:', sessionError);
+        } else if (session?.user) {
+          console.log('✅ Session existante trouvée:', session.user.email);
+          updateUser(session.user);
+          setAuthError(null);
+          setLoading(false);
+          authStateRef.current = 'stable';
+          return;
+        }
+        
+        // Si pas de session, essayer getUser()
         const { data: { user }, error } = await supabase.auth.getUser();
         
         if (!isMounted.current) return;
@@ -126,10 +146,14 @@ export const useAuth = () => {
       } finally {
         if (isMounted.current) {
           setLoading(false);
+          authStateRef.current = 'stable';
         }
       }
     };
 
+    // Vérification immédiate de la session existante
+    getCurrentUser();
+    
     // Délai pour éviter les vérifications trop fréquentes
     sessionCheckTimeout.current = setTimeout(() => {
       getCurrentUser();
@@ -210,11 +234,40 @@ export const useAuth = () => {
     }
   };
 
+  // Fonction pour forcer le rechargement de l'authentification
+  const refreshAuth = async () => {
+    console.log('🔄 Forçage du rechargement de l\'authentification...');
+    hasCheckedSession.current = false;
+    authStateRef.current = 'stable';
+    
+    // Vérifier directement l'utilisateur actuel
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (!isMounted.current) return;
+      
+      if (error) {
+        console.error('❌ Erreur lors du rechargement:', error);
+        updateUser(null);
+        setAuthError(error.message);
+      } else {
+        console.log('✅ Utilisateur rechargé:', user?.email);
+        updateUser(user);
+        setAuthError(null);
+      }
+    } catch (error: any) {
+      console.error('💥 Exception lors du rechargement:', error);
+      updateUser(null);
+      setAuthError('Erreur lors du rechargement');
+    }
+  };
+
   return {
     user,
     loading,
     authError,
     isAuthenticated: !!user,
+    refreshAuth,
     resetAuth
   };
 };

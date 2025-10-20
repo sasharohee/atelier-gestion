@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Script de déploiement pour corriger l'erreur 404 device_model_services
+# Ce script applique la migration complète avec vérification
+
+echo "🚀 Correction de l'erreur 404 - Table device_model_services manquante"
+echo ""
+
+# Vérifier que le fichier SQL existe
+if [ ! -f "check_and_create_device_model_services.sql" ]; then
+    echo "❌ Erreur: Le fichier check_and_create_device_model_services.sql n'existe pas"
+    exit 1
+fi
+
+echo "📋 Instructions pour appliquer la correction:"
+echo ""
+echo "1. Connectez-vous à votre dashboard Supabase:"
+echo "   https://supabase.com/dashboard"
+echo ""
+echo "2. Sélectionnez votre projet"
+echo ""
+echo "3. Allez dans l'éditeur SQL (SQL Editor)"
+echo ""
+echo "4. Copiez le contenu du fichier 'check_and_create_device_model_services.sql'"
+echo ""
+echo "5. Collez-le dans l'éditeur SQL"
+echo ""
+echo "6. Cliquez sur 'Run' pour exécuter le script"
+echo ""
+echo "7. Vérifiez que vous voyez les messages de succès:"
+echo "   ✅ Table device_model_services existe"
+echo "   ✅ Vue device_model_services_detailed existe"
+echo "   ✅ Politiques RLS configurées"
+echo ""
+echo "✅ Après l'exécution, l'erreur 404 devrait être résolue"
+echo ""
+echo "📁 Fichier SQL à utiliser: check_and_create_device_model_services.sql"
+echo ""
+echo "🔧 Ce script fait tout automatiquement:"
+echo "   - Vérifie si la table existe"
+echo "   - Crée la table si nécessaire"
+echo "   - Crée tous les index"
+echo "   - Configure les politiques RLS"
+echo "   - Crée la vue détaillée"
+echo "   - Crée les fonctions RPC"
+echo "   - Crée le trigger updated_at"
+echo "   - Vérifie que tout fonctionne"
+echo ""
+echo "⚠️  Prérequis: Les tables suivantes doivent exister:"
+echo "   - device_models"
+echo "   - services"
+echo "   - device_brands"
+echo "   - device_categories"
+echo "   - workshops (optionnel)"
+echo ""
+echo "🎯 Une fois le script exécuté, l'application devrait fonctionner sans erreur 404"
+echo ""
+echo "🧪 Pour tester après l'exécution:"
+echo "   1. Rechargez votre application"
+echo "   2. Essayez de créer une association service-modèle"
+echo "   3. Vérifiez qu'il n'y a plus d'erreur 404 dans la console"

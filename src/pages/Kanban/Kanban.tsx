@@ -30,6 +30,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -67,6 +68,9 @@ import { deviceCategoryService } from '../../services/deviceCategoryService';
 import { DeviceCategory } from '../../types/deviceManagement';
 import { brandService, BrandWithCategories } from '../../services/brandService';
 import { deviceModelServiceService } from '../../services/deviceModelServiceService';
+import { deviceModelService } from '../../services/deviceModelService';
+import { DeviceModel } from '../../types/deviceManagement';
+import CategoryIconDisplay from '../../components/CategoryIconDisplay';
 
 const Kanban: React.FC = () => {
   const navigate = useNavigate();
@@ -276,12 +280,19 @@ const Kanban: React.FC = () => {
   const [dbBrands, setDbBrands] = useState<BrandWithCategories[]>([]);
   const [brandsLoading, setBrandsLoading] = useState(true);
 
-  // États pour le nouveau modèle
-  const [newDevice, setNewDevice] = useState({
-    categoryId: '',
+  // États pour le nouveau modèle (format DeviceManagement)
+  const [newModel, setNewModel] = useState({
+    name: '',
+    description: '',
     brandId: '',
-    model: '',
+    categoryId: '',
+    isActive: true,
   });
+  
+  // États pour les dialogues
+  const [modelDialogOpen, setModelDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // États pour le nouveau client
   const [newClient, setNewClient] = useState({
@@ -1005,87 +1016,90 @@ const Kanban: React.FC = () => {
   };
 
   // Fonctions pour gérer les nouveaux appareils et clients
-  const handleCreateNewDevice = async () => {
+  // Fonctions pour gérer les nouveaux modèles (format DeviceManagement)
+  const handleCreateModel = async () => {
     try {
-      // Validation des champs requis
-      if (!newDevice.categoryId || !newDevice.brandId || !newDevice.model.trim()) {
-        alert('❌ Veuillez sélectionner une catégorie, une marque et saisir un modèle.');
-        return;
-      }
-
-      // Vérifier si le modèle existe déjà pour cette marque
-      const existingModel = deviceModels.find(m => 
-                m.brandId === newDevice.brandId &&
-        m.model.toLowerCase() === newDevice.model.trim().toLowerCase()
-      );
+      setLoading(true);
+      setError(null);
       
-      if (existingModel) {
-        alert('❌ Un modèle avec ce nom existe déjà pour cette marque.\n\nVeuillez utiliser un nom différent.');
-        return;
-      }
-
-      // Créer le nouveau modèle
-      const brand = dbBrands.find(b => b.id === newDevice.brandId);
-      const category = dbCategories.find(c => c.id === newDevice.categoryId);
-      
-      if (!brand || !category) {
-        alert('❌ Erreur : marque ou catégorie introuvable.');
-        return;
-      }
-
-      // Créer le modèle dans le store centralisé
-      const modelData = {
-        brand: brand.name,
-        model: newDevice.model.trim(),
-        type: category.name.toLowerCase() as any,
-        year: new Date().getFullYear(),
-        specifications: {},
-        commonIssues: [],
-        repairDifficulty: 'medium' as 'easy' | 'medium' | 'hard',
-        partsAvailability: 'medium' as 'high' | 'medium' | 'low',
-        isActive: true,
-      };
-
-      // Utiliser la fonction du store pour ajouter le modèle
-      await addDeviceModel(modelData as any);
-      
-      // Créer aussi un appareil dans l'ancien système pour la compatibilité
-      const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
-        brand: brand.name,
-        model: newDevice.model.trim(),
-        serialNumber: undefined, // Pas de numéro de série lors de la création d'un modèle
-        type: category.name.toLowerCase() as any,
-        specifications: {},
-      };
-
-      await addDevice(deviceData as Device);
-      
-      // Trouver le nouveau modèle créé
-      const newDeviceCreated = devices.find(d => 
-        d.brand === brand.name && 
-        d.model === newDevice.model.trim()
-      );
-      
-      // Sélectionner automatiquement le nouveau modèle
-      if (newDeviceCreated) {
-        handleNewRepairChange('deviceId', newDeviceCreated.id);
-      }
-      
-      // Réinitialiser le formulaire
-      setNewDevice({
-        categoryId: '',
-        brandId: '',
-        model: '',
+      const result = await deviceModelService.create({
+        name: newModel.name,
+        description: newModel.description,
+        brandId: newModel.brandId,
+        categoryId: newModel.categoryId,
       });
       
-      // Retourner à l'onglet réparation
-      setActiveTab(0);
-      
-      alert('✅ Modèle créé avec succès et sélectionné !');
-    } catch (error: any) {
-      console.error('Erreur lors de la création du modèle:', error);
-      alert('❌ Erreur lors de la création du modèle.\n\nVeuillez vérifier les informations saisies et réessayer.');
+      if (result.success) {
+        // Mettre à jour la liste des modèles
+        await loadDeviceModels();
+        
+        // Fermer le dialogue et réinitialiser le formulaire
+        setModelDialogOpen(false);
+        resetModelForm();
+        
+        // Trouver le nouveau modèle créé et le sélectionner
+        const newModelCreated = deviceModels.find(d => 
+          d.brandId === newModel.brandId && d.name === newModel.name
+        );
+        
+        if (newModelCreated) {
+          // Créer un appareil dans l'ancien système pour la compatibilité
+          const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
+            brand: newModelCreated.brandName,
+            model: newModelCreated.name,
+            serialNumber: undefined,
+            type: newModelCreated.categoryName.toLowerCase() as any,
+            specifications: {},
+          };
+          
+          await addDevice(deviceData as Device);
+          
+          // Trouver l'appareil créé et le sélectionner
+          const newDeviceCreated = devices.find(d => 
+            d.brand === newModelCreated.brandName && 
+            d.model === newModelCreated.name
+          );
+          
+          if (newDeviceCreated) {
+            handleNewRepairChange('deviceId', newDeviceCreated.id);
+          }
+        }
+        
+        // Retourner à l'onglet réparation
+        setActiveTab(0);
+        
+        console.log('✅ Modèle créé avec succès:', result.data);
+      } else {
+        console.error('❌ Erreur lors de la création du modèle:', result.error);
+        setError(result.error || 'Erreur lors de la création du modèle');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la création du modèle:', error);
+      setError('Erreur lors de la création du modèle');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const resetModelForm = () => {
+    setNewModel({
+      name: '',
+      description: '',
+      brandId: '',
+      categoryId: '',
+      isActive: true,
+    });
+  };
+
+  const openModelDialog = () => {
+    resetModelForm();
+    setModelDialogOpen(true);
+  };
+
+  // Fonction pour obtenir l'icône d'une catégorie
+  const getCategoryIcon = (categoryName: string, iconValue?: string) => {
+    const iconType = iconValue || (categoryName || '').toLowerCase().replace(/\s+/g, '-');
+    return <CategoryIconDisplay iconType={iconType} size={20} />;
   };
 
   const handleCreateNewClient = async (clientFormData: any) => {
@@ -2684,77 +2698,15 @@ const Kanban: React.FC = () => {
                 </Alert>
               </Grid>
               
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Catégorie *</InputLabel>
-                  <Select
-                    label="Catégorie *"
-                    value={newDevice.categoryId || ''}
-                    onChange={(e) => setNewDevice(prev => ({ ...prev, categoryId: e.target.value }))}
-                  >
-                    {dbCategories
-                      .filter(category => category.isActive)
-                      .map((category) => (
-                        <MenuItem key={category.id} value={category.id}>
-                          {category.name}
-                        </MenuItem>
-                      ))}
-                    {dbCategories.length === 0 && deviceCategories
-                      .filter(category => category.isActive)
-                      .map((category) => (
-                        <MenuItem key={category.id} value={category.id}>
-                          {category.name}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Marque *</InputLabel>
-                  <Select
-                    label="Marque *"
-                    value={newDevice.brandId || ''}
-                    onChange={(e) => setNewDevice(prev => ({ ...prev, brandId: e.target.value }))}
-                    disabled={!newDevice.categoryId}
-                  >
-                    {dbBrands
-                      .filter(brand => brand.isActive && (!newDevice.categoryId || brand.categories.some(cat => cat.id === newDevice.categoryId)))
-                      .map((brand) => (
-                        <MenuItem key={brand.id} value={brand.id}>
-                          {brand.name}
-                        </MenuItem>
-                      ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Modèle *"
-                  value={newDevice.model}
-                  onChange={(e) => setNewDevice(prev => ({ ...prev, model: e.target.value }))}
-                  disabled={!newDevice.brandId}
-                />
-              </Grid>
-              
-
-              
               <Grid item xs={12}>
                 <Button
                   variant="contained"
                   startIcon={<DeviceHubIcon />}
-                  onClick={handleCreateNewDevice}
-                  disabled={Boolean(
-                    !newDevice.categoryId || 
-                    !newDevice.brandId || 
-                    !newDevice.model
-                  )}
+                  onClick={openModelDialog}
                   fullWidth
+                  sx={{ mb: 2 }}
                 >
-                  Créer l'appareil
+                  Créer un nouveau modèle
                 </Button>
               </Grid>
             </Grid>
@@ -3184,6 +3136,96 @@ const Kanban: React.FC = () => {
           onClose={closeInterventionForm}
         />
       )}
+
+      {/* Dialogue pour créer un nouveau modèle */}
+      <Dialog open={modelDialogOpen} onClose={() => setModelDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Créer un nouveau modèle
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {/* Affichage des erreurs */}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
+
+            <TextField
+              label="Nom du modèle"
+              value={newModel.name}
+              onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
+              fullWidth
+              required
+              placeholder="Ex: iPhone 14, Galaxy S23, etc."
+            />
+            
+            <TextField
+              label="Description"
+              value={newModel.description}
+              onChange={(e) => setNewModel({ ...newModel, description: e.target.value })}
+              fullWidth
+              multiline
+              rows={3}
+            />
+            
+            <FormControl fullWidth required>
+              <InputLabel>Marque</InputLabel>
+              <Select
+                value={newModel.brandId || ''}
+                onChange={(e) => setNewModel({ ...newModel, brandId: e.target.value })}
+                label="Marque"
+              >
+                {(dbBrands || []).map((brand) => (
+                  <MenuItem key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControl fullWidth required>
+              <InputLabel>Catégorie</InputLabel>
+              <Select
+                value={newModel.categoryId || ''}
+                onChange={(e) => setNewModel({ ...newModel, categoryId: e.target.value })}
+                label="Catégorie"
+              >
+                {(dbCategories || []).map((category) => (
+                  <MenuItem key={category.id} value={category.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {getCategoryIcon(category.name, category.icon)}
+                      <span>{category.name}</span>
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={newModel.isActive}
+                  onChange={(e) => setNewModel({ ...newModel, isActive: e.target.checked })}
+                />
+              }
+              label="Modèle actif"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setModelDialogOpen(false)}>
+            Annuler
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreateModel}
+            disabled={!newModel.name || !newModel.brandId || !newModel.categoryId || loading}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Créer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

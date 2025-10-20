@@ -68,7 +68,7 @@ const Administration: React.FC = () => {
   } = useAppStore();
 
   // Hook d'authentification
-  const { user: authUser, loading: authLoading, isAuthenticated } = useAuth();
+  const { user: authUser, loading: authLoading, isAuthenticated, refreshAuth } = useAuth();
 
   // États locaux
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
@@ -76,6 +76,7 @@ const Administration: React.FC = () => {
   const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [forceRender, setForceRender] = useState(0);
   
   // États des formulaires
   const [newUserForm, setNewUserForm] = useState({
@@ -333,19 +334,44 @@ const Administration: React.FC = () => {
       makeUserAdmin();
     }, 1500);
     
-    // Forcer le rechargement des paramètres après 2 secondes si pas encore chargés
-    const settingsTimer = setTimeout(() => {
-      if (systemSettings.length === 0) {
-        console.log('⏰ Timeout - Forcer le rechargement des paramètres');
-        loadSystemSettings();
-      }
-    }, 2000);
-    
     return () => {
       clearTimeout(adminTimer);
-      clearTimeout(settingsTimer);
     };
-  }, [loadUsers, loadSystemSettings, systemSettings.length, isAuthenticated, authUser, authLoading]);
+  }, [isAuthenticated, authUser, authLoading]); // Suppression de systemSettings.length pour éviter la boucle infinie
+
+  // Effet pour forcer le rechargement de l'authentification si nécessaire
+  useEffect(() => {
+    // Si on a des utilisateurs mais pas d'authentification, forcer le rechargement
+    if (users.length > 0 && !isAuthenticated && !authLoading) {
+      console.log('🔄 Détection d\'incohérence: utilisateurs présents mais pas d\'authentification');
+      const timer = setTimeout(() => {
+        refreshAuth();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [users.length, isAuthenticated, authLoading, refreshAuth]);
+
+  // Effet pour forcer le rechargement immédiat au chargement de la page
+  useEffect(() => {
+    // Forcer le rechargement de l'authentification au chargement de la page
+    const timer = setTimeout(() => {
+      if (!isAuthenticated && !authLoading) {
+        console.log('🔄 Rechargement automatique de l\'authentification au chargement de la page');
+        refreshAuth().then(() => {
+          // Forcer un re-render après le rechargement
+          setForceRender(prev => prev + 1);
+        });
+      }
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []); // Exécuté une seule fois au montage
+
+  // Effet pour forcer le re-render quand l'authentification change
+  useEffect(() => {
+    console.log('🔄 État d\'authentification mis à jour:', { isAuthenticated, authUser: authUser?.email });
+    setForceRender(prev => prev + 1);
+  }, [isAuthenticated, authUser]);
 
   // Validation du formulaire
   const validateForm = (form: any, isEdit = false) => {
@@ -518,10 +544,10 @@ const Administration: React.FC = () => {
   const openEditDialog = (user: any) => {
     setSelectedUser(user);
     setEditUserForm({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      role: user.role,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      role: user.role || 'technician',
     });
     setEditUserDialogOpen(true);
   };
@@ -629,12 +655,12 @@ const Administration: React.FC = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Prénom :</strong> {currentUser.firstName}
+                  <strong>Prénom :</strong> {currentUser.firstName || 'Non défini'}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Nom :</strong> {currentUser.lastName}
+                  <strong>Nom :</strong> {currentUser.lastName || 'Non défini'}
                 </Typography>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -668,6 +694,7 @@ const Administration: React.FC = () => {
             </Typography>
           </Box>
         )}
+        
       </Box>
 
       {/* Bannière d'avertissement */}
@@ -951,11 +978,11 @@ const Administration: React.FC = () => {
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Avatar src={user.avatar} sx={{ mr: 2 }}>
-                            {user.firstName.charAt(0)}
+                            {user.firstName?.charAt(0) || user.email?.charAt(0) || 'U'}
                           </Avatar>
                           <Box>
                             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {`${user.firstName} ${user.lastName}`}
+                              {`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Utilisateur'}
                             </Typography>
                             {(user.id === currentUser?.id || user.id === authUser?.id) && (
                               <Chip label="Vous" size="small" color="primary" />
@@ -1327,7 +1354,7 @@ const Administration: React.FC = () => {
         <DialogContent>
           <Typography>
             Êtes-vous sûr de vouloir supprimer l'utilisateur{' '}
-            <strong>{selectedUser?.firstName} {selectedUser?.lastName}</strong> ?
+            <strong>{selectedUser?.firstName || ''} {selectedUser?.lastName || ''}</strong> ?
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Cette action est irréversible.

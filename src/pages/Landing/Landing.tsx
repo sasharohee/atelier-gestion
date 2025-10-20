@@ -27,7 +27,20 @@ import {
   CheckCircle as CheckCircleIcon,
   PlayArrow as PlayArrowIcon,
   Star as StarIcon,
-  TrendingUp as TrendingUpIcon
+  TrendingUp as TrendingUpIcon,
+  Handyman as HandymanIcon,
+  Archive as ArchiveIcon,
+  Loyalty as LoyaltyIcon,
+  Receipt as ReceiptIcon,
+  Description as DescriptionIcon,
+  LocalShipping as ShippingIcon,
+  Warning as WarningIcon,
+  DeviceHub as DeviceHubIcon,
+  AccountBalance as AccountBalanceIcon,
+  AdminPanelSettings as AdminIcon,
+  ShoppingCart as ShoppingCartIcon,
+  Memory as MemoryIcon,
+  Inventory2 as Inventory2Icon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import LandingNavbar from '../../components/LandingNavbar';
@@ -90,10 +103,17 @@ const Landing: React.FC = () => {
   const features = [
     {
       icon: <BuildIcon sx={{ fontSize: 40, color: '#FF6B6B' }} />,
-      title: 'Gestion des Réparations',
-              description: 'Suivez l\'état de vos réparations en temps réel avec notre système de suivi intuitif',
+      title: 'Suivi des Réparations',
+      description: 'Gérez vos réparations avec le système Kanban intuitif et suivez l\'état en temps réel',
       bgColor: '#FFF5F5',
       borderColor: '#FF6B6B'
+    },
+    {
+      icon: <HandymanIcon sx={{ fontSize: 40, color: '#16a34a' }} />,
+      title: 'SAV (Service Après-Vente)',
+      description: 'Gérez les retours et les garanties avec un système SAV complet et organisé',
+      bgColor: '#F0FFF4',
+      borderColor: '#16a34a'
     },
     {
       icon: <ScheduleIcon sx={{ fontSize: 40, color: '#4ECDC4' }} />,
@@ -110,25 +130,102 @@ const Landing: React.FC = () => {
       borderColor: '#45B7D1'
     },
     {
-      icon: <InventoryIcon sx={{ fontSize: 40, color: '#96CEB4' }} />,
-      title: 'Inventaire & Pièces',
-      description: 'Gérez votre stock de pièces détachées et vos produits en vente',
+      icon: <DeviceHubIcon sx={{ fontSize: 40, color: '#2196f3' }} />,
+      title: 'Gestion des Appareils',
+      description: 'Catalogue complet des modèles d\'appareils avec gestion centralisée',
+      bgColor: '#F0F8FF',
+      borderColor: '#2196f3'
+    },
+    {
+      icon: <BuildIcon sx={{ fontSize: 40, color: '#ff9800' }} />,
+      title: 'Services de Réparation',
+      description: 'Catalogue des services proposés avec tarification et durée estimée',
+      bgColor: '#FFF8E1',
+      borderColor: '#ff9800'
+    },
+    {
+      icon: <MemoryIcon sx={{ fontSize: 40, color: '#4caf50' }} />,
+      title: 'Pièces Détachées',
+      description: 'Gestion complète du stock de pièces détachées avec alertes de rupture',
       bgColor: '#F0FFF4',
-      borderColor: '#96CEB4'
+      borderColor: '#4caf50'
+    },
+    {
+      icon: <Inventory2Icon sx={{ fontSize: 40, color: '#9c27b0' }} />,
+      title: 'Produits & Accessoires',
+      description: 'Gestion des produits et accessoires en vente avec suivi des stocks',
+      bgColor: '#F3E5F5',
+      borderColor: '#9c27b0'
+    },
+    {
+      icon: <WarningIcon sx={{ fontSize: 40, color: '#f44336' }} />,
+      title: 'Alertes de Rupture',
+      description: 'Surveillance automatique des ruptures de stock avec notifications',
+      bgColor: '#FFEBEE',
+      borderColor: '#f44336'
+    },
+    {
+      icon: <ReceiptIcon sx={{ fontSize: 40, color: '#4caf50' }} />,
+      title: 'Ventes & Facturation',
+      description: 'Gestion complète des ventes, factures et encaissements',
+      bgColor: '#F0FFF4',
+      borderColor: '#4caf50'
+    },
+    {
+      icon: <DescriptionIcon sx={{ fontSize: 40, color: '#ff9800' }} />,
+      title: 'Devis & Estimations',
+      description: 'Création et gestion des devis avec suivi des conversions',
+      bgColor: '#FFF8E1',
+      borderColor: '#ff9800'
+    },
+    {
+      icon: <ShippingIcon sx={{ fontSize: 40, color: '#607d8b' }} />,
+      title: 'Suivi des Commandes',
+      description: 'Gestion des commandes fournisseurs avec suivi des livraisons',
+      bgColor: '#F5F5F5',
+      borderColor: '#607d8b'
     },
     {
       icon: <AssessmentIcon sx={{ fontSize: 40, color: '#FFEAA7' }} />,
       title: 'Statistiques & Rapports',
-      description: 'Analysez vos performances avec des tableaux de bord détaillés',
+      description: 'Tableaux de bord détaillés et analyses de performance',
       bgColor: '#FFFBEB',
       borderColor: '#FFEAA7'
     },
     {
-      icon: <MessageIcon sx={{ fontSize: 40, color: '#DDA0DD' }} />,
-      title: 'Données en temps réel',
-      description: 'Accédez à vos données en temps réel depuis l\'application',
-      bgColor: '#FDF0FF',
-      borderColor: '#DDA0DD'
+      icon: <ArchiveIcon sx={{ fontSize: 40, color: '#3b82f6' }} />,
+      title: 'Archives',
+      description: 'Conservation et consultation des données historiques',
+      bgColor: '#EFF6FF',
+      borderColor: '#3b82f6'
+    },
+    {
+      icon: <LoyaltyIcon sx={{ fontSize: 40, color: '#f59e0b' }} />,
+      title: 'Points de Fidélité',
+      description: 'Programme de fidélité pour récompenser vos clients réguliers',
+      bgColor: '#FFFBEB',
+      borderColor: '#f59e0b'
+    },
+    {
+      icon: <AccountBalanceIcon sx={{ fontSize: 40, color: '#8b5cf6' }} />,
+      title: 'Gestion des Dépenses',
+      description: 'Suivi des dépenses et coûts de l\'atelier pour un meilleur contrôle',
+      bgColor: '#F3E8FF',
+      borderColor: '#8b5cf6'
+    },
+    {
+      icon: <DescriptionIcon sx={{ fontSize: 40, color: '#06b6d4' }} />,
+      title: 'Demandes de Devis',
+      description: 'Gestion des demandes de devis clients avec suivi personnalisé',
+      bgColor: '#ECFEFF',
+      borderColor: '#06b6d4'
+    },
+    {
+      icon: <AdminIcon sx={{ fontSize: 40, color: '#6366f1' }} />,
+      title: 'Administration',
+      description: 'Outils d\'administration complets pour gérer votre atelier',
+      bgColor: '#EEF2FF',
+      borderColor: '#6366f1'
     }
   ];
 
@@ -136,7 +233,16 @@ const Landing: React.FC = () => {
     'Interface moderne et intuitive',
     'Synchronisation en temps réel',
     'Gestion complète de l\'atelier',
-    'Rapports détaillés',
+    'Système Kanban pour le suivi des réparations',
+    'SAV et gestion des garanties',
+    'Calendrier intégré pour les rendez-vous',
+    'Base de données clients centralisée',
+    'Gestion complète des stocks',
+    'Alertes de rupture automatiques',
+    'Facturation et devis intégrés',
+    'Programme de fidélité clients',
+    'Archives et historique complet',
+    'Statistiques et rapports détaillés',
     'Support multi-appareils',
     'Sécurisé et fiable'
   ];
@@ -158,7 +264,7 @@ const Landing: React.FC = () => {
       <Box
         id="home"
         sx={{
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 50%, ${theme.palette.secondary.main} 100%)`,
+          background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 50%, #374151 100%)',
           color: 'white',
           minHeight: { xs: '100vh', md: '100vh' },
           pt: { xs: 8, md: 0 },
@@ -166,7 +272,21 @@ const Landing: React.FC = () => {
           position: 'relative',
           overflow: 'hidden',
           display: 'flex',
-          alignItems: 'center'
+          alignItems: 'center',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 40% 40%, rgba(245, 158, 11, 0.1) 0%, transparent 50%)
+            `,
+            zIndex: 1
+          }
         }}
       >
         {/* Animated background elements */}
@@ -175,11 +295,14 @@ const Landing: React.FC = () => {
             position: 'absolute',
             top: { xs: '5%', md: '10%' },
             left: { xs: '2%', md: '5%' },
-            width: { xs: 100, md: 200 },
-            height: { xs: 100, md: 200 },
+            width: { xs: 120, md: 250 },
+            height: { xs: 120, md: 250 },
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.1)',
-            animation: 'float1 6s ease-in-out infinite'
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            animation: 'float1 8s ease-in-out infinite',
+            zIndex: 2
           }}
         />
         <Box
@@ -187,11 +310,29 @@ const Landing: React.FC = () => {
             position: 'absolute',
             bottom: { xs: '10%', md: '20%' },
             right: { xs: '5%', md: '10%' },
-            width: { xs: 80, md: 150 },
-            height: { xs: 80, md: 150 },
+            width: { xs: 100, md: 180 },
+            height: { xs: 100, md: 180 },
             borderRadius: '50%',
-            background: 'rgba(255, 255, 255, 0.08)',
-            animation: 'float2 8s ease-in-out infinite reverse'
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            backdropFilter: 'blur(15px)',
+            animation: 'float2 10s ease-in-out infinite reverse',
+            zIndex: 2
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            top: { xs: '60%', md: '50%' },
+            left: { xs: '80%', md: '75%' },
+            width: { xs: 60, md: 120 },
+            height: { xs: 60, md: 120 },
+            borderRadius: '50%',
+            background: 'rgba(99, 102, 241, 0.1)',
+            border: '1px solid rgba(99, 102, 241, 0.2)',
+            backdropFilter: 'blur(8px)',
+            animation: 'pulse 4s ease-in-out infinite',
+            zIndex: 2
           }}
         />
         
@@ -203,8 +344,13 @@ const Landing: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='1.5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-            opacity: 0.6
+            background: `
+              url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='20' cy='20' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
+              linear-gradient(45deg, transparent 25%, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.02) 50%, transparent 50%, transparent 75%, rgba(255,255,255,0.02) 75%)
+            `,
+            backgroundSize: '40px 40px, 20px 20px',
+            opacity: 0.8,
+            zIndex: 1
           }}
         />
 
@@ -220,12 +366,16 @@ const Landing: React.FC = () => {
                       icon={<StarIcon />}
                       label="Solution Professionnelle"
                       sx={{
-                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)',
                         color: 'white',
                         fontSize: { xs: '0.8rem', md: '0.9rem' },
                         fontWeight: 600,
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)'
+                        backdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)'
+                        }
                       }}
                     />
                   </Box>
@@ -235,16 +385,17 @@ const Landing: React.FC = () => {
                     variant="h1"
                     component="h1"
                     sx={{
-                      fontWeight: 800,
+                      fontWeight: 900,
                       mb: { xs: 2, md: 3 },
-                      fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem', lg: '4rem' },
-                      lineHeight: { xs: 1.2, md: 1.1 },
-                      background: 'linear-gradient(45deg, #ffffff 30%, #f0f0f0 90%)',
+                      fontSize: { xs: '2.5rem', sm: '3rem', md: '4rem', lg: '4.5rem' },
+                      lineHeight: { xs: 1.1, md: 1.05 },
+                      background: 'linear-gradient(135deg, #ffffff 0%, #f7fafc 30%, #e2e8f0 70%, #cbd5e0 100%)',
                       backgroundClip: 'text',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
-                      textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      textAlign: { xs: 'center', md: 'left' }
+                      textShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                      textAlign: { xs: 'center', md: 'left' },
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
                     }}
                   >
                     Atelier Gestion
@@ -296,15 +447,8 @@ const Landing: React.FC = () => {
                     </Stack>
                   </Box>
 
-                  {/* CTA Buttons */}
-                  <Box sx={{ 
-                    mb: { xs: 3, md: 4 }, 
-                    textAlign: { xs: 'center', md: 'left' },
-                    display: 'flex',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    gap: 2,
-                    justifyContent: { xs: 'center', md: 'flex-start' }
-                  }}>
+                  {/* CTA Button */}
+                  <Box sx={{ mb: { xs: 3, md: 4 }, textAlign: { xs: 'center', md: 'left' } }}>
                     <Button
                       variant="contained"
                       size="large"
@@ -329,31 +473,6 @@ const Landing: React.FC = () => {
                       endIcon={<ArrowForwardIcon />}
                     >
                       Accéder à l'Atelier
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="large"
-                      onClick={handleRepairTracking}
-                      sx={{
-                        borderColor: 'white',
-                        color: 'white',
-                        px: { xs: 3, md: 4 },
-                        py: { xs: 1.5, md: 2 },
-                        fontSize: { xs: '1rem', md: '1.1rem' },
-                        fontWeight: 600,
-                        borderRadius: 3,
-                        borderWidth: 2,
-                        transition: 'all 0.3s ease',
-                        width: { xs: '100%', sm: 'auto' },
-                        '&:hover': {
-                          bgcolor: 'rgba(255, 255, 255, 0.1)',
-                          borderColor: 'white',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 8px 32px rgba(255,255,255,0.2)'
-                        }
-                      }}
-                    >
-                      Suivre ma Réparation
                     </Button>
                   </Box>
 
@@ -901,11 +1020,24 @@ const Landing: React.FC = () => {
                     <Box sx={{ mb: 5 }}>
                       <Stack spacing={2.5}>
                         {[
-                          'Gestion complète des réparations',
+                          'Suivi des réparations avec système Kanban',
+                          'SAV et gestion des garanties',
                           'Calendrier et rendez-vous illimités',
                           'Base de données clients illimitée',
-                          'Inventaire et gestion des pièces',
-                          'Rapports et statistiques détaillés',
+                          'Gestion complète des appareils',
+                          'Catalogue des services de réparation',
+                          'Inventaire et gestion des pièces détachées',
+                          'Produits et accessoires en vente',
+                          'Alertes de rupture automatiques',
+                          'Ventes et facturation intégrées',
+                          'Devis et estimations personnalisées',
+                          'Suivi des commandes fournisseurs',
+                          'Statistiques et rapports détaillés',
+                          'Archives et historique complet',
+                          'Programme de fidélité clients',
+                          'Gestion des dépenses atelier',
+                          'Demandes de devis clients',
+                          'Outils d\'administration complets',
                           'Support technique prioritaire',
                           'Sauvegarde automatique des données',
                           'Mises à jour gratuites',
@@ -1036,76 +1168,382 @@ const Landing: React.FC = () => {
       </Box>
 
       {/* About Section */}
-      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 }, px: { xs: 2, md: 3 } }} id="about">
-        <Slide direction="up" in timeout={1200}>
-          <Box>
-            <Typography
-              variant="h3"
-              component="h2"
-              sx={{
-                textAlign: 'center',
-                mb: { xs: 4, md: 6 },
-                fontWeight: 600,
-                fontSize: { xs: '2rem', md: '3rem' }
-              }}
-            >
-              À Propos d'Atelier Gestion
-            </Typography>
-            
-            <Grid container spacing={{ xs: 3, md: 4 }} alignItems="center">
-              <Grid item xs={12} md={6}>
-                <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                  Notre Mission
+      <Box sx={{ 
+        bgcolor: 'grey.50', 
+        py: { xs: 8, md: 12 }, 
+        position: 'relative',
+        overflow: 'hidden'
+      }} id="about">
+        {/* Background decorative elements */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '10%',
+            left: '5%',
+            width: { xs: 100, md: 200 },
+            height: { xs: 100, md: 200 },
+            borderRadius: '50%',
+            background: 'linear-gradient(45deg, rgba(99, 102, 241, 0.1), rgba(16, 185, 129, 0.1))',
+            animation: 'float1 8s ease-in-out infinite'
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: '15%',
+            right: '8%',
+            width: { xs: 80, md: 150 },
+            height: { xs: 80, md: 150 },
+            borderRadius: '50%',
+            background: 'linear-gradient(45deg, rgba(245, 158, 11, 0.1), rgba(239, 68, 68, 0.1))',
+            animation: 'float2 10s ease-in-out infinite reverse'
+          }}
+        />
+        
+        <Container maxWidth="lg" sx={{ px: { xs: 2, md: 3 }, position: 'relative', zIndex: 2 }}>
+          <Slide direction="up" in timeout={1200}>
+            <Box>
+              {/* Header Section */}
+              <Box sx={{ textAlign: 'center', mb: { xs: 6, md: 8 } }}>
+                <Chip
+                  label="À Propos"
+                  sx={{
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    px: 3,
+                    py: 1,
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    mb: 3,
+                    borderRadius: '25px'
+                  }}
+                />
+                <Typography
+                  variant="h3"
+                  component="h2"
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: { xs: '2.5rem', md: '3.5rem', lg: '4rem' },
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    mb: 3,
+                    lineHeight: 1.2
+                  }}
+                >
+                  Notre Histoire
                 </Typography>
-                <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.7 }}>
-                  Atelier Gestion est né de la volonté de simplifier la gestion quotidienne des ateliers de réparation. 
-                  Nous comprenons les défis auxquels font face les techniciens et propriétaires d'ateliers.
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: 'text.secondary',
+                    maxWidth: 600,
+                    mx: 'auto',
+                    fontSize: { xs: '1.1rem', md: '1.25rem' },
+                    lineHeight: 1.6
+                  }}
+                >
+                  Une solution pensée par des professionnels, pour des professionnels
                 </Typography>
-                <Typography variant="body1" sx={{ mb: 3, lineHeight: 1.7 }}>
-                  Notre solution offre une approche moderne et intuitive pour gérer les clients, les réparations, 
-                  l'inventaire et les rendez-vous, le tout depuis une interface unifiée.
-                </Typography>
-                <Typography variant="body1" sx={{ lineHeight: 1.7 }}>
-                  Que vous soyez un petit atelier ou une chaîne de réparation, notre plateforme s'adapte à vos besoins 
-                  et évolue avec votre entreprise.
-                </Typography>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Box sx={{ textAlign: 'center' }}>
-                  <Box
-                    sx={{
-                      width: { xs: 200, sm: 250, md: 300 },
-                      height: { xs: 200, sm: 250, md: 300 },
-                      mx: 'auto',
-                      borderRadius: '50%',
-                      background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.light} 100%)`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'relative',
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: -10,
-                        left: -10,
-                        right: -10,
-                        bottom: -10,
-                        borderRadius: '50%',
-                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                        zIndex: -1,
-                        opacity: 0.3,
-                        animation: 'pulse 2s ease-in-out infinite'
-                      }
-                    }}
-                  >
-                    <BuildIcon sx={{ fontSize: { xs: 80, sm: 100, md: 120 }, color: 'white' }} />
+              </Box>
+
+              <Grid container spacing={{ xs: 4, md: 6 }} alignItems="center">
+                {/* Left side - Content */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ pr: { xs: 0, md: 4 } }}>
+                    {/* Mission Card */}
+                    <Card
+                      sx={{
+                        p: 4,
+                        mb: 4,
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                        border: '1px solid rgba(99, 102, 241, 0.1)',
+                        borderRadius: 3,
+                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-5px)',
+                          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
+                        }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                        <Box
+                          sx={{
+                            width: 50,
+                            height: 50,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 3
+                          }}
+                        >
+                          <StarIcon sx={{ color: 'white', fontSize: 24 }} />
+                        </Box>
+                        <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                          Notre Mission
+                        </Typography>
+                      </Box>
+                      <Typography variant="body1" sx={{ lineHeight: 1.7, color: 'text.secondary' }}>
+                        Simplifier la gestion quotidienne des ateliers de réparation grâce à une solution 
+                        moderne et intuitive. Nous comprenons les défis des techniciens et propriétaires d'ateliers.
+                      </Typography>
+                    </Card>
+
+                    {/* Vision Card */}
+                    <Card
+                      sx={{
+                        p: 4,
+                        mb: 4,
+                        background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
+                        border: '1px solid rgba(16, 185, 129, 0.1)',
+                        borderRadius: 3,
+                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-5px)',
+                          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
+                        }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                        <Box
+                          sx={{
+                            width: 50,
+                            height: 50,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 3
+                          }}
+                        >
+                          <TrendingUpIcon sx={{ color: 'white', fontSize: 24 }} />
+                        </Box>
+                        <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                          Notre Vision
+                        </Typography>
+                      </Box>
+                      <Typography variant="body1" sx={{ lineHeight: 1.7, color: 'text.secondary' }}>
+                        Devenir la référence en matière de gestion d'atelier, en accompagnant la transformation 
+                        digitale des professionnels de la réparation.
+                      </Typography>
+                    </Card>
+
+                    {/* Values Card */}
+                    <Card
+                      sx={{
+                        p: 4,
+                        background: 'linear-gradient(135deg, #ffffff 0%, #fef3c7 100%)',
+                        border: '1px solid rgba(245, 158, 11, 0.1)',
+                        borderRadius: 3,
+                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-5px)',
+                          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)'
+                        }
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                        <Box
+                          sx={{
+                            width: 50,
+                            height: 50,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mr: 3
+                          }}
+                        >
+                          <CheckCircleIcon sx={{ color: 'white', fontSize: 24 }} />
+                        </Box>
+                        <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                          Nos Valeurs
+                        </Typography>
+                      </Box>
+                      <Typography variant="body1" sx={{ lineHeight: 1.7, color: 'text.secondary' }}>
+                        Innovation, simplicité, fiabilité et accompagnement personnalisé sont au cœur 
+                        de notre démarche pour vous offrir la meilleure expérience possible.
+                      </Typography>
+                    </Card>
                   </Box>
-                </Box>
+                </Grid>
+
+                {/* Right side - Visual elements */}
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ textAlign: 'center', position: 'relative' }}>
+                    {/* Main visual container */}
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        width: { xs: 280, sm: 350, md: 400 },
+                        height: { xs: 280, sm: 350, md: 400 },
+                        mx: 'auto'
+                      }}
+                    >
+                      {/* Central icon with gradient background */}
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          width: { xs: 120, sm: 150, md: 180 },
+                          height: { xs: 120, sm: 150, md: 180 },
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #10b981 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 20px 60px rgba(99, 102, 241, 0.3)',
+                          animation: 'pulse 3s ease-in-out infinite'
+                        }}
+                      >
+                        <BuildIcon sx={{ 
+                          fontSize: { xs: 60, sm: 80, md: 100 }, 
+                          color: 'white',
+                          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))'
+                        }} />
+                      </Box>
+
+                      {/* Floating feature icons */}
+                      {[
+                        { icon: <PeopleIcon />, color: '#3b82f6', delay: 0 },
+                        { icon: <ScheduleIcon />, color: '#10b981', delay: 1 },
+                        { icon: <InventoryIcon />, color: '#f59e0b', delay: 2 },
+                        { icon: <AssessmentIcon />, color: '#ef4444', delay: 3 }
+                      ].map((item, index) => (
+                        <Box
+                          key={index}
+                          sx={{
+                            position: 'absolute',
+                            width: { xs: 60, sm: 80, md: 100 },
+                            height: { xs: 60, sm: 80, md: 100 },
+                            borderRadius: '50%',
+                            background: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+                            border: `3px solid ${item.color}20`,
+                            top: index < 2 ? '10%' : '70%',
+                            left: index % 2 === 0 ? '10%' : '70%',
+                            animation: `float1 ${4 + index}s ease-in-out infinite`,
+                            animationDelay: `${item.delay}s`,
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                              boxShadow: `0 15px 40px ${item.color}30`
+                            }
+                          }}
+                        >
+                          {React.cloneElement(item.icon, {
+                            sx: { 
+                              fontSize: { xs: 30, sm: 40, md: 50 }, 
+                              color: item.color 
+                            }
+                          })}
+                        </Box>
+                      ))}
+                    </Box>
+
+                    {/* Stats section */}
+                    <Box sx={{ mt: 6 }}>
+                      <Grid container spacing={3}>
+                        {[
+                          { number: '18', label: 'Modules Complets', color: '#6366f1' },
+                          { number: '100%', label: 'Satisfaction', color: '#10b981' },
+                          { number: '24/7', label: 'Disponible', color: '#f59e0b' }
+                        ].map((stat, index) => (
+                          <Grid item xs={4} key={index}>
+                            <Box
+                              sx={{
+                                textAlign: 'center',
+                                p: 3,
+                                background: 'white',
+                                borderRadius: 2,
+                                boxShadow: '0 5px 20px rgba(0, 0, 0, 0.08)',
+                                border: `2px solid ${stat.color}20`,
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                  transform: 'translateY(-5px)',
+                                  boxShadow: `0 10px 30px ${stat.color}30`
+                                }
+                              }}
+                            >
+                              <Typography
+                                variant="h4"
+                                sx={{
+                                  fontWeight: 800,
+                                  color: stat.color,
+                                  fontSize: { xs: '1.5rem', md: '2rem' }
+                                }}
+                              >
+                                {stat.number}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: 'text.secondary',
+                                  fontWeight: 600,
+                                  fontSize: { xs: '0.75rem', md: '0.875rem' }
+                                }}
+                              >
+                                {stat.label}
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+                  </Box>
+                </Grid>
               </Grid>
-            </Grid>
-          </Box>
-        </Slide>
-      </Container>
+
+              {/* Bottom CTA */}
+              <Box sx={{ textAlign: 'center', mt: { xs: 6, md: 8 } }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    mb: 3,
+                    fontWeight: 600,
+                    color: 'text.primary'
+                  }}
+                >
+                  Prêt à transformer votre atelier ?
+                </Typography>
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={handleAccessApp}
+                  sx={{
+                    px: 6,
+                    py: 2,
+                    fontSize: '1.1rem',
+                    fontWeight: 600,
+                    borderRadius: 3,
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    boxShadow: '0 10px 30px rgba(99, 102, 241, 0.3)',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 15px 40px rgba(99, 102, 241, 0.4)'
+                    }
+                  }}
+                  endIcon={<ArrowForwardIcon />}
+                >
+                  Découvrir la Solution
+                </Button>
+              </Box>
+            </Box>
+          </Slide>
+        </Container>
+      </Box>
 
       {/* CTA Section */}
       <Container maxWidth="md" sx={{ py: { xs: 6, md: 8 }, px: { xs: 2, md: 3 }, textAlign: 'center' }}>
@@ -1191,8 +1629,8 @@ const Landing: React.FC = () => {
                   Atelier Gestion
                 </Typography>
                 <Typography variant="body2" sx={{ opacity: 0.8, mb: 3, lineHeight: 1.6 }}>
-                  Solution complète de gestion d'atelier de réparation d'appareils électroniques. 
-                  Simplifiez votre quotidien avec nos outils professionnels.
+                  Solution complète de gestion d'atelier avec 18 modules intégrés : suivi Kanban, SAV, calendrier, 
+                  clients, inventaire, facturation, devis, statistiques, fidélité, archives et bien plus encore.
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <Box

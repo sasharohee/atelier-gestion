@@ -308,7 +308,7 @@ export const OnboardingGuide: React.FC<OnboardingGuideProps> = ({ open = false, 
                       {service.price}€
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      ⏱️ {service.duration} minutes
+                      ⏱️ {service.duration}h
                     </Typography>
                   </CardContent>
                 </Card>
