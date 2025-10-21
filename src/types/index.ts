@@ -69,6 +69,97 @@ export interface Client {
 
 export type DeviceType = 'smartphone' | 'tablet' | 'laptop' | 'desktop' | 'other';
 
+// Types pour les rachats d'appareils
+export type BuybackStatus = 'pending' | 'accepted' | 'rejected' | 'paid';
+export type DeviceCondition = 'excellent' | 'good' | 'fair' | 'poor' | 'broken';
+export type PaymentMethod = 'cash' | 'transfer' | 'check' | 'credit';
+export type BuybackReason = 'resale' | 'parts' | 'collection' | 'other';
+export type IDType = 'cni' | 'passeport' | 'permis' | 'autre';
+
+export interface Buyback {
+  id: string;
+  
+  // Informations client vendeur
+  clientFirstName: string;
+  clientLastName: string;
+  clientEmail: string;
+  clientPhone: string;
+  clientAddress?: string;
+  clientAddressComplement?: string;
+  clientPostalCode?: string;
+  clientCity?: string;
+  clientIdType?: IDType;
+  clientIdNumber?: string;
+  
+  // Informations appareil
+  deviceType: DeviceType;
+  deviceBrand: string;
+  deviceModel: string;
+  deviceImei?: string;
+  deviceSerialNumber?: string;
+  deviceColor?: string;
+  deviceStorageCapacity?: string;
+  
+  // État technique
+  physicalCondition: DeviceCondition;
+  functionalCondition: {
+    powersOn?: boolean;
+    touchWorks?: boolean;
+    soundWorks?: boolean;
+    camerasWork?: boolean;
+    buttonsWork?: boolean;
+  };
+  batteryHealth?: number; // pourcentage 0-100
+  screenCondition?: 'perfect' | 'minor_scratches' | 'major_scratches' | 'cracked' | 'broken';
+  buttonCondition?: 'perfect' | 'sticky' | 'broken' | 'missing';
+  
+  // Blocages
+  icloudLocked: boolean;
+  googleLocked: boolean;
+  carrierLocked: boolean;
+  otherLocks?: string;
+  
+  // Accessoires inclus
+  accessories: {
+    charger?: boolean;
+    cable?: boolean;
+    headphones?: boolean;
+    originalBox?: boolean;
+    screenProtector?: boolean;
+    case?: boolean;
+    manual?: boolean;
+  };
+  
+  // Informations commerciales
+  suggestedPrice?: number;
+  offeredPrice: number;
+  finalPrice?: number;
+  paymentMethod: PaymentMethod;
+  buybackReason: BuybackReason;
+  
+  // Garantie
+  hasWarranty: boolean;
+  warrantyExpiresAt?: Date;
+  
+  // Photos et documents
+  photos?: string[];
+  documents?: string[];
+  
+  // Statut et notes
+  status: BuybackStatus;
+  internalNotes?: string;
+  clientNotes?: string;
+  
+  // Conditions acceptées
+  termsAccepted: boolean;
+  termsAcceptedAt?: Date;
+  
+  // Métadonnées
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Device {
   id: string;
   brand: string;
@@ -501,3 +592,6 @@ export interface SAVStats {
 
 // Re-export des types pour les services par modèle
 export * from './deviceModelService';
+
+// Re-export des types comptables
+export * from './accounting';

@@ -48,6 +48,8 @@ import {
   LocalShipping as ShippingIcon,
   AttachMoney as ExpensesIcon,
   RequestQuote as RequestQuoteIcon,
+  ShoppingBag as BuybackIcon,
+  AccountBalance as AccountingIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
@@ -137,6 +139,18 @@ const menuItems = [
     icon: <RequestQuoteIcon />,
     path: '/app/quote-requests',
     color: '#7c3aed',
+  },
+  {
+    text: 'Rachat',
+    icon: <BuybackIcon />,
+    path: '/app/buyback',
+    color: '#10b981',
+  },
+  {
+    text: 'Comptabilité',
+    icon: <AccountingIcon />,
+    path: '/app/accounting',
+    color: '#0ea5e9',
   },
   {
     text: 'Administration',

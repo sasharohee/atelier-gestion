@@ -1131,12 +1131,19 @@ const Administration: React.FC = () => {
                   value={getSettingValue('vat_rate', '20')}
                   onChange={(e) => updateLocalSetting('vat_rate', e.target.value)}
                 />
-                <TextField
-                  fullWidth
-                  label="Devise"
-                  value={getSettingValue('currency', 'EUR')}
-                  onChange={(e) => updateLocalSetting('currency', e.target.value)}
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Devise</InputLabel>
+                  <Select 
+                    value={getSettingValue('currency', 'EUR')} 
+                    label="Devise"
+                    onChange={(e) => updateLocalSetting('currency', e.target.value)}
+                  >
+                    <MenuItem value="EUR">EUR (€)</MenuItem>
+                    <MenuItem value="USD">USD ($)</MenuItem>
+                    <MenuItem value="GBP">GBP (£)</MenuItem>
+                    <MenuItem value="CHF">CHF (CHF)</MenuItem>
+                  </Select>
+                </FormControl>
                 <TextField
                   fullWidth
                   label="Préfixe facture"

@@ -24,6 +24,7 @@ import Layout from './components/Layout/Layout';
 import AuthGuard from './components/AuthGuard';
 import AdminGuard from './components/AdminGuard';
 import AdminPasswordGuard from './components/AdminPasswordGuard';
+import AccountingPasswordGuard from './components/AccountingPasswordGuard';
 import GuestGuard from './components/GuestGuard';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -45,6 +46,8 @@ const Expenses = lazy(() => import('./pages/Expenses/Expenses'));
 const QuoteRequests = lazy(() => import('./pages/QuoteRequests/QuoteRequestsManagement'));
 const Administration = lazy(() => import('./pages/Administration/Administration'));
 const Settings = lazy(() => import('./pages/Settings/Settings'));
+import Buyback from './pages/Buyback/BuybackProgressive';
+const Accounting = lazy(() => import('./pages/Accounting/Accounting'));
 const SubscriptionBlocked = lazy(() => import('./pages/Auth/SubscriptionBlocked'));
 
 // Pages légères - import direct
@@ -241,6 +244,12 @@ function App() {
                           <Route path="/loyalty" element={<Loyalty />} />
                           <Route path="/expenses" element={<Expenses />} />
                           <Route path="/quote-requests" element={<QuoteRequests />} />
+                          <Route path="/buyback" element={<Buyback />} />
+                          <Route path="/accounting" element={
+                            <AccountingPasswordGuard>
+                              <Accounting />
+                            </AccountingPasswordGuard>
+                          } />
                           <Route path="/settings" element={<Settings />} />
                         </Routes>
                       </Suspense>

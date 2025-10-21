@@ -14,7 +14,9 @@ import {
   Notification,
   DashboardStats,
   Expense,
-  ExpenseStats
+  ExpenseStats,
+  Buyback,
+  BuybackStatus
 } from '../types';
 
 // Service pour les paramètres système
@@ -3463,6 +3465,260 @@ export const subscriptionService = {
   }
 };
 
+// Service pour les rachats d'appareils
+export const buybackService = {
+  async getAll() {
+    console.log('🔍 buybackService.getAll() appelé');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log('❌ Aucun utilisateur connecté');
+        return handleSupabaseSuccess([]);
+      }
+
+      const { data, error } = await supabase
+        .from('buybacks')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      console.log('📊 Résultat Supabase buybacks:', { data, error });
+      
+      if (error) {
+        console.error('❌ Erreur Supabase buybacks:', error);
+        return handleSupabaseError(error);
+      }
+      
+      // Conversion snake_case vers camelCase pour l'interface
+      const convertedData = data?.map((item: any) => ({
+        id: item.id,
+        clientFirstName: item.client_first_name,
+        clientLastName: item.client_last_name,
+        clientEmail: item.client_email,
+        clientPhone: item.client_phone,
+        clientAddress: item.client_address,
+        clientAddressComplement: item.client_address_complement,
+        clientPostalCode: item.client_postal_code,
+        clientCity: item.client_city,
+        clientIdType: item.client_id_type,
+        clientIdNumber: item.client_id_number,
+        deviceType: item.device_type,
+        deviceBrand: item.device_brand,
+        deviceModel: item.device_model,
+        deviceImei: item.device_imei,
+        deviceSerialNumber: item.device_serial_number,
+        deviceColor: item.device_color,
+        deviceStorageCapacity: item.device_storage_capacity,
+        physicalCondition: item.physical_condition,
+        functionalCondition: item.functional_condition,
+        batteryHealth: item.battery_health,
+        screenCondition: item.screen_condition,
+        buttonCondition: item.button_condition,
+        icloudLocked: item.icloud_locked,
+        googleLocked: item.google_locked,
+        carrierLocked: item.carrier_locked,
+        otherLocks: item.other_locks,
+        accessories: item.accessories,
+        suggestedPrice: item.suggested_price,
+        offeredPrice: item.offered_price,
+        finalPrice: item.final_price,
+        paymentMethod: item.payment_method,
+        buybackReason: item.buyback_reason,
+        hasWarranty: item.has_warranty,
+        warrantyExpiresAt: item.warranty_expires_at,
+        photos: item.photos,
+        documents: item.documents,
+        status: item.status,
+        internalNotes: item.internal_notes,
+        clientNotes: item.client_notes,
+        termsAccepted: item.terms_accepted,
+        termsAcceptedAt: item.terms_accepted_at,
+        userId: item.user_id,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      })) || [];
+      
+      console.log('✅ Données rachats récupérées:', convertedData);
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      console.error('💥 Exception dans getAll buybacks:', err);
+      return handleSupabaseSuccess([]);
+    }
+  },
+
+  async getById(id: string) {
+    console.log('🔍 buybackService.getById() appelé pour:', id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const { data, error } = await supabase
+        .from('buybacks')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      return handleSupabaseSuccess(data);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async create(buyback: Omit<Buyback, 'id' | 'createdAt' | 'updatedAt'>) {
+    console.log('🔍 buybackService.create() appelé');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      // Conversion camelCase vers snake_case pour la base de données
+      const buybackData = {
+        client_first_name: buyback.clientFirstName,
+        client_last_name: buyback.clientLastName,
+        client_email: buyback.clientEmail,
+        client_phone: buyback.clientPhone,
+        client_address: buyback.clientAddress,
+        client_address_complement: buyback.clientAddressComplement,
+        client_postal_code: buyback.clientPostalCode,
+        client_city: buyback.clientCity,
+        client_id_type: buyback.clientIdType,
+        client_id_number: buyback.clientIdNumber,
+        device_type: buyback.deviceType,
+        device_brand: buyback.deviceBrand,
+        device_model: buyback.deviceModel,
+        device_imei: buyback.deviceImei,
+        device_serial_number: buyback.deviceSerialNumber,
+        device_color: buyback.deviceColor,
+        device_storage_capacity: buyback.deviceStorageCapacity,
+        physical_condition: buyback.physicalCondition,
+        functional_condition: buyback.functionalCondition,
+        battery_health: buyback.batteryHealth,
+        screen_condition: buyback.screenCondition,
+        button_condition: buyback.buttonCondition,
+        icloud_locked: buyback.icloudLocked,
+        google_locked: buyback.googleLocked,
+        carrier_locked: buyback.carrierLocked,
+        other_locks: buyback.otherLocks,
+        accessories: buyback.accessories,
+        suggested_price: buyback.suggestedPrice,
+        offered_price: buyback.offeredPrice,
+        final_price: buyback.finalPrice,
+        payment_method: buyback.paymentMethod,
+        buyback_reason: buyback.buybackReason,
+        has_warranty: buyback.hasWarranty,
+        warranty_expires_at: buyback.warrantyExpiresAt,
+        photos: buyback.photos,
+        documents: buyback.documents,
+        status: buyback.status,
+        internal_notes: buyback.internalNotes,
+        client_notes: buyback.clientNotes,
+        terms_accepted: buyback.termsAccepted,
+        terms_accepted_at: buyback.termsAcceptedAt,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('buybacks')
+        .insert([buybackData])
+        .select()
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      return handleSupabaseSuccess(data);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async update(id: string, buyback: Partial<Omit<Buyback, 'id' | 'createdAt' | 'updatedAt' | 'userId'>>) {
+    console.log('🔍 buybackService.update() appelé pour:', id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const updateData = {
+        ...buyback,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('buybacks')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      return handleSupabaseSuccess(data);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async delete(id: string) {
+    console.log('🔍 buybackService.delete() appelé pour:', id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const { error } = await supabase
+        .from('buybacks')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+      
+      if (error) return handleSupabaseError(error);
+      return handleSupabaseSuccess({ message: 'Rachat supprimé avec succès' });
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async updateStatus(id: string, status: BuybackStatus) {
+    console.log('🔍 buybackService.updateStatus() appelé pour:', id, 'statut:', status);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const { data, error } = await supabase
+        .from('buybacks')
+        .update({ 
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      return handleSupabaseSuccess(data);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  }
+};
+
 export default {
   userService,
   systemSettingsService,
@@ -3478,5 +3734,6 @@ export default {
   appointmentService,
   dashboardService,
   subscriptionService,
+  buybackService,
 };
 
