@@ -324,12 +324,12 @@ const Products: React.FC = () => {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 fullWidth
-                label="Prix HT (€)"
+                label="Prix TTC (€)"
                 type="number"
                 value={formData.price}
                 onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
                 inputProps={{ min: 0, step: 0.01 }}
-                helperText="Prix hors taxes"
+                helperText="Prix toutes taxes comprises"
               />
               
               <TextField
