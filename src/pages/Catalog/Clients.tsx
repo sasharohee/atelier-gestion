@@ -24,9 +24,11 @@ import {
   Email as EmailIcon,
   Phone as PhoneIcon,
   Refresh as RefreshIcon,
+  Upload as UploadIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import ClientForm from '../../components/ClientForm';
+import CSVImport from '../../components/CSVImport';
 import { clientService } from '../../services/supabaseService';
 
 const Clients: React.FC = () => {
@@ -37,6 +39,7 @@ const Clients: React.FC = () => {
   const [clientFormOpen, setClientFormOpen] = useState(false);
   const [editClientFormOpen, setEditClientFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
+  const [csvImportOpen, setCsvImportOpen] = useState(false);
 
   useEffect(() => {
     const loadClientsData = async () => {
@@ -63,6 +66,16 @@ const Clients: React.FC = () => {
 
   const handleCloseDialog = () => {
     setClientFormOpen(false);
+    setError(null);
+  };
+
+  const handleOpenCsvImport = () => {
+    setCsvImportOpen(true);
+    setError(null);
+  };
+
+  const handleCloseCsvImport = () => {
+    setCsvImportOpen(false);
     setError(null);
   };
 
@@ -304,6 +317,43 @@ const Clients: React.FC = () => {
     }
   };
 
+  const handleCsvImport = async (clientsToImport: any[]) => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      console.log('🚀 CLIENTS PAGE - Début de l\'import CSV:', clientsToImport.length, 'clients');
+      
+      // Importer chaque client
+      for (const clientData of clientsToImport) {
+        // Vérifier si l'email existe déjà
+        const existingClient = clients.find(c => c.email.toLowerCase() === clientData.email.toLowerCase());
+        if (existingClient) {
+          console.warn(`⚠️ Client avec l'email "${clientData.email}" existe déjà, ignoré`);
+          continue;
+        }
+
+        console.log('📋 CLIENTS PAGE - Import du client:', clientData.email);
+        await addClient(clientData);
+      }
+
+      // Recharger la liste des clients
+      await loadClients();
+      
+      console.log('✅ CLIENTS PAGE - Import CSV terminé avec succès!');
+      alert(`✅ ${clientsToImport.length} clients importés avec succès !`);
+      
+    } catch (err: any) {
+      console.error('💥 CLIENTS PAGE - Erreur lors de l\'import CSV:', err);
+      const errorMessage = err?.message || 'Erreur lors de l\'import CSV. Veuillez réessayer.';
+      setError(errorMessage);
+      alert(`❌ ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
+      setCsvImportOpen(false);
+    }
+  };
+
   return (
     <Box>
       <Box sx={{ mb: 4 }}>
@@ -328,6 +378,22 @@ const Clients: React.FC = () => {
           }}
         >
           Nouveau client
+        </Button>
+
+        <Button
+          variant="outlined"
+          startIcon={<UploadIcon />}
+          onClick={handleOpenCsvImport}
+          sx={{
+            borderColor: '#6b7280',
+            color: '#6b7280',
+            '&:hover': {
+              borderColor: '#4b5563',
+              backgroundColor: '#f9fafb',
+            }
+          }}
+        >
+          Importer CSV
         </Button>
         
 
@@ -554,6 +620,13 @@ const Clients: React.FC = () => {
           emailMarketing: editingClient.emailMarketing !== false,
         } : undefined}
         isEditing={true}
+      />
+
+      {/* Dialog d'import CSV */}
+      <CSVImport
+        open={csvImportOpen}
+        onClose={handleCloseCsvImport}
+        onImport={handleCsvImport}
       />
     </Box>
   );
