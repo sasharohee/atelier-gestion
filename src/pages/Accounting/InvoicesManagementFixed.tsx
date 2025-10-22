@@ -28,6 +28,9 @@ import {
 } from '@mui/material';
 import { Search, Visibility, Download, Close as CloseIcon } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import { useCurrencyFormatter } from '../../utils/currency';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 interface Invoice {
   id: string;
@@ -50,6 +53,10 @@ const InvoicesManagementFixed: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   const { sales, repairs, clients, systemSettings, loadSales, loadRepairs, loadClients, loadSystemSettings } = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   useEffect(() => {
     loadRealInvoices();
@@ -167,10 +174,7 @@ const InvoicesManagementFixed: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
+    return formatFromEUR(amount, currency);
   };
 
   const handleDownloadInvoice = (invoice: Invoice) => {
@@ -253,11 +257,11 @@ const InvoicesManagementFixed: React.FC = () => {
         <div class="totals-section">
             <div class="total-row">
                 <span>Sous-total HT :</span>
-                <span>${(invoice.totalAmount / (1 + getVatRate() / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                <span>${formatFromEUR(invoice.totalAmount / (1 + getVatRate() / 100), currency)}</span>
             </div>
             <div class="total-row">
                 <span>TVA (${getVatRate()}%) :</span>
-                <span>${(invoice.totalAmount - (invoice.totalAmount / (1 + getVatRate() / 100))).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+                <span>${formatFromEUR(invoice.totalAmount - (invoice.totalAmount / (1 + getVatRate() / 100)), currency)}</span>
             </div>
             <div class="total-row">
                 <span>TOTAL TTC :</span>
@@ -590,7 +594,7 @@ const InvoicesManagementFixed: React.FC = () => {
                           Sous-total HT :
                         </Typography>
                         <Typography sx={{ fontWeight: 600, fontSize: '16px' }}>
-                          {(selectedInvoice.totalAmount / (1 + getVatRate() / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                          {formatFromEUR(selectedInvoice.totalAmount / (1 + getVatRate() / 100), currency)}
                         </Typography>
                       </Box>
                       <Box sx={{ 
@@ -603,7 +607,7 @@ const InvoicesManagementFixed: React.FC = () => {
                           TVA ({getVatRate()}%) :
                         </Typography>
                         <Typography sx={{ fontSize: '16px' }}>
-                          {(selectedInvoice.totalAmount - (selectedInvoice.totalAmount / (1 + getVatRate() / 100))).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                          {formatFromEUR(selectedInvoice.totalAmount - (selectedInvoice.totalAmount / (1 + getVatRate() / 100)), currency)}
                         </Typography>
                       </Box>
                       <Divider sx={{ my: 1.5, borderColor: '#eee' }} />

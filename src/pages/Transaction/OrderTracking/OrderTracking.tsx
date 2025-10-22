@@ -46,12 +46,20 @@ import {
 } from '@mui/icons-material';
 import { InputAdornment } from '@mui/material';
 import { useAppStore } from '../../../store';
+import { useWorkshopSettings } from '../../../contexts/WorkshopSettingsContext';
+import { formatFromEUR, getCurrencySymbol } from '../../../utils/currencyUtils';
 
 import OrderStats from './OrderStats';
 import { Order } from '../../../types/order';
 import orderService from '../../../services/orderService';
 
 const OrderTracking: React.FC = () => {
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
+  const currencySymbol = getCurrencySymbol(currency);
+  
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
@@ -456,10 +464,7 @@ const OrderTracking: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                      {order.totalAmount.toLocaleString('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR'
-                      })}
+                      {formatFromEUR(order.totalAmount, currency)}
                     </Typography>
                   </TableCell>
                   <TableCell align="center">
@@ -533,6 +538,12 @@ const OrderDialog: React.FC<OrderDialogProps> = ({
   onClose,
   onSave
 }) => {
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
+  const currencySymbol = getCurrencySymbol(currency);
+  
   const [formData, setFormData] = useState<Partial<Order>>({});
 
   useEffect(() => {
@@ -672,7 +683,7 @@ const OrderDialog: React.FC<OrderDialogProps> = ({
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
-              label="Montant total (€)"
+              label={`Montant total (${currencySymbol})`}
               type="number"
               value={formData.totalAmount || 0}
               onChange={(e) => setFormData({ ...formData, totalAmount: parseFloat(e.target.value) || 0 })}
@@ -683,7 +694,7 @@ const OrderDialog: React.FC<OrderDialogProps> = ({
                 placeholder: "0.00"
               }}
               InputProps={{
-                startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                startAdornment: <InputAdornment position="start">{currencySymbol}</InputAdornment>,
               }}
             />
           </Grid>

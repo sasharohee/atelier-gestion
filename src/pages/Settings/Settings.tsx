@@ -1339,7 +1339,7 @@ const Settings: React.FC = () => {
                   >
                     <option value="EUR">EUR (€)</option>
                     <option value="USD">USD ($)</option>
-                    <option value="GBP">GBP (£)</option>
+                    <option value="CHF">CHF (CHF)</option>
                   </select>
                 </div>
               </div>

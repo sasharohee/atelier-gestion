@@ -28,6 +28,8 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { addDays } from 'date-fns';
 import { Client, Device, User, RepairStatus, Repair } from '../../types';
 import { savService } from '../../services/savService';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { getCurrencySymbol } from '../../utils/currencyUtils';
 
 interface NewRepairDialogProps {
   open: boolean;
@@ -72,6 +74,12 @@ export const NewRepairDialog: React.FC<NewRepairDialogProps> = ({
   repairStatuses,
   onSubmit,
 }) => {
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
+  const currencySymbol = getCurrencySymbol(currency);
+  
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [loading, setLoading] = useState(false);
@@ -356,7 +364,7 @@ export const NewRepairDialog: React.FC<NewRepairDialogProps> = ({
               <TextField
                 fullWidth
                 type="number"
-                label="Prix estimé (€)"
+                label={`Prix estimé (${currencySymbol})`}
                 value={formData.totalPrice}
                 onChange={(e) => handleChange('totalPrice', parseFloat(e.target.value) || 0)}
                 inputProps={{ min: 0, step: 5 }}

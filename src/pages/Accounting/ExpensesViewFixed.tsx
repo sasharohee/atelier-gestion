@@ -23,6 +23,9 @@ import {
 } from '@mui/material';
 import { Search, Add, AttachMoney } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import { useCurrencyFormatter } from '../../utils/currency';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 interface Expense {
   id: string;
@@ -41,6 +44,11 @@ const ExpensesViewFixed: React.FC = () => {
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   useEffect(() => {
     loadRealExpenses();
@@ -117,10 +125,7 @@ const ExpensesViewFixed: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
+    return formatFromEUR(amount, currency);
   };
 
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);

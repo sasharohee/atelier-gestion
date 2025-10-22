@@ -58,8 +58,15 @@ import { deviceTypeColors } from '../../theme';
 import { Repair, Device, Client } from '../../types';
 import Invoice from '../../components/Invoice';
 import { repairService } from '../../services/supabaseService';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 const Archive: React.FC = () => {
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
+  
   const {
     repairs,
     clients,
@@ -377,7 +384,7 @@ const Archive: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
-                      {repair.totalPrice ? `${repair.totalPrice.toFixed(2)} € TTC` : '0.00 € TTC'}
+                      {repair.totalPrice ? `${formatFromEUR(repair.totalPrice, currency)} TTC` : `${formatFromEUR(0, currency)} TTC`}
                     </Typography>
                   </TableCell>
                   <TableCell>

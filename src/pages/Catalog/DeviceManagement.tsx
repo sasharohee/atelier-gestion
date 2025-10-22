@@ -75,6 +75,8 @@ import {
 } from '@mui/icons-material';
 import CategoryIconDisplay from '../../components/CategoryIconDisplay';
 import CategoryIconGrid from '../../components/CategoryIconGrid';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 interface NewBrandForm {
   name: string;
@@ -99,6 +101,11 @@ interface NewModelForm {
 }
 
 const DeviceManagement: React.FC = () => {
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
+  
   // États pour les données
   const [allCategories, setAllCategories] = useState<DeviceCategory[]>([]);
   const [allBrands, setAllBrands] = useState<BrandWithCategories[]>([]);
@@ -1475,7 +1482,7 @@ const DeviceManagement: React.FC = () => {
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant="body2">
-                              {association.effective_price || 0} €
+                              {formatFromEUR(association.effective_price || 0, currency)}
                             </Typography>
                             {association.customPrice && (
                               <Chip 
@@ -1551,7 +1558,7 @@ const DeviceManagement: React.FC = () => {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                       <span>{service.name}</span>
                       <Typography variant="caption" color="text.secondary">
-                        {service.price} € - {service.duration}h
+                        {formatFromEUR(service.price, currency)} - {service.duration}h
                       </Typography>
                     </Box>
                   </MenuItem>

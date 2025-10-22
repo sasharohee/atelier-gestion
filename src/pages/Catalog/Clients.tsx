@@ -25,6 +25,7 @@ import {
   Phone as PhoneIcon,
   Refresh as RefreshIcon,
   Upload as UploadIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import ClientForm from '../../components/ClientForm';
@@ -354,6 +355,80 @@ const Clients: React.FC = () => {
     }
   };
 
+  const handleExportClients = () => {
+    if (clients.length === 0) {
+      alert('Aucun client à exporter.');
+      return;
+    }
+
+    // En-têtes du CSV
+    const headers = [
+      'Prénom',
+      'Nom', 
+      'Email',
+      'Indicatif',
+      'Téléphone mobile',
+      'Adresse',
+      'Complément adresse',
+      'Code postal',
+      'Ville',
+      'Etat',
+      'Pays',
+      'Société',
+      'N° TVA',
+      'N° SIREN',
+      'Code Comptable',
+      'Titre (M. / Mme)',
+      'Identifiant CNI'
+    ];
+
+    // Convertir les clients en format CSV
+    const csvData = clients.map(client => {
+      // Extraire le numéro de téléphone sans l'indicatif
+      const phoneWithoutCode = client.phone ? client.phone.replace(client.countryCode || '33', '') : '';
+      
+      return [
+        client.firstName || '',
+        client.lastName || '',
+        client.email || '',
+        client.countryCode || '33',
+        phoneWithoutCode,
+        client.address || '',
+        client.addressComplement || '',
+        client.postalCode || '',
+        client.city || '',
+        client.region || '',
+        'France', // Pays par défaut
+        client.companyName || '',
+        client.vatNumber || '',
+        client.sirenNumber || '',
+        client.accountingCode || '',
+        client.title === 'mrs' ? 'Mme' : 'M.',
+        client.cniIdentifier || ''
+      ];
+    });
+
+    // Créer le contenu CSV
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.map(field => `"${field}"`).join(','))
+    ].join('\n');
+
+    // Créer et télécharger le fichier
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `clients_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    console.log('✅ Export CSV terminé:', clients.length, 'clients exportés');
+    alert(`✅ ${clients.length} clients exportés avec succès !`);
+  };
+
   return (
     <Box>
       <Box sx={{ mb: 4 }}>
@@ -394,6 +469,27 @@ const Clients: React.FC = () => {
           }}
         >
           Importer CSV
+        </Button>
+
+        <Button
+          variant="outlined"
+          startIcon={<DownloadIcon />}
+          onClick={handleExportClients}
+          disabled={clients.length === 0}
+          sx={{
+            borderColor: '#10b981',
+            color: '#10b981',
+            '&:hover': {
+              borderColor: '#059669',
+              backgroundColor: '#f0fdf4',
+            },
+            '&:disabled': {
+              borderColor: '#d1d5db',
+              color: '#9ca3af',
+            }
+          }}
+        >
+          Exporter CSV
         </Button>
         
 

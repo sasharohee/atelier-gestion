@@ -1,0 +1,11 @@
+Prénom,Nom,Email,Indicatif,Téléphone mobile,Adresse,Complément adresse,Code postal,Ville,Etat,Pays,Société,N° TVA,N° SIREN,Code Comptable,Titre (M. / Mme),Identifiant CNI
+Jean,Dupont,jean.dupont@email.com,33,612345678,123 Rue de la Paix,Appartement 4B,75001,Paris,Île-de-France,France,,,,"",M.,1234567890123
+Marie,Martin,marie.martin@company.fr,33,698765432,456 Avenue des Champs,Étage 2,69000,Lyon,Auvergne-Rhône-Alpes,France,TechnoSolutions,FR12345678901,123456789,CLI001,Mme,9876543210987
+Pierre,Bernard,pierre.bernard@test.com,33,655123456,789 Boulevard Saint-Germain,,13001,Marseille,Provence-Alpes-Côte d'Azur,France,,,,"",M.,4567891230456
+Sophie,Petit,sophie.petit@entreprise.com,33,644789123,321 Rue de Rivoli,Bureau 15,31000,Toulouse,Occitanie,France,DigitalCorp,FR98765432109,987654321,CLI002,Mme,7891234560789
+Marc,Dubois,marc.dubois@example.org,33,633987654,654 Place Bellecour,,69002,Lyon,Auvergne-Rhône-Alpes,France,,,,"",M.,3216549870123
+Julie,Moreau,julie.moreau@business.fr,33,677456123,987 Cours Mirabeau,Suite 8,13100,Aix-en-Provence,Provence-Alpes-Côte d'Azur,France,InnovateLtd,FR45678912345,456789123,CLI003,Mme,6543219870456
+Thomas,Robert,thomas.robert@test.fr,33,611234567,147 Rue de la République,,44000,Nantes,Pays de la Loire,France,,,,"",M.,9876543210123
+Laura,Simon,laura.simon@company.com,33,699876543,258 Avenue Jean Jaurès,Appartement 3A,59000,Lille,Hauts-de-France,France,ServicePro,FR78912345678,789123456,CLI004,Mme,1472583690741
+Nicolas,Laurent,nicolas.laurent@demo.fr,33,655987123,369 Rue du Commerce,,67000,Strasbourg,Grand Est,France,,,,"",M.,3691472580369
+Emma,Rousseau,emma.rousseau@business.com,33,644123789,741 Boulevard Haussmann,Bureau 22,75008,Paris,Île-de-France,France,MarketingPlus,FR14725836901,147258369,CLI005,Mme,7418529630741

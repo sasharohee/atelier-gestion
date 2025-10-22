@@ -64,6 +64,7 @@ import { Sale, SaleItem } from '../../types';
 import Invoice from '../../components/Invoice';
 import SimplifiedSalesDialog from '../../components/SimplifiedSalesDialog';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 interface SaleItemForm {
   type: 'product' | 'service' | 'part';
@@ -88,6 +89,9 @@ const Sales: React.FC = () => {
   } = useAppStore();
   
   const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   const [newSaleDialogOpen, setNewSaleDialogOpen] = useState(false);
   const [simplifiedSaleDialogOpen, setSimplifiedSaleDialogOpen] = useState(false);
@@ -548,8 +552,8 @@ const Sales: React.FC = () => {
               <tr>
                 <td>${item.name || 'Article'}</td>
                 <td>${item.quantity || 1}</td>
-                <td>${(item.unitPrice || 0).toLocaleString('fr-FR')} €</td>
-                <td>${(item.totalPrice || 0).toLocaleString('fr-FR')} €</td>
+                <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
+                <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
               </tr>
             `).join('') : '<tr><td colspan="4" style="text-align: center; color: #666;">Aucun article dans cette vente</td></tr>'}
           </tbody>
@@ -558,21 +562,21 @@ const Sales: React.FC = () => {
         <div class="totals">
           <div class="total-line">
             <span>Sous-total HT:</span>
-            <span>${(sale.subtotal || 0).toLocaleString('fr-FR')} €</span>
+            <span>${formatFromEUR(sale.subtotal || 0, currency)}</span>
           </div>
           <div class="total-line">
             <span>TVA (${workshopSettings.vatRate || 20}%):</span>
-            <span>${(sale.tax || 0).toLocaleString('fr-FR')} €</span>
+            <span>${formatFromEUR(sale.tax || 0, currency)}</span>
           </div>
           ${(sale.discountPercentage || 0) > 0 ? `
             <div class="total-line">
               <span>Remise (${sale.discountPercentage}%):</span>
-              <span>-${(sale.discountAmount || 0).toLocaleString('fr-FR')} €</span>
+              <span>-${formatFromEUR(sale.discountAmount || 0, currency)}</span>
             </div>
           ` : ''}
           <div class="total-line final">
             <span>TOTAL TTC:</span>
-            <span>${(sale.total || 0).toLocaleString('fr-FR')} €</span>
+            <span>${formatFromEUR(sale.total || 0, currency)}</span>
           </div>
         </div>
 
@@ -726,7 +730,7 @@ const Sales: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {getTotalRevenueForDate(new Date(), 'day').toLocaleString('fr-FR')} €
+                {formatFromEUR(getTotalRevenueForDate(new Date(), 'day'), currency)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Ventes + Réparations payées
@@ -762,7 +766,7 @@ const Sales: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {getTotalRevenueForDate(new Date(), 'month').toLocaleString('fr-FR')} €
+                {formatFromEUR(getTotalRevenueForDate(new Date(), 'month'), currency)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 Ventes + Réparations payées
@@ -801,13 +805,13 @@ const Sales: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <EuroIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
                   <Typography variant="body2" color="text.secondary">
-                    CA Ventes : {getSalesForDate(new Date(), 'day').reduce((sum, sale) => sum + sale.total, 0).toLocaleString('fr-FR')} €
+                    CA Ventes : {formatFromEUR(getSalesForDate(new Date(), 'day').reduce((sum, sale) => sum + sale.total, 0), currency)}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <AttachMoneyIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
                   <Typography variant="body2" color="text.secondary">
-                    CA Réparations : {getRepairsForDate(new Date(), 'day').reduce((sum, repair) => sum + repair.totalPrice, 0).toLocaleString('fr-FR')} €
+                    CA Réparations : {formatFromEUR(getRepairsForDate(new Date(), 'day').reduce((sum, repair) => sum + repair.totalPrice, 0), currency)}
                   </Typography>
                 </Box>
               </Box>
@@ -841,13 +845,13 @@ const Sales: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <EuroIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
                   <Typography variant="body2" color="text.secondary">
-                    CA Ventes : {getSalesForDate(new Date(), 'month').reduce((sum, sale) => sum + sale.total, 0).toLocaleString('fr-FR')} €
+                    CA Ventes : {formatFromEUR(getSalesForDate(new Date(), 'month').reduce((sum, sale) => sum + sale.total, 0), currency)}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <AttachMoneyIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
                   <Typography variant="body2" color="text.secondary">
-                    CA Réparations : {getRepairsForDate(new Date(), 'month').reduce((sum, repair) => sum + repair.totalPrice, 0).toLocaleString('fr-FR')} €
+                    CA Réparations : {formatFromEUR(getRepairsForDate(new Date(), 'month').reduce((sum, repair) => sum + repair.totalPrice, 0), currency)}
                   </Typography>
                 </Box>
               </Box>
@@ -946,7 +950,7 @@ const Sales: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                            {sale.total.toLocaleString('fr-FR')} €
+                            {formatFromEUR(sale.total, currency)}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -1249,7 +1253,7 @@ const Sales: React.FC = () => {
                                 </span>
                               )}
                               <span style={{ color: 'text.secondary' }}>
-                                💰 {item.price.toLocaleString('fr-FR')} €
+                                💰 {formatFromEUR(item.price, currency)}
                               </span>
                               {selectedItemType === 'part' && (
                                 <span style={{ color: 'text.secondary' }}>
@@ -1358,7 +1362,7 @@ const Sales: React.FC = () => {
                           secondary={
                             <span style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 4 }}>
                               <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                                💰 {item.unitPrice.toLocaleString('fr-FR')} € l'unité
+                                💰 {formatFromEUR(item.unitPrice, currency)} l'unité
                               </span>
                               <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
                                 📦 Quantité: {item.quantity}
@@ -1380,7 +1384,7 @@ const Sales: React.FC = () => {
                               }}
                             />
                             <span style={{ fontWeight: 600, minWidth: 80, textAlign: 'right', fontSize: '0.875rem' }}>
-                              {item.totalPrice.toLocaleString('fr-FR')} €
+                              {formatFromEUR(item.totalPrice, currency)}
                             </span>
                             <IconButton 
                               size="small" 
@@ -1432,7 +1436,7 @@ const Sales: React.FC = () => {
                   />
                   {discountPercentage > 0 && (
                     <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-                      Réduction de {discountPercentage}% sur le total TTC = {totals.discountAmount.toLocaleString('fr-FR')} €
+                      Réduction de {discountPercentage}% sur le total TTC = {formatFromEUR(totals.discountAmount, currency)}
                     </Alert>
                   )}
                 </Box>
@@ -1454,26 +1458,26 @@ const Sales: React.FC = () => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <span style={{ fontSize: '0.875rem' }}>Sous-total:</span>
                     <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                      {totals.subtotal.toLocaleString('fr-FR')} €
+                      {formatFromEUR(totals.subtotal, currency)}
                     </span>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <span style={{ fontSize: '0.875rem' }}>TVA ({workshopSettings.vatRate}%):</span>
                     <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                      {totals.tax.toLocaleString('fr-FR')} €
+                      {formatFromEUR(totals.tax, currency)}
                     </span>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <span style={{ fontSize: '0.875rem' }}>Total TTC:</span>
                     <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                      {totals.totalBeforeDiscount.toLocaleString('fr-FR')} €
+                      {formatFromEUR(totals.totalBeforeDiscount, currency)}
                     </span>
                   </Box>
                   {discountPercentage > 0 && (
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <span style={{ fontSize: '0.875rem', color: 'success.main' }}>Réduction ({discountPercentage}%):</span>
                       <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'success.main' }}>
-                        -{totals.discountAmount.toLocaleString('fr-FR')} €
+                        -{formatFromEUR(totals.discountAmount, currency)}
                       </span>
                     </Box>
                   )}
@@ -1481,7 +1485,7 @@ const Sales: React.FC = () => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontWeight: 600, fontSize: '1.25rem' }}>Total:</span>
                     <span style={{ fontWeight: 600, color: 'primary.main', fontSize: '1.25rem' }}>
-                      {totals.total.toLocaleString('fr-FR')} €
+                      {formatFromEUR(totals.total, currency)}
                     </span>
                   </Box>
                 </Box>
@@ -1501,7 +1505,7 @@ const Sales: React.FC = () => {
             onClick={createSale}
             disabled={saleItems.length === 0}
           >
-            Créer la vente ({totals.total.toLocaleString('fr-FR')} €)
+            Créer la vente ({formatFromEUR(totals.total, currency)})
           </Button>
                   </DialogActions>
         </Dialog>

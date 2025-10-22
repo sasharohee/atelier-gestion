@@ -42,6 +42,7 @@ import {
 import { theme } from '../../theme';
 import { accountingDataService } from '../../services/accountingDataService';
 import { Invoice, AccountingFilters } from '../../types/accounting';
+import { useCurrencyFormatter } from '../../utils/currency';
 
 const InvoicesManagement: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);

@@ -77,6 +77,8 @@ import {
 import { useAppStore } from '../../store';
 import { format, subDays, subMonths, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FF6B6B', '#4ECDC4'];
 
@@ -116,6 +118,10 @@ const Statistics: React.FC = () => {
     loadClients,
     loadDevices,
   } = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   const [period, setPeriod] = useState('month');
   const [deviceType, setDeviceType] = useState('all');
@@ -387,7 +393,7 @@ const Statistics: React.FC = () => {
     
     console.log(`✅ Top ${result.length} clients calculé:`);
     result.forEach((item, index) => {
-      console.log(`  ${index + 1}. ${item.client.firstName} ${item.client.lastName} (${item.repairs} réparations, ${item.revenue.toFixed(2)}€)`);
+      console.log(`  ${index + 1}. ${item.client.firstName} ${item.client.lastName} (${item.repairs} réparations, ${formatFromEUR(item.revenue, currency)})`);
     });
     
     return result;
@@ -605,7 +611,7 @@ const Statistics: React.FC = () => {
                 </Avatar>
                 <Box>
                   <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    {generalStats.totalRevenue.toLocaleString('fr-FR')}€
+                    {formatFromEUR(generalStats.totalRevenue, workshopSettings.currency)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Chiffre d'affaires
@@ -778,7 +784,7 @@ const Statistics: React.FC = () => {
                     <YAxis yAxisId="right" orientation="right" />
                     <RechartsTooltip />
                     <Legend />
-                    <Bar yAxisId="left" dataKey="revenue" fill="#8884d8" name="Revenus (€)" />
+                    <Bar yAxisId="left" dataKey="revenue" fill="#8884d8" name={`Revenus (${currency})`} />
                     <Line yAxisId="right" type="monotone" dataKey="repairs" stroke="#82ca9d" name="Réparations" />
                   </ComposedChart>
                 </ResponsiveContainer>
@@ -843,7 +849,7 @@ const Statistics: React.FC = () => {
                     <TableRow>
                       <TableCell>Appareil</TableCell>
                       <TableCell align="right">Réparations</TableCell>
-                      <TableCell align="right">CA (€)</TableCell>
+                      <TableCell align="right">CA ({currency})</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -858,7 +864,7 @@ const Statistics: React.FC = () => {
                           </Box>
                         </TableCell>
                         <TableCell align="right">{item.repairs}</TableCell>
-                        <TableCell align="right">{item.revenue.toLocaleString('fr-FR')}</TableCell>
+                        <TableCell align="right">{formatFromEUR(item.revenue, currency)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -880,7 +886,7 @@ const Statistics: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis />
-                    <RechartsTooltip formatter={(value: any) => [`${value} €`, 'Revenus']} />
+                    <RechartsTooltip formatter={(value: any) => [formatFromEUR(value, currency), 'Revenus']} />
                     <Legend />
                     <Area 
                       type="monotone" 
@@ -921,7 +927,7 @@ const Statistics: React.FC = () => {
                     <TableRow>
                       <TableCell>Client</TableCell>
                       <TableCell align="right">Réparations</TableCell>
-                      <TableCell align="right">CA (€)</TableCell>
+                      <TableCell align="right">CA ({currency})</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -936,7 +942,7 @@ const Statistics: React.FC = () => {
                           </Box>
                         </TableCell>
                         <TableCell align="right">{item.repairs}</TableCell>
-                        <TableCell align="right">{item.revenue.toLocaleString('fr-FR')}</TableCell>
+                        <TableCell align="right">{formatFromEUR(item.revenue, currency)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

@@ -29,6 +29,7 @@ import { fr } from 'date-fns/locale';
 import { Buyback } from '../types';
 import { useAppStore } from '../store';
 import { useWorkshopSettings } from '../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../utils/currencyUtils';
 
 interface BuybackTicketProps {
   buyback: Buyback;
@@ -38,6 +39,9 @@ interface BuybackTicketProps {
 
 const BuybackTicket: React.FC<BuybackTicketProps> = ({ buyback, open, onClose }) => {
   const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   const getStatusLabel = (status: string) => {
     const labels: { [key: string]: string } = {
@@ -254,17 +258,17 @@ const BuybackTicket: React.FC<BuybackTicketProps> = ({ buyback, open, onClose })
                   ${buyback.suggestedPrice ? `
                     <div class="price-row">
                       <span>Prix suggéré :</span>
-                      <span>${buyback.suggestedPrice.toLocaleString('fr-FR')} €</span>
+                      <span>${formatFromEUR(buyback.suggestedPrice, currency)}</span>
                     </div>
                   ` : ''}
                   <div class="price-row">
                     <span>Prix proposé :</span>
-                    <span>${buyback.offeredPrice.toLocaleString('fr-FR')} €</span>
+                    <span>${formatFromEUR(buyback.offeredPrice, currency)}</span>
                   </div>
                   ${buyback.finalPrice ? `
                     <div class="price-row">
                       <span>Prix final :</span>
-                      <span>${buyback.finalPrice.toLocaleString('fr-FR')} €</span>
+                      <span>${formatFromEUR(buyback.finalPrice, currency)}</span>
                     </div>
                   ` : ''}
                 </div>
@@ -562,17 +566,17 @@ const BuybackTicket: React.FC<BuybackTicketProps> = ({ buyback, open, onClose })
               {buyback.suggestedPrice && (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography sx={{ fontSize: '14px' }}>Prix suggéré :</Typography>
-                  <Typography sx={{ fontSize: '14px' }}>{buyback.suggestedPrice.toLocaleString('fr-FR')} €</Typography>
+                  <Typography sx={{ fontSize: '14px' }}>{formatFromEUR(buyback.suggestedPrice, currency)}</Typography>
                 </Box>
               )}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                 <Typography sx={{ fontSize: '14px' }}>Prix proposé :</Typography>
-                <Typography sx={{ fontSize: '14px' }}>{buyback.offeredPrice.toLocaleString('fr-FR')} €</Typography>
+                <Typography sx={{ fontSize: '14px' }}>{formatFromEUR(buyback.offeredPrice, currency)}</Typography>
               </Box>
               {buyback.finalPrice && (
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography sx={{ fontSize: '14px' }}>Prix final :</Typography>
-                  <Typography sx={{ fontSize: '14px' }}>{buyback.finalPrice.toLocaleString('fr-FR')} €</Typography>
+                  <Typography sx={{ fontSize: '14px' }}>{formatFromEUR(buyback.finalPrice, currency)}</Typography>
                 </Box>
               )}
             </Paper>

@@ -48,6 +48,7 @@ import {
 import { theme } from '../../theme';
 import { accountingDataService } from '../../services/accountingDataService';
 import { ExpenseSummary, AccountingFilters } from '../../types/accounting';
+import { useCurrencyFormatter } from '../../utils/currency';
 
 const ExpensesView: React.FC = () => {
   const [expenseSummary, setExpenseSummary] = useState<ExpenseSummary | null>(null);

@@ -47,8 +47,15 @@ import { buybackService } from '../../services/supabaseService';
 import { toast } from 'react-hot-toast';
 import BuybackForm from './BuybackForm';
 import BuybackTicket from '../../components/BuybackTicket';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 const BuybackProgressive: React.FC = () => {
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
+  
   const [buybacks, setBuybacks] = useState<Buyback[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -270,7 +277,7 @@ const BuybackProgressive: React.FC = () => {
                     Valeur totale
                   </Typography>
                   <Typography variant="h4">
-                    {stats.totalValue.toLocaleString('fr-FR')} €
+                    {formatFromEUR(stats.totalValue, currency)}
                   </Typography>
                 </Box>
                 <AttachMoneyIcon sx={{ fontSize: 40, color: '#10b981' }} />
@@ -387,7 +394,7 @@ const BuybackProgressive: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
-                      {(buyback.finalPrice || buyback.offeredPrice).toLocaleString('fr-FR')} €
+                      {formatFromEUR(buyback.finalPrice || buyback.offeredPrice, currency)}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -487,9 +494,9 @@ const BuybackProgressive: React.FC = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <Typography variant="h6" gutterBottom>Détails Financiers</Typography>
-                <Typography variant="body2"><strong>Prix proposé:</strong> {selectedBuyback.offeredPrice.toLocaleString('fr-FR')} €</Typography>
+                <Typography variant="body2"><strong>Prix proposé:</strong> {formatFromEUR(selectedBuyback.offeredPrice, currency)}</Typography>
                 {selectedBuyback.finalPrice && (
-                  <Typography variant="body2"><strong>Prix final:</strong> {selectedBuyback.finalPrice.toLocaleString('fr-FR')} €</Typography>
+                  <Typography variant="body2"><strong>Prix final:</strong> {formatFromEUR(selectedBuyback.finalPrice, currency)}</Typography>
                 )}
                 <Typography variant="body2"><strong>Mode de paiement:</strong> {selectedBuyback.paymentMethod}</Typography>
                 <Typography variant="body2"><strong>Raison:</strong> {selectedBuyback.buybackReason}</Typography>

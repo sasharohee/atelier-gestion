@@ -32,12 +32,15 @@ import {
 import { theme } from '../../theme';
 import { accountingDataServiceSimple as accountingDataService } from '../../services/accountingDataServiceSimple';
 import { AccountingKPIs } from '../../types/accounting';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 const AccountingOverview: React.FC = () => {
   const [kpis, setKpis] = useState<AccountingKPIs | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const { workshopSettings } = useWorkshopSettings();
 
   useEffect(() => {
     loadDashboard();

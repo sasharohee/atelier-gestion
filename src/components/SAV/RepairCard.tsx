@@ -31,6 +31,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Repair, Client, Device, User, RepairStatus } from '../../types';
 import { savService } from '../../services/savService';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 // Fonction helper pour mapper les noms de statuts
 const getDisplayStatusName = (statusName: string): string => {
@@ -66,6 +68,11 @@ export const RepairCard: React.FC<RepairCardProps> = ({
   onPaymentStatusChange,
   onClick,
 }) => {
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
+  
   const [timer, setTimer] = useState(savService.getTimer(repair.id));
   const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -261,7 +268,7 @@ export const RepairCard: React.FC<RepairCardProps> = ({
                   color: repair.isPaid ? '#10b981' : '#ef4444',
                 }}
               >
-                {repair.totalPrice.toFixed(2)} €
+                {formatFromEUR(repair.totalPrice, currency)}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

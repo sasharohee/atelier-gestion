@@ -38,6 +38,7 @@ import {
 import { theme } from '../../theme';
 import { accountingDataService } from '../../services/accountingDataService';
 import { AccountingTransaction, AccountingFilters } from '../../types/accounting';
+import { useCurrencyFormatter } from '../../utils/currency';
 
 const TransactionsList: React.FC = () => {
   const [transactions, setTransactions] = useState<AccountingTransaction[]>([]);

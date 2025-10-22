@@ -53,6 +53,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../store';
 import { Expense } from '../../types';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 import toast from 'react-hot-toast';
 
 
@@ -66,6 +68,10 @@ const Expenses: React.FC = () => {
     updateExpense,
     deleteExpense,
   } = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   const [newExpenseDialogOpen, setNewExpenseDialogOpen] = useState(false);
   const [editExpenseDialogOpen, setEditExpenseDialogOpen] = useState(false);
@@ -332,7 +338,7 @@ const Expenses: React.FC = () => {
                       Total Dépenses
                     </Typography>
                     <Typography variant="h5">
-                      {expenseStats.total.toFixed(2)} €
+                      {formatFromEUR(expenseStats.total, currency)}
                     </Typography>
                   </Box>
                 </Box>
@@ -351,7 +357,7 @@ const Expenses: React.FC = () => {
                       Ce Mois
                     </Typography>
                     <Typography variant="h5">
-                      {expenseStats.monthly.toFixed(2)} €
+                      {formatFromEUR(expenseStats.monthly, currency)}
                     </Typography>
                   </Box>
                 </Box>
@@ -370,7 +376,7 @@ const Expenses: React.FC = () => {
                       En Attente
                     </Typography>
                     <Typography variant="h5">
-                      {expenseStats.pending.toFixed(2)} €
+                      {formatFromEUR(expenseStats.pending, currency)}
                     </Typography>
                   </Box>
                 </Box>
@@ -389,7 +395,7 @@ const Expenses: React.FC = () => {
                       Payé
                     </Typography>
                     <Typography variant="h5">
-                      {expenseStats.paid.toFixed(2)} €
+                      {formatFromEUR(expenseStats.paid, currency)}
                     </Typography>
                   </Box>
                 </Box>
@@ -472,7 +478,7 @@ const Expenses: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="subtitle2" fontWeight="bold">
-                      {expense.amount.toFixed(2)} €
+                      {formatFromEUR(expense.amount, currency)}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -569,7 +575,7 @@ const Expenses: React.FC = () => {
                 value={expenseForm.amount}
                 onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
                 InputProps={{
-                  startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                  startAdornment: <InputAdornment position="start">{currency}</InputAdornment>,
                 }}
               />
             </Grid>
@@ -682,7 +688,7 @@ const Expenses: React.FC = () => {
                 value={expenseForm.amount}
                 onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
                 InputProps={{
-                  startAdornment: <InputAdornment position="start">€</InputAdornment>,
+                  startAdornment: <InputAdornment position="start">{currency}</InputAdornment>,
                 }}
               />
             </Grid>

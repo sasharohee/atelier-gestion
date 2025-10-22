@@ -33,9 +33,15 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 const Products: React.FC = () => {
   const { products, addProduct, deleteProduct, updateProduct } = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
   const [openDialog, setOpenDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -243,7 +249,7 @@ const Products: React.FC = () => {
                         {product.minStockLevel || 1}
                       </Typography>
                     </TableCell>
-                    <TableCell>{product.price} €</TableCell>
+                    <TableCell>{formatFromEUR(product.price, currency)}</TableCell>
                     <TableCell>
                       <Chip
                         label={product.isActive ? 'Actif' : 'Inactif'}
@@ -324,7 +330,7 @@ const Products: React.FC = () => {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 fullWidth
-                label="Prix TTC (€)"
+                label={`Prix TTC (${currency})`}
                 type="number"
                 value={formData.price}
                 onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}

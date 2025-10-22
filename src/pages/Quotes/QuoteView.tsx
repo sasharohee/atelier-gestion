@@ -41,6 +41,7 @@ import { Quote, Client, Repair } from '../../types';
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatQuoteNumber } from '../../utils/quoteUtils';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 interface QuoteViewProps {
   open: boolean;
@@ -255,12 +256,12 @@ Nous avons le plaisir de vous transmettre notre devis pour les services demandé
 • Numéro de devis : ${formatQuoteNumber(quote.quoteNumber)}
 • Date de création : ${format(new Date(quote.createdAt), 'dd/MM/yyyy', { locale: fr })}
 • Validité : jusqu'au ${format(new Date(quote.validUntil), 'dd/MM/yyyy', { locale: fr })}
-• Montant total : ${quote.total.toLocaleString('fr-FR')} €
+• Montant total : ${formatFromEUR(quote.total, workshopSettings.currency)}
 
 ${Array.isArray(quote.items) && quote.items.length > 0 ? `
 📦 ARTICLES INCLUS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${quote.items.map(item => `• ${item.name} - ${item.quantity}x ${item.unitPrice.toLocaleString('fr-FR')}€ = ${item.totalPrice.toLocaleString('fr-FR')}€`).join('\n')}
+${quote.items.map(item => `• ${item.name} - ${item.quantity}x ${formatFromEUR(item.unitPrice, workshopSettings.currency)} = ${formatFromEUR(item.totalPrice, workshopSettings.currency)}`).join('\n')}
 ` : ''}
 
 ${quote.notes ? `
@@ -444,12 +445,12 @@ L'équipe Mon Atelier
                     </TableCell>
                     <TableCell align="right">
                       <Typography variant="body2">
-                        {item.unitPrice.toLocaleString('fr-FR')} €
+                        {formatFromEUR(item.unitPrice, workshopSettings.currency)}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {item.totalPrice.toLocaleString('fr-FR')} €
+                        {formatFromEUR(item.totalPrice, workshopSettings.currency)}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -480,7 +481,7 @@ L'équipe Mon Atelier
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                 <Typography variant="body2">Sous-total :</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {quote.subtotal.toLocaleString('fr-FR')} €
+                  {formatFromEUR(quote.subtotal, workshopSettings.currency)}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -488,7 +489,7 @@ L'équipe Mon Atelier
                   TVA ({settingsLoading ? '...' : workshopSettings.vatRate}%) :
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {quote.tax.toLocaleString('fr-FR')} €
+                  {formatFromEUR(quote.tax, workshopSettings.currency)}
                 </Typography>
               </Box>
               <Divider sx={{ my: 1 }} />
@@ -497,7 +498,7 @@ L'équipe Mon Atelier
                   Total :
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                  {quote.total.toLocaleString('fr-FR')} €
+                  {formatFromEUR(quote.total, workshopSettings.currency)}
                 </Typography>
               </Box>
             </Box>

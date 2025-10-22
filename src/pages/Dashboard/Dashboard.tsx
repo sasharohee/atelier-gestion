@@ -36,6 +36,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../store';
 import { deviceTypeColors, repairStatusColors } from '../../theme';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 // import AppStatus from '../../components/AppStatus'; // MASQUÉ
 // import SupabaseTest from '../../components/SupabaseTest'; // MASQUÉ
 import { demoDataService } from '../../services/demoDataService';
@@ -119,6 +121,10 @@ const Dashboard: React.FC = () => {
     loadSales,
     loadAppointments,
   } = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   // Charger les données au montage du composant
   useEffect(() => {
@@ -494,7 +500,7 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Chiffre d'affaires"
-            value={`${defaultStats.monthlyRevenue.toLocaleString('fr-FR')} €`}
+            value={formatFromEUR(defaultStats.monthlyRevenue, currency)}
             icon={<TrendingUpIcon />}
             color="#9c27b0"
             subtitle="Ce mois"
@@ -1373,7 +1379,7 @@ const Dashboard: React.FC = () => {
                             }
                           />
                           <Typography variant="h6" color="primary">
-                            {repair.totalPrice} € TTC
+                            {formatFromEUR(repair.totalPrice, currency)} TTC
                           </Typography>
                         </ListItem>
                         {index < recentRepairs.length - 1 && <Divider variant="inset" component="li" />}

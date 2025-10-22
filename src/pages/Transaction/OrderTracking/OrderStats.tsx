@@ -16,6 +16,8 @@ import {
   Cancel as CancelIcon,
   Euro as EuroIcon,
 } from '@mui/icons-material';
+import { useWorkshopSettings } from '../../../contexts/WorkshopSettingsContext';
+import { formatFromEUR, getCurrencySymbol } from '../../../utils/currencyUtils';
 
 interface OrderStatsProps {
   stats: {
@@ -30,6 +32,10 @@ interface OrderStatsProps {
 }
 
 const OrderStats: React.FC<OrderStatsProps> = ({ stats }) => {
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
   const statCards = [
     {
       title: 'Total Commandes',
@@ -153,10 +159,7 @@ const OrderStats: React.FC<OrderStatsProps> = ({ stats }) => {
               </Box>
             </Box>
             <Typography variant="h4" sx={{ fontWeight: 700, color: '#4caf50' }}>
-              {(stats.totalAmount || 0).toLocaleString('fr-FR', {
-                style: 'currency',
-                currency: 'EUR'
-              })}
+              {formatFromEUR(stats.totalAmount || 0, currency)}
             </Typography>
           </Box>
         </CardContent>

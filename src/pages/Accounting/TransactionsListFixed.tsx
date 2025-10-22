@@ -20,6 +20,9 @@ import {
 } from '@mui/material';
 import { Search } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import { useCurrencyFormatter } from '../../utils/currency';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 interface Transaction {
   id: string;
@@ -36,6 +39,11 @@ const TransactionsListFixed: React.FC = () => {
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+  
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   useEffect(() => {
     loadRealTransactions();
@@ -151,10 +159,7 @@ const TransactionsListFixed: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
+    return formatFromEUR(amount, currency);
   };
 
   return (

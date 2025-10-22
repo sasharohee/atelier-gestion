@@ -45,6 +45,7 @@ import { fr } from 'date-fns/locale';
 import { theme } from '../../theme';
 import { accountingDataService } from '../../services/accountingDataService';
 import { FinancialReport, FinancialSummary } from '../../types/accounting';
+import { useCurrencyFormatter } from '../../utils/currency';
 
 const FinancialReports: React.FC = () => {
   const [report, setReport] = useState<FinancialReport | null>(null);

@@ -27,6 +27,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Sale, Client, Repair } from '../types';
 import { useAppStore } from '../store';
+import { useWorkshopSettings } from '../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../utils/currencyUtils';
 
 interface InvoiceProps {
   sale?: Sale;
@@ -38,6 +40,10 @@ interface InvoiceProps {
 
 const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }) => {
   const { systemSettings, loadSystemSettings } = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   // Charger les paramètres système si nécessaire
   useEffect(() => {
@@ -71,7 +77,8 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
     return setting ? setting.value : defaultValue;
   };
 
-  const workshopSettings = {
+  // Utilisation des paramètres depuis le hook WorkshopSettingsContext
+  const workshopSettingsData = {
     name: getSettingValue('workshop_name', 'Atelier de réparation'),
     address: getSettingValue('workshop_address', '123 Rue de la Paix, 75001 Paris'),
     phone: getSettingValue('workshop_phone', '07 59 23 91 70'),
@@ -152,12 +159,12 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
             <body>
               <div class="invoice-container">
                 <div class="header">
-                  <h1>${workshopSettings.name}</h1>
-                  <div class="subtitle">${workshopSettings.address}</div>
+                  <h1>${workshopSettingsData.name}</h1>
+                  <div class="subtitle">${workshopSettingsData.address}</div>
                   <div class="contact-info">
-                    Tél: ${workshopSettings.phone} • Email: ${workshopSettings.email}
-                    ${workshopSettings.siret ? `<br>SIRET: ${workshopSettings.siret}` : ''}
-                    ${workshopSettings.vatNumber ? ` • TVA: ${workshopSettings.vatNumber}` : ''}
+                    Tél: ${workshopSettingsData.phone} • Email: ${workshopSettingsData.email}
+                    ${workshopSettingsData.siret ? `<br>SIRET: ${workshopSettingsData.siret}` : ''}
+                    ${workshopSettingsData.vatNumber ? ` • TVA: ${workshopSettingsData.vatNumber}` : ''}
                   </div>
                 </div>
 
@@ -189,7 +196,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                 ${isRepair ? `
                   <div class="repair-details">
                     <h3>Détails de la réparation</h3>
-                    <p><strong>Prix de la réparation (TTC) :</strong> ${(data as Repair).totalPrice.toLocaleString('fr-FR')} €</p>
+                    <p><strong>Prix de la réparation (TTC) :</strong> ${formatFromEUR((data as Repair).totalPrice, currency)}</p>
                     ${(data as Repair).notes ? `<p><strong>Notes :</strong> ${(data as Repair).notes}</p>` : ''}
                   </div>
                 ` : `
@@ -208,9 +215,9 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         <tr>
                           <td><span class="item-name">${item.name}</span></td>
                           <td><span class="item-type">${item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'}</span></td>
-                          <td style="text-align: right;"><span class="price">${item.unitPrice.toLocaleString('fr-FR')} €</span></td>
+                          <td style="text-align: right;"><span class="price">${formatFromEUR(item.unitPrice, currency)}</span></td>
                           <td style="text-align: center;">${item.quantity}</td>
-                          <td style="text-align: right;"><span class="price">${item.totalPrice.toLocaleString('fr-FR')} €</span></td>
+                          <td style="text-align: right;"><span class="price">${formatFromEUR(item.totalPrice, currency)}</span></td>
                         </tr>
                       `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666; font-style: italic;">Aucun article disponible</td></tr>'}
                     </tbody>
@@ -219,15 +226,15 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                   <div class="totals-section">
                     <div class="total-row">
                       <span>Sous-total HT :</span>
-                      <span>${(data as Sale).subtotal.toLocaleString('fr-FR')} €</span>
+                      <span>${formatFromEUR((data as Sale).subtotal, currency)}</span>
                     </div>
                     <div class="total-row">
-                      <span>TVA (${workshopSettings.vatRate}%) :</span>
-                      <span>${(data as Sale).tax.toLocaleString('fr-FR')} €</span>
+                      <span>TVA (${workshopSettingsData.vatRate}%) :</span>
+                      <span>${formatFromEUR((data as Sale).tax, currency)}</span>
                     </div>
                     <div class="total-row">
                       <span>TOTAL TTC :</span>
-                      <span>${(data as Sale).total.toLocaleString('fr-FR')} €</span>
+                      <span>${formatFromEUR((data as Sale).total, currency)}</span>
                     </div>
                   </div>
                 `}
@@ -238,16 +245,16 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                     ${!isRepair ? `<li>Paiement immédiat par ${getPaymentMethodLabel((data as Sale).paymentMethod).toLowerCase()}</li>` : ''}
                     <li>Facture valable 30 jours à compter de la date d'émission</li>
                     <li>Aucun escompte en cas de paiement anticipé</li>
-                    <li>Pour toute question, contactez-nous au ${workshopSettings.phone} ou par email à ${workshopSettings.email}</li>
+                    <li>Pour toute question, contactez-nous au ${workshopSettingsData.phone} ou par email à ${workshopSettingsData.email}</li>
                   </ul>
                 </div>
 
                 <div class="footer">
-                  <h3>${workshopSettings.name}</h3>
-                  <p>Tél: ${workshopSettings.phone} • Email: ${workshopSettings.email}</p>
-                  <p>Tél: ${workshopSettings.phone} • Email: ${workshopSettings.email}</p>
-                  ${workshopSettings.siret ? `<p>SIRET: ${workshopSettings.siret}</p>` : ''}
-                  ${workshopSettings.vatNumber ? `<p>TVA: ${workshopSettings.vatNumber}</p>` : ''}
+                  <h3>${workshopSettingsData.name}</h3>
+                  <p>Tél: ${workshopSettingsData.phone} • Email: ${workshopSettingsData.email}</p>
+                  <p>Tél: ${workshopSettingsData.phone} • Email: ${workshopSettingsData.email}</p>
+                  ${workshopSettingsData.siret ? `<p>SIRET: ${workshopSettingsData.siret}</p>` : ''}
+                  ${workshopSettingsData.vatNumber ? `<p>TVA: ${workshopSettingsData.vatNumber}</p>` : ''}
                   <div class="thank-you">Merci de votre confiance !</div>
                 </div>
               </div>
@@ -303,20 +310,20 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                 color: '#333',
                 fontSize: '24px'
               }}>
-                {workshopSettings.name}
+                {workshopSettingsData.name}
               </Typography>
               <Box sx={{ fontSize: '12px', color: '#666', lineHeight: 1.8 }}>
                 <Typography sx={{ mb: 0.5 }}>
-                  Tél: {workshopSettings.phone} • Email: {workshopSettings.email}
+                  Tél: {workshopSettingsData.phone} • Email: {workshopSettingsData.email}
                 </Typography>
-                {workshopSettings.siret && (
+                {workshopSettingsData.siret && (
                   <Typography>
-                    SIRET: {workshopSettings.siret}
+                    SIRET: {workshopSettingsData.siret}
                   </Typography>
                 )}
-                {workshopSettings.vatNumber && (
+                {workshopSettingsData.vatNumber && (
                   <Typography>
-                    TVA: {workshopSettings.vatNumber}
+                    TVA: {workshopSettingsData.vatNumber}
                   </Typography>
                 )}
               </Box>
@@ -435,12 +442,12 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                   border: '1px solid #e0e0e0'
                 }}>
                   <Typography sx={{ fontSize: '16px', mb: 1 }}>
-                    <strong>Prix de la réparation (TTC) :</strong> {(data as Repair).totalPrice.toLocaleString('fr-FR')} €
+                    <strong>Prix de la réparation (TTC) :</strong> {formatFromEUR((data as Repair).totalPrice, currency)}
                     {(() => {
                       const repair = data as Repair;
                       return repair.discountPercentage && repair.discountPercentage > 0 ? (
                         <span style={{ color: 'success.main', marginLeft: '8px' }}>
-                          (Prix original: {(repair.totalPrice + (repair.discountAmount || 0)).toLocaleString('fr-FR')} €)
+                          (Prix original: {formatFromEUR(repair.totalPrice + (repair.discountAmount || 0), currency)})
                         </span>
                       ) : null;
                     })()}
@@ -476,7 +483,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         Sous-total HT :
                       </Typography>
                       <Typography sx={{ fontWeight: 600, fontSize: '16px' }}>
-                        {((data as Repair).totalPrice / (1 + parseFloat(workshopSettings.vatRate) / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                        {formatFromEUR((data as Repair).totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100), currency)}
                       </Typography>
                     </Box>
                     <Box sx={{ 
@@ -486,10 +493,10 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                       mb: 1 
                     }}>
                       <Typography sx={{ fontSize: '16px' }}>
-                        TVA ({workshopSettings.vatRate}%) :
+                        TVA ({workshopSettingsData.vatRate}%) :
                       </Typography>
                       <Typography sx={{ fontSize: '16px' }}>
-                        {((data as Repair).totalPrice - ((data as Repair).totalPrice / (1 + parseFloat(workshopSettings.vatRate) / 100))).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+                        {formatFromEUR((data as Repair).totalPrice - ((data as Repair).totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100)), currency)}
                       </Typography>
                     </Box>
                     {(() => {
@@ -505,7 +512,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                             Réduction fidélité ({repair.discountPercentage}%) :
                           </Typography>
                           <Typography sx={{ fontSize: '16px', color: 'success.main', fontWeight: 600 }}>
-                            -{(repair.discountAmount || 0).toLocaleString('fr-FR')} €
+                            -{formatFromEUR(repair.discountAmount || 0, currency)}
                           </Typography>
                         </Box>
                       ) : null;
@@ -528,7 +535,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         fontSize: '16px',
                         color: '#1976d2'
                       }}>
-                        {(data as Repair).totalPrice.toLocaleString('fr-FR')} €
+                        {formatFromEUR((data as Repair).totalPrice, currency)}
                       </Typography>
                     </Box>
                   </Box>
@@ -624,7 +631,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                             textAlign: 'right'
                           }}>
                             <Typography sx={{ fontSize: '14px' }}>
-                              {item.unitPrice.toLocaleString('fr-FR')} €
+                              {formatFromEUR(item.unitPrice, currency)}
                             </Typography>
                           </TableCell>
                           <TableCell sx={{ 
@@ -646,7 +653,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                               fontSize: '14px',
                               color: '#333'
                             }}>
-                              {item.totalPrice.toLocaleString('fr-FR')} €
+                              {formatFromEUR(item.totalPrice, currency)}
                             </Typography>
                           </TableCell>
                         </TableRow>
@@ -690,7 +697,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         Sous-total HT :
                       </Typography>
                       <Typography sx={{ fontWeight: 600, fontSize: '16px' }}>
-                        {(data as Sale).subtotal.toLocaleString('fr-FR')} €
+                        {formatFromEUR((data as Sale).subtotal, currency)}
                       </Typography>
                     </Box>
                     <Box sx={{ 
@@ -700,10 +707,10 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                       mb: 1 
                     }}>
                       <Typography sx={{ fontSize: '16px' }}>
-                        TVA ({workshopSettings.vatRate}%) :
+                        TVA ({workshopSettingsData.vatRate}%) :
                       </Typography>
                       <Typography sx={{ fontSize: '16px' }}>
-                        {(data as Sale).tax.toLocaleString('fr-FR')} €
+                        {formatFromEUR((data as Sale).tax, currency)}
                       </Typography>
                     </Box>
                     {(() => {
@@ -719,7 +726,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                             Réduction fidélité ({sale.discountPercentage}%) :
                           </Typography>
                           <Typography sx={{ fontSize: '16px', color: 'success.main', fontWeight: 600 }}>
-                            -{(sale.discountAmount || 0).toLocaleString('fr-FR')} €
+                            -{formatFromEUR(sale.discountAmount || 0, currency)}
                           </Typography>
                         </Box>
                       ) : null;
@@ -742,7 +749,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         fontSize: '16px',
                         color: '#1976d2'
                       }}>
-                        {(data as Sale).total.toLocaleString('fr-FR')} €
+                        {formatFromEUR((data as Sale).total, currency)}
                       </Typography>
                     </Box>
                   </Box>
@@ -830,7 +837,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                     color: '#666'
                   }
                 }}>
-                  Pour toute question, contactez-nous au {workshopSettings.phone} ou par email à {workshopSettings.email}
+                  Pour toute question, contactez-nous au {workshopSettingsData.phone} ou par email à {workshopSettingsData.email}
                 </Box>
               </Box>
             </Box>
@@ -847,31 +854,31 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                 fontSize: '18px', 
                 color: '#333' 
               }}>
-                {workshopSettings.name}
+                {workshopSettingsData.name}
               </Typography>
               <Typography sx={{ 
                 fontSize: '12px', 
                 color: '#666', 
                 mb: 0.5 
               }}>
-                Tél: {workshopSettings.phone} • Email: {workshopSettings.email}
+                Tél: {workshopSettingsData.phone} • Email: {workshopSettingsData.email}
               </Typography>
-              {workshopSettings.siret && (
+              {workshopSettingsData.siret && (
                 <Typography sx={{ 
                   fontSize: '12px', 
                   color: '#666', 
                   mb: 0.5 
                 }}>
-                  SIRET: {workshopSettings.siret}
+                  SIRET: {workshopSettingsData.siret}
                 </Typography>
               )}
-              {workshopSettings.vatNumber && (
+              {workshopSettingsData.vatNumber && (
                 <Typography sx={{ 
                   fontSize: '12px', 
                   color: '#666', 
                   mb: 1 
                 }}>
-                  TVA: {workshopSettings.vatNumber}
+                  TVA: {workshopSettingsData.vatNumber}
                 </Typography>
               )}
               <Typography sx={{ 

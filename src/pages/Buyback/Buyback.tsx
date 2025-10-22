@@ -51,11 +51,18 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Buyback, BuybackStatus } from '../../types';
 import { buybackService } from '../../services/supabaseService';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 // import BuybackForm from './BuybackForm';
 // import BuybackTicket from '../../components/BuybackTicket';
 import toast from 'react-hot-toast';
 
 const Buyback: React.FC = () => {
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
+  
   const [buybacks, setBuybacks] = useState<Buyback[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBuyback, setSelectedBuyback] = useState<Buyback | null>(null);
@@ -300,7 +307,7 @@ const Buyback: React.FC = () => {
                     Valeur totale
                   </Typography>
                   <Typography variant="h4">
-                    {stats.totalValue.toLocaleString('fr-FR')} €
+                    {formatFromEUR(stats.totalValue, currency)}
                   </Typography>
                 </Box>
                 <AttachMoneyIcon sx={{ fontSize: 40, color: '#10b981' }} />
@@ -425,7 +432,7 @@ const Buyback: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight="medium">
-                      {buyback.offeredPrice.toLocaleString('fr-FR')} €
+                      {formatFromEUR(buyback.offeredPrice, currency)}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -578,9 +585,9 @@ const Buyback: React.FC = () => {
               
               <Grid item xs={12} sm={6}>
                 <Typography variant="h6" gutterBottom>Détails Financiers</Typography>
-                <Typography variant="body2"><strong>Prix suggéré:</strong> {selectedBuyback.suggestedPrice ? `${selectedBuyback.suggestedPrice.toLocaleString('fr-FR')} €` : 'Non calculé'}</Typography>
-                <Typography variant="body2"><strong>Prix proposé:</strong> {selectedBuyback.offeredPrice.toLocaleString('fr-FR')} €</Typography>
-                <Typography variant="body2"><strong>Prix final:</strong> {selectedBuyback.finalPrice ? `${selectedBuyback.finalPrice.toLocaleString('fr-FR')} €` : 'Non défini'}</Typography>
+                <Typography variant="body2"><strong>Prix suggéré:</strong> {selectedBuyback.suggestedPrice ? formatFromEUR(selectedBuyback.suggestedPrice, currency) : 'Non calculé'}</Typography>
+                <Typography variant="body2"><strong>Prix proposé:</strong> {formatFromEUR(selectedBuyback.offeredPrice, currency)}</Typography>
+                <Typography variant="body2"><strong>Prix final:</strong> {selectedBuyback.finalPrice ? formatFromEUR(selectedBuyback.finalPrice, currency) : 'Non défini'}</Typography>
                 <Typography variant="body2"><strong>Mode de paiement:</strong> {getPaymentMethodLabel(selectedBuyback.paymentMethod)}</Typography>
                 <Typography variant="body2"><strong>Raison:</strong> {selectedBuyback.buybackReason}</Typography>
               </Grid>

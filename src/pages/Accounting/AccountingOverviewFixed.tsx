@@ -18,6 +18,7 @@ import {
   Download,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import { useCurrencyFormatter } from '../../utils/currency';
 
 const AccountingOverviewFixed: React.FC = () => {
   const { currentUser } = useAppStore();

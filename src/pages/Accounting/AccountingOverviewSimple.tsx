@@ -19,6 +19,9 @@ import {
   Download,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import { useCurrencyFormatter } from '../../utils/currency';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 const AccountingOverviewSimple: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +32,10 @@ const AccountingOverviewSimple: React.FC = () => {
 
   // Récupérer les fonctions du store
   const store = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   useEffect(() => {
     loadAllData();
@@ -266,10 +273,10 @@ const AccountingOverviewSimple: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: '#10b981' }}>
-                {kpis ? formatCurrency(kpis.totalRevenue) : '0,00 €'}
+                {kpis ? formatFromEUR(kpis.totalRevenue, currency) : formatFromEUR(0, currency)}
               </Typography>
               <Typography variant="body2" sx={{ color: '#d1fae5' }}>
-                {kpis ? formatCurrency(kpis.revenueLast30Days) + ' (30 derniers jours)' : 'Aucune donnée disponible'}
+                {kpis ? formatFromEUR(kpis.revenueLast30Days, currency) + ' (30 derniers jours)' : 'Aucune donnée disponible'}
               </Typography>
               {kpis && (
                 <Typography variant="caption" sx={{ color: '#d1fae5', display: 'block', mt: 1 }}>
@@ -294,10 +301,10 @@ const AccountingOverviewSimple: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: '#ef4444' }}>
-                {kpis ? formatCurrency(kpis.totalExpenses) : '0,00 €'}
+                {kpis ? formatFromEUR(kpis.totalExpenses, currency) : formatFromEUR(0, currency)}
               </Typography>
               <Typography variant="body2" sx={{ color: '#fecaca' }}>
-                {kpis ? formatCurrency(kpis.expensesLast30Days) + ' (30 derniers jours)' : 'Aucune donnée disponible'}
+                {kpis ? formatFromEUR(kpis.expensesLast30Days, currency) + ' (30 derniers jours)' : 'Aucune donnée disponible'}
               </Typography>
               {kpis && (
                 <Typography variant="caption" sx={{ color: '#fecaca', display: 'block', mt: 1 }}>
@@ -322,10 +329,10 @@ const AccountingOverviewSimple: React.FC = () => {
                 </Typography>
               </Box>
               <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, color: '#3b82f6' }}>
-                {kpis ? formatCurrency(kpis.netProfit) : '0,00 €'}
+                {kpis ? formatFromEUR(kpis.netProfit, currency) : formatFromEUR(0, currency)}
               </Typography>
               <Typography variant="body2" sx={{ color: '#dbeafe' }}>
-                {kpis ? formatCurrency(kpis.profitLast30Days) + ' (30 derniers jours)' : 'Aucune donnée disponible'}
+                {kpis ? formatFromEUR(kpis.profitLast30Days, currency) + ' (30 derniers jours)' : 'Aucune donnée disponible'}
               </Typography>
               {kpis && (
                 <Typography variant="caption" sx={{ color: '#dbeafe', display: 'block', mt: 1 }}>

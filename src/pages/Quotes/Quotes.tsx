@@ -69,6 +69,7 @@ import { useAppStore } from '../../store';
 import { Quote, QuoteItem } from '../../types';
 import { generateQuoteNumber, formatQuoteNumber } from '../../utils/quoteUtils';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 import QuoteForm from './QuoteForm';
 import QuoteView from './QuoteView';
 import RepairForm, { RepairFormData } from './RepairForm';
@@ -100,6 +101,9 @@ const Quotes: React.FC = () => {
   } = useAppStore();
   
   const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
   
   const [newQuoteDialogOpen, setNewQuoteDialogOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
@@ -594,8 +598,8 @@ const Quotes: React.FC = () => {
                 <td>${item.name || 'Article'}</td>
                 <td>${item.description || '-'}</td>
                 <td>${item.quantity || 1}</td>
-                <td>${(item.unitPrice || 0).toLocaleString('fr-FR')} €</td>
-                <td>${(item.totalPrice || 0).toLocaleString('fr-FR')} €</td>
+                <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
+                <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
               </tr>
             `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666;">Aucun article dans ce devis</td></tr>'}
           </tbody>
@@ -604,15 +608,15 @@ const Quotes: React.FC = () => {
         <div class="totals">
           <div class="total-line">
             <span>Sous-total HT:</span>
-            <span>${(quote.subtotal || 0).toLocaleString('fr-FR')} €</span>
+            <span>${formatFromEUR(quote.subtotal || 0, currency)}</span>
           </div>
           <div class="total-line">
             <span>TVA (${workshopSettings.vatRate || 20}%):</span>
-            <span>${(quote.tax || 0).toLocaleString('fr-FR')} €</span>
+            <span>${formatFromEUR(quote.tax || 0, currency)}</span>
           </div>
           <div class="total-line final">
             <span>TOTAL TTC:</span>
-            <span>${(quote.total || 0).toLocaleString('fr-FR')} €</span>
+            <span>${formatFromEUR(quote.total || 0, currency)}</span>
           </div>
         </div>
 
@@ -879,8 +883,8 @@ const Quotes: React.FC = () => {
                 <td>${item.name || 'Article'}</td>
                 <td>${item.description || '-'}</td>
                 <td>${item.quantity || 1}</td>
-                <td>${(item.unitPrice || 0).toLocaleString('fr-FR')} €</td>
-                <td>${(item.totalPrice || 0).toLocaleString('fr-FR')} €</td>
+                <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
+                <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
               </tr>
             `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666;">Aucun article dans ce devis</td></tr>'}
           </tbody>
@@ -889,15 +893,15 @@ const Quotes: React.FC = () => {
         <div class="totals">
           <div class="total-line">
             <span>Sous-total HT:</span>
-            <span>${(quote.subtotal || 0).toLocaleString('fr-FR')} €</span>
+            <span>${formatFromEUR(quote.subtotal || 0, currency)}</span>
           </div>
           <div class="total-line">
             <span>TVA (${workshopSettings.vatRate || 20}%):</span>
-            <span>${(quote.tax || 0).toLocaleString('fr-FR')} €</span>
+            <span>${formatFromEUR(quote.tax || 0, currency)}</span>
           </div>
           <div class="total-line final">
             <span>TOTAL TTC:</span>
-            <span>${(quote.total || 0).toLocaleString('fr-FR')} €</span>
+            <span>${formatFromEUR(quote.total || 0, currency)}</span>
           </div>
         </div>
 
@@ -1054,7 +1058,7 @@ const Quotes: React.FC = () => {
                   <MonetizationOnIcon sx={{ color: '#f44336', mr: 1 }} />
                   <Box>
                     <Typography variant="h6">
-                      {quotes.filter(q => q.status === 'accepted').reduce((sum, q) => sum + q.total, 0).toLocaleString('fr-FR')} €
+                      {formatFromEUR(quotes.filter(q => q.status === 'accepted').reduce((sum, q) => sum + q.total, 0), currency)}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">CA potentiel</Typography>
                   </Box>
@@ -1179,7 +1183,7 @@ const Quotes: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {quote.total.toLocaleString('fr-FR')} €
+                        {formatFromEUR(quote.total, currency)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {quote.items.length} article(s)

@@ -26,6 +26,8 @@ import {
   Delete,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 interface Report {
   id: string;
@@ -44,6 +46,7 @@ const FinancialReportsFixed: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const { sales, repairs, expenses, clients, systemSettings, loadSales, loadRepairs, loadExpenses, loadClients, loadSystemSettings } = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
 
   useEffect(() => {
     loadRealData();
@@ -650,17 +653,17 @@ const FinancialReportsFixed: React.FC = () => {
             <div class="data-grid">
                 <div class="data-card">
                     <h3>Chiffre d'Affaires Total</h3>
-                    <div class="value">${financialData.totalRevenue.toLocaleString('fr-FR')} €</div>
+                    <div class="value">${formatFromEUR(financialData.totalRevenue, workshopSettings.currency)}</div>
                     <div class="subtitle">Toutes activités confondues</div>
                 </div>
                 <div class="data-card">
                     <h3>Dépenses Total</h3>
-                    <div class="value">${financialData.totalExpenses.toLocaleString('fr-FR')} €</div>
+                    <div class="value">${formatFromEUR(financialData.totalExpenses, workshopSettings.currency)}</div>
                     <div class="subtitle">${financialData.totalExpensesCount} dépenses enregistrées</div>
                 </div>
                 <div class="data-card">
                     <h3>Bénéfice Net</h3>
-                    <div class="value" style="color: ${financialData.netProfit >= 0 ? '#4caf50' : '#f44336'}">${financialData.netProfit.toLocaleString('fr-FR')} €</div>
+                    <div class="value" style="color: ${financialData.netProfit >= 0 ? '#4caf50' : '#f44336'}">${formatFromEUR(financialData.netProfit, workshopSettings.currency)}</div>
                     <div class="subtitle">Résultat d'exploitation</div>
                 </div>
                 <div class="data-card">
@@ -683,7 +686,7 @@ const FinancialReportsFixed: React.FC = () => {
                     ${financialData.last12Months.slice(-6).map(month => `
                         <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
                             <span>${month.month}</span>
-                            <span>Revenus: ${month.revenue.toLocaleString('fr-FR')} € | Dépenses: ${month.expenses.toLocaleString('fr-FR')} €</span>
+                            <span>Revenus: ${formatFromEUR(month.revenue, workshopSettings.currency)} | Dépenses: ${formatFromEUR(month.expenses, workshopSettings.currency)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -724,9 +727,9 @@ const FinancialReportsFixed: React.FC = () => {
                       return `
                       <tr>
                           <td>${item.month}</td>
-                          <td class="number" style="color: #4caf50;">${revenue.toLocaleString('fr-FR')} €</td>
-                          <td class="number" style="color: #f44336;">${expenses.toLocaleString('fr-FR')} €</td>
-                          <td class="number" style="color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${profit.toLocaleString('fr-FR')} €</td>
+                          <td class="number" style="color: #4caf50;">${formatFromEUR(revenue, workshopSettings.currency)}</td>
+                          <td class="number" style="color: #f44336;">${formatFromEUR(expenses, workshopSettings.currency)}</td>
+                          <td class="number" style="color: ${profit >= 0 ? '#4caf50' : '#f44336'};">${formatFromEUR(profit, workshopSettings.currency)}</td>
                           <td class="number">${margin}%</td>
                       </tr>
                       `;
@@ -829,17 +832,17 @@ const FinancialReportsFixed: React.FC = () => {
             <div class="data-grid">
                 <div class="data-card">
                     <h3>Chiffre d'Affaires Total</h3>
-                    <div class="value">${financialData.totalRevenue.toLocaleString('fr-FR')} €</div>
+                    <div class="value">${formatFromEUR(financialData.totalRevenue, workshopSettings.currency)}</div>
                     <div class="subtitle">Toutes activités confondues</div>
                 </div>
                 <div class="data-card">
                     <h3>Dépenses Total</h3>
-                    <div class="value">${financialData.totalExpenses.toLocaleString('fr-FR')} €</div>
+                    <div class="value">${formatFromEUR(financialData.totalExpenses, workshopSettings.currency)}</div>
                     <div class="subtitle">${financialData.totalExpensesCount} dépenses enregistrées</div>
                 </div>
                 <div class="data-card">
                     <h3>Bénéfice Net</h3>
-                    <div class="value" style="color: ${financialData.netProfit >= 0 ? '#4caf50' : '#f44336'}">${financialData.netProfit.toLocaleString('fr-FR')} €</div>
+                    <div class="value" style="color: ${financialData.netProfit >= 0 ? '#4caf50' : '#f44336'}">${formatFromEUR(financialData.netProfit, workshopSettings.currency)}</div>
                     <div class="subtitle">Résultat d'exploitation</div>
                 </div>
                 <div class="data-card">
@@ -862,7 +865,7 @@ const FinancialReportsFixed: React.FC = () => {
                     ${financialData.last12Months.slice(-6).map(month => `
                         <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee;">
                             <span>${month.month}</span>
-                            <span>Revenus: ${month.revenue.toLocaleString('fr-FR')} € | Dépenses: ${month.expenses.toLocaleString('fr-FR')} €</span>
+                            <span>Revenus: ${formatFromEUR(month.revenue, workshopSettings.currency)} | Dépenses: ${formatFromEUR(month.expenses, workshopSettings.currency)}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -911,23 +914,23 @@ const FinancialReportsFixed: React.FC = () => {
                     <tr>
                         <td>Ventes</td>
                         <td>${salesData.filter(s => s.status === 'completed').length}</td>
-                        <td class="number">${(financialData.totalSales / (1 + getVatRate() / 100)).toLocaleString('fr-FR')} €</td>
-                        <td class="number">${(financialData.totalSales - (financialData.totalSales / (1 + getVatRate() / 100))).toLocaleString('fr-FR')} €</td>
-                        <td class="number">${financialData.totalSales.toLocaleString('fr-FR')} €</td>
+                        <td class="number">${formatFromEUR(financialData.totalSales / (1 + getVatRate() / 100), workshopSettings.currency)}</td>
+                        <td class="number">${formatFromEUR(financialData.totalSales - (financialData.totalSales / (1 + getVatRate() / 100)), workshopSettings.currency)}</td>
+                        <td class="number">${formatFromEUR(financialData.totalSales, workshopSettings.currency)}</td>
                     </tr>
                     <tr>
                         <td>Réparations</td>
                         <td>${repairsData.filter(r => r.isPaid && r.status === 'completed').length}</td>
-                        <td class="number">${(financialData.totalRepairs / (1 + getVatRate() / 100)).toLocaleString('fr-FR')} €</td>
-                        <td class="number">${(financialData.totalRepairs - (financialData.totalRepairs / (1 + getVatRate() / 100))).toLocaleString('fr-FR')} €</td>
-                        <td class="number">${financialData.totalRepairs.toLocaleString('fr-FR')} €</td>
+                        <td class="number">${formatFromEUR(financialData.totalRepairs / (1 + getVatRate() / 100), workshopSettings.currency)}</td>
+                        <td class="number">${formatFromEUR(financialData.totalRepairs - (financialData.totalRepairs / (1 + getVatRate() / 100)), workshopSettings.currency)}</td>
+                        <td class="number">${formatFromEUR(financialData.totalRepairs, workshopSettings.currency)}</td>
                     </tr>
                     <tr class="total-row">
                         <td><strong>TOTAL</strong></td>
                         <td><strong>${salesData.filter(s => s.status === 'completed').length + repairsData.filter(r => r.isPaid && r.status === 'completed').length}</strong></td>
-                        <td class="number"><strong>${(financialData.totalRevenue / (1 + getVatRate() / 100)).toLocaleString('fr-FR')} €</strong></td>
-                        <td class="number"><strong>${(financialData.totalRevenue - (financialData.totalRevenue / (1 + getVatRate() / 100))).toLocaleString('fr-FR')} €</strong></td>
-                        <td class="number"><strong>${financialData.totalRevenue.toLocaleString('fr-FR')} €</strong></td>
+                        <td class="number"><strong>${formatFromEUR(financialData.totalRevenue / (1 + getVatRate() / 100), workshopSettings.currency)}</strong></td>
+                        <td class="number"><strong>${formatFromEUR(financialData.totalRevenue - (financialData.totalRevenue / (1 + getVatRate() / 100)), workshopSettings.currency)}</strong></td>
+                        <td class="number"><strong>${formatFromEUR(financialData.totalRevenue, workshopSettings.currency)}</strong></td>
                     </tr>
                 </tbody>
             </table>
@@ -959,13 +962,13 @@ const FinancialReportsFixed: React.FC = () => {
                     <tr>
                         <td>${item.category}</td>
                         <td>${item.count}</td>
-                        <td class="number">${item.amount.toLocaleString('fr-FR')} €</td>
+                        <td class="number">${formatFromEUR(item.amount, workshopSettings.currency)}</td>
                     </tr>
                     `).join('')}
                     <tr class="total-row">
                         <td><strong>TOTAL DÉPENSES</strong></td>
                         <td><strong>${financialData.totalExpensesCount}</strong></td>
-                        <td class="number"><strong>${financialData.totalExpenses.toLocaleString('fr-FR')} €</strong></td>
+                        <td class="number"><strong>${formatFromEUR(financialData.totalExpenses, workshopSettings.currency)}</strong></td>
                     </tr>
                 </tbody>
             </table>
@@ -977,17 +980,17 @@ const FinancialReportsFixed: React.FC = () => {
             <div class="data-grid">
                 <div class="data-card">
                     <h3>Revenus (30j)</h3>
-                    <div class="value">${financialData.revenueLast30Days?.toLocaleString('fr-FR') || 0} €</div>
+                    <div class="value">${formatFromEUR(financialData.revenueLast30Days || 0, workshopSettings.currency)}</div>
                     <div class="subtitle">Derniers 30 jours</div>
                 </div>
                 <div class="data-card">
                     <h3>Dépenses (30j)</h3>
-                    <div class="value">${financialData.expensesLast30Days?.toLocaleString('fr-FR') || 0} €</div>
+                    <div class="value">${formatFromEUR(financialData.expensesLast30Days || 0, workshopSettings.currency)}</div>
                     <div class="subtitle">Derniers 30 jours</div>
                 </div>
                 <div class="data-card">
                     <h3>Profit (30j)</h3>
-                    <div class="value" style="color: ${(financialData.profitLast30Days || 0) >= 0 ? '#4caf50' : '#f44336'}">${financialData.profitLast30Days?.toLocaleString('fr-FR') || 0} €</div>
+                    <div class="value" style="color: ${(financialData.profitLast30Days || 0) >= 0 ? '#4caf50' : '#f44336'}">${formatFromEUR(financialData.profitLast30Days || 0, workshopSettings.currency)}</div>
                     <div class="subtitle">Derniers 30 jours</div>
                 </div>
                 <div class="data-card">
@@ -1013,7 +1016,7 @@ const FinancialReportsFixed: React.FC = () => {
                     ${financialData.topExpensesCategories?.map((item: any, index: number) => `
                     <tr>
                         <td>${item.category}</td>
-                        <td class="number">${item.amount.toLocaleString('fr-FR')} €</td>
+                        <td class="number">${formatFromEUR(item.amount, workshopSettings.currency)}</td>
                         <td class="number">${financialData.totalExpenses > 0 ? ((item.amount / financialData.totalExpenses) * 100).toFixed(1) : 0}%</td>
                     </tr>
                     `).join('') || '<tr><td colspan="3">Aucune dépense enregistrée</td></tr>'}
@@ -1038,17 +1041,17 @@ const FinancialReportsFixed: React.FC = () => {
                     <tr>
                         <td><strong>Encaissements</strong></td>
                         <td>Ventes et réparations payées</td>
-                        <td class="number" style="color: #4caf50;">+${financialData.totalRevenue.toLocaleString('fr-FR')} €</td>
+                        <td class="number" style="color: #4caf50;">+${formatFromEUR(financialData.totalRevenue, workshopSettings.currency)}</td>
                     </tr>
                     <tr>
                         <td><strong>Décaissements</strong></td>
                         <td>Dépenses et charges</td>
-                        <td class="number" style="color: #f44336;">-${financialData.totalExpenses.toLocaleString('fr-FR')} €</td>
+                        <td class="number" style="color: #f44336;">-${formatFromEUR(financialData.totalExpenses, workshopSettings.currency)}</td>
                     </tr>
                     <tr class="total-row">
                         <td><strong>VARIATION NETTE</strong></td>
                         <td><strong>Trésorerie disponible</strong></td>
-                        <td class="number" style="color: ${financialData.netProfit >= 0 ? '#4caf50' : '#f44336'};"><strong>${financialData.netProfit.toLocaleString('fr-FR')} €</strong></td>
+                        <td class="number" style="color: ${financialData.netProfit >= 0 ? '#4caf50' : '#f44336'};"><strong>${formatFromEUR(financialData.netProfit, workshopSettings.currency)}</strong></td>
                     </tr>
                 </tbody>
             </table>
@@ -1135,23 +1138,23 @@ const FinancialReportsFixed: React.FC = () => {
                     <tr>
                         <td>Ventes</td>
                         <td>${sales.filter(s => s.status === 'completed').length}</td>
-                        <td class="number">${(financialData.totalSales / (1 + getVatRate() / 100)).toLocaleString('fr-FR')} €</td>
-                        <td class="number">${(financialData.totalSales - (financialData.totalSales / (1 + getVatRate() / 100))).toLocaleString('fr-FR')} €</td>
-                        <td class="number">${financialData.totalSales.toLocaleString('fr-FR')} €</td>
+                        <td class="number">${formatFromEUR(financialData.totalSales / (1 + getVatRate() / 100), workshopSettings.currency)}</td>
+                        <td class="number">${formatFromEUR(financialData.totalSales - (financialData.totalSales / (1 + getVatRate() / 100)), workshopSettings.currency)}</td>
+                        <td class="number">${formatFromEUR(financialData.totalSales, workshopSettings.currency)}</td>
                     </tr>
                     <tr>
                         <td>Réparations</td>
                         <td>${repairs.filter(r => r.isPaid && r.status === 'completed').length}</td>
-                        <td class="number">${(financialData.totalRepairs / (1 + getVatRate() / 100)).toLocaleString('fr-FR')} €</td>
-                        <td class="number">${(financialData.totalRepairs - (financialData.totalRepairs / (1 + getVatRate() / 100))).toLocaleString('fr-FR')} €</td>
-                        <td class="number">${financialData.totalRepairs.toLocaleString('fr-FR')} €</td>
+                        <td class="number">${formatFromEUR(financialData.totalRepairs / (1 + getVatRate() / 100), workshopSettings.currency)}</td>
+                        <td class="number">${formatFromEUR(financialData.totalRepairs - (financialData.totalRepairs / (1 + getVatRate() / 100)), workshopSettings.currency)}</td>
+                        <td class="number">${formatFromEUR(financialData.totalRepairs, workshopSettings.currency)}</td>
                     </tr>
                     <tr class="total-row">
                         <td><strong>TOTAL</strong></td>
                         <td><strong>${sales.filter(s => s.status === 'completed').length + repairs.filter(r => r.isPaid && r.status === 'completed').length}</strong></td>
-                        <td class="number"><strong>${(financialData.totalRevenue / (1 + getVatRate() / 100)).toLocaleString('fr-FR')} €</strong></td>
-                        <td class="number"><strong>${(financialData.totalRevenue - (financialData.totalRevenue / (1 + getVatRate() / 100))).toLocaleString('fr-FR')} €</strong></td>
-                        <td class="number"><strong>${financialData.totalRevenue.toLocaleString('fr-FR')} €</strong></td>
+                        <td class="number"><strong>${formatFromEUR(financialData.totalRevenue / (1 + getVatRate() / 100), workshopSettings.currency)}</strong></td>
+                        <td class="number"><strong>${formatFromEUR(financialData.totalRevenue - (financialData.totalRevenue / (1 + getVatRate() / 100)), workshopSettings.currency)}</strong></td>
+                        <td class="number"><strong>${formatFromEUR(financialData.totalRevenue, workshopSettings.currency)}</strong></td>
                     </tr>
                 </tbody>
             </table>
@@ -1183,13 +1186,13 @@ const FinancialReportsFixed: React.FC = () => {
                     <tr>
                         <td>${item.category}</td>
                         <td>${item.count}</td>
-                        <td class="number">${item.amount.toLocaleString('fr-FR')} €</td>
+                        <td class="number">${formatFromEUR(item.amount, workshopSettings.currency)}</td>
                     </tr>
                     `).join('')}
                     <tr class="total-row">
                         <td><strong>TOTAL DÉPENSES</strong></td>
                         <td><strong>${financialData.totalExpensesCount}</strong></td>
-                        <td class="number"><strong>${financialData.totalExpenses.toLocaleString('fr-FR')} €</strong></td>
+                        <td class="number"><strong>${formatFromEUR(financialData.totalExpenses, workshopSettings.currency)}</strong></td>
                     </tr>
                 </tbody>
             </table>
@@ -1212,17 +1215,17 @@ const FinancialReportsFixed: React.FC = () => {
                     <tr>
                         <td><strong>Encaissements</strong></td>
                         <td>Ventes et réparations payées</td>
-                        <td class="number" style="color: #4caf50;">+${financialData.totalRevenue.toLocaleString('fr-FR')} €</td>
+                        <td class="number" style="color: #4caf50;">+${formatFromEUR(financialData.totalRevenue, workshopSettings.currency)}</td>
                     </tr>
                     <tr>
                         <td><strong>Décaissements</strong></td>
                         <td>Dépenses et charges</td>
-                        <td class="number" style="color: #f44336;">-${financialData.totalExpenses.toLocaleString('fr-FR')} €</td>
+                        <td class="number" style="color: #f44336;">-${formatFromEUR(financialData.totalExpenses, workshopSettings.currency)}</td>
                     </tr>
                     <tr class="total-row">
                         <td><strong>VARIATION NETTE</strong></td>
                         <td><strong>Trésorerie disponible</strong></td>
-                        <td class="number" style="color: ${financialData.netProfit >= 0 ? '#4caf50' : '#f44336'};"><strong>${financialData.netProfit.toLocaleString('fr-FR')} €</strong></td>
+                        <td class="number" style="color: ${financialData.netProfit >= 0 ? '#4caf50' : '#f44336'};"><strong>${formatFromEUR(financialData.netProfit, workshopSettings.currency)}</strong></td>
                     </tr>
                 </tbody>
             </table>

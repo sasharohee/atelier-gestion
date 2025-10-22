@@ -71,9 +71,17 @@ import { deviceModelServiceService } from '../../services/deviceModelServiceServ
 import { deviceModelService } from '../../services/deviceModelService';
 import { DeviceModel } from '../../types/deviceManagement';
 import CategoryIconDisplay from '../../components/CategoryIconDisplay';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR, getCurrencySymbol } from '../../utils/currencyUtils';
 
 const Kanban: React.FC = () => {
   const navigate = useNavigate();
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
+  const currencySymbol = getCurrencySymbol(currency);
+  
   const {
     repairs,
     repairStatuses,
@@ -1630,7 +1638,7 @@ const Kanban: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="h6" color="primary">
-                {repair.totalPrice} € TTC
+                {formatFromEUR(repair.totalPrice, currency)} TTC
               </Typography>
             </Box>
             <Typography variant="caption" color="text.secondary">
@@ -1854,7 +1862,7 @@ const Kanban: React.FC = () => {
                           return service ? (
                             <Chip 
                               key={serviceId} 
-                              label={`${service.service_name || service.serviceName || 'Service'} - ${service.effective_price || service.effectivePrice || 0}€`} 
+                              label={`${service.service_name || service.serviceName || 'Service'} - ${formatFromEUR(service.effective_price || service.effectivePrice || 0, currency)}`} 
                               size="small" 
                             />
                           ) : null;
@@ -1873,7 +1881,7 @@ const Kanban: React.FC = () => {
                           </Typography>
                           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
                             <Typography variant="caption" color="primary">
-                              {service.effective_price || service.effectivePrice || 0}€
+                              {formatFromEUR(service.effective_price || service.effectivePrice || 0, currency)}
                             </Typography>
                           </Box>
                         </Box>
@@ -1896,9 +1904,9 @@ const Kanban: React.FC = () => {
                         Services sélectionnés: {editRepair.selectedServices.length}
                       </Typography>
                       <Typography variant="caption" color="primary" sx={{ ml: 1, fontWeight: 'bold' }}>
-                        Total: {getServicesForEditModel()
+                        Total: {formatFromEUR(getServicesForEditModel()
                           .filter(s => editRepair.selectedServices.includes(s.id))
-                          .reduce((sum, s) => sum + (s.effective_price || s.effectivePrice || 0), 0)}€
+                          .reduce((sum, s) => sum + (s.effective_price || s.effectivePrice || 0), 0), currency)}
                       </Typography>
                     </Box>
                   )}
@@ -1932,7 +1940,7 @@ const Kanban: React.FC = () => {
               <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
-                  label="Prix estimé (€)"
+                  label={`Prix estimé (${currencySymbol})`}
                   type="number"
                   value={editRepair.totalPrice}
                   onChange={(e) => handleEditRepairChange('totalPrice', parseFloat(e.target.value) || 0)}
@@ -1959,7 +1967,7 @@ const Kanban: React.FC = () => {
                 />
                 {editRepair.discountPercentage > 0 && (
                   <Typography variant="caption" color="success.main" sx={{ mt: 1, display: 'block' }}>
-                    Prix final: {((editRepair.totalPrice * (100 - editRepair.discountPercentage)) / 100).toFixed(2)} €
+                    Prix final: {formatFromEUR(((editRepair.totalPrice * (100 - editRepair.discountPercentage)) / 100), currency)}
                   </Typography>
                 )}
               </Grid>
@@ -2485,7 +2493,7 @@ const Kanban: React.FC = () => {
                   return service ? (
                     <Chip 
                       key={serviceId} 
-                      label={`${service.service_name || service.serviceName || 'Service'} - ${service.effective_price || service.effectivePrice || 0}€`} 
+                      label={`${service.service_name || service.serviceName || 'Service'} - ${formatFromEUR(service.effective_price || service.effectivePrice || 0, currency)}`} 
                       size="small" 
                     />
                   ) : null;
@@ -2504,7 +2512,7 @@ const Kanban: React.FC = () => {
                   </Typography>
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
                     <Typography variant="caption" color="primary">
-                      {service.effective_price || service.effectivePrice || 0}€
+                      {formatFromEUR(service.effective_price || service.effectivePrice || 0, currency)}
                     </Typography>
                   </Box>
                 </Box>
@@ -2527,9 +2535,9 @@ const Kanban: React.FC = () => {
                         Services sélectionnés: {newRepair.selectedServices.length}
                       </Typography>
               <Typography variant="caption" color="primary" sx={{ ml: 1, fontWeight: 'bold' }}>
-                Total: {getServicesForSelectedModel()
+                Total: {formatFromEUR(getServicesForSelectedModel()
                   .filter(s => newRepair.selectedServices.includes(s.id))
-                  .reduce((sum, s) => sum + (s.effective_price || s.effectivePrice || 0), 0)}€
+                  .reduce((sum, s) => sum + (s.effective_price || s.effectivePrice || 0), 0), currency)}
               </Typography>
                     </Box>
                   )}
@@ -2563,7 +2571,7 @@ const Kanban: React.FC = () => {
               <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
-                  label="Prix estimé (€)"
+                  label={`Prix estimé (${currencySymbol})`}
                   type="number"
                   value={newRepair.totalPrice}
                   onChange={(e) => handleNewRepairChange('totalPrice', parseFloat(e.target.value) || 0)}
@@ -2590,7 +2598,7 @@ const Kanban: React.FC = () => {
                 />
                 {newRepair.discountPercentage > 0 && (
                   <Typography variant="caption" color="success.main" sx={{ mt: 1, display: 'block' }}>
-                    Prix final: {((newRepair.totalPrice * (100 - newRepair.discountPercentage)) / 100).toFixed(2)} €
+                    Prix final: {formatFromEUR(((newRepair.totalPrice * (100 - newRepair.discountPercentage)) / 100), currency)}
                   </Typography>
                 )}
               </Grid>
@@ -3090,7 +3098,7 @@ const Kanban: React.FC = () => {
                   <strong>Statut :</strong> {repairStatuses.find(s => s.id === repairToDelete.status)?.name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  <strong>Prix TTC :</strong> {repairToDelete.totalPrice} €
+                  <strong>Prix TTC :</strong> {formatFromEUR(repairToDelete.totalPrice, currency)}
                 </Typography>
               </Box>
               

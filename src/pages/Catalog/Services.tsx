@@ -33,9 +33,15 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 
 const Services: React.FC = () => {
   const { services, addService, updateService, deleteService } = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
   const [openDialog, setOpenDialog] = useState(false);
   const [editingService, setEditingService] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -214,7 +220,7 @@ const Services: React.FC = () => {
                       <Chip label={service.category} size="small" />
                     </TableCell>
                     <TableCell>{service.duration}h</TableCell>
-                    <TableCell>{service.price} €</TableCell>
+                    <TableCell>{formatFromEUR(service.price, currency)}</TableCell>
                     <TableCell>
                       <Chip
                         label={service.isActive ? 'Actif' : 'Inactif'}
@@ -303,7 +309,7 @@ const Services: React.FC = () => {
               
               <TextField
                 fullWidth
-                label="Prix TTC (€)"
+                label={`Prix TTC (${currency})`}
                 type="number"
                 value={formData.price || 0}
                 onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
