@@ -54,12 +54,15 @@ import {
   Build as BuildIcon,
   Euro as EuroIcon,
   AttachMoney as AttachMoneyIcon,
+  TouchApp as TouchAppIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../store';
 import { Sale, SaleItem } from '../../types';
 import Invoice from '../../components/Invoice';
+import SimplifiedSalesDialog from '../../components/SimplifiedSalesDialog';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 
 interface SaleItemForm {
@@ -87,6 +90,7 @@ const Sales: React.FC = () => {
   const { workshopSettings } = useWorkshopSettings();
 
   const [newSaleDialogOpen, setNewSaleDialogOpen] = useState(false);
+  const [simplifiedSaleDialogOpen, setSimplifiedSaleDialogOpen] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer' | 'check' | 'payment_link'>('card');
   const [saleItems, setSaleItems] = useState<SaleItemForm[]>([]);
@@ -349,12 +353,11 @@ const Sales: React.FC = () => {
     };
 
     try {
-      await addSale(newSale);
+      const createdSale = await addSale(newSale);
       setNewSaleDialogOpen(false);
       resetForm();
       
-      // Ouvrir automatiquement la facture de la vente créée
-      const createdSale = { ...newSale, id: newSale.id || 'temp-id' };
+      // Ouvrir automatiquement la facture de la vente créée avec le vrai ID
       openInvoice(createdSale);
     } catch (error) {
       console.error('Erreur lors de la création de la vente:', error);
@@ -383,6 +386,221 @@ const Sales: React.FC = () => {
   const closeInvoice = () => {
     setInvoiceOpen(false);
     setSelectedSaleForInvoice(null);
+  };
+
+  // Télécharger la facture en PDF
+  const downloadInvoice = (sale: Sale) => {
+    // Vérifier que la vente existe et a des données valides
+    if (!sale || !sale.id) {
+      console.error('Vente invalide pour le téléchargement:', sale);
+      alert('Erreur: Impossible de télécharger la facture. Vente invalide.');
+      return;
+    }
+
+    // Debug: vérifier la structure des données
+    console.log('Données de la vente pour téléchargement:', {
+      id: sale.id,
+      items: sale.items,
+      itemsType: typeof sale.items,
+      isArray: Array.isArray(sale.items),
+      subtotal: sale.subtotal,
+      total: sale.total
+    });
+
+    // Créer le contenu HTML de la facture
+    const client = sale.clientId ? getClientById(sale.clientId) : null;
+    const clientName = client ? `${client.firstName} ${client.lastName}` : 'Client anonyme';
+    const clientEmail = client?.email || '';
+    const clientPhone = client?.phone || '';
+
+    const invoiceContent = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Facture ${sale.id}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: white;
+            color: #333;
+          }
+          .invoice-header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #1976d2;
+            padding-bottom: 20px;
+          }
+          .invoice-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 10px;
+          }
+          .invoice-number {
+            font-size: 16px;
+            color: #666;
+          }
+          .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+          }
+          .workshop-info, .client-info {
+            width: 45%;
+          }
+          .workshop-info h3, .client-info h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 18px;
+          }
+          .workshop-info p, .client-info p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          .items-table th, .items-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+          }
+          .items-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #333;
+          }
+          .items-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          .totals {
+            float: right;
+            width: 300px;
+            margin-top: 20px;
+          }
+          .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+          }
+          .total-line.final {
+            font-weight: bold;
+            font-size: 18px;
+            border-top: 2px solid #1976d2;
+            padding-top: 10px;
+            color: #1976d2;
+          }
+          .invoice-footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+          }
+          @media print {
+            body { margin: 0; padding: 15px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-header">
+          <div class="invoice-title">FACTURE</div>
+          <div class="invoice-number">N° ${sale.id}</div>
+        </div>
+
+        <div class="invoice-details">
+          <div class="workshop-info">
+            <h3>Atelier de Réparation</h3>
+            <p>123 Rue de la Paix</p>
+            <p>75001 Paris, France</p>
+            <p>Tél: 07 59 23 91 70</p>
+            <p>Email: contact.ateliergestion@gmail.com</p>
+          </div>
+          <div class="client-info">
+            <h3>Facturé à</h3>
+            <p><strong>${clientName}</strong></p>
+            ${clientEmail ? `<p>Email: ${clientEmail}</p>` : ''}
+            ${clientPhone ? `<p>Tél: ${clientPhone}</p>` : ''}
+          </div>
+        </div>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Article</th>
+              <th>Quantité</th>
+              <th>Prix unitaire</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Array.isArray(sale.items) ? sale.items.map(item => `
+              <tr>
+                <td>${item.name || 'Article'}</td>
+                <td>${item.quantity || 1}</td>
+                <td>${(item.unitPrice || 0).toLocaleString('fr-FR')} €</td>
+                <td>${(item.totalPrice || 0).toLocaleString('fr-FR')} €</td>
+              </tr>
+            `).join('') : '<tr><td colspan="4" style="text-align: center; color: #666;">Aucun article dans cette vente</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="total-line">
+            <span>Sous-total HT:</span>
+            <span>${(sale.subtotal || 0).toLocaleString('fr-FR')} €</span>
+          </div>
+          <div class="total-line">
+            <span>TVA (${workshopSettings.vatRate || 20}%):</span>
+            <span>${(sale.tax || 0).toLocaleString('fr-FR')} €</span>
+          </div>
+          ${(sale.discountPercentage || 0) > 0 ? `
+            <div class="total-line">
+              <span>Remise (${sale.discountPercentage}%):</span>
+              <span>-${(sale.discountAmount || 0).toLocaleString('fr-FR')} €</span>
+            </div>
+          ` : ''}
+          <div class="total-line final">
+            <span>TOTAL TTC:</span>
+            <span>${(sale.total || 0).toLocaleString('fr-FR')} €</span>
+          </div>
+        </div>
+
+        <div class="invoice-footer">
+          <p>Date d'émission: ${safeFormatDate(sale.createdAt, 'dd/MM/yyyy')}</p>
+          <p>Méthode de paiement: ${getPaymentMethodLabel(sale.paymentMethod)}</p>
+          <p>Merci de votre confiance !</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Créer un blob avec le contenu HTML
+    const blob = new Blob([invoiceContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Créer un lien de téléchargement
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Facture_${sale.id}_${safeFormatDate(sale.createdAt, 'yyyy-MM-dd')}.html`;
+    
+    // Déclencher le téléchargement
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Nettoyer l'URL
+    URL.revokeObjectURL(url);
   };
 
   // Changer le statut de paiement
@@ -460,13 +678,21 @@ const Sales: React.FC = () => {
       </Box>
 
       {/* Actions */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setNewSaleDialogOpen(true)}
         >
           Nouvelle vente
+        </Button>
+        <Button
+          variant="contained"
+          color="secondary"
+          startIcon={<TouchAppIcon />}
+          onClick={() => setSimplifiedSaleDialogOpen(true)}
+        >
+          Vente Simplifiée
         </Button>
       </Box>
 
@@ -756,6 +982,14 @@ const Sales: React.FC = () => {
                               onClick={() => openInvoice(sale)}
                             >
                               <ReceiptIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton 
+                              size="small" 
+                              title="Télécharger facture PDF"
+                              onClick={() => downloadInvoice(sale)}
+                              color="primary"
+                            >
+                              <DownloadIcon fontSize="small" />
                             </IconButton>
                             <IconButton 
                               size="small" 
@@ -1282,6 +1516,11 @@ const Sales: React.FC = () => {
           />
         )}
 
+        {/* Dialogue Vente Simplifiée */}
+        <SimplifiedSalesDialog
+          open={simplifiedSaleDialogOpen}
+          onClose={() => setSimplifiedSaleDialogOpen(false)}
+        />
 
       </Box>
     );

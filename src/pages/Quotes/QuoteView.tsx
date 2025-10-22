@@ -18,12 +18,10 @@ import {
   Chip,
   Divider,
   IconButton,
-  Tooltip,
   Alert,
 } from '@mui/material';
 import {
   Close as CloseIcon,
-  Print as PrintIcon,
   Send as SendIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
@@ -188,7 +186,7 @@ const QuoteView: React.FC<QuoteViewProps> = ({
     const services: any[] = [];
     const parts: any[] = [];
     
-    quote.items.forEach((item, index) => {
+    (Array.isArray(quote.items) ? quote.items : []).forEach((item, index) => {
       if (item.type === 'service') {
         services.push({
           id: `temp_${index}`,
@@ -259,7 +257,7 @@ Nous avons le plaisir de vous transmettre notre devis pour les services demandé
 • Validité : jusqu'au ${format(new Date(quote.validUntil), 'dd/MM/yyyy', { locale: fr })}
 • Montant total : ${quote.total.toLocaleString('fr-FR')} €
 
-${quote.items.length > 0 ? `
+${Array.isArray(quote.items) && quote.items.length > 0 ? `
 📦 ARTICLES INCLUS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${quote.items.map(item => `• ${item.name} - ${item.quantity}x ${item.unitPrice.toLocaleString('fr-FR')}€ = ${item.totalPrice.toLocaleString('fr-FR')}€`).join('\n')}
@@ -310,150 +308,6 @@ L'équipe Mon Atelier
     }
   };
 
-  const handlePrint = () => {
-    const printContent = document.getElementById('quote-content');
-    if (printContent) {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Devis ${formatQuoteNumber(quote.quoteNumber)}</title>
-              <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
-                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-                  margin: 0; padding: 24px; background: white; color: #333; line-height: 1.6;
-                }
-                .quote-container { max-width: 800px; margin: 0 auto; background: white; }
-                .header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-                .header h1 { font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: #333; }
-                .header .subtitle { font-size: 14px; color: #666; margin-bottom: 16px; }
-                .header .contact-info { font-size: 12px; color: #666; line-height: 1.8; }
-                .quote-details { display: flex; justify-content: space-between; margin-bottom: 40px; }
-                .client-section, .quote-section { flex: 1; }
-                .section-title { font-weight: 600; margin-bottom: 12px; color: #333; font-size: 14px; }
-                .client-info, .quote-info { font-size: 14px; color: #666; line-height: 1.6; }
-                .client-name { font-weight: 600; color: #333; margin-bottom: 8px; }
-                .quote-number { font-weight: 600; color: #1976d2; font-size: 16px; margin-bottom: 8px; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                th { background-color: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; color: #333; border-bottom: 1px solid #eee; }
-                td { padding: 12px; border-bottom: 1px solid #f1f1f1; }
-                .totals-section { margin-bottom: 30px; }
-                .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
-                .total-row:last-child { font-weight: 600; font-size: 16px; color: #1976d2; border-top: 1px solid #eee; padding-top: 8px; }
-                .conditions { background-color: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 30px; }
-                .conditions h3 { margin-bottom: 12px; font-size: 16px; color: #333; }
-                .conditions p { font-size: 14px; color: #666; line-height: 1.6; }
-                .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
-                .footer h3 { margin-bottom: 8px; font-size: 18px; color: #333; }
-                .footer p { font-size: 12px; color: #666; margin-bottom: 4px; }
-                .thank-you { font-weight: 600; color: #1976d2; margin-top: 12px; }
-              </style>
-            </head>
-            <body>
-              <div class="quote-container">
-                <div class="header">
-                  <h1>DEVIS</h1>
-                  <div class="subtitle">Mon Atelier - Réparation et Vente</div>
-                  <div class="contact-info">
-                    Tél: +33 1 23 45 67 89 • Email: contact@monatelier.fr<br>
-                    Adresse: 123 Rue de la Réparation, 75001 Paris
-                  </div>
-                </div>
-
-                <div class="quote-details">
-                  <div class="client-section">
-                    <div class="section-title">DEVISÉ À</div>
-                    <div class="client-info">
-                      ${client ? `
-                        <div class="client-name">${client.firstName} ${client.lastName}</div>
-                        <div>${client.email}</div>
-                        <div>${client.phone}</div>
-                        ${client.address ? `<div>${client.address}</div>` : ''}
-                      ` : '<div>Client anonyme</div>'}
-                    </div>
-                  </div>
-                  
-                  <div class="quote-section">
-                    <div class="section-title">DÉTAILS DU DEVIS</div>
-                    <div class="quote-info">
-                      <div class="quote-number">${formatQuoteNumber(quote.quoteNumber)}</div>
-                      <div><strong>Date :</strong> ${format(new Date(quote.createdAt), 'dd/MM/yyyy', { locale: fr })}</div>
-                      <div><strong>Validité :</strong> ${format(new Date(quote.validUntil), 'dd/MM/yyyy', { locale: fr })}</div>
-                      <div><strong>Statut :</strong> ${getStatusLabel(quote.status)}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Article</th>
-                      <th>Description</th>
-                      <th>Quantité</th>
-                      <th>Prix unitaire</th>
-                      <th>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${quote.items.map(item => `
-                      <tr>
-                        <td>${item.name}${item.type === 'repair' ? ' <span style="color: #1976d2; font-weight: 500;">(Réparation)</span>' : ''}</td>
-                        <td>${item.description || '-'}</td>
-                        <td>${item.quantity}</td>
-                        <td>${item.unitPrice.toLocaleString('fr-FR')} €</td>
-                        <td>${item.totalPrice.toLocaleString('fr-FR')} €</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-
-                <div class="totals-section">
-                  <div class="total-row">
-                    <span>Sous-total :</span>
-                    <span>${quote.subtotal.toLocaleString('fr-FR')} €</span>
-                  </div>
-                  <div class="total-row">
-                    <span>TVA (${settingsLoading ? '...' : workshopSettings.vatRate}%) :</span>
-                    <span>${quote.tax.toLocaleString('fr-FR')} €</span>
-                  </div>
-                  <div class="total-row">
-                    <span>Total :</span>
-                    <span>${quote.total.toLocaleString('fr-FR')} €</span>
-                  </div>
-                </div>
-
-                ${quote.notes ? `
-                  <div class="conditions">
-                    <h3>Notes</h3>
-                    <p>${quote.notes}</p>
-                  </div>
-                ` : ''}
-
-                ${quote.terms ? `
-                  <div class="conditions">
-                    <h3>Conditions et termes</h3>
-                    <p>${quote.terms}</p>
-                  </div>
-                ` : ''}
-
-                <div class="footer">
-                  <h3>Merci de votre confiance</h3>
-                  <p>Ce devis est valable jusqu'au ${format(new Date(quote.validUntil), 'dd/MM/yyyy', { locale: fr })}</p>
-                  <p>Pour toute question, n'hésitez pas à nous contacter</p>
-                  <div class="thank-you">Mon Atelier</div>
-                </div>
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-      }
-    }
-  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -464,11 +318,6 @@ L'équipe Mon Atelier
                             <Typography variant="h6">Devis {formatQuoteNumber(quote.quoteNumber)}</Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip title="Imprimer">
-              <IconButton onClick={handlePrint} sx={{ color: '#1976d2' }}>
-                <PrintIcon />
-              </IconButton>
-            </Tooltip>
             <IconButton onClick={onClose}>
               <CloseIcon />
             </IconButton>
@@ -566,7 +415,7 @@ L'équipe Mon Atelier
                 </TableRow>
               </TableHead>
               <TableBody>
-                {quote.items.map((item) => (
+                {Array.isArray(quote.items) ? quote.items.map((item) => (
                   <TableRow key={item.id}>
                                          <TableCell>
                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -604,7 +453,15 @@ L'équipe Mon Atelier
                       </Typography>
                     </TableCell>
                   </TableRow>
-                ))}
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center">
+                      <Typography variant="body2" color="text.secondary">
+                        Aucun article dans ce devis
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableContainer>

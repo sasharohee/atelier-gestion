@@ -39,6 +39,7 @@ import {
   productService,
   serviceService,
   saleService,
+  quoteService,
   appointmentService,
   dashboardService,
   expenseService,
@@ -198,7 +199,7 @@ interface AppActions {
   updateAppointment: (id: string, updates: Partial<Appointment>) => Promise<void>;
   deleteAppointment: (id: string) => Promise<void>;
   
-  addSale: (sale: Sale) => Promise<void>;
+  addSale: (sale: Sale) => Promise<Sale>;
   updateSale: (id: string, updates: Partial<Sale>) => Promise<void>;
   deleteSale: (id: string) => Promise<void>;
   
@@ -230,6 +231,7 @@ interface AppActions {
   loadRepairs: () => Promise<void>;
   updateRepairPaymentStatus: (repairId: string, isPaid: boolean) => Promise<void>;
   loadSales: () => Promise<void>;
+  loadQuotes: () => Promise<void>;
   loadAppointments: () => Promise<void>;
   loadStockAlerts: () => Promise<void>;
   loadExpenses: () => Promise<void>;
@@ -1517,12 +1519,15 @@ export const useAppStore = create<AppStore>()(
           
           // Envoyer au backend en arrière-plan
           const result = await saleService.create(saleWithId);
+          let finalSale = saleWithId;
+          
           if (result.success && 'data' in result && result.data) {
             // Mettre à jour avec l'ID du backend si nécessaire
+            finalSale = { ...saleWithId, id: result.data.id || saleWithId.id };
             set((state) => ({
               sales: state.sales.map(s => 
                 s.id === saleWithId.id 
-                  ? { ...s, id: result.data.id || s.id }
+                  ? finalSale
                   : s
               )
             }));
@@ -1541,9 +1546,13 @@ export const useAppStore = create<AppStore>()(
             }
           }
           
+          // Retourner la vente avec l'ID final
+          return finalSale;
+          
         } catch (error) {
           console.error('Erreur lors de l\'ajout de la vente:', error);
-          // En cas d'erreur, on garde la vente en local
+          // En cas d'erreur, on garde la vente en local et on la retourne
+          return saleWithId;
         }
       },
       
@@ -1555,19 +1564,24 @@ export const useAppStore = create<AppStore>()(
           // Ajouter immédiatement au store local pour l'affichage
           set((state) => ({ quotes: [quoteWithId, ...state.quotes] }));
           
-          // TODO: Envoyer au backend quand le service sera implémenté
-          // const result = await quoteService.create(quoteWithId);
-          // if (result.success && 'data' in result && result.data) {
-          //   set((state) => ({
-          //     quotes: state.quotes.map(q => 
-          //       q.id === quoteWithId.id 
-          //         ? { ...q, id: result.data.id || q.id }
-          //         : q
-          //     )
-          //   }));
-          // }
+          // Envoyer au backend
+          const result = await quoteService.create(quoteWithId);
+          if (result.success && 'data' in result && result.data) {
+            set((state) => ({
+              quotes: state.quotes.map(q => 
+                q.id === quoteWithId.id 
+                  ? { ...q, id: result.data.id || q.id }
+                  : q
+              )
+            }));
+            return result.data;
+          } else {
+            console.error('Erreur lors de la création du devis:', result);
+            return quoteWithId;
+          }
         } catch (error) {
           console.error('Erreur lors de l\'ajout du devis:', error);
+          return quoteWithId;
         }
       },
       
@@ -1580,11 +1594,12 @@ export const useAppStore = create<AppStore>()(
             )
           }));
           
-          // TODO: Envoyer au backend quand le service sera implémenté
-          // const result = await quoteService.update(id, updates);
-          // if (!result.success) {
-          //   throw new Error('Erreur lors de la mise à jour du devis');
-          // }
+          // Envoyer au backend
+          const result = await quoteService.update(id, updates);
+          if (!result.success) {
+            console.error('Erreur lors de la mise à jour du devis:', result);
+            throw new Error('Erreur lors de la mise à jour du devis');
+          }
         } catch (error) {
           console.error('Erreur lors de la mise à jour du devis:', error);
         }
@@ -1597,11 +1612,12 @@ export const useAppStore = create<AppStore>()(
             quotes: state.quotes.filter(quote => quote.id !== id)
           }));
           
-          // TODO: Envoyer au backend quand le service sera implémenté
-          // const result = await quoteService.delete(id);
-          // if (!result.success) {
-          //   throw new Error('Erreur lors de la suppression du devis');
-          // }
+          // Envoyer au backend
+          const result = await quoteService.delete(id);
+          if (!result.success) {
+            console.error('Erreur lors de la suppression du devis:', result);
+            throw new Error('Erreur lors de la suppression du devis');
+          }
         } catch (error) {
           console.error('Erreur lors de la suppression du devis:', error);
         }
@@ -2007,6 +2023,17 @@ export const useAppStore = create<AppStore>()(
           }
         } catch (error) {
           console.error('Erreur lors du chargement des ventes:', error);
+        }
+      },
+
+      loadQuotes: async () => {
+        try {
+          const result = await quoteService.getAll();
+          if (result.success && 'data' in result && result.data) {
+            set({ quotes: result.data });
+          }
+        } catch (error) {
+          console.error('Erreur lors du chargement des devis:', error);
         }
       },
       

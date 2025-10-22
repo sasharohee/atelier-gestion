@@ -172,7 +172,14 @@ const BuybackProgressive: React.FC = () => {
     try {
       const result = await buybackService.updateStatus(buyback.id, newStatus);
       if (result.success) {
-        toast.success(`Statut mis à jour vers ${getStatusLabel(newStatus)}`);
+        if (newStatus === 'paid') {
+          toast.success(`Rachat marqué comme payé et dépense créée automatiquement dans la comptabilité`, {
+            duration: 5000,
+            icon: '💰'
+          });
+        } else {
+          toast.success(`Statut mis à jour vers ${getStatusLabel(newStatus)}`);
+        }
         loadBuybacks();
       } else {
         toast.error('Erreur lors de la mise à jour du statut');

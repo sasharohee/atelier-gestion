@@ -10,6 +10,7 @@ import {
   Message,
   Appointment,
   Sale,
+  Quote,
   StockAlert,
   Notification,
   DashboardStats,
@@ -3712,10 +3713,293 @@ export const buybackService = {
         .single();
       
       if (error) return handleSupabaseError(error);
+
+      // Si le rachat est marqué comme payé, créer automatiquement une dépense
+      if (status === 'paid' && data) {
+        console.log('💰 Rachat payé détecté, création automatique d\'une dépense...');
+        
+        try {
+          // Récupérer les détails du rachat pour créer la dépense
+          const buybackData = data;
+          const expenseAmount = buybackData.final_price || buybackData.offered_price;
+          
+          // Créer la dépense automatiquement
+          const expenseData = {
+            title: `Rachat d'appareil - ${buybackData.device_brand} ${buybackData.device_model}`,
+            description: `Rachat d'appareil de ${buybackData.client_first_name} ${buybackData.client_last_name}. Appareil: ${buybackData.device_brand} ${buybackData.device_model}`,
+            amount: expenseAmount,
+            supplier: `${buybackData.client_first_name} ${buybackData.client_last_name}`,
+            paymentMethod: buybackData.payment_method,
+            status: 'paid' as const,
+            expenseDate: new Date(),
+            tags: ['rachat', 'appareil', 'automatique']
+          };
+
+          const expenseResult = await expenseService.create(expenseData);
+          
+          if (expenseResult.success) {
+            console.log('✅ Dépense créée automatiquement pour le rachat payé');
+            
+            // Recharger les dépenses dans le store pour mettre à jour l'interface
+            try {
+              const { useAppStore } = await import('../store');
+              const store = useAppStore.getState();
+              await store.loadExpenses();
+              console.log('✅ Dépenses rechargées dans le store');
+            } catch (storeError) {
+              console.warn('⚠️ Erreur lors du rechargement des dépenses dans le store:', storeError);
+            }
+          } else {
+            console.warn('⚠️ Erreur lors de la création automatique de la dépense:', expenseResult.error);
+          }
+        } catch (expenseError) {
+          console.error('❌ Erreur lors de la création automatique de la dépense:', expenseError);
+          // Ne pas faire échouer la mise à jour du statut du rachat si la création de dépense échoue
+        }
+      }
+
       return handleSupabaseSuccess(data);
     } catch (err) {
       return handleSupabaseError(err as any);
     }
+  }
+};
+
+// Service pour les devis
+export const quoteService = {
+  async getAll() {
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+
+    const { data, error } = await supabase
+      .from('quotes')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    
+    if (error) return handleSupabaseError(error);
+    
+    // Convertir les données de snake_case vers camelCase
+    const convertedData = data?.map(quote => ({
+      id: quote.id,
+      clientId: quote.client_id,
+      quoteNumber: quote.quote_number,
+      items: quote.items || [],
+      subtotal: quote.subtotal,
+      tax: quote.tax,
+      total: quote.total,
+      discountPercentage: quote.discount_percentage,
+      discountAmount: quote.discount_amount,
+      originalTotal: quote.original_total,
+      status: quote.status,
+      validUntil: quote.valid_until,
+      notes: quote.notes,
+      terms: quote.terms,
+      repairDetails: quote.repair_details,
+      createdAt: quote.created_at,
+      updatedAt: quote.updated_at
+    })) || [];
+    
+    return handleSupabaseSuccess(convertedData);
+  },
+
+  async getById(id: string) {
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+
+    const { data, error } = await supabase
+      .from('quotes')
+      .select(`
+        *,
+        client:clients(*)
+      `)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+    
+    if (error) return handleSupabaseError(error);
+    
+    // Convertir les données de snake_case vers camelCase
+    const convertedData = data ? {
+      id: data.id,
+      clientId: data.client_id,
+      quoteNumber: data.quote_number,
+      items: data.items || [],
+      subtotal: data.subtotal,
+      tax: data.tax,
+      total: data.total,
+      discountPercentage: data.discount_percentage,
+      discountAmount: data.discount_amount,
+      originalTotal: data.original_total,
+      status: data.status,
+      validUntil: data.valid_until,
+      notes: data.notes,
+      terms: data.terms,
+      repairDetails: data.repair_details,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      client: data.client
+    } : null;
+    
+    return handleSupabaseSuccess(convertedData);
+  },
+
+  async create(quote: Omit<Quote, 'id' | 'createdAt' | 'updatedAt'>) {
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+
+    // Vérifier que le client appartient à l'utilisateur connecté
+    if (quote.clientId) {
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('id', quote.clientId)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (clientError || !clientData) {
+        return handleSupabaseError(new Error('Client non trouvé ou n\'appartient pas à l\'utilisateur connecté'));
+      }
+    }
+
+    // Convertir les noms de propriétés camelCase vers snake_case
+    const quoteData = {
+      client_id: quote.clientId,
+      quote_number: quote.quoteNumber,
+      items: JSON.stringify(quote.items || []),
+      subtotal: quote.subtotal,
+      tax: quote.tax,
+      total: quote.total,
+      discount_percentage: quote.discountPercentage || 0,
+      discount_amount: quote.discountAmount || 0,
+      original_total: quote.originalTotal || quote.total,
+      status: quote.status,
+      valid_until: quote.validUntil,
+      notes: quote.notes,
+      terms: quote.terms,
+      repair_details: quote.repairDetails ? JSON.stringify(quote.repairDetails) : null,
+      user_id: user.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('quotes')
+      .insert([quoteData])
+      .select()
+      .single();
+    
+    if (error) return handleSupabaseError(error);
+    
+    // Convertir les données de snake_case vers camelCase
+    const convertedData = {
+      id: data.id,
+      clientId: data.client_id,
+      quoteNumber: data.quote_number,
+      items: data.items || [],
+      subtotal: data.subtotal,
+      tax: data.tax,
+      total: data.total,
+      discountPercentage: data.discount_percentage,
+      discountAmount: data.discount_amount,
+      originalTotal: data.original_total,
+      status: data.status,
+      validUntil: data.valid_until,
+      notes: data.notes,
+      terms: data.terms,
+      repairDetails: data.repair_details,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+    
+    return handleSupabaseSuccess(convertedData);
+  },
+
+  async update(id: string, updates: Partial<Quote>) {
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+
+    // Convertir les noms de propriétés camelCase vers snake_case
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (updates.clientId !== undefined) updateData.client_id = updates.clientId;
+    if (updates.quoteNumber !== undefined) updateData.quote_number = updates.quoteNumber;
+    if (updates.items !== undefined) updateData.items = JSON.stringify(updates.items);
+    if (updates.subtotal !== undefined) updateData.subtotal = updates.subtotal;
+    if (updates.tax !== undefined) updateData.tax = updates.tax;
+    if (updates.total !== undefined) updateData.total = updates.total;
+    if (updates.discountPercentage !== undefined) updateData.discount_percentage = updates.discountPercentage;
+    if (updates.discountAmount !== undefined) updateData.discount_amount = updates.discountAmount;
+    if (updates.originalTotal !== undefined) updateData.original_total = updates.originalTotal;
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.validUntil !== undefined) updateData.valid_until = updates.validUntil;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
+    if (updates.terms !== undefined) updateData.terms = updates.terms;
+    if (updates.repairDetails !== undefined) updateData.repair_details = updates.repairDetails ? JSON.stringify(updates.repairDetails) : null;
+
+    const { data, error } = await supabase
+      .from('quotes')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+    
+    if (error) return handleSupabaseError(error);
+    
+    // Convertir les données de snake_case vers camelCase
+    const convertedData = {
+      id: data.id,
+      clientId: data.client_id,
+      quoteNumber: data.quote_number,
+      items: data.items || [],
+      subtotal: data.subtotal,
+      tax: data.tax,
+      total: data.total,
+      discountPercentage: data.discount_percentage,
+      discountAmount: data.discount_amount,
+      originalTotal: data.original_total,
+      status: data.status,
+      validUntil: data.valid_until,
+      notes: data.notes,
+      terms: data.terms,
+      repairDetails: data.repair_details,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
+    
+    return handleSupabaseSuccess(convertedData);
+  },
+
+  async delete(id: string) {
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+
+    const { error } = await supabase
+      .from('quotes')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+    
+    if (error) return handleSupabaseError(error);
+    return handleSupabaseSuccess(true);
   }
 };
 
@@ -3731,6 +4015,7 @@ export default {
   productService,
   serviceService,
   saleService,
+  quoteService,
   appointmentService,
   dashboardService,
   subscriptionService,

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -56,12 +56,12 @@ import {
   Build as BuildIcon,
   Euro as EuroIcon,
   AttachMoney as AttachMoneyIcon,
-  Edit as EditIcon,
   Visibility as VisibilityIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   Schedule as ScheduleIcon,
   Warning as WarningIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { format, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -94,6 +94,7 @@ const Quotes: React.FC = () => {
     addQuote,
     updateQuote,
     deleteQuote,
+    loadQuotes,
     getClientById,
     getDeviceById,
   } = useAppStore();
@@ -112,6 +113,11 @@ const Quotes: React.FC = () => {
   const [validUntil, setValidUntil] = useState<Date>(addDays(new Date(), 30));
   const [notes, setNotes] = useState('');
   const [terms, setTerms] = useState('');
+
+  // Charger les devis au démarrage
+  useEffect(() => {
+    loadQuotes();
+  }, [loadQuotes]);
 
   // Calcul des totaux
   const totals = useMemo(() => {
@@ -354,6 +360,583 @@ const Quotes: React.FC = () => {
   const openQuoteView = (quote: Quote) => {
     setSelectedQuoteForView(quote);
     setQuoteViewOpen(true);
+  };
+
+  // Télécharger le devis en PDF
+  const downloadQuote = (quote: Quote) => {
+    // Vérifier que le devis existe et a des données valides
+    if (!quote || !quote.id) {
+      console.error('Devis invalide pour le téléchargement:', quote);
+      alert('Erreur: Impossible de télécharger le devis. Devis invalide.');
+      return;
+    }
+
+    // Debug: vérifier la structure des données
+    console.log('Données du devis pour téléchargement:', {
+      id: quote.id,
+      items: quote.items,
+      itemsType: typeof quote.items,
+      isArray: Array.isArray(quote.items),
+      subtotal: quote.subtotal,
+      total: quote.total
+    });
+
+    // Créer le contenu HTML du devis
+    const client = quote.clientId ? getClientById(quote.clientId) : null;
+    const clientName = client ? `${client.firstName} ${client.lastName}` : 'Client anonyme';
+    const clientEmail = client?.email || '';
+    const clientPhone = client?.phone || '';
+
+    const quoteContent = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Devis ${quote.quoteNumber}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: white;
+            color: #333;
+            line-height: 1.6;
+          }
+          .quote-header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ff9800;
+            padding-bottom: 20px;
+          }
+          .quote-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff9800;
+            margin-bottom: 10px;
+          }
+          .quote-number {
+            font-size: 16px;
+            color: #666;
+          }
+          .quote-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+          }
+          .workshop-info, .client-info {
+            width: 45%;
+          }
+          .workshop-info h3, .client-info h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 18px;
+          }
+          .workshop-info p, .client-info p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          .items-table th, .items-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+          }
+          .items-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #333;
+            border: 1px solid #ddd;
+          }
+          .items-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          .items-table tr:hover {
+            background-color: #f0f0f0;
+          }
+          .totals {
+            float: right;
+            width: 300px;
+            margin-top: 20px;
+          }
+          .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+          }
+          .total-line.final {
+            font-weight: bold;
+            font-size: 18px;
+            border-top: 2px solid #ff9800;
+            padding-top: 10px;
+            color: #ff9800;
+          }
+          .quote-footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+          }
+          .validity-info {
+            background-color: #fff3e0;
+            border: 1px solid #ff9800;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+          }
+          .notes-section {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+          }
+          @media print {
+            body { 
+              margin: 0; 
+              padding: 15px; 
+              font-size: 12px;
+              line-height: 1.4;
+            }
+            .quote-header {
+              margin-bottom: 20px;
+              padding-bottom: 15px;
+            }
+            .quote-title {
+              font-size: 24px;
+            }
+            .quote-details {
+              margin-bottom: 20px;
+            }
+            .validity-info {
+              margin: 15px 0;
+              padding: 10px;
+            }
+            .items-table {
+              margin-bottom: 20px;
+            }
+            .items-table th, .items-table td {
+              padding: 8px;
+              font-size: 11px;
+            }
+            .totals {
+              width: 250px;
+              margin-top: 15px;
+            }
+            .total-line {
+              margin-bottom: 5px;
+              font-size: 11px;
+            }
+            .total-line.final {
+              font-size: 14px;
+              padding-top: 5px;
+            }
+            .quote-footer {
+              margin-top: 30px;
+              padding-top: 15px;
+              font-size: 10px;
+            }
+            .notes-section {
+              margin-top: 20px;
+              padding: 10px;
+            }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="quote-header">
+          <div class="quote-title">DEVIS</div>
+          <div class="quote-number">N° ${formatQuoteNumber(quote.quoteNumber)}</div>
+        </div>
+
+        <div class="quote-details">
+          <div class="workshop-info">
+            <h3>Atelier de Réparation</h3>
+            <p>123 Rue de la Paix</p>
+            <p>75001 Paris, France</p>
+            <p>Tél: 07 59 23 91 70</p>
+            <p>Email: contact.ateliergestion@gmail.com</p>
+          </div>
+          <div class="client-info">
+            <h3>Devis pour</h3>
+            <p><strong>${clientName}</strong></p>
+            ${clientEmail ? `<p>Email: ${clientEmail}</p>` : ''}
+            ${clientPhone ? `<p>Tél: ${clientPhone}</p>` : ''}
+          </div>
+        </div>
+
+        <div class="validity-info">
+          <strong>Validité du devis :</strong> ${format(new Date(quote.validUntil), 'dd/MM/yyyy', { locale: fr })}
+        </div>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Article</th>
+              <th>Description</th>
+              <th>Quantité</th>
+              <th>Prix unitaire</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Array.isArray(quote.items) ? quote.items.map(item => `
+              <tr>
+                <td>${item.name || 'Article'}</td>
+                <td>${item.description || '-'}</td>
+                <td>${item.quantity || 1}</td>
+                <td>${(item.unitPrice || 0).toLocaleString('fr-FR')} €</td>
+                <td>${(item.totalPrice || 0).toLocaleString('fr-FR')} €</td>
+              </tr>
+            `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666;">Aucun article dans ce devis</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="total-line">
+            <span>Sous-total HT:</span>
+            <span>${(quote.subtotal || 0).toLocaleString('fr-FR')} €</span>
+          </div>
+          <div class="total-line">
+            <span>TVA (${workshopSettings.vatRate || 20}%):</span>
+            <span>${(quote.tax || 0).toLocaleString('fr-FR')} €</span>
+          </div>
+          <div class="total-line final">
+            <span>TOTAL TTC:</span>
+            <span>${(quote.total || 0).toLocaleString('fr-FR')} €</span>
+          </div>
+        </div>
+
+        ${quote.notes ? `
+          <div class="notes-section">
+            <h4>Notes :</h4>
+            <p>${quote.notes}</p>
+          </div>
+        ` : ''}
+
+        ${quote.terms ? `
+          <div class="notes-section">
+            <h4>Conditions :</h4>
+            <p>${quote.terms}</p>
+          </div>
+        ` : ''}
+
+        <div class="quote-footer">
+          <p>Date d'émission: ${format(new Date(quote.createdAt), 'dd/MM/yyyy', { locale: fr })}</p>
+          <p>Statut: ${getStatusLabel(quote.status)}</p>
+          <p>Merci de votre confiance !</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Créer un blob avec le contenu HTML
+    const blob = new Blob([quoteContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Créer un lien de téléchargement
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Devis_${formatQuoteNumber(quote.quoteNumber)}_${format(new Date(quote.createdAt), 'yyyy-MM-dd')}.html`;
+    
+    // Déclencher le téléchargement
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Nettoyer l'URL
+    URL.revokeObjectURL(url);
+  };
+
+  // Imprimer le devis (ouvre dans une nouvelle fenêtre)
+  const printQuote = (quote: Quote) => {
+    // Vérifier que le devis existe et a des données valides
+    if (!quote || !quote.id) {
+      console.error('Devis invalide pour l\'impression:', quote);
+      alert('Erreur: Impossible d\'imprimer le devis. Devis invalide.');
+      return;
+    }
+
+    // Créer le contenu HTML du devis (même contenu que downloadQuote)
+    const client = quote.clientId ? getClientById(quote.clientId) : null;
+    const clientName = client ? `${client.firstName} ${client.lastName}` : 'Client anonyme';
+    const clientEmail = client?.email || '';
+    const clientPhone = client?.phone || '';
+
+    const quoteContent = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Devis ${quote.quoteNumber}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: white;
+            color: #333;
+            line-height: 1.6;
+          }
+          .quote-header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ff9800;
+            padding-bottom: 20px;
+          }
+          .quote-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff9800;
+            margin-bottom: 10px;
+          }
+          .quote-number {
+            font-size: 16px;
+            color: #666;
+          }
+          .quote-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+          }
+          .workshop-info, .client-info {
+            width: 45%;
+          }
+          .workshop-info h3, .client-info h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 18px;
+          }
+          .workshop-info p, .client-info p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          .items-table th, .items-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+          }
+          .items-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #333;
+            border: 1px solid #ddd;
+          }
+          .items-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          .items-table tr:hover {
+            background-color: #f0f0f0;
+          }
+          .totals {
+            float: right;
+            width: 300px;
+            margin-top: 20px;
+          }
+          .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+          }
+          .total-line.final {
+            font-weight: bold;
+            font-size: 18px;
+            border-top: 2px solid #ff9800;
+            padding-top: 10px;
+            color: #ff9800;
+          }
+          .quote-footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+          }
+          .validity-info {
+            background-color: #fff3e0;
+            border: 1px solid #ff9800;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+          }
+          .notes-section {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+          }
+          @media print {
+            body { 
+              margin: 0; 
+              padding: 15px; 
+              font-size: 12px;
+              line-height: 1.4;
+            }
+            .quote-header {
+              margin-bottom: 20px;
+              padding-bottom: 15px;
+            }
+            .quote-title {
+              font-size: 24px;
+            }
+            .quote-details {
+              margin-bottom: 20px;
+            }
+            .validity-info {
+              margin: 15px 0;
+              padding: 10px;
+            }
+            .items-table {
+              margin-bottom: 20px;
+            }
+            .items-table th, .items-table td {
+              padding: 8px;
+              font-size: 11px;
+            }
+            .totals {
+              width: 250px;
+              margin-top: 15px;
+            }
+            .total-line {
+              margin-bottom: 5px;
+              font-size: 11px;
+            }
+            .total-line.final {
+              font-size: 14px;
+              padding-top: 5px;
+            }
+            .quote-footer {
+              margin-top: 30px;
+              padding-top: 15px;
+              font-size: 10px;
+            }
+            .notes-section {
+              margin-top: 20px;
+              padding: 10px;
+            }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="quote-header">
+          <div class="quote-title">DEVIS</div>
+          <div class="quote-number">N° ${formatQuoteNumber(quote.quoteNumber)}</div>
+        </div>
+
+        <div class="quote-details">
+          <div class="workshop-info">
+            <h3>Atelier de Réparation</h3>
+            <p>123 Rue de la Paix</p>
+            <p>75001 Paris, France</p>
+            <p>Tél: 07 59 23 91 70</p>
+            <p>Email: contact.ateliergestion@gmail.com</p>
+          </div>
+          <div class="client-info">
+            <h3>Devis pour</h3>
+            <p><strong>${clientName}</strong></p>
+            ${clientEmail ? `<p>Email: ${clientEmail}</p>` : ''}
+            ${clientPhone ? `<p>Tél: ${clientPhone}</p>` : ''}
+          </div>
+        </div>
+
+        <div class="validity-info">
+          <strong>Validité du devis :</strong> ${format(new Date(quote.validUntil), 'dd/MM/yyyy', { locale: fr })}
+        </div>
+
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Article</th>
+              <th>Description</th>
+              <th>Quantité</th>
+              <th>Prix unitaire</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Array.isArray(quote.items) ? quote.items.map(item => `
+              <tr>
+                <td>${item.name || 'Article'}</td>
+                <td>${item.description || '-'}</td>
+                <td>${item.quantity || 1}</td>
+                <td>${(item.unitPrice || 0).toLocaleString('fr-FR')} €</td>
+                <td>${(item.totalPrice || 0).toLocaleString('fr-FR')} €</td>
+              </tr>
+            `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666;">Aucun article dans ce devis</td></tr>'}
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="total-line">
+            <span>Sous-total HT:</span>
+            <span>${(quote.subtotal || 0).toLocaleString('fr-FR')} €</span>
+          </div>
+          <div class="total-line">
+            <span>TVA (${workshopSettings.vatRate || 20}%):</span>
+            <span>${(quote.tax || 0).toLocaleString('fr-FR')} €</span>
+          </div>
+          <div class="total-line final">
+            <span>TOTAL TTC:</span>
+            <span>${(quote.total || 0).toLocaleString('fr-FR')} €</span>
+          </div>
+        </div>
+
+        ${quote.notes ? `
+          <div class="notes-section">
+            <h4>Notes :</h4>
+            <p>${quote.notes}</p>
+          </div>
+        ` : ''}
+
+        ${quote.terms ? `
+          <div class="notes-section">
+            <h4>Conditions :</h4>
+            <p>${quote.terms}</p>
+          </div>
+        ` : ''}
+
+        <div class="quote-footer">
+          <p>Date d'émission: ${format(new Date(quote.createdAt), 'dd/MM/yyyy', { locale: fr })}</p>
+          <p>Statut: ${getStatusLabel(quote.status)}</p>
+          <p>Merci de votre confiance !</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Ouvrir le devis dans une nouvelle fenêtre pour l'impression
+    const quoteWindow = window.open('', '_blank');
+    if (!quoteWindow) return;
+
+    quoteWindow.document.write(quoteContent);
+    quoteWindow.document.close();
+
+    // Attendre que le contenu soit chargé puis déclencher l'impression
+    quoteWindow.onload = () => {
+      setTimeout(() => {
+        quoteWindow.print();
+      }, 500);
+    };
   };
 
   // Gérer la création d'une réparation
@@ -631,21 +1214,22 @@ const Quotes: React.FC = () => {
                             <VisibilityIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Modifier">
+                        <Tooltip title="Télécharger devis PDF">
                           <IconButton
                             size="small"
-                            sx={{ color: '#ff9800' }}
+                            onClick={() => downloadQuote(quote)}
+                            sx={{ color: '#4caf50' }}
                           >
-                            <EditIcon />
+                            <DownloadIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Supprimer">
+                        <Tooltip title="Imprimer devis">
                           <IconButton
                             size="small"
-                            onClick={() => handleDeleteQuote(quote.id)}
-                            sx={{ color: '#f44336' }}
+                            onClick={() => printQuote(quote)}
+                            sx={{ color: '#2196f3' }}
                           >
-                            <DeleteIcon />
+                            <PrintIcon />
                           </IconButton>
                         </Tooltip>
                       </Box>
