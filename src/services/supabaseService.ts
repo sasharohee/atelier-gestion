@@ -2086,6 +2086,8 @@ export const productService = {
       return handleSupabaseError(new Error('Utilisateur non connecté'));
     }
 
+    console.log('🔍 productService.getByBarcode - Recherche du code-barres:', barcode);
+
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -2093,7 +2095,17 @@ export const productService = {
       .eq('user_id', user.id)
       .single();
     
-    if (error) return handleSupabaseError(error);
+    if (error) {
+      console.log('❌ productService.getByBarcode - Erreur:', error);
+      // Si aucun produit n'est trouvé, retourner un succès avec data null
+      if (error.code === 'PGRST116') {
+        console.log('ℹ️ Aucun produit trouvé avec ce code-barres');
+        return handleSupabaseSuccess(null);
+      }
+      return handleSupabaseError(error);
+    }
+    
+    console.log('✅ productService.getByBarcode - Produit trouvé:', data);
     return handleSupabaseSuccess(data);
   }
 };

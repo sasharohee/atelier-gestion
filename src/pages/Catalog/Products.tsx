@@ -194,6 +194,9 @@ const Products: React.FC = () => {
   const handleBarcodeScanned = async (barcode: string) => {
     console.log('🔍 Code-barres scanné détecté:', barcode);
     
+    // Mettre à jour la barre de recherche avec le code-barres scanné
+    setSearchTerm(barcode);
+    
     setScannedBarcode(barcode);
     setScanDialogOpen(true);
     setScanLoading(true);
