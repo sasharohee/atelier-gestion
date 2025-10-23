@@ -232,9 +232,18 @@ const Products: React.FC = () => {
     scannerService.addScanListener(handleBarcodeScanned);
     scannerService.startListening();
 
+    // Debug: afficher l'état du scanner toutes les 2 secondes
+    const debugInterval = setInterval(() => {
+      const state = scannerService.getBufferState();
+      if (state.buffer.length > 0) {
+        console.log('🔍 État du scanner:', state);
+      }
+    }, 2000);
+
     return () => {
       scannerService.removeScanListener(handleBarcodeScanned);
       scannerService.stopListening();
+      clearInterval(debugInterval);
     };
   }, []);
 
@@ -326,11 +335,27 @@ const Products: React.FC = () => {
         </Typography>
         
         {/* Indicateur de scan actif */}
-        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-          <ScannerIcon color="success" fontSize="small" />
-          <Typography variant="caption" color="success.main">
-            Lecteur de codes-barres actif - Scannez un produit pour l'identifier
-          </Typography>
+        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <ScannerIcon color="success" fontSize="small" />
+            <Typography variant="caption" color="success.main">
+              Lecteur de codes-barres actif - Scannez un produit pour l'identifier
+            </Typography>
+          </Box>
+          
+          {/* Bouton de test pour debug */}
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              const scannerService = BarcodeScannerService.getInstance();
+              const testBarcode = '2001234567890'; // Code de test
+              scannerService.testBarcode(testBarcode);
+            }}
+            sx={{ ml: 2, fontSize: '0.75rem' }}
+          >
+            Test Scan
+          </Button>
         </Box>
       </Box>
 
