@@ -70,39 +70,6 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
     scannerService.forceProcessCurrentBuffer();
   };
 
-  const handleDiagnostic = () => {
-    const scannerService = BarcodeScannerService.getInstance();
-    const diagnostic = scannerService.getDiagnosticInfo();
-    console.log('🔍 Diagnostic scanner:', diagnostic);
-    alert(`Diagnostic Scanner:
-État: ${diagnostic.isListening ? 'Actif' : 'Inactif'}
-Buffer: "${diagnostic.buffer}" (${diagnostic.bufferLength} caractères)
-Dernière touche: ${diagnostic.timeSinceLastKey}ms
-Timeout actif: ${diagnostic.hasTimeout ? 'Oui' : 'Non'}
-Listeners: ${diagnostic.listenersCount}`);
-  };
-
-  const handleCompatibilityTest = () => {
-    const scannerService = BarcodeScannerService.getInstance();
-    console.log('🧪 Lancement des tests de compatibilité...');
-    scannerService.testScannerCompatibility();
-    alert('Tests de compatibilité lancés ! Vérifiez la console pour les résultats.');
-  };
-
-  const handleUltraFastMode = () => {
-    const scannerService = BarcodeScannerService.getInstance();
-    console.log('🚀 Activation du mode ultra-rapide...');
-    scannerService.enableUltraFastMode();
-    alert('Mode ultra-rapide activé ! Essayez de scanner maintenant.');
-  };
-
-  const handleContinuousCapture = () => {
-    const scannerService = BarcodeScannerService.getInstance();
-    console.log('🔄 Activation du mode capture continue...');
-    scannerService.enableContinuousCaptureMode();
-    alert('Mode capture continue activé ! Le scanner va accumuler tous les caractères. Essayez de scanner maintenant.');
-  };
-
   return (
     <Card variant="outlined" sx={{ mb: 2 }}>
       <CardContent>
@@ -176,42 +143,6 @@ Listeners: ${diagnostic.listenersCount}`);
           >
             Forcer Buffer
           </Button>
-          
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleDiagnostic}
-            color="info"
-          >
-            Diagnostic
-          </Button>
-          
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleCompatibilityTest}
-            color="secondary"
-          >
-            Test Compatibilité
-          </Button>
-          
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleUltraFastMode}
-            color="success"
-          >
-            Mode Ultra-Rapide
-          </Button>
-          
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={handleContinuousCapture}
-            color="primary"
-          >
-            Capture Continue
-          </Button>
         </Box>
 
         <Typography variant="caption" color="text.secondary">
@@ -222,14 +153,15 @@ Listeners: ${diagnostic.listenersCount}`);
           💡 Conseil: Utilisez un code-barres d'un produit existant pour tester la recherche.
         </Typography>
         
-        <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 1 }}>
-          ⚠️ Si le scanner ne capture que les premiers chiffres (ex: 20093049 au lieu de 2009304971731):
-          <br/>• Cliquez sur "Capture Continue" pour accumuler tous les caractères
-          <br/>• Ou essayez "Mode Ultra-Rapide" pour les scanners très rapides
-          <br/>• Vérifiez qu'il n'y a qu'un seul code-barres sur l'étiquette
-          <br/>• Assurez-vous que le scanner est configuré pour EAN-13
-          <br/>• Utilisez "Diagnostic" pour voir ce qui est capturé
-        </Typography>
+        <Alert severity="info" sx={{ mt: 2, fontSize: '0.75rem' }}>
+          <Typography variant="caption" sx={{ fontWeight: 'bold', display: 'block', mb: 0.5 }}>
+            🚧 Fonctionnalité en cours de développement
+          </Typography>
+          <Typography variant="caption">
+            Les éléments de test et de debug sont temporaires et en cours d'ajout. 
+            Veuillez ne pas tenir compte de ces éléments.
+          </Typography>
+        </Alert>
       </CardContent>
     </Card>
   );
