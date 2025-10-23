@@ -68,6 +68,7 @@ const Products: React.FC = () => {
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [scanNotification, setScanNotification] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -194,28 +195,41 @@ const Products: React.FC = () => {
   // Fonctions de gestion du scan
   const handleBarcodeScanned = async (barcode: string) => {
     console.log('🔍 Code-barres scanné détecté:', barcode);
+    console.log('📱 Ouverture du dialog de scan...');
     
+    // Afficher une notification immédiate
+    setScanNotification(`Code-barres scanné: ${barcode}`);
+    
+    // Ouvrir le dialog immédiatement
     setScannedBarcode(barcode);
     setScanDialogOpen(true);
     setScanLoading(true);
     setScanError(null);
     setScannedProduct(null);
 
+    console.log('🔍 Recherche du produit avec le code-barres:', barcode);
+
     try {
       const result = await productService.getByBarcode(barcode);
+      console.log('📊 Résultat de la recherche:', result);
       
       if (result.success && result.data) {
         console.log('✅ Produit trouvé:', result.data);
         setScannedProduct(result.data);
+        setScanNotification(`Produit trouvé: ${result.data.name}`);
+        console.log('📱 Produit affiché dans le dialog');
       } else {
-        console.log('❌ Produit non trouvé');
+        console.log('❌ Produit non trouvé - Résultat:', result);
         setScanError('Aucun produit trouvé avec ce code-barres.');
+        setScanNotification('Produit non trouvé');
       }
     } catch (error) {
       console.error('❌ Erreur lors de la recherche:', error);
       setScanError('Erreur lors de la recherche du produit.');
+      setScanNotification('Erreur de recherche');
     } finally {
       setScanLoading(false);
+      console.log('📱 Dialog de scan configuré');
     }
   };
 
@@ -225,6 +239,7 @@ const Products: React.FC = () => {
     setScannedBarcode(null);
     setScanError(null);
     setScanLoading(false);
+    setScanNotification(null);
   };
 
   // Démarrer l'écoute des codes-barres au montage du composant
@@ -343,6 +358,17 @@ const Products: React.FC = () => {
               Lecteur de codes-barres actif - Scannez un produit pour l'identifier
             </Typography>
           </Box>
+          
+          {/* Notification de scan */}
+          {scanNotification && (
+            <Alert 
+              severity={scannedProduct ? "success" : scanError ? "error" : "info"}
+              sx={{ mt: 1, mb: 1 }}
+              onClose={() => setScanNotification(null)}
+            >
+              {scanNotification}
+            </Alert>
+          )}
           
           {/* Boutons de test pour debug */}
           <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
