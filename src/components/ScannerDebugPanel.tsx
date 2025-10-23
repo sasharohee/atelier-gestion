@@ -64,6 +64,12 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
     scannerService.forceProcessBarcode(testBarcode);
   };
 
+  const handleForceBuffer = () => {
+    const scannerService = BarcodeScannerService.getInstance();
+    console.log('🔧 Forcer le traitement du buffer actuel');
+    scannerService.forceProcessCurrentBuffer();
+  };
+
   return (
     <Card variant="outlined" sx={{ mb: 2 }}>
       <CardContent>
@@ -127,6 +133,15 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
             color="warning"
           >
             Test Forcé
+          </Button>
+          
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleForceBuffer}
+            color="error"
+          >
+            Forcer Buffer
           </Button>
         </Box>
 

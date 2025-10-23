@@ -403,6 +403,21 @@ const Products: React.FC = () => {
             >
               Test Scan Externe
             </Button>
+            
+            <Button
+              size="small"
+              variant="outlined"
+              color="error"
+              onClick={() => {
+                // Forcer le traitement du buffer actuel
+                const scannerService = BarcodeScannerService.getInstance();
+                console.log('🔧 Forcer le traitement du buffer actuel');
+                scannerService.forceProcessCurrentBuffer();
+              }}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Forcer Buffer
+            </Button>
           </Box>
         </Box>
       </Box>
