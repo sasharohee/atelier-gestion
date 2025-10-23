@@ -44,6 +44,8 @@ import NewRepairDialog from '../../components/SAV/NewRepairDialog';
 import { printTemplatesService } from '../../components/SAV/PrintTemplates';
 import { repairService } from '../../services/supabaseService';
 import toast from 'react-hot-toast';
+import ThermalReceiptDialog from '../../components/ThermalReceiptDialog';
+import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 
 // Fonction helper pour mapper les noms de statuts
 const getDisplayStatusName = (statusName: string): string => {
@@ -72,6 +74,8 @@ const SAV: React.FC = () => {
     systemSettings,
   } = useAppStore();
 
+  const { workshopSettings } = useWorkshopSettings();
+
   // États locaux
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTechnician, setFilterTechnician] = useState<string>('all');
@@ -81,6 +85,8 @@ const SAV: React.FC = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [newRepairDialogOpen, setNewRepairDialogOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [thermalReceiptDialogOpen, setThermalReceiptDialogOpen] = useState(false);
+  const [thermalReceiptRepair, setThermalReceiptRepair] = useState<Repair | null>(null);
 
   // Calculer les statistiques
   const stats = useMemo(() => {
@@ -238,6 +244,12 @@ const SAV: React.FC = () => {
 
     printTemplatesService.print(template);
     toast.success('Document généré');
+  };
+
+  // Gérer l'impression thermique
+  const handleOpenThermalReceipt = (repair: Repair) => {
+    setThermalReceiptRepair(repair);
+    setThermalReceiptDialogOpen(true);
   };
 
   // Gérer la vue des détails
@@ -560,6 +572,7 @@ const SAV: React.FC = () => {
                                   onPrint={(repair, type) => handlePrint(repair, type)}
                                   onPrintCompleteTicket={(repair) => handlePrint(repair, 'complete_ticket')}
                                   onPaymentStatusChange={handlePaymentStatusChange}
+                                  onThermalReceipt={handleOpenThermalReceipt}
                                 />
                               </div>
                             )}
@@ -608,6 +621,7 @@ const SAV: React.FC = () => {
                   onPrint={(repair, type) => handlePrint(repair, type)}
                   onPrintCompleteTicket={(repair) => handlePrint(repair, 'complete_ticket')}
                   onPaymentStatusChange={handlePaymentStatusChange}
+                  onThermalReceipt={handleOpenThermalReceipt}
                   onClick={() => handleViewDetails(repair)}
                 />
               );
@@ -671,6 +685,29 @@ const SAV: React.FC = () => {
         repairStatuses={repairStatuses}
         onSubmit={handleCreateRepair}
       />
+
+      {/* Dialog pour l'impression thermique */}
+      {thermalReceiptRepair && (
+        <ThermalReceiptDialog
+          open={thermalReceiptDialogOpen}
+          onClose={() => {
+            setThermalReceiptDialogOpen(false);
+            setThermalReceiptRepair(null);
+          }}
+          repair={thermalReceiptRepair}
+          client={getClientById(thermalReceiptRepair.clientId)}
+          device={thermalReceiptRepair.deviceId ? getDeviceById(thermalReceiptRepair.deviceId) : undefined}
+          technician={thermalReceiptRepair.assignedTechnicianId ? getUserById(thermalReceiptRepair.assignedTechnicianId) : undefined}
+          workshopInfo={{
+            name: workshopSettings?.name || 'Atelier',
+            address: workshopSettings?.address,
+            phone: workshopSettings?.phone,
+            email: workshopSettings?.email,
+            siret: workshopSettings?.siret,
+            vatNumber: workshopSettings?.vatNumber,
+          }}
+        />
+      )}
     </Box>
   );
 };

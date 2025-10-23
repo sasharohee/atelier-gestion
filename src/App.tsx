@@ -14,6 +14,7 @@ import { WorkshopSettingsProvider } from './contexts/WorkshopSettingsContext';
 import { AuthErrorHandler } from './components/AuthErrorHandler';
 import { repairService } from './services/supabaseService';
 import './styles/print.css';
+import './styles/thermalPrint.css';
 
 // Composants de layout
 import Layout from './components/Layout/Layout';

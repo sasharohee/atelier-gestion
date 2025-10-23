@@ -1966,11 +1966,12 @@ export const useAppStore = create<AppStore>()(
                   : (product.stockQuantity || 0),
                 minStockLevel: product.min_stock_level || product.minStockLevel || 1,
                 isActive: product.is_active !== undefined ? product.is_active : (product.isActive !== undefined ? product.isActive : true),
+                barcode: product.barcode || null,
                 createdAt: product.created_at ? new Date(product.created_at) : new Date(),
                 updatedAt: product.updated_at ? new Date(product.updated_at) : new Date(),
               };
               
-              console.log(`Produit ${product.name}: stock_quantity=${product.stock_quantity}, stockQuantity=${transformedProduct.stockQuantity}`);
+              console.log(`Produit ${product.name}: stock_quantity=${product.stock_quantity}, stockQuantity=${transformedProduct.stockQuantity}, barcode=${product.barcode}`);
               return transformedProduct;
             });
             

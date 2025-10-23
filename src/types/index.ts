@@ -231,6 +231,7 @@ export interface Product {
   stockQuantity: number;
   minStockLevel: number;
   isActive: boolean;
+  barcode?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -267,7 +268,7 @@ export interface Repair {
   discountAmount?: number;
   originalPrice?: number;
   isPaid: boolean;
-  source?: 'kanban' | 'sav'; // Source de création de la réparation
+  source?: 'kanban' | 'sav' | 'sale'; // Source de création de la réparation
   createdAt: Date;
   updatedAt: Date;
 }

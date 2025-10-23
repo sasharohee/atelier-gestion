@@ -26,6 +26,7 @@ import {
   Build as BuildIcon,
   Check as CheckIcon,
   Close as CloseIcon,
+  Receipt as ReceiptIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -53,6 +54,7 @@ interface RepairCardProps {
   onPrint: (repair: Repair, type: 'label' | 'work_order' | 'deposit_receipt' | 'invoice' | 'complete_ticket') => void;
   onPrintCompleteTicket?: (repair: Repair) => void;
   onPaymentStatusChange?: (repair: Repair, isPaid: boolean) => void;
+  onThermalReceipt?: (repair: Repair) => void;
   onClick?: () => void;
 }
 
@@ -66,6 +68,7 @@ export const RepairCard: React.FC<RepairCardProps> = ({
   onPrint,
   onPrintCompleteTicket,
   onPaymentStatusChange,
+  onThermalReceipt,
   onClick,
 }) => {
   const { workshopSettings } = useWorkshopSettings();
@@ -393,6 +396,22 @@ export const RepairCard: React.FC<RepairCardProps> = ({
               <BuildIcon fontSize="small" />
             </IconButton>
           </Tooltip>
+
+          {/* Reçu thermique - uniquement pour les réparations terminées */}
+          {onThermalReceipt && repair.status === 'completed' && (
+            <Tooltip title="Reçu thermique">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onThermalReceipt(repair);
+                }}
+                sx={{ color: '#8b5cf6' }}
+              >
+                <ReceiptIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
 
           {/* Voir détails */}
           <Tooltip title="Voir détails">

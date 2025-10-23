@@ -73,6 +73,7 @@ import { DeviceModel } from '../../types/deviceManagement';
 import CategoryIconDisplay from '../../components/CategoryIconDisplay';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR, getCurrencySymbol } from '../../utils/currencyUtils';
+import ThermalReceiptDialog from '../../components/ThermalReceiptDialog';
 
 const Kanban: React.FC = () => {
   const navigate = useNavigate();
@@ -114,6 +115,8 @@ const Kanban: React.FC = () => {
 
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [thermalReceiptDialogOpen, setThermalReceiptDialogOpen] = useState(false);
+  const [thermalReceiptRepair, setThermalReceiptRepair] = useState<Repair | null>(null);
   
   // État pour le formulaire de modification (comme newRepair mais pour l'édition)
   const [editRepair, setEditRepair] = useState({
@@ -684,6 +687,11 @@ const Kanban: React.FC = () => {
     }, 100);
     
     setEditDialogOpen(true);
+  };
+
+  const handleOpenThermalReceipt = (repair: Repair) => {
+    setThermalReceiptRepair(repair);
+    setThermalReceiptDialogOpen(true);
   };
 
   const handleSaveRepair = async () => {
@@ -1522,6 +1530,19 @@ const Kanban: React.FC = () => {
                   <DeleteIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+              {repair.status === 'completed' && (
+                <Tooltip title="Reçu thermique">
+                  <IconButton 
+                    size="small" 
+                    onClick={(e) => { e.stopPropagation(); handleOpenThermalReceipt(repair); }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    sx={{ color: 'primary.main' }}
+                  >
+                    <ReceiptIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
 
               {(repair.status === 'completed' || repair.status === 'returned') && (
                 <>
@@ -1794,56 +1815,94 @@ const Kanban: React.FC = () => {
           
           <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
             <Tab label="Réparation" />
-            <Tab label="Nouveau client" />
-            <Tab label="Nouveau modèle" />
             <Tab label="Bon d'intervention" />
           </Tabs>
 
           {activeTab === 0 && (
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Client *</InputLabel>
-                  <Select
-                    label="Client *"
-                    value={editRepair.clientId || ''}
-                    onChange={(e) => handleEditRepairChange('clientId', e.target.value)}
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Client *</InputLabel>
+                    <Select
+                      label="Client *"
+                      value={editRepair.clientId || ''}
+                      onChange={(e) => handleEditRepairChange('clientId', e.target.value)}
+                    >
+                      {clients.map((client) => (
+                        <MenuItem key={client.id} value={client.id}>
+                          {client.firstName} {client.lastName}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => setClientFormOpen(true)}
+                    sx={{ 
+                      minWidth: '40px',
+                      width: '40px',
+                      height: '56px', // Même hauteur que le Select
+                      borderRadius: '4px',
+                      backgroundColor: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      }
+                    }}
+                    title="Créer un nouveau client"
                   >
-                    {clients.map((client) => (
-                      <MenuItem key={client.id} value={client.id}>
-                        {client.firstName} {client.lastName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Box>
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Modèle *</InputLabel>
-                  <Select
-                    label="Modèle *"
-                    value={editRepair.deviceId || ''}
-                    onChange={(e) => {
-                      handleEditRepairChange('deviceId', e.target.value);
-                      // Réinitialiser les services sélectionnés quand on change de modèle
-                      setEditRepair(prev => ({ ...prev, selectedServices: [] }));
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Modèle *</InputLabel>
+                    <Select
+                      label="Modèle *"
+                      value={editRepair.deviceId || ''}
+                      onChange={(e) => {
+                        handleEditRepairChange('deviceId', e.target.value);
+                        // Réinitialiser les services sélectionnés quand on change de modèle
+                        setEditRepair(prev => ({ ...prev, selectedServices: [] }));
+                      }}
+                      disabled={getFilteredModels().length === 0}
+                    >
+                      {getFilteredModels().map((model) => {
+                        const brandName = model.brandName || (model as any).brand || 'N/A';
+                        const modelName = model.model || 'N/A';
+                        const categoryName = model.categoryName || (model as any).type || 'N/A';
+                        
+                        return (
+                          <MenuItem key={model.id} value={model.id}>
+                            {brandName} {modelName} ({categoryName})
+                          </MenuItem>
+                        );
+                      })}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={openModelDialog}
+                    sx={{ 
+                      minWidth: '40px',
+                      width: '40px',
+                      height: '56px', // Même hauteur que le Select
+                      borderRadius: '4px',
+                      backgroundColor: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      }
                     }}
-                    disabled={getFilteredModels().length === 0}
+                    title="Créer un nouveau modèle"
                   >
-                    {getFilteredModels().map((model) => {
-                      const brandName = model.brandName || (model as any).brand || 'N/A';
-                      const modelName = model.model || 'N/A';
-                      const categoryName = model.categoryName || (model as any).type || 'N/A';
-                      
-                      return (
-                        <MenuItem key={model.id} value={model.id}>
-                          {brandName} {modelName} ({categoryName})
-                        </MenuItem>
-                      );
-                    })}
-                  </Select>
-                </FormControl>
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Box>
               </Grid>
 
               <Grid item xs={12}>
@@ -2033,34 +2092,9 @@ const Kanban: React.FC = () => {
           )}
 
           {/* Autres onglets - même contenu que le formulaire de création */}
+
+
           {activeTab === 1 && (
-            <ClientForm 
-              open={true}
-              onClose={() => setActiveTab(0)}
-              onSubmit={async (newClient) => {
-                // Le client sera créé et l'ID sera disponible après la création
-                // Pour l'instant, on revient à l'onglet principal
-                setActiveTab(0);
-              }}
-              existingEmails={clients.map(c => c.email).filter(Boolean)}
-            />
-          )}
-
-          {activeTab === 2 && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Créer un nouveau modèle d'appareil
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Cette fonctionnalité sera disponible prochainement.
-              </Typography>
-              <Button onClick={() => setActiveTab(0)} variant="outlined">
-                Retour à la réparation
-              </Button>
-            </Box>
-          )}
-
-          {activeTab === 3 && (
             <Grid container spacing={3} sx={{ mt: 1 }}>
               <Grid item xs={12}>
                 <Alert severity="info" sx={{ mb: 2 }}>
@@ -2363,8 +2397,6 @@ const Kanban: React.FC = () => {
             <Typography variant="h6">Nouvelle réparation</Typography>
             <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
               <Tab label="Réparation" />
-              <Tab label="Nouveau client" />
-              <Tab label="Nouveau modèle" />
               <Tab label="Bon d'intervention" />
             </Tabs>
           </Box>
@@ -2380,20 +2412,40 @@ const Kanban: React.FC = () => {
               </Grid>
               
               <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Client *</InputLabel>
-                  <Select 
-                    label="Client *"
-                    value={newRepair.clientId || ''}
-                    onChange={(e) => handleNewRepairChange('clientId', e.target.value)}
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Client *</InputLabel>
+                    <Select 
+                      label="Client *"
+                      value={newRepair.clientId || ''}
+                      onChange={(e) => handleNewRepairChange('clientId', e.target.value)}
+                    >
+                      {clients.map((client) => (
+                        <MenuItem key={client.id} value={client.id}>
+                          {client.firstName} {client.lastName}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => setClientFormOpen(true)}
+                    sx={{ 
+                      minWidth: '40px',
+                      width: '40px',
+                      height: '56px', // Même hauteur que le Select
+                      borderRadius: '4px',
+                      backgroundColor: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      }
+                    }}
+                    title="Créer un nouveau client"
                   >
-                    {clients.map((client) => (
-                      <MenuItem key={client.id} value={client.id}>
-                        {client.firstName} {client.lastName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Box>
               </Grid>
               
               <Grid item xs={12} md={4}>
@@ -2440,40 +2492,60 @@ const Kanban: React.FC = () => {
               </Grid>
               
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Modèle *</InputLabel>
-                  <Select 
-                    label="Modèle *"
-                    value={newRepair.deviceId || ''}
-                    onChange={(e) => {
-                      handleNewRepairChange('deviceId', e.target.value);
-                      // Réinitialiser les services sélectionnés quand on change de modèle
-                      setNewRepair(prev => ({ ...prev, selectedServices: [] }));
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Modèle *</InputLabel>
+                    <Select
+                      label="Modèle *"
+                      value={newRepair.deviceId || ''}
+                      onChange={(e) => {
+                        handleNewRepairChange('deviceId', e.target.value);
+                        // Réinitialiser les services sélectionnés quand on change de modèle
+                        setNewRepair(prev => ({ ...prev, selectedServices: [] }));
+                      }}
+                      disabled={getFilteredModels().length === 0}
+                    >
+                      {getFilteredModels().map((model) => {
+                        // Debug: Afficher la structure du modèle
+                        console.log('🔍 Modèle debug:', model);
+                        
+                        // Utiliser les propriétés avec fallbacks pour compatibilité
+                        const brandName = model.brandName || (model as any).brand || 'N/A';
+                        const modelName = model.model || (model as any).name || 'N/A';
+                        const categoryName = model.categoryName || (model as any).type || 'N/A';
+                        
+                        return (
+                          <MenuItem key={model.id} value={model.id}>
+                            {brandName} {modelName} ({categoryName})
+                          </MenuItem>
+                        );
+                      })}
+                    </Select>
+                    {getFilteredModels().length === 0 && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                        Aucun modèle trouvé avec les filtres sélectionnés
+                      </Typography>
+                    )}
+                  </FormControl>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={openModelDialog}
+                    sx={{ 
+                      minWidth: '40px',
+                      width: '40px',
+                      height: '56px', // Même hauteur que le Select
+                      borderRadius: '4px',
+                      backgroundColor: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      }
                     }}
-                    disabled={getFilteredModels().length === 0}
+                    title="Créer un nouveau modèle"
                   >
-                    {getFilteredModels().map((model) => {
-                      // Debug: Afficher la structure du modèle
-                      console.log('🔍 Modèle debug:', model);
-                      
-                      // Utiliser les propriétés avec fallbacks pour compatibilité
-                      const brandName = model.brandName || (model as any).brand || 'N/A';
-                      const modelName = model.model || (model as any).name || 'N/A';
-                      const categoryName = model.categoryName || (model as any).type || 'N/A';
-                      
-                      return (
-                        <MenuItem key={model.id} value={model.id}>
-                          {brandName} {modelName} ({categoryName})
-                        </MenuItem>
-                      );
-                    })}
-                  </Select>
-                  {getFilteredModels().length === 0 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      Aucun modèle trouvé avec les filtres sélectionnés
-                    </Typography>
-                  )}
-                </FormControl>
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Box>
               </Grid>
               
               {/* Sélection des services associés au modèle */}
@@ -2671,56 +2743,9 @@ const Kanban: React.FC = () => {
             </Grid>
           )}
           
+          
+          
           {activeTab === 1 && (
-            <Grid container spacing={3} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Créez un nouveau client pour cette réparation avec notre formulaire complet.
-                </Alert>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  startIcon={<PersonAddIcon />}
-                  onClick={() => setClientFormOpen(true)}
-                  fullWidth
-                  sx={{ 
-                    background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-                    }
-                  }}
-                >
-                  Ouvrir le formulaire de création de client
-                </Button>
-              </Grid>
-            </Grid>
-          )}
-          
-          {activeTab === 2 && (
-            <Grid container spacing={3} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Créez un nouveau modèle pour cette réparation.
-                </Alert>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  startIcon={<DeviceHubIcon />}
-                  onClick={openModelDialog}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                >
-                  Créer un nouveau modèle
-                </Button>
-              </Grid>
-            </Grid>
-          )}
-          
-          {activeTab === 3 && (
             <Grid container spacing={3} sx={{ mt: 1 }}>
               <Grid item xs={12}>
                 <Alert severity="info" sx={{ mb: 2 }}>
@@ -3234,6 +3259,29 @@ const Kanban: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Dialog pour l'impression thermique */}
+      {thermalReceiptRepair && (
+        <ThermalReceiptDialog
+          open={thermalReceiptDialogOpen}
+          onClose={() => {
+            setThermalReceiptDialogOpen(false);
+            setThermalReceiptRepair(null);
+          }}
+          repair={thermalReceiptRepair}
+          client={getClientById(thermalReceiptRepair.clientId)}
+          device={thermalReceiptRepair.deviceId ? getDeviceById(thermalReceiptRepair.deviceId) : undefined}
+          technician={thermalReceiptRepair.assignedTechnicianId ? getUserById(thermalReceiptRepair.assignedTechnicianId) : undefined}
+          workshopInfo={{
+            name: workshopSettings?.name || 'Atelier',
+            address: workshopSettings?.address,
+            phone: workshopSettings?.phone,
+            email: workshopSettings?.email,
+            siret: workshopSettings?.siret,
+            vatNumber: workshopSettings?.vatNumber,
+          }}
+        />
+      )}
     </Box>
   );
 };

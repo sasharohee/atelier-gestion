@@ -31,13 +31,18 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  QrCode2 as QrCodeIcon,
+  Print as PrintIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
+import { BarcodeService } from '../../services/barcodeService';
+import BarcodeDisplay from '../../components/BarcodeDisplay';
+import BarcodePrintDialog from '../../components/BarcodePrintDialog';
 
 const Products: React.FC = () => {
-  const { products, addProduct, deleteProduct, updateProduct } = useAppStore();
+  const { products, addProduct, deleteProduct, updateProduct, loadProducts } = useAppStore();
   const { workshopSettings } = useWorkshopSettings();
   
   // Valeur par défaut pour éviter les erreurs
@@ -46,6 +51,8 @@ const Products: React.FC = () => {
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printProduct, setPrintProduct] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -54,6 +61,7 @@ const Products: React.FC = () => {
     stockQuantity: 0,
     minStockLevel: 1,
     isActive: true,
+    barcode: '',
   });
 
   const productCategories = [
@@ -85,6 +93,7 @@ const Products: React.FC = () => {
         stockQuantity: product.stockQuantity || 0,
         minStockLevel: product.minStockLevel || 1,
         isActive: product.isActive !== undefined ? product.isActive : true,
+        barcode: product.barcode || '',
       });
     } else {
       setEditingProduct(null);
@@ -96,6 +105,7 @@ const Products: React.FC = () => {
         stockQuantity: 0,
         minStockLevel: 1,
         isActive: true,
+        barcode: '',
       });
     }
   };
@@ -117,11 +127,36 @@ const Products: React.FC = () => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
       try {
         await deleteProduct(productId);
+        // Recharger les données après suppression
+        await loadProducts();
       } catch (error) {
         console.error('Erreur lors de la suppression du produit:', error);
         alert('Erreur lors de la suppression du produit');
       }
     }
+  };
+
+  const handleGenerateBarcode = () => {
+    try {
+      // Récupérer tous les codes-barres existants pour éviter les doublons
+      const existingBarcodes = products
+        .filter(p => p.barcode)
+        .map(p => p.barcode!);
+      
+      const newBarcode = BarcodeService.generateUniqueEAN13(existingBarcodes);
+      setFormData(prev => ({
+        ...prev,
+        barcode: newBarcode
+      }));
+    } catch (error) {
+      console.error('Erreur lors de la génération du code-barres:', error);
+      setError('Erreur lors de la génération du code-barres');
+    }
+  };
+
+  const handlePrintBarcode = (product: any) => {
+    setPrintProduct(product);
+    setPrintDialogOpen(true);
   };
 
   const handleSubmit = async () => {
@@ -144,9 +179,17 @@ const Products: React.FC = () => {
     setError(null);
 
     try {
+      // Log pour debug
+      console.log('🔍 Données à sauvegarder:', {
+        editingProduct,
+        formData,
+        barcode: formData.barcode
+      });
+
       if (editingProduct) {
         // Mode édition
-        await updateProduct(editingProduct, {
+        console.log('📝 Mise à jour du produit:', editingProduct);
+        const updateData = {
           name: formData.name,
           description: formData.description,
           category: formData.category,
@@ -154,10 +197,15 @@ const Products: React.FC = () => {
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
           isActive: formData.isActive,
-        });
+          barcode: formData.barcode || null, // S'assurer que c'est null si vide
+        };
+        console.log('📝 Données de mise à jour:', updateData);
+        
+        await updateProduct(editingProduct, updateData);
       } else {
         // Mode création
-        await addProduct({
+        console.log('➕ Création du produit');
+        const createData = {
           name: formData.name,
           description: formData.description,
           category: formData.category,
@@ -165,13 +213,24 @@ const Products: React.FC = () => {
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
           isActive: formData.isActive,
-        } as any);
+          barcode: formData.barcode || null, // S'assurer que c'est null si vide
+        };
+        console.log('➕ Données de création:', createData);
+        
+        await addProduct(createData as any);
       }
+      
+      console.log('✅ Produit sauvegardé avec succès');
+      
+      // Recharger les données pour afficher le code-barres
+      console.log('🔄 Rechargement des données...');
+      await loadProducts();
+      console.log('✅ Données rechargées');
       
       handleCloseDialog();
     } catch (err) {
       setError('Erreur lors de la sauvegarde du produit');
-      console.error('Erreur sauvegarde produit:', err);
+      console.error('❌ Erreur sauvegarde produit:', err);
     } finally {
       setLoading(false);
     }
@@ -209,12 +268,21 @@ const Products: React.FC = () => {
                   <TableCell>Stock</TableCell>
                   <TableCell>Stock Min.</TableCell>
                   <TableCell>Prix</TableCell>
+                  <TableCell>Code-Barres</TableCell>
                   <TableCell>Statut</TableCell>
                   <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {products.filter(product => product.id).map((product) => (
+                {products.filter(product => product.id).map((product) => {
+                  // Log pour debug
+                  console.log('🔍 Affichage produit:', { 
+                    id: product.id, 
+                    name: product.name, 
+                    barcode: product.barcode 
+                  });
+                  
+                  return (
                   <TableRow key={product.id}>
                     <TableCell>
                       <Box>
@@ -251,6 +319,26 @@ const Products: React.FC = () => {
                     </TableCell>
                     <TableCell>{formatFromEUR(product.price, currency)}</TableCell>
                     <TableCell>
+                      {product.barcode ? (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, maxWidth: 180 }}>
+                          <BarcodeDisplay 
+                            barcode={product.barcode} 
+                            width={160} 
+                            height={50} 
+                            showValue={false}
+                            scale={1}
+                          />
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                            {BarcodeService.formatBarcode(product.barcode)}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          Non généré
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Chip
                         label={product.isActive ? 'Actif' : 'Inactif'}
                         color={product.isActive ? 'success' : 'default'}
@@ -266,6 +354,16 @@ const Products: React.FC = () => {
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
+                        {product.barcode && (
+                          <IconButton 
+                            size="small" 
+                            title="Imprimer code-barres"
+                            color="primary"
+                            onClick={() => handlePrintBarcode(product)}
+                          >
+                            <PrintIcon fontSize="small" />
+                          </IconButton>
+                        )}
                         <IconButton 
                           size="small" 
                           title="Supprimer" 
@@ -277,7 +375,8 @@ const Products: React.FC = () => {
                       </Box>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
@@ -358,6 +457,48 @@ const Products: React.FC = () => {
               helperText="Seuil d'alerte quand le stock devient faible"
             />
             
+            {/* Section Code-barres */}
+            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, mt: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <QrCodeIcon fontSize="small" />
+                Code-barres EAN-13
+              </Typography>
+              
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                <TextField
+                  fullWidth
+                  label="Code-barres"
+                  value={formData.barcode}
+                  InputProps={{ readOnly: true }}
+                  helperText="Code-barres généré automatiquement"
+                  sx={{ flex: 1 }}
+                />
+                <Button
+                  variant="outlined"
+                  startIcon={<QrCodeIcon />}
+                  onClick={handleGenerateBarcode}
+                  sx={{ minWidth: 200 }}
+                >
+                  {formData.barcode ? 'Régénérer' : 'Générer'}
+                </Button>
+              </Box>
+              
+              {formData.barcode && (
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Aperçu du code-barres:
+                  </Typography>
+                  <BarcodeDisplay 
+                    barcode={formData.barcode} 
+                    width={200} 
+                    height={50} 
+                    showValue={true}
+                    scale={2}
+                  />
+                </Box>
+              )}
+            </Box>
+            
             <FormControlLabel
               control={
                 <Switch
@@ -382,6 +523,19 @@ const Products: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Dialog d'impression du code-barres */}
+      {printProduct && (
+        <BarcodePrintDialog
+          open={printDialogOpen}
+          onClose={() => {
+            setPrintDialogOpen(false);
+            setPrintProduct(null);
+          }}
+          product={printProduct}
+          currency={currency}
+        />
+      )}
     </Box>
   );
 };

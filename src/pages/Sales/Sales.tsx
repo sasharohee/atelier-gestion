@@ -65,6 +65,7 @@ import Invoice from '../../components/Invoice';
 import SimplifiedSalesDialog from '../../components/SimplifiedSalesDialog';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
+import ThermalReceiptDialog from '../../components/ThermalReceiptDialog';
 
 interface SaleItemForm {
   type: 'product' | 'service' | 'part';
@@ -98,6 +99,8 @@ const Sales: React.FC = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer' | 'check' | 'payment_link'>('card');
   const [saleItems, setSaleItems] = useState<SaleItemForm[]>([]);
+  const [thermalReceiptDialogOpen, setThermalReceiptDialogOpen] = useState(false);
+  const [thermalReceiptSale, setThermalReceiptSale] = useState<Sale | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItemType, setSelectedItemType] = useState<'product' | 'service' | 'part'>('product');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -390,6 +393,12 @@ const Sales: React.FC = () => {
   const closeInvoice = () => {
     setInvoiceOpen(false);
     setSelectedSaleForInvoice(null);
+  };
+
+  // Gérer l'impression thermique pour les ventes
+  const handleOpenThermalReceipt = (sale: Sale) => {
+    setThermalReceiptSale(sale);
+    setThermalReceiptDialogOpen(true);
   };
 
   // Télécharger la facture en PDF
@@ -1002,6 +1011,14 @@ const Sales: React.FC = () => {
                             >
                               <PrintIcon fontSize="small" />
                             </IconButton>
+                            <IconButton 
+                              size="small" 
+                              title="Reçu thermique"
+                              onClick={() => handleOpenThermalReceipt(sale)}
+                              sx={{ color: 'primary.main' }}
+                            >
+                              <ReceiptIcon fontSize="small" />
+                            </IconButton>
 
                             <IconButton 
                               size="small" 
@@ -1525,6 +1542,29 @@ const Sales: React.FC = () => {
           open={simplifiedSaleDialogOpen}
           onClose={() => setSimplifiedSaleDialogOpen(false)}
         />
+
+        {/* Dialog pour l'impression thermique */}
+        {thermalReceiptSale && (
+          <ThermalReceiptDialog
+            open={thermalReceiptDialogOpen}
+            onClose={() => {
+              setThermalReceiptDialogOpen(false);
+              setThermalReceiptSale(null);
+            }}
+            sale={thermalReceiptSale}
+            client={thermalReceiptSale.clientId ? getClientById(thermalReceiptSale.clientId) : undefined}
+            device={undefined}
+            technician={undefined}
+            workshopInfo={{
+              name: workshopSettings?.name || 'Atelier',
+              address: workshopSettings?.address,
+              phone: workshopSettings?.phone,
+              email: workshopSettings?.email,
+              siret: workshopSettings?.siret,
+              vatNumber: workshopSettings?.vatNumber,
+            }}
+          />
+        )}
 
       </Box>
     );

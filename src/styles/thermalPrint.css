@@ -1,0 +1,245 @@
+/* Styles pour l'impression thermique */
+
+/* Styles de base pour l'aperçu */
+.thermal-receipt-preview {
+  font-family: 'Courier New', monospace;
+  background: white;
+  color: black;
+  border: 1px solid #ccc;
+  margin: 10px 0;
+  overflow: hidden;
+}
+
+.thermal-receipt-preview.thermal-58mm {
+  width: 220px;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.thermal-receipt-preview.thermal-80mm {
+  width: 302px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* Styles pour l'impression thermique */
+@media print {
+  * {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+  
+  body {
+    font-family: 'Courier New', monospace !important;
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    color: black !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .thermal-receipt {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 2mm !important;
+    background: white !important;
+    color: black !important;
+  }
+  
+  .thermal-receipt.thermal-58mm {
+    width: 58mm !important;
+    font-size: 10px !important;
+    padding: 3mm !important;
+  }
+  
+  .thermal-receipt.thermal-80mm {
+    width: 80mm !important;
+    font-size: 12px !important;
+    padding: 5mm !important;
+  }
+  
+  /* En-tête */
+  .thermal-receipt .header {
+    text-align: center !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .thermal-receipt .workshop-name {
+    font-weight: bold !important;
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .thermal-receipt .workshop-address {
+    font-size: 9px !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .thermal-receipt .workshop-contact {
+    font-size: 9px !important;
+  }
+  
+  /* Séparateurs */
+  .thermal-receipt .separator {
+    text-align: center !important;
+    margin: 6px 0 !important;
+    font-weight: bold !important;
+  }
+  
+  /* Titre */
+  .thermal-receipt .title {
+    text-align: center !important;
+    font-weight: bold !important;
+    font-size: 13px !important;
+    margin: 8px 0 !important;
+  }
+  
+  /* Informations réparation */
+  .thermal-receipt .repair-info {
+    margin: 6px 0 !important;
+    font-weight: bold !important;
+  }
+  
+  /* Sections */
+  .thermal-receipt .section {
+    margin: 6px 0 !important;
+  }
+  
+  .thermal-receipt .section-title {
+    font-weight: bold !important;
+    text-align: center !important;
+    margin: 4px 0 !important;
+    border-top: 1px solid black !important;
+    border-bottom: 1px solid black !important;
+    padding: 2px 0 !important;
+  }
+  
+  .thermal-receipt .section-content {
+    margin: 4px 0 !important;
+  }
+  
+  .thermal-receipt .section-content div {
+    margin: 2px 0 !important;
+  }
+  
+  /* Total */
+  .thermal-receipt .total {
+    font-weight: bold !important;
+    font-size: 13px !important;
+    text-align: center !important;
+    margin: 4px 0 !important;
+  }
+  
+  /* Statut de paiement */
+  .thermal-receipt .payment-status {
+    text-align: center !important;
+    font-weight: bold !important;
+    margin: 4px 0 !important;
+  }
+  
+  .thermal-receipt .payment-status.paid {
+    color: black !important; /* Noir pour l'impression */
+  }
+  
+  .thermal-receipt .payment-status.unpaid {
+    color: black !important; /* Noir pour l'impression */
+  }
+  
+  /* Pied de page */
+  .thermal-receipt .footer {
+    text-align: center !important;
+    margin-top: 8px !important;
+  }
+  
+  .thermal-receipt .print-date {
+    font-size: 8px !important;
+    margin-top: 4px !important;
+  }
+  
+  /* Code préformaté */
+  .thermal-receipt pre {
+    font-family: 'Courier New', monospace !important;
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Configuration de la page */
+  @page {
+    margin: 0 !important;
+    size: auto !important;
+  }
+  
+  /* Masquer les éléments non nécessaires */
+  .MuiDialog-root,
+  .MuiDialog-backdrop,
+  .MuiDialogTitle-root,
+  .MuiDialogActions-root,
+  .MuiIconButton-root,
+  .MuiButton-root,
+  .MuiSvgIcon-root {
+    display: none !important;
+  }
+  
+  /* Afficher seulement le contenu du reçu */
+  .thermal-receipt {
+    display: block !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 2mm !important;
+    background: white !important;
+  }
+  
+  /* Optimisations pour imprimantes thermiques */
+  .thermal-receipt * {
+    color: black !important;
+    background: white !important;
+  }
+  
+  /* Éviter les sauts de page */
+  .thermal-receipt {
+    page-break-inside: avoid !important;
+  }
+  
+  /* Ajustements pour format 58mm */
+  .thermal-receipt.thermal-58mm {
+    width: 58mm !important;
+    font-size: 10px !important;
+    padding: 3mm !important;
+  }
+  
+  .thermal-receipt.thermal-58mm .workshop-name {
+    font-size: 11px !important;
+  }
+  
+  .thermal-receipt.thermal-58mm .title {
+    font-size: 12px !important;
+  }
+  
+  .thermal-receipt.thermal-58mm .total {
+    font-size: 12px !important;
+  }
+  
+  /* Ajustements pour format 80mm */
+  .thermal-receipt.thermal-80mm {
+    width: 80mm !important;
+    font-size: 12px !important;
+    padding: 5mm !important;
+  }
+  
+  .thermal-receipt.thermal-80mm .workshop-name {
+    font-size: 14px !important;
+  }
+  
+  .thermal-receipt.thermal-80mm .title {
+    font-size: 14px !important;
+  }
+  
+  .thermal-receipt.thermal-80mm .total {
+    font-size: 14px !important;
+  }
+}

@@ -1954,6 +1954,17 @@ export const productService = {
       .order('created_at', { ascending: false });
     
     if (error) return handleSupabaseError(error);
+    
+    // Log pour vérifier si le barcode est récupéré
+    console.log('🔍 productService.getAll - Données récupérées:', data?.map(p => ({ 
+      id: p.id, 
+      name: p.name, 
+      barcode: p.barcode 
+    })));
+    
+    // Log détaillé pour debug
+    console.log('🔍 productService.getAll - Données brutes:', data);
+    
     return handleSupabaseSuccess(data);
   },
 
@@ -1991,10 +2002,15 @@ export const productService = {
       stock_quantity: product.stockQuantity,
       min_stock_level: product.minStockLevel,
       is_active: product.isActive,
+      barcode: product.barcode,
       user_id: user.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
+
+    // Log pour debug
+    console.log('🔍 productService.create - Données reçues:', product);
+    console.log('🔍 productService.create - Données DB:', productData);
 
     const { data, error } = await supabase
       .from('products')
@@ -2023,6 +2039,11 @@ export const productService = {
     if (updates.stockQuantity !== undefined) dbUpdates.stock_quantity = updates.stockQuantity;
     if (updates.minStockLevel !== undefined) dbUpdates.min_stock_level = updates.minStockLevel;
     if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+    if (updates.barcode !== undefined) dbUpdates.barcode = updates.barcode;
+
+    // Log pour debug
+    console.log('🔍 productService.update - Données reçues:', updates);
+    console.log('🔍 productService.update - Données DB:', dbUpdates);
 
     const { data, error } = await supabase
       .from('products')
@@ -2032,7 +2053,12 @@ export const productService = {
       .select()
       .single();
     
-    if (error) return handleSupabaseError(error);
+    if (error) {
+      console.error('❌ Erreur lors de la mise à jour du produit:', error);
+      return handleSupabaseError(error);
+    }
+    
+    console.log('✅ Produit mis à jour avec succès:', data);
     return handleSupabaseSuccess(data);
   },
 
@@ -2051,6 +2077,24 @@ export const productService = {
     
     if (error) return handleSupabaseError(error);
     return handleSupabaseSuccess(true);
+  },
+
+  async getByBarcode(barcode: string) {
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('barcode', barcode)
+      .eq('user_id', user.id)
+      .single();
+    
+    if (error) return handleSupabaseError(error);
+    return handleSupabaseSuccess(data);
   }
 };
 
