@@ -71,6 +71,7 @@ import { deviceModelServiceService } from '../../services/deviceModelServiceServ
 import { deviceModelService } from '../../services/deviceModelService';
 import { DeviceModel } from '../../types/deviceManagement';
 import CategoryIconDisplay from '../../components/CategoryIconDisplay';
+import CategoryIconGrid from '../../components/CategoryIconGrid';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR, getCurrencySymbol } from '../../utils/currencyUtils';
 import ThermalReceiptDialog from '../../components/ThermalReceiptDialog';
@@ -299,6 +300,21 @@ const Kanban: React.FC = () => {
     categoryId: '',
     isActive: true,
   });
+
+  // États pour les nouveaux éléments
+  const [newCategory, setNewCategory] = useState({
+    name: '',
+    description: '',
+    icon: 'category',
+    isActive: true
+  });
+
+  const [newBrand, setNewBrand] = useState({
+    name: '',
+    description: '',
+    categoryIds: [] as string[],
+    isActive: true
+  });
   
   // États pour les dialogues
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
@@ -314,6 +330,8 @@ const Kanban: React.FC = () => {
     address: '',
   });
   const [clientFormOpen, setClientFormOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [brandDialogOpen, setBrandDialogOpen] = useState(false);
 
   const getStatusColor = (status: string) => {
     return repairStatusColors[status as keyof typeof repairStatusColors] || '#757575';
@@ -1110,6 +1128,94 @@ const Kanban: React.FC = () => {
   const openModelDialog = () => {
     resetModelForm();
     setModelDialogOpen(true);
+  };
+
+  const openCategoryDialog = () => {
+    setNewCategory({ name: '', description: '', icon: 'category', isActive: true });
+    setCategoryDialogOpen(true);
+  };
+
+  const openBrandDialog = () => {
+    setNewBrand({ name: '', description: '', categoryIds: [], isActive: true });
+    setBrandDialogOpen(true);
+  };
+
+  const handleCreateCategory = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!newCategory.name.trim()) {
+        setError('Le nom de la catégorie est requis');
+        return;
+      }
+
+      const result = await deviceCategoryService.create({
+        name: newCategory.name.trim(),
+        description: newCategory.description.trim(),
+        icon: newCategory.icon
+      });
+
+      if (result.success && result.data) {
+        // Recharger les catégories
+        await loadCategories();
+        
+        // Fermer le dialogue et réinitialiser le formulaire
+        setCategoryDialogOpen(false);
+        setNewCategory({ name: '', description: '', icon: 'category' });
+        
+        // Sélectionner la nouvelle catégorie
+        setSelectedCategory(result.data.name);
+        
+        alert('✅ Catégorie créée avec succès !');
+      } else {
+        setError(result.error || 'Erreur lors de la création de la catégorie');
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de la création de la catégorie:', error);
+      setError(error.message || 'Erreur lors de la création de la catégorie');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateBrand = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!newBrand.name.trim()) {
+        setError('Le nom de la marque est requis');
+        return;
+      }
+
+      const result = await brandService.create({
+        name: newBrand.name.trim(),
+        description: newBrand.description.trim(),
+        categoryIds: newBrand.categoryIds
+      });
+
+      if (result) {
+        // Recharger les marques
+        await loadBrands();
+        
+        // Fermer le dialogue et réinitialiser le formulaire
+        setBrandDialogOpen(false);
+        setNewBrand({ name: '', description: '', logo: '' });
+        
+        // Sélectionner la nouvelle marque
+        setSelectedBrand(result.name);
+        
+        alert('✅ Marque créée avec succès !');
+      } else {
+        setError('Erreur lors de la création de la marque');
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de la création de la marque:', error);
+      setError(error.message || 'Erreur lors de la création de la marque');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Fonction pour obtenir l'icône d'une catégorie
@@ -2449,46 +2555,86 @@ const Kanban: React.FC = () => {
               </Grid>
               
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Marque</InputLabel>
-                  <Select 
-                    label="Marque"
-                    value={selectedBrand}
-                    onChange={(e) => {
-                      setSelectedBrand(e.target.value);
-                      setNewRepair(prev => ({ ...prev, deviceId: '' })); // Réinitialiser la sélection de modèle
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Marque</InputLabel>
+                    <Select 
+                      label="Marque"
+                      value={selectedBrand}
+                      onChange={(e) => {
+                        setSelectedBrand(e.target.value);
+                        setNewRepair(prev => ({ ...prev, deviceId: '' })); // Réinitialiser la sélection de modèle
+                      }}
+                    >
+                      <MenuItem value="">Toutes les marques</MenuItem>
+                      {getUniqueBrands().map((brand) => (
+                        <MenuItem key={brand} value={brand}>
+                          {brand}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={openBrandDialog}
+                    sx={{ 
+                      minWidth: '40px',
+                      width: '40px',
+                      height: '56px', // Même hauteur que le Select
+                      borderRadius: '4px',
+                      backgroundColor: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      }
                     }}
+                    title="Créer une nouvelle marque"
                   >
-                    <MenuItem value="">Toutes les marques</MenuItem>
-                    {getUniqueBrands().map((brand) => (
-                      <MenuItem key={brand} value={brand}>
-                        {brand}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Box>
               </Grid>
               
               <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Catégorie</InputLabel>
-                  <Select 
-                    label="Catégorie"
-                    value={selectedCategory}
-                    onChange={(e) => {
-                      setSelectedCategory(e.target.value);
-                      setSelectedBrand(''); // Réinitialiser la sélection de marque
-                      setNewRepair(prev => ({ ...prev, deviceId: '' })); // Réinitialiser la sélection de modèle
+                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Catégorie</InputLabel>
+                    <Select 
+                      label="Catégorie"
+                      value={selectedCategory}
+                      onChange={(e) => {
+                        setSelectedCategory(e.target.value);
+                        setSelectedBrand(''); // Réinitialiser la sélection de marque
+                        setNewRepair(prev => ({ ...prev, deviceId: '' })); // Réinitialiser la sélection de modèle
+                      }}
+                    >
+                      <MenuItem value="">Toutes les catégories</MenuItem>
+                      {getUniqueCategories().map((category) => (
+                        <MenuItem key={category} value={category}>
+                          {category}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={openCategoryDialog}
+                    sx={{ 
+                      minWidth: '40px',
+                      width: '40px',
+                      height: '56px', // Même hauteur que le Select
+                      borderRadius: '4px',
+                      backgroundColor: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      }
                     }}
+                    title="Créer une nouvelle catégorie"
                   >
-                    <MenuItem value="">Toutes les catégories</MenuItem>
-                    {getUniqueCategories().map((category) => (
-                      <MenuItem key={category} value={category}>
-                        {category}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Box>
               </Grid>
               
               <Grid item xs={12} md={4}>
@@ -3282,6 +3428,155 @@ const Kanban: React.FC = () => {
           }}
         />
       )}
+
+      {/* Dialogue pour créer une nouvelle catégorie */}
+      <Dialog open={categoryDialogOpen} onClose={() => setCategoryDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Créer une nouvelle catégorie</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Nom de la catégorie"
+              value={newCategory.name}
+              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+              fullWidth
+              required
+            />
+            
+            <TextField
+              label="Description"
+              value={newCategory.description}
+              onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+              fullWidth
+              multiline
+              rows={3}
+            />
+            
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
+                Sélectionner une icône pour la catégorie
+              </Typography>
+              <Box sx={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
+                <CategoryIconGrid 
+                  selectedIcon={newCategory.icon}
+                  onIconSelect={(iconType) => setNewCategory({ ...newCategory, icon: iconType })}
+                />
+              </Box>
+            </Box>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={newCategory.isActive}
+                  onChange={(e) => setNewCategory({ ...newCategory, isActive: e.target.checked })}
+                />
+              }
+              label="Catégorie active"
+            />
+          </Box>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCategoryDialogOpen(false)}>
+            Annuler
+          </Button>
+          <Button
+            onClick={handleCreateCategory}
+            variant="contained"
+            disabled={loading || !newCategory.name.trim()}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Créer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialogue pour créer une nouvelle marque */}
+      <Dialog open={brandDialogOpen} onClose={() => setBrandDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Créer une nouvelle marque</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Nom de la marque"
+              value={newBrand.name}
+              onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
+              fullWidth
+              required
+            />
+            
+            <TextField
+              label="Description"
+              value={newBrand.description}
+              onChange={(e) => setNewBrand({ ...newBrand, description: e.target.value })}
+              fullWidth
+              multiline
+              rows={3}
+            />
+            
+            <FormControl fullWidth>
+              <InputLabel>Catégories</InputLabel>
+              <Select
+                multiple
+                value={newBrand.categoryIds}
+                onChange={(e) => setNewBrand({ ...newBrand, categoryIds: e.target.value as string[] })}
+                label="Catégories"
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {(selected as string[]).map((value) => {
+                      const category = dbCategories.find(cat => cat.id === value);
+                      return (
+                        <Chip
+                          key={value}
+                          label={category?.name || value}
+                          size="small"
+                        />
+                      );
+                    })}
+                  </Box>
+                )}
+              >
+                {dbCategories.map((category) => (
+                  <MenuItem key={category.id} value={category.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {getCategoryIcon(category.name, category.icon)}
+                      {category.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={newBrand.isActive}
+                  onChange={(e) => setNewBrand({ ...newBrand, isActive: e.target.checked })}
+                />
+              }
+              label="Marque active"
+            />
+          </Box>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBrandDialogOpen(false)}>
+            Annuler
+          </Button>
+          <Button
+            onClick={handleCreateBrand}
+            variant="contained"
+            disabled={loading || !newBrand.name.trim()}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Créer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -33,6 +33,9 @@ import {
   Delete as DeleteIcon,
   QrCode2 as QrCodeIcon,
   Print as PrintIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  QrCodeScanner as ScannerIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
@@ -40,6 +43,9 @@ import { formatFromEUR } from '../../utils/currencyUtils';
 import { BarcodeService } from '../../services/barcodeService';
 import BarcodeDisplay from '../../components/BarcodeDisplay';
 import BarcodePrintDialog from '../../components/BarcodePrintDialog';
+import ScannedProductDialog from '../../components/ScannedProductDialog';
+import BarcodeScannerService from '../../services/barcodeScannerService';
+import { productService } from '../../services/supabaseService';
 
 const Products: React.FC = () => {
   const { products, addProduct, deleteProduct, updateProduct, loadProducts } = useAppStore();
@@ -53,6 +59,14 @@ const Products: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [printProduct, setPrintProduct] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // États pour la détection de codes-barres
+  const [scannedProduct, setScannedProduct] = useState<any>(null);
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -159,6 +173,71 @@ const Products: React.FC = () => {
     setPrintDialogOpen(true);
   };
 
+  // Fonction de filtrage des produits avec useMemo pour optimiser les performances
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return products;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return products.filter(product => 
+      product.name.toLowerCase().includes(searchLower) ||
+      product.description.toLowerCase().includes(searchLower) ||
+      product.category.toLowerCase().includes(searchLower) ||
+      (product.barcode && product.barcode.includes(searchTerm))
+    );
+  }, [products, searchTerm]);
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+  };
+
+  // Fonctions de gestion du scan
+  const handleBarcodeScanned = async (barcode: string) => {
+    console.log('🔍 Code-barres scanné détecté:', barcode);
+    
+    setScannedBarcode(barcode);
+    setScanDialogOpen(true);
+    setScanLoading(true);
+    setScanError(null);
+    setScannedProduct(null);
+
+    try {
+      const result = await productService.getByBarcode(barcode);
+      
+      if (result.success && result.data) {
+        console.log('✅ Produit trouvé:', result.data);
+        setScannedProduct(result.data);
+      } else {
+        console.log('❌ Produit non trouvé');
+        setScanError('Aucun produit trouvé avec ce code-barres.');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la recherche:', error);
+      setScanError('Erreur lors de la recherche du produit.');
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
+  const handleCloseScanDialog = () => {
+    setScanDialogOpen(false);
+    setScannedProduct(null);
+    setScannedBarcode(null);
+    setScanError(null);
+    setScanLoading(false);
+  };
+
+  // Démarrer l'écoute des codes-barres au montage du composant
+  useEffect(() => {
+    const scannerService = BarcodeScannerService.getInstance();
+    scannerService.addScanListener(handleBarcodeScanned);
+    scannerService.startListening();
+
+    return () => {
+      scannerService.removeScanListener(handleBarcodeScanned);
+      scannerService.stopListening();
+    };
+  }, []);
+
   const handleSubmit = async () => {
     if (!formData.name) {
       setError('Le nom du produit est obligatoire');
@@ -245,36 +324,86 @@ const Products: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Produits et accessoires
         </Typography>
+        
+        {/* Indicateur de scan actif */}
+        <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ScannerIcon color="success" fontSize="small" />
+          <Typography variant="caption" color="success.main">
+            Lecteur de codes-barres actif - Scannez un produit pour l'identifier
+          </Typography>
+        </Box>
       </Box>
 
+      {/* Barre de recherche */}
       <Box sx={{ mb: 3 }}>
-        <Button 
-          variant="contained" 
-          startIcon={<AddIcon />}
-          onClick={handleOpenDialog}
-        >
-          Nouveau produit
-        </Button>
+        <TextField
+          fullWidth
+          placeholder="Rechercher un produit par nom, description, catégorie ou code-barres..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+            endAdornment: searchTerm && (
+              <IconButton
+                size="small"
+                onClick={handleClearSearch}
+                sx={{ mr: -1 }}
+              >
+                <ClearIcon />
+              </IconButton>
+            ),
+          }}
+          sx={{ mb: 2 }}
+        />
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />}
+            onClick={handleOpenDialog}
+          >
+            Nouveau produit
+          </Button>
+          
+          {searchTerm && (
+            <Typography variant="body2" color="text.secondary">
+              {filteredProducts.length} produit(s) trouvé(s)
+            </Typography>
+          )}
+        </Box>
       </Box>
 
       <Card>
         <CardContent>
-          <TableContainer component={Paper} variant="outlined">
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Produit</TableCell>
-                  <TableCell>Catégorie</TableCell>
-                  <TableCell>Stock</TableCell>
-                  <TableCell>Stock Min.</TableCell>
-                  <TableCell>Prix</TableCell>
-                  <TableCell>Code-Barres</TableCell>
-                  <TableCell>Statut</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {products.filter(product => product.id).map((product) => {
+          {filteredProducts.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                {searchTerm ? 'Aucun produit trouvé' : 'Aucun produit enregistré'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {searchTerm 
+                  ? `Aucun produit ne correspond à "${searchTerm}"`
+                  : 'Commencez par ajouter votre premier produit'
+                }
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer component={Paper} variant="outlined">
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Produit</TableCell>
+                    <TableCell>Catégorie</TableCell>
+                    <TableCell>Stock</TableCell>
+                    <TableCell>Stock Min.</TableCell>
+                    <TableCell>Prix</TableCell>
+                    <TableCell>Code-Barres</TableCell>
+                    <TableCell>Statut</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredProducts.filter(product => product.id).map((product) => {
                   // Log pour debug
                   console.log('🔍 Affichage produit:', { 
                     id: product.id, 
@@ -377,9 +506,10 @@ const Products: React.FC = () => {
                   </TableRow>
                   );
                 })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -429,12 +559,12 @@ const Products: React.FC = () => {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 fullWidth
-                label={`Prix TTC (${currency})`}
+                label={`Prix HT (${currency})`}
                 type="number"
                 value={formData.price}
                 onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
                 inputProps={{ min: 0, step: 0.01 }}
-                helperText="Prix toutes taxes comprises"
+                helperText="Prix hors taxes"
               />
               
               <TextField
@@ -536,6 +666,16 @@ const Products: React.FC = () => {
           currency={currency}
         />
       )}
+
+      {/* Dialog de produit scanné */}
+      <ScannedProductDialog
+        open={scanDialogOpen}
+        onClose={handleCloseScanDialog}
+        product={scannedProduct}
+        loading={scanLoading}
+        error={scanError}
+        barcode={scannedBarcode}
+      />
     </Box>
   );
 };
