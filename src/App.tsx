@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline, Box, Alert, Button, Typography, CircularProgress } from '@mui/material';
 import { Toaster } from 'react-hot-toast';
+import { SnackbarProvider } from 'notistack';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { fr } from 'date-fns/locale';
@@ -197,11 +198,12 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
-        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AuthProvider>
-            <WorkshopSettingsProvider>
-              <AuthErrorHandler>
+      <SnackbarProvider maxSnack={3}>
+        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={fr}>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <AuthProvider>
+              <WorkshopSettingsProvider>
+                <AuthErrorHandler>
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={
@@ -270,6 +272,7 @@ function App() {
           </AuthProvider>
         </Router>
       </LocalizationProvider>
+      </SnackbarProvider>
       <Toaster position="top-right" />
     </ThemeProvider>
   );
