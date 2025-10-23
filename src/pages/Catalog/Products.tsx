@@ -194,6 +194,7 @@ const Products: React.FC = () => {
 
   // Fonctions de gestion du scan
   const handleBarcodeScanned = async (barcode: string) => {
+    console.log('🔍 ===== FONCTION handleBarcodeScanned APPELÉE =====');
     console.log('🔍 Code-barres scanné détecté:', barcode);
     console.log('📱 Ouverture du dialog de scan...');
     
