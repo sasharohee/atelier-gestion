@@ -377,6 +377,22 @@ const Products: React.FC = () => {
             >
               Test Existant
             </Button>
+            
+            <Button
+              size="small"
+              variant="outlined"
+              color="warning"
+              onClick={() => {
+                // Simuler un scan externe avec code partiel
+                const scannerService = BarcodeScannerService.getInstance();
+                const partialBarcode = '2008541223'; // 10 chiffres au lieu de 13
+                console.log('🧪 Test scan externe (code partiel):', partialBarcode);
+                scannerService.forceProcessBarcode(partialBarcode);
+              }}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Test Scan Externe
+            </Button>
           </Box>
         </Box>
       </Box>

@@ -2107,12 +2107,30 @@ export const productService = {
       })));
     }
 
-    const { data, error } = await supabase
+    // Recherche exacte d'abord
+    let { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('barcode', barcode)
       .eq('user_id', user.id)
       .single();
+    
+    // Si pas trouvé et que le code fait moins de 13 caractères, essayer une recherche partielle
+    if (error && barcode.length < 13) {
+      console.log('🔍 Recherche exacte échouée, tentative de recherche partielle...');
+      
+      const { data: partialData, error: partialError } = await supabase
+        .from('products')
+        .select('*')
+        .like('barcode', `${barcode}%`)
+        .eq('user_id', user.id)
+        .limit(1);
+      
+      if (!partialError && partialData && partialData.length > 0) {
+        console.log('✅ Produit trouvé par recherche partielle:', { id: partialData[0].id, name: partialData[0].name, barcode: partialData[0].barcode });
+        return handleSupabaseSuccess(partialData[0]);
+      }
+    }
     
     if (error) {
       console.log('❌ Erreur lors de la recherche:', error);
