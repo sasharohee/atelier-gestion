@@ -350,9 +350,19 @@ const Products: React.FC = () => {
               size="small"
               variant="outlined"
               onClick={() => {
-                const scannerService = BarcodeScannerService.getInstance();
-                const testBarcode = '2001234567890'; // Code de test
-                scannerService.testBarcode(testBarcode);
+                // Utiliser un code-barres existant ou générer un nouveau
+                const existingProduct = products.find(p => p.barcode);
+                if (existingProduct) {
+                  const scannerService = BarcodeScannerService.getInstance();
+                  console.log('🧪 Test avec produit existant:', existingProduct.name, existingProduct.barcode);
+                  scannerService.testBarcode(existingProduct.barcode);
+                } else {
+                  // Générer un code de test si aucun produit n'a de code-barres
+                  const scannerService = BarcodeScannerService.getInstance();
+                  const testBarcode = '2001234567890';
+                  console.log('🧪 Test avec code générique:', testBarcode);
+                  scannerService.testBarcode(testBarcode);
+                }
               }}
               sx={{ fontSize: '0.75rem' }}
             >

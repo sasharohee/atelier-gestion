@@ -54,11 +54,13 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
 
   const handleTestScan = () => {
     const scannerService = BarcodeScannerService.getInstance();
+    console.log('🧪 Test normal avec code:', testBarcode);
     scannerService.testBarcode(testBarcode);
   };
 
   const handleForceScan = () => {
     const scannerService = BarcodeScannerService.getInstance();
+    console.log('🔧 Test forcé avec code:', testBarcode);
     scannerService.forceProcessBarcode(testBarcode);
   };
 
@@ -130,6 +132,10 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
 
         <Typography variant="caption" color="text.secondary">
           Le scanner écoute les événements clavier. Scannez un code-barres ou utilisez les boutons de test.
+        </Typography>
+        
+        <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 1 }}>
+          💡 Conseil: Utilisez un code-barres d'un produit existant pour tester la recherche.
         </Typography>
       </CardContent>
     </Card>

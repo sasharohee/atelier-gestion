@@ -2113,10 +2113,10 @@ export const productService = {
       .select('*')
       .eq('barcode', barcode)
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle(); // Utiliser maybeSingle() au lieu de single() pour éviter l'erreur PGRST116
     
     // Si pas trouvé et que le code fait moins de 13 caractères, essayer une recherche partielle
-    if (error && barcode.length < 13) {
+    if (!data && barcode.length < 13) {
       console.log('🔍 Recherche exacte échouée, tentative de recherche partielle...');
       
       const { data: partialData, error: partialError } = await supabase
@@ -2139,11 +2139,11 @@ export const productService = {
     
     if (data) {
       console.log('✅ Produit trouvé:', { id: data.id, name: data.name, barcode: data.barcode });
+      return handleSupabaseSuccess(data);
     } else {
       console.log('❌ Aucun produit trouvé avec le code-barres:', barcode);
+      return handleSupabaseError(new Error('Produit non trouvé'));
     }
-    
-    return handleSupabaseSuccess(data);
   }
 };
 
