@@ -2080,13 +2080,32 @@ export const productService = {
   },
 
   async getByBarcode(barcode: string) {
+    console.log('🔍 productService.getByBarcode - Recherche du code-barres:', barcode);
+    
     // Obtenir l'utilisateur connecté
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
+      console.log('❌ Utilisateur non connecté');
       return handleSupabaseError(new Error('Utilisateur non connecté'));
     }
 
-    console.log('🔍 productService.getByBarcode - Recherche du code-barres:', barcode);
+    console.log('👤 Utilisateur connecté:', user.id);
+
+    // D'abord, récupérer tous les produits pour debug
+    const { data: allProducts, error: allError } = await supabase
+      .from('products')
+      .select('id, name, barcode')
+      .eq('user_id', user.id);
+    
+    if (allError) {
+      console.log('❌ Erreur lors de la récupération des produits:', allError);
+    } else {
+      console.log('📋 Tous les produits avec codes-barres:', allProducts?.map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        barcode: p.barcode 
+      })));
+    }
 
     const { data, error } = await supabase
       .from('products')
@@ -2096,16 +2115,16 @@ export const productService = {
       .single();
     
     if (error) {
-      console.log('❌ productService.getByBarcode - Erreur:', error);
-      // Si aucun produit n'est trouvé, retourner un succès avec data null
-      if (error.code === 'PGRST116') {
-        console.log('ℹ️ Aucun produit trouvé avec ce code-barres');
-        return handleSupabaseSuccess(null);
-      }
+      console.log('❌ Erreur lors de la recherche:', error);
       return handleSupabaseError(error);
     }
     
-    console.log('✅ productService.getByBarcode - Produit trouvé:', data);
+    if (data) {
+      console.log('✅ Produit trouvé:', { id: data.id, name: data.name, barcode: data.barcode });
+    } else {
+      console.log('❌ Aucun produit trouvé avec le code-barres:', barcode);
+    }
+    
     return handleSupabaseSuccess(data);
   }
 };

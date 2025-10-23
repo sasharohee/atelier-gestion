@@ -44,6 +44,7 @@ import { BarcodeService } from '../../services/barcodeService';
 import BarcodeDisplay from '../../components/BarcodeDisplay';
 import BarcodePrintDialog from '../../components/BarcodePrintDialog';
 import ScannedProductDialog from '../../components/ScannedProductDialog';
+import ScannerDebugPanel from '../../components/ScannerDebugPanel';
 import BarcodeScannerService from '../../services/barcodeScannerService';
 import { productService } from '../../services/supabaseService';
 
@@ -194,9 +195,6 @@ const Products: React.FC = () => {
   const handleBarcodeScanned = async (barcode: string) => {
     console.log('🔍 Code-barres scanné détecté:', barcode);
     
-    // Mettre à jour la barre de recherche avec le code-barres scanné
-    setSearchTerm(barcode);
-    
     setScannedBarcode(barcode);
     setScanDialogOpen(true);
     setScanLoading(true);
@@ -346,21 +344,47 @@ const Products: React.FC = () => {
             </Typography>
           </Box>
           
-          {/* Bouton de test pour debug */}
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => {
-              const scannerService = BarcodeScannerService.getInstance();
-              const testBarcode = '2001234567890'; // Code de test
-              scannerService.testBarcode(testBarcode);
-            }}
-            sx={{ ml: 2, fontSize: '0.75rem' }}
-          >
-            Test Scan
-          </Button>
+          {/* Boutons de test pour debug */}
+          <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                const scannerService = BarcodeScannerService.getInstance();
+                const testBarcode = '2001234567890'; // Code de test
+                scannerService.testBarcode(testBarcode);
+              }}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Test Scan
+            </Button>
+            
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => {
+                // Utiliser un code-barres existant si disponible
+                const existingProduct = products.find(p => p.barcode);
+                if (existingProduct) {
+                  const scannerService = BarcodeScannerService.getInstance();
+                  console.log('🧪 Test avec produit existant:', existingProduct.name, existingProduct.barcode);
+                  scannerService.testBarcode(existingProduct.barcode);
+                } else {
+                  alert('Aucun produit avec code-barres trouvé. Créez d\'abord un produit avec un code-barres.');
+                }
+              }}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Test Existant
+            </Button>
+          </Box>
         </Box>
       </Box>
+
+      {/* Panneau de debug du scanner */}
+      <ScannerDebugPanel 
+        onBarcodeScanned={handleBarcodeScanned}
+      />
 
       {/* Barre de recherche */}
       <Box sx={{ mb: 3 }}>
