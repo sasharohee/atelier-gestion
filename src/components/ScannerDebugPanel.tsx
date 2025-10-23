@@ -157,18 +157,6 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
           >
             Voir Historique
           </Button>
-          
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              console.log('🧪 Test direct de handleBarcodeScanned avec:', testBarcode);
-              onBarcodeScanned(testBarcode);
-            }}
-            color="success"
-          >
-            Test Direct
-          </Button>
         </Box>
 
         <Typography variant="caption" color="text.secondary">

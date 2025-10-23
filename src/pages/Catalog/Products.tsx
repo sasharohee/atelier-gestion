@@ -40,10 +40,10 @@ import {
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
+import { useSnackbar } from 'notistack';
 import { BarcodeService } from '../../services/barcodeService';
 import BarcodeDisplay from '../../components/BarcodeDisplay';
 import BarcodePrintDialog from '../../components/BarcodePrintDialog';
-import ScannedProductDialog from '../../components/ScannedProductDialog';
 import ScannerDebugPanel from '../../components/ScannerDebugPanel';
 import BarcodeScannerService from '../../services/barcodeScannerService';
 import { productService } from '../../services/supabaseService';
@@ -51,6 +51,7 @@ import { productService } from '../../services/supabaseService';
 const Products: React.FC = () => {
   const { products, addProduct, deleteProduct, updateProduct, loadProducts } = useAppStore();
   const { workshopSettings } = useWorkshopSettings();
+  const { enqueueSnackbar } = useSnackbar();
   
   // Valeur par défaut pour éviter les erreurs
   const currency = workshopSettings?.currency || 'EUR';
@@ -62,13 +63,6 @@ const Products: React.FC = () => {
   const [printProduct, setPrintProduct] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // États pour la détection de codes-barres
-  const [scannedProduct, setScannedProduct] = useState<any>(null);
-  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
-  const [scanDialogOpen, setScanDialogOpen] = useState(false);
-  const [scanLoading, setScanLoading] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [scanNotification, setScanNotification] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -194,54 +188,42 @@ const Products: React.FC = () => {
 
   // Fonctions de gestion du scan
   const handleBarcodeScanned = async (barcode: string) => {
-    console.log('🔍 ===== FONCTION handleBarcodeScanned APPELÉE =====');
     console.log('🔍 Code-barres scanné détecté:', barcode);
-    console.log('📱 Ouverture du dialog de scan...');
-    
-    // Afficher une notification immédiate
-    setScanNotification(`Code-barres scanné: ${barcode}`);
-    
-    // Ouvrir le dialog immédiatement
-    setScannedBarcode(barcode);
-    setScanDialogOpen(true);
-    setScanLoading(true);
-    setScanError(null);
-    setScannedProduct(null);
-
-    console.log('🔍 Recherche du produit avec le code-barres:', barcode);
 
     try {
       const result = await productService.getByBarcode(barcode);
-      console.log('📊 Résultat de la recherche:', result);
       
       if (result.success && result.data) {
         console.log('✅ Produit trouvé:', result.data);
-        setScannedProduct(result.data);
-        setScanNotification(`Produit trouvé: ${result.data.name}`);
-        console.log('📱 Produit affiché dans le dialog');
+        
+        // Ouvrir directement le dialogue de modification
+        handleOpenDialog(result.data);
+        
+        // Notification de succès
+        enqueueSnackbar(`Produit scanné: ${result.data.name}`, { 
+          variant: 'success',
+          autoHideDuration: 2000
+        });
       } else {
-        console.log('❌ Produit non trouvé - Résultat:', result);
-        setScanError('Aucun produit trouvé avec ce code-barres.');
-        setScanNotification('Produit non trouvé');
+        console.log('❌ Produit non trouvé');
+        
+        // Notification rapide d'erreur
+        enqueueSnackbar(`Aucun produit trouvé avec le code-barres: ${barcode}`, { 
+          variant: 'warning',
+          autoHideDuration: 3000
+        });
       }
     } catch (error) {
       console.error('❌ Erreur lors de la recherche:', error);
-      setScanError('Erreur lors de la recherche du produit.');
-      setScanNotification('Erreur de recherche');
-    } finally {
-      setScanLoading(false);
-      console.log('📱 Dialog de scan configuré');
+      
+      // Notification d'erreur
+      enqueueSnackbar('Erreur lors de la recherche du produit', { 
+        variant: 'error',
+        autoHideDuration: 3000
+      });
     }
   };
 
-  const handleCloseScanDialog = () => {
-    setScanDialogOpen(false);
-    setScannedProduct(null);
-    setScannedBarcode(null);
-    setScanError(null);
-    setScanLoading(false);
-    setScanNotification(null);
-  };
 
   // Démarrer l'écoute des codes-barres au montage du composant
   useEffect(() => {
@@ -359,17 +341,6 @@ const Products: React.FC = () => {
               Lecteur de codes-barres actif - Scannez un produit pour l'identifier
             </Typography>
           </Box>
-          
-          {/* Notification de scan */}
-          {scanNotification && (
-            <Alert 
-              severity={scannedProduct ? "success" : scanError ? "error" : "info"}
-              sx={{ mt: 1, mb: 1 }}
-              onClose={() => setScanNotification(null)}
-            >
-              {scanNotification}
-            </Alert>
-          )}
           
           {/* Boutons de test pour debug */}
           <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
@@ -799,15 +770,6 @@ const Products: React.FC = () => {
         />
       )}
 
-      {/* Dialog de produit scanné */}
-      <ScannedProductDialog
-        open={scanDialogOpen}
-        onClose={handleCloseScanDialog}
-        product={scannedProduct}
-        loading={scanLoading}
-        error={scanError}
-        barcode={scannedBarcode}
-      />
     </Box>
   );
 };
