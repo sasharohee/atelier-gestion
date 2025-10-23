@@ -157,6 +157,24 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
           >
             Voir Historique
           </Button>
+          
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              const scannerService = BarcodeScannerService.getInstance();
+              const state = scannerService.getBufferState();
+              console.log('🔍 État actuel du scanner:', state);
+              alert(`État du Scanner:
+Actif: ${state.isListening ? 'Oui' : 'Non'}
+Buffer: "${state.buffer}" (${state.buffer.length} caractères)
+
+Si le buffer contient des chiffres, cliquez sur "Forcer Buffer" pour traiter le scan.`);
+            }}
+            color="secondary"
+          >
+            État Scanner
+          </Button>
         </Box>
 
         <Typography variant="caption" color="text.secondary">
