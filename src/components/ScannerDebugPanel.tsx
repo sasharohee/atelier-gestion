@@ -143,6 +143,20 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
           >
             Forcer Buffer
           </Button>
+          
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              const scannerService = BarcodeScannerService.getInstance();
+              const history = scannerService.getCaptureHistory();
+              console.log('📜 Historique des captures:', history);
+              alert(`Historique:\n${history.join('\n')}`);
+            }}
+            color="info"
+          >
+            Voir Historique
+          </Button>
         </Box>
 
         <Typography variant="caption" color="text.secondary">
