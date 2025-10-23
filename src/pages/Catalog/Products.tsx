@@ -418,6 +418,75 @@ const Products: React.FC = () => {
             >
               Forcer Buffer
             </Button>
+            
+            <Button
+              size="small"
+              variant="outlined"
+              color="info"
+              onClick={() => {
+                // Diagnostic avancé
+                const scannerService = BarcodeScannerService.getInstance();
+                const diagnostic = scannerService.getDiagnosticInfo();
+                console.log('🔍 Diagnostic scanner:', diagnostic);
+                alert(`Diagnostic Scanner:
+État: ${diagnostic.isListening ? 'Actif' : 'Inactif'}
+Buffer: "${diagnostic.buffer}" (${diagnostic.bufferLength} caractères)
+Dernière touche: ${diagnostic.timeSinceLastKey}ms
+Timeout actif: ${diagnostic.hasTimeout ? 'Oui' : 'Non'}
+Listeners: ${diagnostic.listenersCount}`);
+              }}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Diagnostic
+            </Button>
+            
+            <Button
+              size="small"
+              variant="outlined"
+              color="secondary"
+              onClick={() => {
+                // Test de compatibilité
+                const scannerService = BarcodeScannerService.getInstance();
+                console.log('🧪 Lancement des tests de compatibilité...');
+                scannerService.testScannerCompatibility();
+                alert('Tests de compatibilité lancés ! Vérifiez la console pour les résultats.');
+              }}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Test Compatibilité
+            </Button>
+            
+            <Button
+              size="small"
+              variant="outlined"
+              color="success"
+              onClick={() => {
+                // Mode ultra-rapide
+                const scannerService = BarcodeScannerService.getInstance();
+                console.log('🚀 Activation du mode ultra-rapide...');
+                scannerService.enableUltraFastMode();
+                alert('Mode ultra-rapide activé ! Essayez de scanner maintenant.');
+              }}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Mode Ultra-Rapide
+            </Button>
+            
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              onClick={() => {
+                // Mode capture continue
+                const scannerService = BarcodeScannerService.getInstance();
+                console.log('🔄 Activation du mode capture continue...');
+                scannerService.enableContinuousCaptureMode();
+                alert('Mode capture continue activé ! Le scanner va accumuler tous les caractères. Essayez de scanner maintenant.');
+              }}
+              sx={{ fontSize: '0.75rem' }}
+            >
+              Capture Continue
+            </Button>
           </Box>
         </Box>
       </Box>
