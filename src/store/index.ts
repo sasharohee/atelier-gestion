@@ -804,15 +804,17 @@ export const useAppStore = create<AppStore>()(
             if (result.error) {
               const errorText = result.error.toLowerCase();
               
-              // Détecter l'erreur de duplicate email
-              if (errorText.includes('duplicate key') && errorText.includes('email')) {
-                errorMessage = 'Un client avec cet email existe déjà. Veuillez utiliser un autre email ou modifier le client existant.';
-              } else if (errorText.includes('unique constraint')) {
-                errorMessage = 'Cette information existe déjà dans le système. Veuillez vérifier vos données.';
-              } else {
-                // Utiliser le message d'erreur original s'il est informatif
-                errorMessage = result.error;
-              }
+            // Détecter l'erreur de duplicate email
+            if (errorText.includes('duplicate key') && errorText.includes('email')) {
+              errorMessage = 'Un client avec cet email existe déjà. Veuillez utiliser un autre email ou modifier le client existant.';
+            } else if (errorText.includes('unique constraint')) {
+              errorMessage = 'Cette information existe déjà dans le système. Veuillez vérifier vos données.';
+            } else if (errorText.includes('duplicate') || errorText.includes('unique')) {
+              errorMessage = 'Un client avec ces informations existe déjà.';
+            } else {
+              // Utiliser le message d'erreur original s'il est informatif
+              errorMessage = result.error;
+            }
             }
             
             throw new Error(errorMessage);

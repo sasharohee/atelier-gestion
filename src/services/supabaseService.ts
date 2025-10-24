@@ -1016,20 +1016,30 @@ export const clientService = {
       // Vérifier les doublons si nécessaire
       if (!skipDuplicateCheck && client.email && client.email.trim()) {
         console.log('🔍 CLIENT SERVICE - Vérification des doublons pour:', client.email);
-        const { data: existingClients, error: checkError } = await supabase
-          .from('clients')
-          .select('id, email')
-          .eq('user_id', currentUserId)
-          .eq('email', client.email.toLowerCase());
+        console.log('🔍 CLIENT SERVICE - skipDuplicateCheck:', skipDuplicateCheck);
+        console.log('🔍 CLIENT SERVICE - currentUserId:', currentUserId);
         
-        if (checkError) {
-          console.error('❌ Erreur lors de la vérification des doublons:', checkError);
-          return handleSupabaseError(checkError);
-        }
-        
-        if (existingClients && existingClients.length > 0) {
-          console.warn('⚠️ CLIENT SERVICE - Doublon détecté, ignoré:', client.email);
-          return handleSupabaseSuccess(null, 'Client ignoré (déjà présent)');
+        try {
+          const { data: existingClients, error: checkError } = await supabase
+            .from('clients')
+            .select('id, email')
+            .eq('user_id', currentUserId)
+            .eq('email', client.email.toLowerCase());
+          
+          console.log('🔍 CLIENT SERVICE - Résultat vérification doublons:', { existingClients, checkError });
+          
+          if (checkError) {
+            console.error('❌ Erreur lors de la vérification des doublons:', checkError);
+            // Ne pas bloquer l'import en cas d'erreur de vérification
+            console.warn('⚠️ CLIENT SERVICE - Erreur de vérification, continuation de l\'import');
+          } else if (existingClients && existingClients.length > 0) {
+            console.warn('⚠️ CLIENT SERVICE - Doublon détecté, ignoré:', client.email);
+            return handleSupabaseSuccess(null, 'Client ignoré (déjà présent)');
+          }
+        } catch (err) {
+          console.error('❌ Erreur lors de la vérification des doublons:', err);
+          // Ne pas bloquer l'import en cas d'erreur
+          console.warn('⚠️ CLIENT SERVICE - Erreur de vérification, continuation de l\'import');
         }
       }
       

@@ -352,9 +352,22 @@ const Clients: React.FC = () => {
         }
 
         console.log('📋 CLIENTS PAGE - Import du client:', clientData.email || clientData.firstName + ' ' + clientData.lastName);
-        const result = await addClient(clientData, true); // skipDuplicateCheck = true
-        if (result && result.success) {
-          importedCount++;
+        try {
+          const result = await addClient(clientData, true); // skipDuplicateCheck = true
+          console.log('📋 CLIENTS PAGE - Résultat addClient:', result);
+          if (result && result.success) {
+            importedCount++;
+          }
+        } catch (error) {
+          console.error('❌ CLIENTS PAGE - Erreur lors de l\'ajout du client:', error);
+          // Si c'est une erreur de doublon, l'ignorer
+          if (error.message && error.message.includes('existe déjà')) {
+            console.warn('⚠️ CLIENTS PAGE - Client ignoré (déjà présent):', clientData.email);
+            skippedCount++;
+          } else {
+            // Pour les autres erreurs, les propager
+            throw error;
+          }
         }
       }
 
