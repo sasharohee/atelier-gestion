@@ -180,9 +180,16 @@ const Clients: React.FC = () => {
         }
       }
 
+      // Générer un nom par défaut si ni prénom ni nom ne sont fournis
+      const firstName = clientFormData.firstName || '';
+      const lastName = clientFormData.lastName || '';
+      const displayName = firstName && lastName 
+        ? `${firstName} ${lastName}` 
+        : firstName || lastName || 'Client sans nom';
+      
       const clientData = {
-        firstName: clientFormData.firstName || '',
-        lastName: clientFormData.lastName || '',
+        firstName: firstName || 'Client',
+        lastName: lastName || 'Sans nom',
         email: clientFormData.email || '',
         phone: (clientFormData.countryCode || '33') + (clientFormData.mobile || ''),
         address: clientFormData.address || '',
@@ -677,11 +684,14 @@ const Clients: React.FC = () => {
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Avatar sx={{ mr: 2 }}>
-                              {client.firstName.charAt(0)}
+                              {client.firstName ? client.firstName.charAt(0) : '?'}
                             </Avatar>
                             <Box>
                               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {client.firstName} {client.lastName}
+                                {client.firstName && client.lastName 
+                                  ? `${client.firstName} ${client.lastName}`
+                                  : client.firstName || client.lastName || 'Client sans nom'
+                                }
                               </Typography>
                             </Box>
                           </Box>

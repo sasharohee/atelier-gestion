@@ -170,13 +170,14 @@ const CSVImport: React.FC<CSVImportProps> = ({ open, onClose, onImport }) => {
           return headerIndex >= 0 ? (values[headerIndex] || '') : '';
         };
 
-        // Validation des champs obligatoires avec les valeurs mappées
+        // Validation des champs avec les valeurs mappées
         const firstName = getColumnValue('Prénom') || values[0] || '';
         const lastName = getColumnValue('Nom') || values[1] || '';
         const email = getColumnValue('Email') || values[2] || '';
         
-        if (!firstName || !lastName || !email) {
-          errors.push('Prénom, Nom et Email sont obligatoires');
+        // Vérifier qu'au moins un identifiant est fourni (nom, prénom ou email)
+        if (!firstName && !lastName && !email) {
+          errors.push('Au moins un identifiant est requis (Prénom, Nom ou Email)');
         }
         
         if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -191,8 +192,8 @@ const CSVImport: React.FC<CSVImportProps> = ({ open, onClose, onImport }) => {
         });
 
         const client: ParsedClient = {
-          firstName: firstName,
-          lastName: lastName,
+          firstName: firstName || 'Client',
+          lastName: lastName || 'Sans nom',
           email: email,
           countryCode: getColumnValue('Indicatif') || values[3] || '33',
           mobile: getColumnValue('Téléphone mobile') || values[4] || '',
@@ -246,8 +247,8 @@ const CSVImport: React.FC<CSVImportProps> = ({ open, onClose, onImport }) => {
         
         // Préparer les données pour l'import
         const clientsToImport = batch.map(client => ({
-          firstName: client.firstName,
-          lastName: client.lastName,
+          firstName: client.firstName || 'Client',
+          lastName: client.lastName || 'Sans nom',
           email: client.email,
           phone: client.countryCode + client.mobile,
           address: client.address,
