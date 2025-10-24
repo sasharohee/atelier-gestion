@@ -109,50 +109,105 @@ const CSVImport: React.FC<CSVImportProps> = ({ open, onClose, onImport }) => {
         throw new Error('Le fichier CSV doit contenir au moins un en-tête et une ligne de données.');
       }
 
-      // Vérifier les en-têtes
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-      const missingHeaders = expectedHeaders.filter(expected => 
-        !headers.some(header => header.toLowerCase().includes(expected.toLowerCase()))
-      );
+      // Détecter le séparateur (virgule ou point-virgule)
+      const firstLine = lines[0];
+      const hasSemicolon = firstLine.includes(';');
+      const separator = hasSemicolon ? ';' : ',';
+      
+      console.log('🔍 Séparateur détecté:', separator);
+
+      // Vérifier les en-têtes avec normalisation des caractères
+      const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+      console.log('🔍 En-têtes détectés:', headers);
+      
+      // Normaliser les en-têtes pour gérer les problèmes d'encodage
+      const normalizeHeader = (header: string) => {
+        return header
+          .toLowerCase()
+          .replace(/[àáâãäå]/g, 'a')
+          .replace(/[èéêë]/g, 'e')
+          .replace(/[ìíîï]/g, 'i')
+          .replace(/[òóôõö]/g, 'o')
+          .replace(/[ùúûü]/g, 'u')
+          .replace(/[ç]/g, 'c')
+          .replace(/[ñ]/g, 'n')
+          .replace(/[°]/g, '')
+          .replace(/[^a-z0-9\s]/g, '')
+          .trim();
+      };
+
+      const normalizedExpectedHeaders = expectedHeaders.map(normalizeHeader);
+      const normalizedDetectedHeaders = headers.map(normalizeHeader);
+      
+      console.log('🔍 En-têtes normalisés attendus:', normalizedExpectedHeaders);
+      console.log('🔍 En-têtes normalisés détectés:', normalizedDetectedHeaders);
+
+      const missingHeaders = expectedHeaders.filter((expected, index) => {
+        const normalizedExpected = normalizedExpectedHeaders[index];
+        return !normalizedDetectedHeaders.some(detected => 
+          detected.includes(normalizedExpected) || normalizedExpected.includes(detected)
+        );
+      });
 
       if (missingHeaders.length > 0) {
-        throw new Error(`En-têtes manquants: ${missingHeaders.join(', ')}`);
+        console.warn('⚠️ En-têtes manquants détectés:', missingHeaders);
+        // Ne pas bloquer l'import, juste avertir
       }
 
       // Parser les données
       const clients: ParsedClient[] = [];
       
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+        const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
         const errors: string[] = [];
         
-        // Validation des champs obligatoires
-        if (!values[0] || !values[1] || !values[2]) {
+        // Mapping flexible des colonnes basé sur les en-têtes détectés
+        const getColumnValue = (expectedHeader: string) => {
+          const normalizedExpected = normalizeHeader(expectedHeader);
+          const headerIndex = normalizedDetectedHeaders.findIndex(detected => 
+            detected.includes(normalizedExpected) || normalizedExpected.includes(detected)
+          );
+          return headerIndex >= 0 ? (values[headerIndex] || '') : '';
+        };
+
+        // Validation des champs obligatoires avec les valeurs mappées
+        const firstName = getColumnValue('Prénom') || values[0] || '';
+        const lastName = getColumnValue('Nom') || values[1] || '';
+        const email = getColumnValue('Email') || values[2] || '';
+        
+        if (!firstName || !lastName || !email) {
           errors.push('Prénom, Nom et Email sont obligatoires');
         }
         
-        if (values[2] && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values[2])) {
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           errors.push('Format email invalide');
         }
+        
+        console.log(`🔍 Ligne ${i + 1}:`, {
+          firstName,
+          lastName,
+          email,
+          errors: errors.length > 0 ? errors : 'Aucune erreur'
+        });
 
         const client: ParsedClient = {
-          firstName: values[0] || '',
-          lastName: values[1] || '',
-          email: values[2] || '',
-          countryCode: values[3] || '33',
-          mobile: values[4] || '',
-          address: values[5] || '',
-          addressComplement: values[6] || '',
-          postalCode: values[7] || '',
-          city: values[8] || '',
-          region: values[9] || '',
-          country: values[10] || 'France',
-          companyName: values[11] || '',
-          vatNumber: values[12] || '',
-          sirenNumber: values[13] || '',
-          accountingCode: values[14] || '',
-          title: values[15] === 'Mme' ? 'mrs' : 'mr',
-          cniIdentifier: values[16] || '',
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          countryCode: getColumnValue('Indicatif') || values[3] || '33',
+          mobile: getColumnValue('Téléphone mobile') || values[4] || '',
+          address: getColumnValue('Adresse') || values[5] || '',
+          addressComplement: getColumnValue('Complément adresse') || values[6] || '',
+          postalCode: getColumnValue('Code postal') || values[7] || '',
+          city: getColumnValue('Ville') || values[8] || '',
+          region: getColumnValue('Etat') || values[9] || '',
+          country: getColumnValue('Pays') || values[10] || 'France',
+          companyName: getColumnValue('Société') || values[11] || '',
+          vatNumber: getColumnValue('N° TVA') || values[12] || '',
+          sirenNumber: getColumnValue('N° SIREN') || values[13] || '',
+          accountingCode: getColumnValue('Code Comptable') || values[14] || '',
+          title: (getColumnValue('Titre (M. / Mme)') || values[15] || '').toLowerCase().includes('mme') ? 'mrs' : 'mr',
+          cniIdentifier: getColumnValue('Identifiant CNI') || values[16] || '',
           isValid: errors.length === 0,
           errors
         };

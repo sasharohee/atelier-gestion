@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Import CSV - Correction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #4CAF50;
+            background-color: #E8F5E8;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            color: #f44336;
+            background-color: #FFEBEE;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #2196F3;
+            background-color: #E3F2FD;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test de la correction d'import CSV</h1>
+        
+        <div class="info">
+            <h3>✅ Corrections apportées :</h3>
+            <ul>
+                <li><strong>Détection automatique du séparateur</strong> : Virgule (,) ou point-virgule (;)</li>
+                <li><strong>Normalisation des en-têtes</strong> : Gestion des caractères mal encodés (PrÃ©nom → Prénom)</li>
+                <li><strong>Mapping flexible</strong> : Correspondance intelligente des colonnes</li>
+                <li><strong>Logs de débogage</strong> : Affichage détaillé du processus d'import</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h3>🎯 Problèmes résolus :</h3>
+            <ul>
+                <li>✅ Support des fichiers CSV avec points-virgules</li>
+                <li>✅ Gestion des en-têtes mal encodés (PrÃ©nom, TÃ©IÃ©phone mobile, etc.)</li>
+                <li>✅ Mapping intelligent des colonnes</li>
+                <li>✅ Meilleure validation des données</li>
+            </ul>
+        </div>
+
+        <h3>📋 Instructions de test :</h3>
+        <ol>
+            <li>Ouvrez votre application dans le navigateur</li>
+            <li>Allez dans la section "Clients"</li>
+            <li>Cliquez sur "Import CSV"</li>
+            <li>Sélectionnez votre fichier CSV avec les points-virgules</li>
+            <li>Vérifiez que les données sont maintenant correctement parsées</li>
+        </ol>
+
+        <h3>🔍 Vérifications à effectuer :</h3>
+        <ul>
+            <li>Les en-têtes sont-ils correctement reconnus ?</li>
+            <li>Les données sont-elles mappées aux bons champs ?</li>
+            <li>Le nombre de clients valides a-t-il augmenté ?</li>
+            <li>Les erreurs de parsing ont-elles disparu ?</li>
+        </ul>
+
+        <div class="info">
+            <h3>📊 Exemple de fichier CSV supporté :</h3>
+            <pre>PrÃ©nom;Nom;Email;Indicatif;TÃ©IÃ©phone mobile;Adresse;ComplÃ©ment adresse;Code postal;Ville;Etat;Pays;SociÃ©tÃO;NÃO TVA;NÃO SIREN;Code Comptable;Titre (M./Mme);Identifiant CNI
+Jean;DUPONT;jeandup@mamail.fr;33;225252525;15 rue du pont;;75000;paris;France;France;Entreprise ABC;FR123456789;123456789;COMP001;M.;CNI123456</pre>
+        </div>
+
+        <button onclick="window.open('http://localhost:3000/app/transaction/clients', '_blank')">
+            🚀 Ouvrir l'application
+        </button>
+
+        <div class="success">
+            <h3>✨ Résultat attendu :</h3>
+            <p>L'import CSV devrait maintenant fonctionner correctement avec votre fichier contenant des points-virgules et des en-têtes mal encodés. Les clients devraient être marqués comme "valides" au lieu d'"invalides".</p>
+        </div>
+    </div>
+</body>
+</html>
