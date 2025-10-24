@@ -1006,12 +1006,32 @@ export const clientService = {
     return handleSupabaseSuccess(convertedData);
   },
 
-  async create(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>) {
+  async create(client: Omit<Client, 'id' | 'createdAt' | 'updatedAt'>, skipDuplicateCheck = false) {
     try {
       // Récupérer l'utilisateur connecté
       const currentUserId = await getCurrentUserId();
       
       console.log('🔍 CLIENT SERVICE - DONNÉES REÇUES:', client);
+      
+      // Vérifier les doublons si nécessaire
+      if (!skipDuplicateCheck && client.email && client.email.trim()) {
+        console.log('🔍 CLIENT SERVICE - Vérification des doublons pour:', client.email);
+        const { data: existingClients, error: checkError } = await supabase
+          .from('clients')
+          .select('id, email')
+          .eq('user_id', currentUserId)
+          .eq('email', client.email.toLowerCase());
+        
+        if (checkError) {
+          console.error('❌ Erreur lors de la vérification des doublons:', checkError);
+          return handleSupabaseError(checkError);
+        }
+        
+        if (existingClients && existingClients.length > 0) {
+          console.warn('⚠️ CLIENT SERVICE - Doublon détecté, ignoré:', client.email);
+          return handleSupabaseSuccess(null, 'Client ignoré (déjà présent)');
+        }
+      }
       
       // Utiliser directement la méthode d'insertion pour supporter tous les champs
       console.log('📤 CLIENT SERVICE - UTILISATION DE LA MÉTHODE DIRECTE (tous champs supportés)');

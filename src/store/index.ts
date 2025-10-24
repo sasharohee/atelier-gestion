@@ -724,14 +724,15 @@ export const useAppStore = create<AppStore>()(
         }
       },
       
-      addClient: async (client) => {
+      addClient: async (client, skipDuplicateCheck = false) => {
         try {
           console.log('🚀 STORE - Début de l\'ajout du client:', client);
           
-          const result = await clientService.create(client);
+          const result = await clientService.create(client, skipDuplicateCheck);
           console.log('📥 STORE - Résultat du service:', result);
           
-          if (result.success && 'data' in result && result.data) {
+          if (result.success) {
+            if ('data' in result && result.data) {
             // Transformer les données de Supabase vers le format de l'application
             const transformedClient: Client = {
               id: result.data.id,
@@ -791,6 +792,9 @@ export const useAppStore = create<AppStore>()(
             });
             
             console.log('🎉 STORE - Client ajouté avec succès!');
+            } else {
+              console.log('⚠️ STORE - Client ignoré (déjà présent):', result.message);
+            }
           } else {
             console.error('❌ STORE - Échec de la création du client:', result);
             
@@ -813,6 +817,8 @@ export const useAppStore = create<AppStore>()(
             
             throw new Error(errorMessage);
           }
+          
+          return result;
         } catch (error) {
           console.error('💥 STORE - Erreur lors de l\'ajout du client:', error);
           throw error;

@@ -352,8 +352,10 @@ const Clients: React.FC = () => {
         }
 
         console.log('📋 CLIENTS PAGE - Import du client:', clientData.email || clientData.firstName + ' ' + clientData.lastName);
-        await addClient(clientData);
-        importedCount++;
+        const result = await addClient(clientData, true); // skipDuplicateCheck = true
+        if (result && result.success) {
+          importedCount++;
+        }
       }
 
       // Recharger la liste des clients
