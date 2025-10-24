@@ -187,6 +187,20 @@ Si le buffer contient des chiffres, cliquez sur "Forcer Buffer" pour traiter le 
           >
             Test Direct
           </Button>
+          
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              const scannerService = BarcodeScannerService.getInstance();
+              console.log('🤖 Activation du mode traitement automatique...');
+              scannerService.enableAutoProcessMode();
+              alert('Mode automatique activé ! Le scanner va traiter automatiquement les codes-barres capturés. Scannez maintenant !');
+            }}
+            color="primary"
+          >
+            Mode Auto
+          </Button>
         </Box>
 
         <Typography variant="caption" color="text.secondary">
