@@ -140,7 +140,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSubmit, existi
   };
 
   const isEmailDuplicate = Boolean(formData.email && existingEmails.includes(formData.email.toLowerCase()));
-  const isFormValid = formData.firstName && formData.lastName && formData.email && !isEmailDuplicate;
+  const isFormValid = formData.firstName && formData.lastName && !isEmailDuplicate;
 
   // Initialiser les données du formulaire quand initialData change ou quand le formulaire s'ouvre
   useEffect(() => {
@@ -385,10 +385,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSubmit, existi
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="Saisir Email"
-                required
+                placeholder="Saisir Email (optionnel)"
                 error={isEmailDuplicate}
-                helperText={isEmailDuplicate ? 'Cet email existe déjà' : ''}
+                helperText={isEmailDuplicate ? 'Cet email existe déjà' : 'Email optionnel'}
               />
             </Grid>
 

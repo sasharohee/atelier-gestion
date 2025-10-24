@@ -169,11 +169,13 @@ const Clients: React.FC = () => {
     try {
       console.log('🚀 CLIENTS PAGE - Début de la création:', clientFormData);
       
-      // Vérifier si l'email existe déjà
-      const existingClient = clients.find(c => c.email.toLowerCase() === clientFormData.email.toLowerCase());
-      if (existingClient) {
-        setError(`Un client avec l'email "${clientFormData.email}" existe déjà.`);
-        return;
+      // Vérifier si l'email existe déjà (seulement si un email est fourni)
+      if (clientFormData.email && clientFormData.email.trim()) {
+        const existingClient = clients.find(c => c.email && c.email.toLowerCase() === clientFormData.email.toLowerCase());
+        if (existingClient) {
+          setError(`Un client avec l'email "${clientFormData.email}" existe déjà.`);
+          return;
+        }
       }
 
       const clientData = {
