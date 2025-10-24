@@ -196,7 +196,10 @@ const Products: React.FC = () => {
       if (result.success && result.data) {
         console.log('✅ Produit trouvé:', result.data);
         
-        // Ouvrir directement le dialogue de modification
+        // Recharger toutes les données pour avoir les stocks à jour
+        await loadProducts();
+        
+        // Ouvrir directement le dialogue de modification avec les données fraîches
         handleOpenDialog(result.data);
         
         // Notification de succès
