@@ -44,7 +44,6 @@ import { useSnackbar } from 'notistack';
 import { BarcodeService } from '../../services/barcodeService';
 import BarcodeDisplay from '../../components/BarcodeDisplay';
 import BarcodePrintDialog from '../../components/BarcodePrintDialog';
-import ScannerDebugPanel from '../../components/ScannerDebugPanel';
 import BarcodeScannerService from '../../services/barcodeScannerService';
 import { productService } from '../../services/supabaseService';
 
@@ -188,14 +187,10 @@ const Products: React.FC = () => {
 
   // Fonctions de gestion du scan
   const handleBarcodeScanned = async (barcode: string) => {
-    console.log('🔍 Code-barres scanné détecté:', barcode);
-
     try {
       const result = await productService.getByBarcode(barcode);
       
       if (result.success && result.data) {
-        console.log('✅ Produit trouvé:', result.data);
-        
         // Recharger toutes les données pour avoir les stocks à jour
         await loadProducts();
         
@@ -203,11 +198,9 @@ const Products: React.FC = () => {
         const freshProduct = products.find(p => p.id === result.data.id);
         
         if (freshProduct) {
-          console.log('📊 Données fraîches du produit:', freshProduct);
           // Ouvrir le dialogue avec les données fraîches du store
           handleOpenDialog(freshProduct);
         } else {
-          console.log('⚠️ Produit non trouvé dans le store local, utilisation des données de la base');
           // Fallback: utiliser les données de la base si pas trouvé dans le store
           handleOpenDialog(result.data);
         }
@@ -218,8 +211,6 @@ const Products: React.FC = () => {
           autoHideDuration: 2000
         });
       } else {
-        console.log('❌ Produit non trouvé');
-        
         // Notification rapide d'erreur
         enqueueSnackbar(`Aucun produit trouvé avec le code-barres: ${barcode}`, { 
           variant: 'warning',
@@ -227,8 +218,6 @@ const Products: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('❌ Erreur lors de la recherche:', error);
-      
       // Notification d'erreur
       enqueueSnackbar('Erreur lors de la recherche du produit', { 
         variant: 'error',
@@ -244,18 +233,10 @@ const Products: React.FC = () => {
     scannerService.addScanListener(handleBarcodeScanned);
     scannerService.startListening();
 
-    // Debug: afficher l'état du scanner toutes les 2 secondes
-    const debugInterval = setInterval(() => {
-      const state = scannerService.getBufferState();
-      if (state.buffer.length > 0) {
-        console.log('🔍 État du scanner:', state);
-      }
-    }, 2000);
 
     return () => {
       scannerService.removeScanListener(handleBarcodeScanned);
       scannerService.stopListening();
-      clearInterval(debugInterval);
     };
   }, []);
 
@@ -280,15 +261,9 @@ const Products: React.FC = () => {
 
     try {
       // Log pour debug
-      console.log('🔍 Données à sauvegarder:', {
-        editingProduct,
-        formData,
-        barcode: formData.barcode
-      });
 
       if (editingProduct) {
         // Mode édition
-        console.log('📝 Mise à jour du produit:', editingProduct);
         const updateData = {
           name: formData.name,
           description: formData.description,
@@ -299,12 +274,10 @@ const Products: React.FC = () => {
           isActive: formData.isActive,
           barcode: formData.barcode || null, // S'assurer que c'est null si vide
         };
-        console.log('📝 Données de mise à jour:', updateData);
         
         await updateProduct(editingProduct, updateData);
       } else {
         // Mode création
-        console.log('➕ Création du produit');
         const createData = {
           name: formData.name,
           description: formData.description,
@@ -315,17 +288,13 @@ const Products: React.FC = () => {
           isActive: formData.isActive,
           barcode: formData.barcode || null, // S'assurer que c'est null si vide
         };
-        console.log('➕ Données de création:', createData);
         
         await addProduct(createData as any);
       }
       
-      console.log('✅ Produit sauvegardé avec succès');
       
       // Recharger les données pour afficher le code-barres
-      console.log('🔄 Rechargement des données...');
       await loadProducts();
-      console.log('✅ Données rechargées');
       
       handleCloseDialog();
     } catch (err) {
@@ -355,100 +324,9 @@ const Products: React.FC = () => {
             </Typography>
           </Box>
           
-          {/* Boutons de test pour debug */}
-          <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => {
-                // Utiliser un code-barres existant ou générer un nouveau
-                const existingProduct = products.find(p => p.barcode);
-                if (existingProduct) {
-                  const scannerService = BarcodeScannerService.getInstance();
-                  console.log('🧪 Test avec produit existant:', existingProduct.name, existingProduct.barcode);
-                  scannerService.testBarcode(existingProduct.barcode);
-                } else {
-                  // Générer un code de test si aucun produit n'a de code-barres
-                  const scannerService = BarcodeScannerService.getInstance();
-                  const testBarcode = '2001234567890';
-                  console.log('🧪 Test avec code générique:', testBarcode);
-                  scannerService.testBarcode(testBarcode);
-                }
-              }}
-              sx={{ fontSize: '0.75rem' }}
-            >
-              Test Scan
-            </Button>
-            
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => {
-                // Utiliser un code-barres existant si disponible
-                const existingProduct = products.find(p => p.barcode);
-                if (existingProduct) {
-                  const scannerService = BarcodeScannerService.getInstance();
-                  console.log('🧪 Test avec produit existant:', existingProduct.name, existingProduct.barcode);
-                  scannerService.testBarcode(existingProduct.barcode);
-                } else {
-                  alert('Aucun produit avec code-barres trouvé. Créez d\'abord un produit avec un code-barres.');
-                }
-              }}
-              sx={{ fontSize: '0.75rem' }}
-            >
-              Test Existant
-            </Button>
-            
-            <Button
-              size="small"
-              variant="outlined"
-              color="warning"
-              onClick={() => {
-                // Simuler un scan externe avec code partiel
-                const scannerService = BarcodeScannerService.getInstance();
-                const partialBarcode = '2008541223'; // 10 chiffres au lieu de 13
-                console.log('🧪 Test scan externe (code partiel):', partialBarcode);
-                scannerService.forceProcessBarcode(partialBarcode);
-              }}
-              sx={{ fontSize: '0.75rem' }}
-            >
-              Test Scan Externe
-            </Button>
-            
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              onClick={() => {
-                // Forcer le traitement du buffer actuel
-                const scannerService = BarcodeScannerService.getInstance();
-                console.log('🔧 Forcer le traitement du buffer actuel');
-                scannerService.forceProcessCurrentBuffer();
-              }}
-              sx={{ fontSize: '0.75rem' }}
-            >
-              Forcer Buffer
-            </Button>
-          </Box>
         </Box>
       </Box>
 
-      {/* Panneau de debug du scanner */}
-      <ScannerDebugPanel 
-        onBarcodeScanned={handleBarcodeScanned}
-      />
-
-      {/* Message d'information pour les utilisateurs */}
-      <Alert severity="info" sx={{ mb: 3, fontSize: '0.875rem' }}>
-        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-          🚧 Fonctionnalité en cours de développement
-        </Typography>
-        <Typography variant="body2">
-          Les éléments de test et de debug visibles sur cette page sont en cours d'ajout et de test. 
-          Veuillez ne pas tenir compte de ces éléments temporaires. 
-          La fonctionnalité de scan de codes-barres sera finalisée prochainement.
-        </Typography>
-      </Alert>
 
       {/* Barre de recherche */}
       <Box sx={{ mb: 3 }}>
@@ -520,12 +398,6 @@ const Products: React.FC = () => {
                 </TableHead>
                 <TableBody>
                   {filteredProducts.filter(product => product.id).map((product) => {
-                  // Log pour debug
-                  console.log('🔍 Affichage produit:', { 
-                    id: product.id, 
-                    name: product.name, 
-                    barcode: product.barcode 
-                  });
                   
                   return (
                   <TableRow key={product.id}>
