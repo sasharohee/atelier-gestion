@@ -103,8 +103,14 @@ const Products: React.FC = () => {
         id: productToUse.id,
         name: productToUse.name,
         stockQuantity: productToUse.stockQuantity,
-        source: freshProduct ? 'store local' : 'données passées'
+        source: freshProduct ? 'store local' : 'données passées',
+        rawProduct: productToUse
       });
+      
+      // Vérifier le stock dans le dialogue
+      if (productToUse.stockQuantity === 0 || productToUse.stockQuantity === undefined) {
+        console.log('⚠️ Stock à 0 dans le dialogue, données brutes:', JSON.stringify(productToUse, null, 2));
+      }
       
       setFormData({
         name: productToUse.name || '',
@@ -212,8 +218,15 @@ const Products: React.FC = () => {
               id: freshResult.data.id,
               name: freshResult.data.name,
               stockQuantity: freshResult.data.stockQuantity,
-              price: freshResult.data.price
+              price: freshResult.data.price,
+              rawData: freshResult.data
             });
+            
+            // Vérifier si le stock est correct
+            if (freshResult.data.stockQuantity === 0 || freshResult.data.stockQuantity === undefined) {
+              console.log('⚠️ Stock à 0 ou undefined, vérification des données brutes...');
+              console.log('🔍 Données brutes du produit:', JSON.stringify(freshResult.data, null, 2));
+            }
             
             // Ouvrir le dialogue avec les données fraîches de la base
             handleOpenDialog(freshResult.data);
