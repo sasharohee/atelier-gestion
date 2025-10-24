@@ -164,15 +164,15 @@ const Clients: React.FC = () => {
     }
   };
 
-  const handleCreateNewClient = async (clientFormData: any) => {
+  const handleCreateNewClient = async (clientFormData: any, skipDuplicateCheck = false) => {
     setIsSubmitting(true);
     setError(null);
 
     try {
       console.log('🚀 CLIENTS PAGE - Début de la création:', clientFormData);
       
-      // Vérifier si l'email existe déjà (seulement si un email est fourni)
-      if (clientFormData.email && clientFormData.email.trim()) {
+      // Vérifier si l'email existe déjà (seulement si un email est fourni et si on ne doit pas ignorer les doublons)
+      if (!skipDuplicateCheck && clientFormData.email && clientFormData.email.trim()) {
         const existingClient = clients.find(c => c.email && c.email.toLowerCase() === clientFormData.email.toLowerCase());
         if (existingClient) {
           setError(`Un client avec l'email "${clientFormData.email}" existe déjà.`);
@@ -336,24 +336,40 @@ const Clients: React.FC = () => {
     try {
       console.log('🚀 CLIENTS PAGE - Début de l\'import CSV:', clientsToImport.length, 'clients');
       
+      let importedCount = 0;
+      let skippedCount = 0;
+      
       // Importer chaque client
       for (const clientData of clientsToImport) {
-        // Vérifier si l'email existe déjà
-        const existingClient = clients.find(c => c.email.toLowerCase() === clientData.email.toLowerCase());
-        if (existingClient) {
-          console.warn(`⚠️ Client avec l'email "${clientData.email}" existe déjà, ignoré`);
-          continue;
+        // Vérifier si l'email existe déjà (seulement si un email est fourni)
+        if (clientData.email && clientData.email.trim()) {
+          const existingClient = clients.find(c => c.email && c.email.toLowerCase() === clientData.email.toLowerCase());
+          if (existingClient) {
+            console.warn(`⚠️ Client avec l'email "${clientData.email}" existe déjà, ignoré`);
+            skippedCount++;
+            continue;
+          }
         }
 
-        console.log('📋 CLIENTS PAGE - Import du client:', clientData.email);
+        console.log('📋 CLIENTS PAGE - Import du client:', clientData.email || clientData.firstName + ' ' + clientData.lastName);
         await addClient(clientData);
+        importedCount++;
       }
 
       // Recharger la liste des clients
       await loadClients();
       
       console.log('✅ CLIENTS PAGE - Import CSV terminé avec succès!');
-      alert(`✅ ${clientsToImport.length} clients importés avec succès !`);
+      
+      // Afficher un résumé détaillé
+      if (importedCount > 0 || skippedCount > 0) {
+        const message = `Import terminé : ${importedCount} client(s) importé(s)`;
+        if (skippedCount > 0) {
+          alert(`${message}, ${skippedCount} client(s) ignoré(s) (déjà présents)`);
+        } else {
+          alert(message);
+        }
+      }
       
     } catch (err: any) {
       console.error('💥 CLIENTS PAGE - Erreur lors de l\'import CSV:', err);
