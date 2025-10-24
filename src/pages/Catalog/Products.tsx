@@ -194,15 +194,38 @@ const Products: React.FC = () => {
         // Recharger toutes les données pour avoir les stocks à jour
         await loadProducts();
         
+        // Attendre un peu pour que le store soit mis à jour
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Trouver le produit dans le store local avec les données fraîches
         const freshProduct = products.find(p => p.id === result.data.id);
         
         if (freshProduct) {
+          console.log('📊 Données fraîches trouvées:', {
+            id: freshProduct.id,
+            name: freshProduct.name,
+            stockQuantity: freshProduct.stockQuantity
+          });
           // Ouvrir le dialogue avec les données fraîches du store
           handleOpenDialog(freshProduct);
         } else {
-          // Fallback: utiliser les données de la base si pas trouvé dans le store
-          handleOpenDialog(result.data);
+          console.log('⚠️ Produit non trouvé dans le store local, rechargement forcé...');
+          // Recharger une fois de plus et réessayer
+          await loadProducts();
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const retryProduct = products.find(p => p.id === result.data.id);
+          
+          if (retryProduct) {
+            console.log('📊 Données fraîches après retry:', {
+              id: retryProduct.id,
+              name: retryProduct.name,
+              stockQuantity: retryProduct.stockQuantity
+            });
+            handleOpenDialog(retryProduct);
+          } else {
+            console.log('❌ Produit toujours non trouvé, utilisation des données de la base');
+            handleOpenDialog(result.data);
+          }
         }
         
         // Notification de succès
