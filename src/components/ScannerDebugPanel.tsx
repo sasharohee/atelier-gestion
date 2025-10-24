@@ -175,6 +175,18 @@ Si le buffer contient des chiffres, cliquez sur "Forcer Buffer" pour traiter le 
           >
             État Scanner
           </Button>
+          
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              console.log('🧪 Test direct de handleBarcodeScanned avec:', testBarcode);
+              onBarcodeScanned(testBarcode);
+            }}
+            color="success"
+          >
+            Test Direct
+          </Button>
         </Box>
 
         <Typography variant="caption" color="text.secondary">
