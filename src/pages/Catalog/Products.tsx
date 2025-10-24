@@ -203,43 +203,30 @@ const Products: React.FC = () => {
       const result = await productService.getByBarcode(barcode);
       
       if (result.success && result.data) {
-        // Recharger toutes les données pour avoir les stocks à jour
-        await loadProducts();
-        
-        // Attendre un peu pour que le store soit mis à jour
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        // Trouver le produit dans le store local avec les données fraîches
-        const freshProduct = products.find(p => p.id === result.data.id);
-        
-        if (freshProduct) {
-          console.log('📊 Données fraîches trouvées:', {
-            id: freshProduct.id,
-            name: freshProduct.name,
-            stockQuantity: freshProduct.stockQuantity
-          });
-          // Ouvrir le dialogue avec les données fraîches du store
-          handleOpenDialog(freshProduct);
-        } else {
-          console.log('⚠️ Produit non trouvé dans le store local, récupération directe...');
-          // Récupérer directement le produit depuis la base avec les données fraîches
-          try {
-            const freshResult = await productService.getByBarcode(barcode);
-            if (freshResult.success && freshResult.data) {
-              console.log('📊 Données fraîches récupérées:', {
-                id: freshResult.data.id,
-                name: freshResult.data.name,
-                stockQuantity: freshResult.data.stockQuantity
-              });
-              handleOpenDialog(freshResult.data);
-            } else {
-              console.log('❌ Impossible de récupérer les données fraîches, utilisation des données de base');
-              handleOpenDialog(result.data);
-            }
-          } catch (error) {
-            console.log('❌ Erreur lors de la récupération des données fraîches:', error);
+        // Récupérer directement les données fraîches depuis la base de données
+        console.log('🔄 Récupération des données fraîches depuis la base...');
+        try {
+          const freshResult = await productService.getByBarcode(barcode);
+          if (freshResult.success && freshResult.data) {
+            console.log('📊 Données fraîches récupérées:', {
+              id: freshResult.data.id,
+              name: freshResult.data.name,
+              stockQuantity: freshResult.data.stockQuantity,
+              price: freshResult.data.price
+            });
+            
+            // Ouvrir le dialogue avec les données fraîches de la base
+            handleOpenDialog(freshResult.data);
+            
+            // Recharger les données en arrière-plan pour synchroniser le store
+            loadProducts();
+          } else {
+            console.log('❌ Impossible de récupérer les données fraîches, utilisation des données de base');
             handleOpenDialog(result.data);
           }
+        } catch (error) {
+          console.log('❌ Erreur lors de la récupération des données fraîches:', error);
+          handleOpenDialog(result.data);
         }
         
         // Notification de succès
