@@ -24,7 +24,7 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
     buffer: '',
     isListening: false
   });
-  const [testBarcode, setTestBarcode] = useState('2008541223856');
+  const [testBarcode, setTestBarcode] = useState('2009304971731');
   const [lastScanned, setLastScanned] = useState<string | null>(null);
 
   useEffect(() => {
