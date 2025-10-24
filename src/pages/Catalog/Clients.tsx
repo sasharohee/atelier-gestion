@@ -26,6 +26,8 @@ import {
   Refresh as RefreshIcon,
   Upload as UploadIcon,
   Download as DownloadIcon,
+  Person as PersonIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import ClientForm from '../../components/ClientForm';
@@ -434,12 +436,36 @@ const Clients: React.FC = () => {
   return (
     <Box>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-          Clients
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Base de données clients
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box>
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+              Clients
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Base de données clients
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ 
+              background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+              color: 'white',
+              px: 3,
+              py: 1.5,
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                {clients.length}
+              </Typography>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                {clients.length === 1 ? 'client' : 'clients'}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
       </Box>
 
       <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -516,6 +542,96 @@ const Clients: React.FC = () => {
 
         
         {isLoading && <CircularProgress size={20} />}
+      </Box>
+
+      {/* Statistiques des clients */}
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Card sx={{ 
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          color: 'white',
+          minWidth: 200
+        }}>
+          <CardContent sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {clients.length}
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Total clients
+                </Typography>
+              </Box>
+              <Box sx={{ 
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: '50%',
+                p: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <PersonIcon sx={{ fontSize: 24 }} />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ 
+          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+          color: 'white',
+          minWidth: 200
+        }}>
+          <CardContent sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {clients.filter(c => c.companyName && c.companyName.trim() !== '').length}
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Entreprises
+                </Typography>
+              </Box>
+              <Box sx={{ 
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: '50%',
+                p: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <BusinessIcon sx={{ fontSize: 24 }} />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ 
+          background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+          color: 'white',
+          minWidth: 200
+        }}>
+          <CardContent sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box>
+                <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {clients.filter(c => c.email && c.email.trim() !== '').length}
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Avec email
+                </Typography>
+              </Box>
+              <Box sx={{ 
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: '50%',
+                p: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <EmailIcon sx={{ fontSize: 24 }} />
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
       </Box>
 
       {/* Affichage des erreurs */}
