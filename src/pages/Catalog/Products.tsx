@@ -94,15 +94,27 @@ const Products: React.FC = () => {
     setError(null);
     if (product) {
       setEditingProduct(product.id);
+      
+      // Toujours utiliser les données fraîches du store si disponible
+      const freshProduct = products.find(p => p.id === product.id);
+      const productToUse = freshProduct || product;
+      
+      console.log('📊 Données utilisées pour le dialogue:', {
+        id: productToUse.id,
+        name: productToUse.name,
+        stockQuantity: productToUse.stockQuantity,
+        source: freshProduct ? 'store local' : 'données passées'
+      });
+      
       setFormData({
-        name: product.name || '',
-        description: product.description || '',
-        category: product.category || 'smartphone',
-        price: product.price || 0,
-        stockQuantity: product.stockQuantity || 0,
-        minStockLevel: product.minStockLevel || 1,
-        isActive: product.isActive !== undefined ? product.isActive : true,
-        barcode: product.barcode || '',
+        name: productToUse.name || '',
+        description: productToUse.description || '',
+        category: productToUse.category || 'smartphone',
+        price: productToUse.price || 0,
+        stockQuantity: productToUse.stockQuantity || 0,
+        minStockLevel: productToUse.minStockLevel || 1,
+        isActive: productToUse.isActive !== undefined ? productToUse.isActive : true,
+        barcode: productToUse.barcode || '',
       });
     } else {
       setEditingProduct(null);
