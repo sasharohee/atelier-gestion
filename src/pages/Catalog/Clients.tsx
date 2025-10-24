@@ -178,20 +178,19 @@ const Clients: React.FC = () => {
     }
   };
 
-  const handleCreateNewClient = async (clientFormData: any, skipDuplicateCheck = false) => {
+  const handleCreateNewClient = async (clientFormData: any, skipDuplicateCheck = true) => {
     setIsSubmitting(true);
     setError(null);
 
     try {
       console.log('🚀 CLIENTS PAGE - Début de la création:', clientFormData);
       
-      // Vérifier si l'email existe déjà (seulement si un email est fourni et si on ne doit pas ignorer les doublons)
-      if (!skipDuplicateCheck && clientFormData.email && clientFormData.email.trim()) {
-        const existingClient = clients.find(c => c.email && c.email.toLowerCase() === clientFormData.email.toLowerCase());
-        if (existingClient) {
-          setError(`Un client avec l'email "${clientFormData.email}" existe déjà.`);
-          return;
-        }
+      // Ne plus vérifier les doublons - permettre la création même avec des emails existants
+      console.log('📝 CLIENTS PAGE - Création autorisée même avec email existant');
+      
+      // Si pas d'email, on peut créer sans problème
+      if (!clientFormData.email || !clientFormData.email.trim()) {
+        console.log('📝 CLIENTS PAGE - Aucun email fourni, création directe autorisée');
       }
 
       // Générer un nom par défaut si ni prénom ni nom ne sont fournis
@@ -247,7 +246,7 @@ const Clients: React.FC = () => {
 
       console.log('📋 CLIENTS PAGE - Données préparées:', clientData);
 
-      await addClient(clientData);
+      await addClient(clientData, true); // skipDuplicateCheck = true pour la création manuelle
 
       setClientFormOpen(false);
       

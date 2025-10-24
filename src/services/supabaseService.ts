@@ -1047,11 +1047,35 @@ export const clientService = {
       console.log('📤 CLIENT SERVICE - UTILISATION DE LA MÉTHODE DIRECTE (tous champs supportés)');
       
       
+      // Gérer les emails en doublon en ajoutant un suffixe unique
+      let finalEmail = client.email || '';
+      if (finalEmail && finalEmail.trim() && skipDuplicateCheck) {
+        console.log('🔍 CLIENT SERVICE - Vérification doublon pour email:', finalEmail);
+        // Vérifier si l'email existe déjà
+        const { data: existingClients } = await supabase
+          .from('clients')
+          .select('id, email')
+          .eq('user_id', currentUserId)
+          .eq('email', finalEmail.toLowerCase());
+        
+        if (existingClients && existingClients.length > 0) {
+          // Générer un email unique en ajoutant un suffixe
+          const timestamp = Date.now();
+          const emailParts = finalEmail.split('@');
+          if (emailParts.length === 2) {
+            finalEmail = `${emailParts[0]}+${timestamp}@${emailParts[1]}`;
+            console.log('🔄 CLIENT SERVICE - Email modifié pour éviter le doublon:', finalEmail);
+          }
+        }
+      } else if (!finalEmail || !finalEmail.trim()) {
+        console.log('📝 CLIENT SERVICE - Aucun email fourni, création sans vérification de doublon');
+      }
+      
       // Convertir les noms de propriétés camelCase vers snake_case
       const clientData = {
         first_name: client.firstName || '',
         last_name: client.lastName || '',
-        email: client.email || '',
+        email: finalEmail,
         phone: client.phone || '',
         address: client.address || '',
         notes: client.notes || '',
