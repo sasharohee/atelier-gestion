@@ -199,8 +199,18 @@ const Products: React.FC = () => {
         // Recharger toutes les données pour avoir les stocks à jour
         await loadProducts();
         
-        // Ouvrir directement le dialogue de modification avec les données fraîches
-        handleOpenDialog(result.data);
+        // Trouver le produit dans le store local avec les données fraîches
+        const freshProduct = products.find(p => p.id === result.data.id);
+        
+        if (freshProduct) {
+          console.log('📊 Données fraîches du produit:', freshProduct);
+          // Ouvrir le dialogue avec les données fraîches du store
+          handleOpenDialog(freshProduct);
+        } else {
+          console.log('⚠️ Produit non trouvé dans le store local, utilisation des données de la base');
+          // Fallback: utiliser les données de la base si pas trouvé dans le store
+          handleOpenDialog(result.data);
+        }
         
         // Notification de succès
         enqueueSnackbar(`Produit scanné: ${result.data.name}`, { 
