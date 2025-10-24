@@ -16,6 +16,13 @@ import {
   Avatar,
   Alert,
   CircularProgress,
+  Checkbox,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -28,6 +35,8 @@ import {
   Download as DownloadIcon,
   Person as PersonIcon,
   Business as BusinessIcon,
+  SelectAll as SelectAllIcon,
+  DeleteSweep as DeleteSweepIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import ClientForm from '../../components/ClientForm';
@@ -43,6 +52,11 @@ const Clients: React.FC = () => {
   const [editClientFormOpen, setEditClientFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
+  
+  // États pour la sélection multiple
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadClientsData = async () => {
@@ -249,6 +263,65 @@ const Clients: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Fonctions pour la sélection multiple
+  const handleSelectAll = () => {
+    if (selectedClients.length === clients.length) {
+      setSelectedClients([]);
+    } else {
+      setSelectedClients(clients.map(client => client.id));
+    }
+  };
+
+  const handleSelectClient = (clientId: string) => {
+    setSelectedClients(prev => 
+      prev.includes(clientId) 
+        ? prev.filter(id => id !== clientId)
+        : [...prev, clientId]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selectedClients.length === 0) return;
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      console.log('🗑️ CLIENTS PAGE - Suppression en masse de', selectedClients.length, 'clients');
+      
+      // Supprimer chaque client sélectionné
+      for (const clientId of selectedClients) {
+        await deleteClient(clientId);
+      }
+
+      // Recharger la liste des clients
+      await loadClients();
+      
+      // Réinitialiser la sélection
+      setSelectedClients([]);
+      setDeleteDialogOpen(false);
+      
+      console.log('✅ CLIENTS PAGE - Suppression en masse terminée!');
+      alert(`✅ ${selectedClients.length} client(s) supprimé(s) avec succès !`);
+      
+    } catch (err: any) {
+      console.error('💥 CLIENTS PAGE - Erreur lors de la suppression en masse:', err);
+      const errorMessage = err?.message || 'Erreur lors de la suppression. Veuillez réessayer.';
+      setError(errorMessage);
+      alert(`❌ ${errorMessage}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
   };
 
   const handleUpdateClient = async (clientFormData: any) => {
@@ -557,7 +630,33 @@ const Clients: React.FC = () => {
         >
           Exporter CSV
         </Button>
-        
+
+        {/* Boutons de sélection multiple */}
+        {selectedClients.length > 0 && (
+          <>
+            <Chip
+              label={`${selectedClients.length} sélectionné(s)`}
+              color="primary"
+              variant="outlined"
+              sx={{ ml: 2 }}
+            />
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<DeleteSweepIcon />}
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              sx={{
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                }
+              }}
+            >
+              Supprimer sélection
+            </Button>
+          </>
+        )}
 
         <Button 
           variant="outlined" 
@@ -691,6 +790,14 @@ const Clients: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        indeterminate={selectedClients.length > 0 && selectedClients.length < clients.length}
+                        checked={clients.length > 0 && selectedClients.length === clients.length}
+                        onChange={handleSelectAll}
+                        color="primary"
+                      />
+                    </TableCell>
                     <TableCell>Client</TableCell>
                     <TableCell>Contact</TableCell>
                     <TableCell>Entreprise</TableCell>
@@ -703,7 +810,7 @@ const Clients: React.FC = () => {
                 <TableBody>
                   {clients.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
+                      <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body2" color="text.secondary">
                           Aucun client trouvé
                         </Typography>
@@ -712,6 +819,13 @@ const Clients: React.FC = () => {
                   ) : (
                     clients.map((client) => (
                       <TableRow key={client.id}>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={selectedClients.includes(client.id)}
+                            onChange={() => handleSelectClient(client.id)}
+                            color="primary"
+                          />
+                        </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <Avatar sx={{ mr: 2 }}>
@@ -883,6 +997,38 @@ const Clients: React.FC = () => {
         onClose={handleCloseCsvImport}
         onImport={handleCsvImport}
       />
+
+      {/* Dialog de confirmation de suppression en masse */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          Confirmer la suppression
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Êtes-vous sûr de vouloir supprimer {selectedClients.length} client(s) sélectionné(s) ?
+            Cette action est irréversible.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog} color="primary">
+            Annuler
+          </Button>
+          <Button 
+            onClick={confirmBulkDelete} 
+            color="error" 
+            variant="contained"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={20} /> : <DeleteSweepIcon />}
+          >
+            {isDeleting ? 'Suppression...' : 'Supprimer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
