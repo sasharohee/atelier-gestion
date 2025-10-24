@@ -1049,7 +1049,13 @@ export const clientService = {
       
       // Gérer les emails en doublon en ajoutant un suffixe unique
       let finalEmail = client.email || '';
-      if (finalEmail && finalEmail.trim() && skipDuplicateCheck) {
+      
+      // Si pas d'email ou email vide, générer un email unique pour éviter la contrainte
+      if (!finalEmail || !finalEmail.trim()) {
+        const timestamp = Date.now();
+        finalEmail = `client-${timestamp}@atelier.local`;
+        console.log('📝 CLIENT SERVICE - Aucun email fourni, génération d\'un email unique:', finalEmail);
+      } else if (finalEmail && finalEmail.trim() && skipDuplicateCheck) {
         console.log('🔍 CLIENT SERVICE - Vérification doublon pour email:', finalEmail);
         // Vérifier si l'email existe déjà
         const { data: existingClients } = await supabase
@@ -1067,8 +1073,6 @@ export const clientService = {
             console.log('🔄 CLIENT SERVICE - Email modifié pour éviter le doublon:', finalEmail);
           }
         }
-      } else if (!finalEmail || !finalEmail.trim()) {
-        console.log('📝 CLIENT SERVICE - Aucun email fourni, création sans vérification de doublon');
       }
       
       // Convertir les noms de propriétés camelCase vers snake_case

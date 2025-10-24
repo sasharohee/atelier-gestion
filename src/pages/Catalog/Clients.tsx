@@ -190,7 +190,7 @@ const Clients: React.FC = () => {
       
       // Si pas d'email, on peut créer sans problème
       if (!clientFormData.email || !clientFormData.email.trim()) {
-        console.log('📝 CLIENTS PAGE - Aucun email fourni, création directe autorisée');
+        console.log('📝 CLIENTS PAGE - Aucun email fourni, génération d\'un email unique automatique');
       }
 
       // Générer un nom par défaut si ni prénom ni nom ne sont fournis
@@ -845,7 +845,7 @@ const Clients: React.FC = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                               <EmailIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
                               <Typography variant="body2">
-                                {client.email}
+                                {client.email && !client.email.includes('@atelier.local') ? client.email : 'Aucun email'}
                               </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
