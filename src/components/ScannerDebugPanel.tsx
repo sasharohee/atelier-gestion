@@ -24,7 +24,7 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
     buffer: '',
     isListening: false
   });
-  const [testBarcode, setTestBarcode] = useState('2001234567890');
+  const [testBarcode, setTestBarcode] = useState('2008541223856');
   const [lastScanned, setLastScanned] = useState<string | null>(null);
 
   useEffect(() => {
@@ -71,7 +71,7 @@ const ScannerDebugPanel: React.FC<ScannerDebugPanelProps> = ({ onBarcodeScanned 
   };
 
   return (
-    <Card variant="outlined" sx={{ mb: 2 }}>
+    <Card variant="outlined" sx={{ mb: 2 }} data-debug-panel>
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
           <DebugIcon color="primary" />
