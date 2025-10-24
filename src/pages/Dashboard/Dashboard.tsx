@@ -22,6 +22,7 @@ import {
   Fade,
   Collapse,
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 import {
   Build as BuildIcon,
@@ -40,6 +41,10 @@ import {
   Dashboard as DashboardIcon,
   Assignment as AssignmentIcon,
   Today as TodayIcon,
+  PointOfSale as CashRegisterIcon,
+  Description as QuoteIcon,
+  People as PeopleIcon,
+  Receipt as SalesIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -52,6 +57,7 @@ import { formatFromEUR } from '../../utils/currencyUtils';
 import { demoDataService } from '../../services/demoDataService';
 import WhatsNewButton from '../../components/WhatsNewButton';
 import { whatsNewItems } from '../../config/whatsNew';
+import SimplifiedSalesDialog from '../../components/SimplifiedSalesDialog';
 
 // Styles CSS pour les animations
 const pulseAnimation = `
@@ -75,6 +81,8 @@ const Dashboard: React.FC = () => {
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [unreadNewsCount, setUnreadNewsCount] = useState(0);
+  const [simplifiedSaleDialogOpen, setSimplifiedSaleDialogOpen] = useState(false);
+  const navigate = useNavigate();
   
   // États pour gérer les sections collapsibles
   const [expandedSections, setExpandedSections] = useState({
@@ -585,6 +593,328 @@ const Dashboard: React.FC = () => {
               </Badge>
             </Box>
           </Box>
+        </CardContent>
+      </Card>
+
+      {/* Liens rapides vers les pages essentielles */}
+      <Card sx={{ mb: 4, boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DashboardIcon /> Accès rapides
+          </Typography>
+          <Grid container spacing={3}>
+            {/* Ventes */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+                  color: 'white',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(25, 118, 210, 0.3)',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                    opacity: 0.3,
+                  },
+                }}
+                onClick={() => navigate('/app/transaction/sales')}
+              >
+                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography 
+                        color="rgba(255, 255, 255, 0.8)" 
+                        gutterBottom 
+                        variant="body2"
+                        sx={{ fontWeight: 500 }}
+                      >
+                        Ventes
+                      </Typography>
+                      <Typography 
+                        variant="h5" 
+                        component="div" 
+                        sx={{ 
+                          fontWeight: 700,
+                          color: 'white',
+                          mb: 1
+                        }}
+                      >
+                        Gestion des ventes
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="rgba(255, 255, 255, 0.7)" 
+                        sx={{ fontWeight: 500 }}
+                      >
+                        Facturation et historique
+                      </Typography>
+                    </Box>
+                    <Avatar
+                      sx={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        width: 64,
+                        height: 64,
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                        }
+                      }}
+                    >
+                      <SalesIcon />
+                    </Avatar>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Caisse */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
+                  color: 'white',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(46, 125, 50, 0.3)',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                    opacity: 0.3,
+                  },
+                }}
+                onClick={() => setSimplifiedSaleDialogOpen(true)}
+              >
+                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography 
+                        color="rgba(255, 255, 255, 0.8)" 
+                        gutterBottom 
+                        variant="body2"
+                        sx={{ fontWeight: 500 }}
+                      >
+                        Caisse
+                      </Typography>
+                      <Typography 
+                        variant="h5" 
+                        component="div" 
+                        sx={{ 
+                          fontWeight: 700,
+                          color: 'white',
+                          mb: 1
+                        }}
+                      >
+                        Vente rapide
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="rgba(255, 255, 255, 0.7)" 
+                        sx={{ fontWeight: 500 }}
+                      >
+                        Interface simplifiée
+                      </Typography>
+                    </Box>
+                    <Avatar
+                      sx={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        width: 64,
+                        height: 64,
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                        }
+                      }}
+                    >
+                      <CashRegisterIcon />
+                    </Avatar>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Devis */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #ed6c02 0%, #e65100 100%)',
+                  color: 'white',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(237, 108, 2, 0.3)',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                    opacity: 0.3,
+                  },
+                }}
+                onClick={() => navigate('/app/transaction/quotes')}
+              >
+                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography 
+                        color="rgba(255, 255, 255, 0.8)" 
+                        gutterBottom 
+                        variant="body2"
+                        sx={{ fontWeight: 500 }}
+                      >
+                        Devis
+                      </Typography>
+                      <Typography 
+                        variant="h5" 
+                        component="div" 
+                        sx={{ 
+                          fontWeight: 700,
+                          color: 'white',
+                          mb: 1
+                        }}
+                      >
+                        Estimations
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="rgba(255, 255, 255, 0.7)" 
+                        sx={{ fontWeight: 500 }}
+                      >
+                        Devis et propositions
+                      </Typography>
+                    </Box>
+                    <Avatar
+                      sx={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        width: 64,
+                        height: 64,
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                        }
+                      }}
+                    >
+                      <QuoteIcon />
+                    </Avatar>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Clients */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  background: 'linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%)',
+                  color: 'white',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(123, 31, 162, 0.3)',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                    opacity: 0.3,
+                  },
+                }}
+                onClick={() => navigate('/app/transaction/clients')}
+              >
+                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box>
+                      <Typography 
+                        color="rgba(255, 255, 255, 0.8)" 
+                        gutterBottom 
+                        variant="body2"
+                        sx={{ fontWeight: 500 }}
+                      >
+                        Clients
+                      </Typography>
+                      <Typography 
+                        variant="h5" 
+                        component="div" 
+                        sx={{ 
+                          fontWeight: 700,
+                          color: 'white',
+                          mb: 1
+                        }}
+                      >
+                        Base clients
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="rgba(255, 255, 255, 0.7)" 
+                        sx={{ fontWeight: 500 }}
+                      >
+                        Gestion des contacts
+                      </Typography>
+                    </Box>
+                    <Avatar
+                      sx={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        width: 64,
+                        height: 64,
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                        }
+                      }}
+                    >
+                      <PeopleIcon />
+                    </Avatar>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
         </CardContent>
       </Card>
 
@@ -1858,6 +2188,12 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </Box> */}
+
+      {/* Dialog pour la vente simplifiée */}
+      <SimplifiedSalesDialog
+        open={simplifiedSaleDialogOpen}
+        onClose={() => setSimplifiedSaleDialogOpen(false)}
+      />
     </Box>
   );
 };
