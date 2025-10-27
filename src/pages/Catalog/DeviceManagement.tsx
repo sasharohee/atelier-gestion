@@ -49,6 +49,8 @@ import {
   Switch,
   FormControlLabel,
   CircularProgress,
+  Checkbox,
+  Toolbar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -72,6 +74,8 @@ import {
   Inventory as InventoryIcon,
   Settings as SettingsIcon,
   Build as BuildIcon,
+  CloudUpload as UploadIcon,
+  CloudDownload as DownloadIcon,
 } from '@mui/icons-material';
 import CategoryIconDisplay from '../../components/CategoryIconDisplay';
 import CategoryIconGrid from '../../components/CategoryIconGrid';
@@ -169,6 +173,14 @@ const DeviceManagement: React.FC = () => {
   // États pour le chargement
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importType, setImportType] = useState<'brands' | 'models' | 'categories'>('brands');
+  
+  // États pour la suppression en lot
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteType, setBulkDeleteType] = useState<'brands' | 'models' | 'categories'>('brands');
 
   // Charger les données au montage du composant
   useEffect(() => {
@@ -644,6 +656,301 @@ const DeviceManagement: React.FC = () => {
     setServiceAssociationDialogOpen(true);
   };
 
+  // Fonctions pour l'importation CSV
+  const handleDownloadTemplate = (type: 'brands' | 'models' | 'categories') => {
+    const fileName = type === 'brands' ? 'brands_import.csv' : 
+                   type === 'models' ? 'models_import.csv' : 
+                   'categories_import.csv';
+    const link = document.createElement('a');
+    link.href = `/${fileName}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      // Parser CSV simple qui gère les guillemets
+      const parseCSVLine = (line: string): string[] => {
+        const result: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        
+        result.push(current.trim());
+        return result;
+      };
+      
+      const headers = parseCSVLine(lines[0]);
+      
+      console.log('📄 Fichier CSV analysé:', {
+        totalLines: lines.length,
+        headers: headers,
+        firstDataLine: lines[1] || 'Aucune donnée'
+      });
+      
+      let successCount = 0;
+      let errorCount = 0;
+
+      if (importType === 'categories') {
+        // Importer des catégories
+        for (let i = 1; i < lines.length; i++) {
+          const values = parseCSVLine(lines[i]);
+          const category: any = {};
+          
+          headers.forEach((header, index) => {
+            category[header] = values[index] || '';
+          });
+
+          console.log(`🔍 Traitement de la catégorie ${i}:`, category);
+
+          try {
+            // Vérifier que le nom de la catégorie existe
+            if (!category.name || category.name.trim() === '') {
+              console.warn(`⚠️ Catégorie ${i} ignorée: nom manquant`);
+              errorCount++;
+              continue;
+            }
+
+            console.log(`📤 Création de la catégorie: ${category.name}`);
+
+            const result = await deviceCategoryService.create({
+              name: category.name,
+              description: category.description || `Catégorie ${category.name}`,
+              icon: category.icon || category.name.toLowerCase().replace(/\s+/g, '-'),
+            });
+            
+            if (result.success) {
+              console.log(`✅ Catégorie créée avec succès: ${category.name}`);
+              successCount++;
+            } else {
+              console.error(`❌ Erreur lors de la création de la catégorie ${category.name}:`, result.error);
+              errorCount++;
+            }
+          } catch (err) {
+            console.error(`❌ Erreur lors de l'importation de la catégorie ${category.name}:`, err);
+            errorCount++;
+          }
+        }
+      } else if (importType === 'brands') {
+        // Importer des marques
+        for (let i = 1; i < lines.length; i++) {
+          const values = parseCSVLine(lines[i]);
+          const brand: any = {};
+          
+          headers.forEach((header, index) => {
+            brand[header] = values[index] || '';
+          });
+
+          console.log(`🔍 Traitement de la marque ${i}:`, brand);
+
+          try {
+            // Vérifier que le nom de la marque existe
+            if (!brand.name || brand.name.trim() === '') {
+              console.warn(`⚠️ Marque ${i} ignorée: nom manquant`);
+              errorCount++;
+              continue;
+            }
+
+            // Trouver l'ID de la catégorie par son nom
+            const categoryIds: string[] = [];
+            if (brand.categoryIds) {
+              const categoryNames = brand.categoryIds.split(';');
+              for (const catName of categoryNames) {
+                const category = allCategories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+                if (category) {
+                  categoryIds.push(category.id);
+                  console.log(`✅ Catégorie trouvée: ${catName} (ID: ${category.id})`);
+                } else {
+                  console.warn(`⚠️ Catégorie non trouvée: ${catName}. Veuillez d'abord créer cette catégorie.`);
+                  // Ne pas créer automatiquement les catégories pour éviter les doublons
+                }
+              }
+            }
+
+            console.log(`📤 Création de la marque: ${brand.name} avec catégories:`, categoryIds);
+
+            try {
+              await brandService.create({
+                name: brand.name,
+                description: brand.description || '',
+                categoryIds: categoryIds,
+              });
+              console.log(`✅ Marque créée avec succès: ${brand.name}`);
+              successCount++;
+            } catch (brandError) {
+              console.error(`❌ Erreur lors de la création de la marque ${brand.name}:`, brandError);
+              errorCount++;
+            }
+          } catch (err) {
+            console.error(`❌ Erreur lors de l'importation de la marque ${brand.name}:`, err);
+            errorCount++;
+          }
+        }
+      } else {
+        // Importer des modèles
+        for (let i = 1; i < lines.length; i++) {
+          const values = parseCSVLine(lines[i]);
+          const model: any = {};
+          
+          headers.forEach((header, index) => {
+            model[header] = values[index] || '';
+          });
+
+          console.log(`🔍 Traitement du modèle ${i}:`, model);
+
+          try {
+            // Vérifier que le nom du modèle existe
+            if (!model.name || model.name.trim() === '') {
+              console.warn(`⚠️ Modèle ${i} ignoré: nom manquant`);
+              errorCount++;
+              continue;
+            }
+
+            // Trouver l'ID de la marque par son nom
+            let brand = allBrands.find(b => b.name.toLowerCase() === model.brandName.toLowerCase());
+            if (!brand) {
+              console.error(`❌ Marque non trouvée: ${model.brandName}`);
+              errorCount++;
+              continue;
+            }
+
+            // Trouver l'ID de la catégorie par son nom
+            const category = allCategories.find(c => c.name.toLowerCase() === model.categoryName.toLowerCase());
+            if (!category) {
+              console.error(`❌ Catégorie non trouvée: ${model.categoryName}. Veuillez d'abord créer cette catégorie.`);
+              errorCount++;
+              continue;
+            }
+
+            console.log(`📤 Création du modèle: ${model.name} pour marque: ${brand.name} et catégorie: ${category.name}`);
+
+            const result = await deviceModelService.create({
+              name: model.name,
+              description: model.description || '',
+              brandId: brand.id,
+              categoryId: category.id,
+            });
+            
+            if (result.success) {
+              console.log(`✅ Modèle créé avec succès: ${model.name}`);
+              successCount++;
+            } else {
+              console.error(`❌ Erreur lors de la création du modèle ${model.name}:`, result.error);
+              errorCount++;
+            }
+          } catch (err) {
+            console.error(`❌ Erreur lors de l'importation du modèle ${model.name}:`, err);
+            errorCount++;
+          }
+        }
+      }
+
+      setSuccess(`Importation terminée : ${successCount} éléments importés avec succès${errorCount > 0 ? `, ${errorCount} erreurs` : ''}`);
+      await loadData();
+      setImportDialogOpen(false);
+    } catch (err) {
+      console.error('Erreur lors de l\'importation:', err);
+      setError('Erreur lors de l\'importation du fichier CSV');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fonctions pour la suppression en lot
+  const handleSelectAll = (items: any[], type: 'brands' | 'models' | 'categories') => {
+    if (selectedItems.length === items.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(items.map(item => item.id));
+    }
+  };
+
+  const handleSelectItem = (itemId: string) => {
+    setSelectedItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.length === 0) return;
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const itemId of selectedItems) {
+        try {
+          if (bulkDeleteType === 'brands') {
+            await brandService.delete(itemId);
+          } else if (bulkDeleteType === 'models') {
+            const result = await deviceModelService.delete(itemId);
+            if (!result.success) {
+              throw new Error(result.error);
+            }
+          } else if (bulkDeleteType === 'categories') {
+            const result = await deviceCategoryService.delete(itemId);
+            if (!result.success) {
+              throw new Error(result.error);
+            }
+          }
+          successCount++;
+        } catch (err) {
+          console.error(`Erreur lors de la suppression de l'élément ${itemId}:`, err);
+          errorCount++;
+        }
+      }
+
+      setSuccess(`Suppression terminée : ${successCount} éléments supprimés avec succès${errorCount > 0 ? `, ${errorCount} erreurs` : ''}`);
+      setSelectedItems([]);
+      setBulkDeleteDialogOpen(false);
+      await loadData();
+    } catch (err) {
+      console.error('Erreur lors de la suppression en lot:', err);
+      setError('Erreur lors de la suppression en lot');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openBulkDeleteDialog = (type: 'brands' | 'models' | 'categories') => {
+    if (selectedItems.length === 0) {
+      setError('Veuillez sélectionner au moins un élément à supprimer');
+      return;
+    }
+    setBulkDeleteType(type);
+    setBulkDeleteDialogOpen(true);
+  };
+
   // Filtrer les marques
   const filteredBrands = (allBrands || []).filter(brand => {
     const matchesSearch = (brand.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -696,9 +1003,19 @@ const DeviceManagement: React.FC = () => {
         </Alert>
       )}
 
+      {/* Affichage des succès */}
+      {success && (
+        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+          {success}
+        </Alert>
+      )}
+
       {/* Onglets */}
       <Paper sx={{ mb: 3 }}>
-        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+        <Tabs value={activeTab} onChange={(e, newValue) => {
+          setActiveTab(newValue);
+          setSelectedItems([]); // Réinitialiser la sélection lors du changement d'onglet
+        }}>
           <Tab label="Marques" icon={<BrandingIcon />} />
           <Tab label="Catégories" icon={<CategoryIcon />} />
           <Tab label="Modèles" icon={<ModelIcon />} />
@@ -712,16 +1029,48 @@ const DeviceManagement: React.FC = () => {
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Marques ({filteredBrands.length})</Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  resetBrandForm();
-                  setBrandDialogOpen(true);
-                }}
-              >
-                Ajouter une marque
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={() => handleDownloadTemplate('brands')}
+                  size="small"
+                >
+                  Télécharger le modèle CSV
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<UploadIcon />}
+                  onClick={() => {
+                    setImportType('brands');
+                    setImportDialogOpen(true);
+                  }}
+                  size="small"
+                >
+                  Importer CSV
+                </Button>
+                {selectedItems.length > 0 && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => openBulkDeleteDialog('brands')}
+                    size="small"
+                  >
+                    Supprimer ({selectedItems.length})
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    resetBrandForm();
+                    setBrandDialogOpen(true);
+                  }}
+                >
+                  Ajouter une marque
+                </Button>
+              </Box>
             </Box>
 
             {/* Filtres */}
@@ -779,6 +1128,13 @@ const DeviceManagement: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        indeterminate={selectedItems.length > 0 && selectedItems.length < filteredBrands.length}
+                        checked={filteredBrands.length > 0 && selectedItems.length === filteredBrands.length}
+                        onChange={() => handleSelectAll(filteredBrands, 'brands')}
+                      />
+                    </TableCell>
                     <TableCell>Nom</TableCell>
                     <TableCell>Description</TableCell>
                     <TableCell>Catégories</TableCell>
@@ -789,6 +1145,12 @@ const DeviceManagement: React.FC = () => {
                 <TableBody>
                   {filteredBrands.map((brand) => (
                     <TableRow key={brand.id}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={selectedItems.includes(brand.id)}
+                          onChange={() => handleSelectItem(brand.id)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
@@ -873,16 +1235,48 @@ const DeviceManagement: React.FC = () => {
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Catégories ({(allCategories || []).length})</Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  resetCategoryForm();
-                  setCategoryDialogOpen(true);
-                }}
-              >
-                Ajouter une catégorie
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={() => handleDownloadTemplate('categories')}
+                  size="small"
+                >
+                  Télécharger le modèle CSV
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<UploadIcon />}
+                  onClick={() => {
+                    setImportType('categories');
+                    setImportDialogOpen(true);
+                  }}
+                  size="small"
+                >
+                  Importer CSV
+                </Button>
+                {selectedItems.length > 0 && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => openBulkDeleteDialog('categories')}
+                    size="small"
+                  >
+                    Supprimer ({selectedItems.length})
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    resetCategoryForm();
+                    setCategoryDialogOpen(true);
+                  }}
+                >
+                  Ajouter une catégorie
+                </Button>
+              </Box>
             </Box>
 
             {/* Tableau des catégories */}
@@ -890,6 +1284,13 @@ const DeviceManagement: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        indeterminate={selectedItems.length > 0 && selectedItems.length < (allCategories || []).length}
+                        checked={(allCategories || []).length > 0 && selectedItems.length === (allCategories || []).length}
+                        onChange={() => handleSelectAll(allCategories || [], 'categories')}
+                      />
+                    </TableCell>
                     <TableCell>Nom</TableCell>
                     <TableCell>Description</TableCell>
                     <TableCell>Icône</TableCell>
@@ -900,14 +1301,20 @@ const DeviceManagement: React.FC = () => {
                 <TableBody>
                   {(allCategories || []).map((category) => (
                     <TableRow key={category.id}>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {getCategoryIcon(category.name, category.icon)}
-                        <Typography variant="body2" fontWeight="medium">
-                          {category.name}
-                        </Typography>
-                      </Box>
-                    </TableCell>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={selectedItems.includes(category.id)}
+                          onChange={() => handleSelectItem(category.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {getCategoryIcon(category.name, category.icon)}
+                          <Typography variant="body2" fontWeight="medium">
+                            {category.name}
+                          </Typography>
+                        </Box>
+                      </TableCell>
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
                           {category.description}
@@ -963,16 +1370,48 @@ const DeviceManagement: React.FC = () => {
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">Modèles ({(allModels || []).length})</Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  resetModelForm();
-                  setModelDialogOpen(true);
-                }}
-              >
-                Ajouter un modèle
-              </Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={() => handleDownloadTemplate('models')}
+                  size="small"
+                >
+                  Télécharger le modèle CSV
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<UploadIcon />}
+                  onClick={() => {
+                    setImportType('models');
+                    setImportDialogOpen(true);
+                  }}
+                  size="small"
+                >
+                  Importer CSV
+                </Button>
+                {selectedItems.length > 0 && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={() => openBulkDeleteDialog('models')}
+                    size="small"
+                  >
+                    Supprimer ({selectedItems.length})
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    resetModelForm();
+                    setModelDialogOpen(true);
+                  }}
+                >
+                  Ajouter un modèle
+                </Button>
+              </Box>
             </Box>
 
             {/* Filtres pour les modèles */}
@@ -1026,6 +1465,13 @@ const DeviceManagement: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        indeterminate={selectedItems.length > 0 && selectedItems.length < (allModels || []).length}
+                        checked={(allModels || []).length > 0 && selectedItems.length === (allModels || []).length}
+                        onChange={() => handleSelectAll(allModels || [], 'models')}
+                      />
+                    </TableCell>
                     <TableCell>Nom</TableCell>
                     <TableCell>Marque</TableCell>
                     <TableCell>Catégorie</TableCell>
@@ -1037,6 +1483,12 @@ const DeviceManagement: React.FC = () => {
                 <TableBody>
                   {(allModels || []).map((model) => (
                     <TableRow key={model.id}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={selectedItems.includes(model.id)}
+                          onChange={() => handleSelectItem(model.id)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Typography variant="body2" fontWeight="medium">
                           {model.name}
@@ -1603,6 +2055,120 @@ const DeviceManagement: React.FC = () => {
             disabled={!newServiceAssociation.serviceId || loading}
           >
             {loading ? <CircularProgress size={20} /> : 'Associer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialogue d'importation CSV */}
+      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Importer des {importType === 'brands' ? 'marques' : importType === 'models' ? 'modèles' : 'catégories'} depuis un fichier CSV
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <Alert severity="info">
+              <Typography variant="body2" gutterBottom>
+                <strong>Format attendu :</strong>
+              </Typography>
+              {importType === 'categories' ? (
+                <Typography variant="body2" component="div">
+                  • name : Nom de la catégorie<br />
+                  • description : Description de la catégorie<br />
+                  • icon : Nom de l'icône (optionnel)
+                </Typography>
+              ) : importType === 'brands' ? (
+                <Typography variant="body2" component="div">
+                  • name : Nom de la marque<br />
+                  • description : Description de la marque<br />
+                  • categoryIds : Noms des catégories (séparés par des points-virgules)<br />
+                  <br />
+                  <strong>⚠️ Important :</strong> Les catégories doivent exister avant l'importation. 
+                  Créez d'abord les catégories nécessaires dans l'onglet "Catégories".
+                </Typography>
+              ) : (
+                <Typography variant="body2" component="div">
+                  • name : Nom du modèle<br />
+                  • description : Description du modèle<br />
+                  • brandName : Nom de la marque (doit exister)<br />
+                  • categoryName : Nom de la catégorie (doit exister)<br />
+                  <br />
+                  <strong>⚠️ Important :</strong> Les marques et catégories doivent exister avant l'importation. 
+                  Créez d'abord les marques et catégories nécessaires.
+                </Typography>
+              )}
+            </Alert>
+
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={() => handleDownloadTemplate(importType)}
+              fullWidth
+            >
+              Télécharger le modèle CSV
+            </Button>
+
+            <Divider>
+              <Typography variant="body2" color="text.secondary">
+                Sélectionner un fichier
+              </Typography>
+            </Divider>
+
+            <input
+              accept=".csv"
+              style={{ display: 'none' }}
+              id="csv-upload-input"
+              type="file"
+              onChange={handleImportCSV}
+            />
+            <label htmlFor="csv-upload-input">
+              <Button
+                variant="contained"
+                component="span"
+                startIcon={<UploadIcon />}
+                fullWidth
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                    Importation en cours...
+                  </>
+                ) : (
+                  'Sélectionner et importer un fichier CSV'
+                )}
+              </Button>
+            </label>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setImportDialogOpen(false)} disabled={loading}>
+            Fermer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialogue de confirmation pour la suppression en lot */}
+      <Dialog open={bulkDeleteDialogOpen} onClose={() => setBulkDeleteDialogOpen(false)}>
+        <DialogTitle>
+          Confirmer la suppression en lot
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Êtes-vous sûr de vouloir supprimer {selectedItems.length} {bulkDeleteType === 'brands' ? 'marque(s)' : bulkDeleteType === 'models' ? 'modèle(s)' : 'catégorie(s)'} ?
+            Cette action est irréversible.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBulkDeleteDialogOpen(false)}>
+            Annuler
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error"
+            onClick={handleBulkDelete}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={20} /> : 'Supprimer'}
           </Button>
         </DialogActions>
       </Dialog>

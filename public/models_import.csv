@@ -1,0 +1,68 @@
+name,description,brandName,categoryName
+iPhone 15 Pro Max,Smartphone haut de gamme Apple 2023,Apple,Smartphone
+iPhone 15 Pro,Smartphone professionnel Apple 2023,Apple,Smartphone
+iPhone 15,Smartphone standard Apple 2023,Apple,Smartphone
+iPhone 14 Pro Max,Smartphone haut de gamme Apple 2022,Apple,Smartphone
+iPhone 14 Pro,Smartphone professionnel Apple 2022,Apple,Smartphone
+iPhone 14,Smartphone standard Apple 2022,Apple,Smartphone
+iPhone 13 Pro Max,Smartphone haut de gamme Apple 2021,Apple,Smartphone
+iPhone 13,Smartphone standard Apple 2021,Apple,Smartphone
+iPhone 12 Pro,Smartphone professionnel Apple 2020,Apple,Smartphone
+iPhone 12,Smartphone standard Apple 2020,Apple,Smartphone
+iPhone 11,Smartphone Apple 2019,Apple,Smartphone
+iPhone SE 2022,Smartphone compact Apple 2022,Apple,Smartphone
+Galaxy S24 Ultra,Smartphone haut de gamme Samsung 2024,Samsung,Smartphone
+Galaxy S24 Plus,Smartphone grand format Samsung 2024,Samsung,Smartphone
+Galaxy S24,Smartphone standard Samsung 2024,Samsung,Smartphone
+Galaxy S23 Ultra,Smartphone haut de gamme Samsung 2023,Samsung,Smartphone
+Galaxy S23,Smartphone standard Samsung 2023,Samsung,Smartphone
+Galaxy S22 Ultra,Smartphone haut de gamme Samsung 2022,Samsung,Smartphone
+Galaxy Z Fold 5,Smartphone pliable Samsung 2023,Samsung,Smartphone
+Galaxy Z Flip 5,Smartphone pliable compact Samsung 2023,Samsung,Smartphone
+Galaxy A54,Smartphone milieu de gamme Samsung,Samsung,Smartphone
+Galaxy A34,Smartphone entrée de gamme Samsung,Samsung,Smartphone
+P60 Pro,Smartphone haut de gamme Huawei,Huawei,Smartphone
+Mate 60 Pro,Smartphone professionnel Huawei,Huawei,Smartphone
+Xiaomi 14 Pro,Smartphone haut de gamme Xiaomi,Xiaomi,Smartphone
+Xiaomi 14,Smartphone standard Xiaomi,Xiaomi,Smartphone
+Redmi Note 13 Pro,Smartphone milieu de gamme Xiaomi,Xiaomi,Smartphone
+OnePlus 12 Pro,Smartphone haut de gamme OnePlus,OnePlus,Smartphone
+OnePlus 11,Smartphone standard OnePlus,OnePlus,Smartphone
+Pixel 8 Pro,Smartphone Google haut de gamme,Google,Smartphone
+Pixel 8,Smartphone Google standard,Google,Smartphone
+Pixel 7a,Smartphone Google abordable,Google,Smartphone
+Xperia 1 V,Smartphone professionnel Sony,Sony,Smartphone
+Xperia 5 V,Smartphone compact Sony,Sony,Smartphone
+MacBook Pro 16,Ordinateur portable professionnel 16 pouces,Apple,Ordinateur portable
+MacBook Pro 14,Ordinateur portable professionnel 14 pouces,Apple,Ordinateur portable
+MacBook Air M2,Ordinateur portable ultraportable M2,Apple,Ordinateur portable
+MacBook Air M1,Ordinateur portable ultraportable M1,Apple,Ordinateur portable
+Dell XPS 15,Ordinateur portable premium 15 pouces,Dell,Ordinateur portable
+Dell XPS 13,Ordinateur portable ultraportable 13 pouces,Dell,Ordinateur portable
+ThinkPad X1 Carbon,Ordinateur portable professionnel Lenovo,Lenovo,Ordinateur portable
+ThinkPad T14,Ordinateur portable professionnel 14 pouces,Lenovo,Ordinateur portable
+HP Spectre x360,Ordinateur portable convertible premium,HP,Ordinateur portable
+HP EliteBook 840,Ordinateur portable professionnel 14 pouces,HP,Ordinateur portable
+Surface Laptop 5,Ordinateur portable Microsoft 2022,Microsoft,Ordinateur portable
+Surface Laptop Studio,Ordinateur portable créatif Microsoft,Microsoft,Ordinateur portable
+Asus ZenBook 14,Ordinateur portable ultraportable 14 pouces,Asus,Ordinateur portable
+Acer Swift 3,Ordinateur portable abordable 14 pouces,Acer,Ordinateur portable
+iMac 24,Ordinateur tout-en-un Apple M1,Apple,Ordinateur
+Mac Studio,Station de travail compacte Apple,Apple,Ordinateur
+Mac Mini M2,Ordinateur de bureau compact M2,Apple,Ordinateur
+OptiPlex 7090,Ordinateur de bureau professionnel Dell,Dell,Ordinateur
+EliteDesk 800,Ordinateur de bureau professionnel HP,HP,Ordinateur
+ThinkCentre M90,Ordinateur de bureau professionnel Lenovo,Lenovo,Ordinateur
+iPad Pro 12.9,Tablette professionnelle 12.9 pouces,Apple,Tablette
+iPad Pro 11,Tablette professionnelle 11 pouces,Apple,Tablette
+iPad Air,Tablette ultraportable Apple,Apple,Tablette
+iPad Mini,Tablette compacte Apple,Apple,Tablette
+iPad 10,Tablette standard Apple 10ème génération,Apple,Tablette
+Galaxy Tab S9 Ultra,Tablette haut de gamme Samsung 14.6 pouces,Samsung,Tablette
+Galaxy Tab S9 Plus,Tablette haut de gamme Samsung 12.4 pouces,Samsung,Tablette
+Galaxy Tab S9,Tablette haut de gamme Samsung 11 pouces,Samsung,Tablette
+Galaxy Tab A9,Tablette entrée de gamme Samsung,Samsung,Tablette
+Surface Pro 9,Tablette hybride Microsoft 2022,Microsoft,Tablette
+Surface Go 3,Tablette compacte Microsoft,Microsoft,Tablette
+MatePad Pro,Tablette professionnelle Huawei,Huawei,Tablette
+Xiaomi Pad 6,Tablette Xiaomi 11 pouces,Xiaomi,Tablette
