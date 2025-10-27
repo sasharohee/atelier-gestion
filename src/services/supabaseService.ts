@@ -4154,6 +4154,354 @@ export const quoteService = {
   }
 };
 
+// Service pour les prix de marché des appareils
+export const deviceMarketPriceService = {
+  async getAll() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const { data, error } = await supabase
+        .from('device_market_prices')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('device_brand', { ascending: true })
+        .order('device_model', { ascending: true });
+      
+      if (error) return handleSupabaseError(error);
+      
+      // Conversion snake_case vers camelCase
+      const convertedData = data?.map((item: any) => ({
+        id: item.id,
+        deviceModelId: item.device_model_id,
+        deviceBrand: item.device_brand,
+        deviceModel: item.device_model,
+        deviceType: item.device_type,
+        pricesByCapacity: item.prices_by_capacity,
+        releaseYear: item.release_year,
+        marketSegment: item.market_segment,
+        baseMarketPrice: item.base_market_price,
+        currentMarketPrice: item.current_market_price,
+        depreciationRate: item.depreciation_rate,
+        conditionMultipliers: item.condition_multipliers,
+        screenConditionMultipliers: item.screen_condition_multipliers,
+        batteryHealthPenalty: item.battery_health_penalty,
+        buttonConditionPenalty: item.button_condition_penalty,
+        functionalPenalties: item.functional_penalties,
+        accessoriesBonus: item.accessories_bonus,
+        warrantyBonusPercentage: item.warranty_bonus_percentage,
+        lockPenalties: item.lock_penalties,
+        isActive: item.is_active,
+        lastPriceUpdate: new Date(item.last_price_update),
+        priceSource: item.price_source,
+        externalApiId: item.external_api_id,
+        userId: item.user_id,
+        createdAt: new Date(item.created_at),
+        updatedAt: new Date(item.updated_at)
+      })) || [];
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async getById(id: string) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const { data, error } = await supabase
+        .from('device_market_prices')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      // Conversion snake_case vers camelCase
+      const convertedData = {
+        id: data.id,
+        deviceModelId: data.device_model_id,
+        deviceBrand: data.device_brand,
+        deviceModel: data.device_model,
+        deviceType: data.device_type,
+        pricesByCapacity: data.prices_by_capacity,
+        releaseYear: data.release_year,
+        marketSegment: data.market_segment,
+        baseMarketPrice: data.base_market_price,
+        currentMarketPrice: data.current_market_price,
+        depreciationRate: data.depreciation_rate,
+        conditionMultipliers: data.condition_multipliers,
+        screenConditionMultipliers: data.screen_condition_multipliers,
+        batteryHealthPenalty: data.battery_health_penalty,
+        buttonConditionPenalty: data.button_condition_penalty,
+        functionalPenalties: data.functional_penalties,
+        accessoriesBonus: data.accessories_bonus,
+        warrantyBonusPercentage: data.warranty_bonus_percentage,
+        lockPenalties: data.lock_penalties,
+        isActive: data.is_active,
+        lastPriceUpdate: new Date(data.last_price_update),
+        priceSource: data.price_source,
+        externalApiId: data.external_api_id,
+        userId: data.user_id,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async getByDevice(brand: string, model: string, deviceType: string) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const { data, error } = await supabase
+        .from('device_market_prices')
+        .select('*')
+        .eq('device_brand', brand)
+        .eq('device_model', model)
+        .eq('device_type', deviceType)
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      // Conversion snake_case vers camelCase
+      const convertedData = {
+        id: data.id,
+        deviceModelId: data.device_model_id,
+        deviceBrand: data.device_brand,
+        deviceModel: data.device_model,
+        deviceType: data.device_type,
+        pricesByCapacity: data.prices_by_capacity,
+        releaseYear: data.release_year,
+        marketSegment: data.market_segment,
+        baseMarketPrice: data.base_market_price,
+        currentMarketPrice: data.current_market_price,
+        depreciationRate: data.depreciation_rate,
+        conditionMultipliers: data.condition_multipliers,
+        screenConditionMultipliers: data.screen_condition_multipliers,
+        batteryHealthPenalty: data.battery_health_penalty,
+        buttonConditionPenalty: data.button_condition_penalty,
+        functionalPenalties: data.functional_penalties,
+        accessoriesBonus: data.accessories_bonus,
+        warrantyBonusPercentage: data.warranty_bonus_percentage,
+        lockPenalties: data.lock_penalties,
+        isActive: data.is_active,
+        lastPriceUpdate: new Date(data.last_price_update),
+        priceSource: data.price_source,
+        externalApiId: data.external_api_id,
+        userId: data.user_id,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async create(priceData: Omit<DeviceMarketPrice, 'id' | 'createdAt' | 'updatedAt' | 'userId'>) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      // Conversion camelCase vers snake_case
+      const marketPriceData = {
+        device_model_id: priceData.deviceModelId,
+        device_brand: priceData.deviceBrand,
+        device_model: priceData.deviceModel,
+        device_type: priceData.deviceType,
+        prices_by_capacity: priceData.pricesByCapacity,
+        release_year: priceData.releaseYear,
+        market_segment: priceData.marketSegment,
+        base_market_price: priceData.baseMarketPrice,
+        current_market_price: priceData.currentMarketPrice,
+        depreciation_rate: priceData.depreciationRate,
+        condition_multipliers: priceData.conditionMultipliers,
+        screen_condition_multipliers: priceData.screenConditionMultipliers,
+        battery_health_penalty: priceData.batteryHealthPenalty,
+        button_condition_penalty: priceData.buttonConditionPenalty,
+        functional_penalties: priceData.functionalPenalties,
+        accessories_bonus: priceData.accessoriesBonus,
+        warranty_bonus_percentage: priceData.warrantyBonusPercentage,
+        lock_penalties: priceData.lockPenalties,
+        is_active: priceData.isActive,
+        last_price_update: priceData.lastPriceUpdate.toISOString(),
+        price_source: priceData.priceSource,
+        external_api_id: priceData.externalApiId,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('device_market_prices')
+        .insert([marketPriceData])
+        .select()
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      // Conversion de la réponse
+      const convertedData = {
+        id: data.id,
+        deviceModelId: data.device_model_id,
+        deviceBrand: data.device_brand,
+        deviceModel: data.device_model,
+        deviceType: data.device_type,
+        pricesByCapacity: data.prices_by_capacity,
+        releaseYear: data.release_year,
+        marketSegment: data.market_segment,
+        baseMarketPrice: data.base_market_price,
+        currentMarketPrice: data.current_market_price,
+        depreciationRate: data.depreciation_rate,
+        conditionMultipliers: data.condition_multipliers,
+        screenConditionMultipliers: data.screen_condition_multipliers,
+        batteryHealthPenalty: data.battery_health_penalty,
+        buttonConditionPenalty: data.button_condition_penalty,
+        functionalPenalties: data.functional_penalties,
+        accessoriesBonus: data.accessories_bonus,
+        warrantyBonusPercentage: data.warranty_bonus_percentage,
+        lockPenalties: data.lock_penalties,
+        isActive: data.is_active,
+        lastPriceUpdate: new Date(data.last_price_update),
+        priceSource: data.price_source,
+        externalApiId: data.external_api_id,
+        userId: data.user_id,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async update(id: string, updates: Partial<Omit<DeviceMarketPrice, 'id' | 'createdAt' | 'updatedAt' | 'userId'>>) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      // Conversion camelCase vers snake_case
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (updates.deviceModelId !== undefined) updateData.device_model_id = updates.deviceModelId;
+      if (updates.deviceBrand !== undefined) updateData.device_brand = updates.deviceBrand;
+      if (updates.deviceModel !== undefined) updateData.device_model = updates.deviceModel;
+      if (updates.deviceType !== undefined) updateData.device_type = updates.deviceType;
+      if (updates.pricesByCapacity !== undefined) updateData.prices_by_capacity = updates.pricesByCapacity;
+      if (updates.releaseYear !== undefined) updateData.release_year = updates.releaseYear;
+      if (updates.marketSegment !== undefined) updateData.market_segment = updates.marketSegment;
+      if (updates.baseMarketPrice !== undefined) updateData.base_market_price = updates.baseMarketPrice;
+      if (updates.currentMarketPrice !== undefined) updateData.current_market_price = updates.currentMarketPrice;
+      if (updates.depreciationRate !== undefined) updateData.depreciation_rate = updates.depreciationRate;
+      if (updates.conditionMultipliers !== undefined) updateData.condition_multipliers = updates.conditionMultipliers;
+      if (updates.screenConditionMultipliers !== undefined) updateData.screen_condition_multipliers = updates.screenConditionMultipliers;
+      if (updates.batteryHealthPenalty !== undefined) updateData.battery_health_penalty = updates.batteryHealthPenalty;
+      if (updates.buttonConditionPenalty !== undefined) updateData.button_condition_penalty = updates.buttonConditionPenalty;
+      if (updates.functionalPenalties !== undefined) updateData.functional_penalties = updates.functionalPenalties;
+      if (updates.accessoriesBonus !== undefined) updateData.accessories_bonus = updates.accessoriesBonus;
+      if (updates.warrantyBonusPercentage !== undefined) updateData.warranty_bonus_percentage = updates.warrantyBonusPercentage;
+      if (updates.lockPenalties !== undefined) updateData.lock_penalties = updates.lockPenalties;
+      if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
+      if (updates.lastPriceUpdate !== undefined) updateData.last_price_update = updates.lastPriceUpdate.toISOString();
+      if (updates.priceSource !== undefined) updateData.price_source = updates.priceSource;
+      if (updates.externalApiId !== undefined) updateData.external_api_id = updates.externalApiId;
+
+      const { data, error } = await supabase
+        .from('device_market_prices')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      
+      if (error) return handleSupabaseError(error);
+      
+      // Conversion de la réponse
+      const convertedData = {
+        id: data.id,
+        deviceModelId: data.device_model_id,
+        deviceBrand: data.device_brand,
+        deviceModel: data.device_model,
+        deviceType: data.device_type,
+        pricesByCapacity: data.prices_by_capacity,
+        releaseYear: data.release_year,
+        marketSegment: data.market_segment,
+        baseMarketPrice: data.base_market_price,
+        currentMarketPrice: data.current_market_price,
+        depreciationRate: data.depreciation_rate,
+        conditionMultipliers: data.condition_multipliers,
+        screenConditionMultipliers: data.screen_condition_multipliers,
+        batteryHealthPenalty: data.battery_health_penalty,
+        buttonConditionPenalty: data.button_condition_penalty,
+        functionalPenalties: data.functional_penalties,
+        accessoriesBonus: data.accessories_bonus,
+        warrantyBonusPercentage: data.warranty_bonus_percentage,
+        lockPenalties: data.lock_penalties,
+        isActive: data.is_active,
+        lastPriceUpdate: new Date(data.last_price_update),
+        priceSource: data.price_source,
+        externalApiId: data.external_api_id,
+        userId: data.user_id,
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at)
+      };
+      
+      return handleSupabaseSuccess(convertedData);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async delete(id: string) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return handleSupabaseError(new Error('Utilisateur non connecté'));
+      }
+
+      const { error } = await supabase
+        .from('device_market_prices')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+      
+      if (error) return handleSupabaseError(error);
+      return handleSupabaseSuccess(true);
+    } catch (err) {
+      return handleSupabaseError(err as any);
+    }
+  }
+};
+
 export default {
   userService,
   systemSettingsService,
@@ -4171,5 +4519,6 @@ export default {
   dashboardService,
   subscriptionService,
   buybackService,
+  deviceMarketPriceService,
 };
 

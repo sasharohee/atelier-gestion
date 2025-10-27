@@ -28,7 +28,6 @@ const AccountingOverviewSimple: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [kpis, setKpis] = useState<any>(null);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   // Récupérer les fonctions du store
   const store = useAppStore();
@@ -91,7 +90,6 @@ const AccountingOverviewSimple: React.FC = () => {
       console.log('📈 SIMPLE: KPIs calculés:', calculatedKpis);
       
       setKpis(calculatedKpis);
-      setDebugInfo({ sales, repairs, expenses, clients });
       setLastUpdated(new Date());
       
     } catch (err) {
@@ -197,7 +195,7 @@ const AccountingOverviewSimple: React.FC = () => {
     );
   }
 
-  const hasData = debugInfo && (debugInfo.sales.length > 0 || debugInfo.repairs.length > 0 || debugInfo.expenses.length > 0);
+  const hasData = kpis && (kpis.completedSales > 0 || kpis.completedRepairs > 0 || kpis.totalExpenses > 0);
   
   return (
     <Box>
@@ -215,11 +213,6 @@ const AccountingOverviewSimple: React.FC = () => {
           <Typography variant="body2" color="text.secondary">
             Dernière mise à jour: {lastUpdated.toLocaleString('fr-FR')}
           </Typography>
-          {debugInfo && (
-            <Typography variant="caption" color="text.secondary">
-              Données réelles: {debugInfo.sales.length} ventes • {debugInfo.repairs.length} réparations • {debugInfo.expenses.length} dépenses
-            </Typography>
-          )}
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
@@ -248,14 +241,6 @@ const AccountingOverviewSimple: React.FC = () => {
         </Alert>
       )}
 
-      {/* Debug Info */}
-      {debugInfo && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          <Typography variant="body2">
-            <strong>Debug:</strong> {debugInfo.sales.length} ventes, {debugInfo.repairs.length} réparations, {debugInfo.expenses.length} dépenses
-          </Typography>
-        </Alert>
-      )}
 
       {/* KPIs principaux */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -375,48 +360,6 @@ const AccountingOverviewSimple: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* Section de debug */}
-      {debugInfo && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              🔍 Informations de débogage
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Ventes:</strong> {debugInfo.sales.length}
-                </Typography>
-                {debugInfo.sales.length > 0 && (
-                  <Typography variant="caption" display="block">
-                    Première: {formatCurrency(debugInfo.sales[0].total || 0)}
-                  </Typography>
-                )}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Réparations:</strong> {debugInfo.repairs.length}
-                </Typography>
-                {debugInfo.repairs.length > 0 && (
-                  <Typography variant="caption" display="block">
-                    Première: {formatCurrency(debugInfo.repairs[0].totalPrice || 0)}
-                  </Typography>
-                )}
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Dépenses:</strong> {debugInfo.expenses.length}
-                </Typography>
-                {debugInfo.expenses.length > 0 && (
-                  <Typography variant="caption" display="block">
-                    Première: {formatCurrency(debugInfo.expenses[0].amount || 0)}
-                  </Typography>
-                )}
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )}
     </Box>
   );
 };

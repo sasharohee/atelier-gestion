@@ -206,6 +206,85 @@ export interface Service {
   updatedAt: Date;
 }
 
+// Interfaces pour le système de pricing des rachats
+export interface DeviceMarketPrice {
+  id: string;
+  deviceModelId?: string;
+  deviceBrand: string;
+  deviceModel: string;
+  deviceType: DeviceType;
+  pricesByCapacity: Record<string, number>; // {"64GB": 350, "128GB": 420}
+  releaseYear?: number;
+  marketSegment?: 'premium' | 'mid-range' | 'budget';
+  baseMarketPrice?: number;
+  currentMarketPrice?: number;
+  depreciationRate: number; // Taux de dépréciation annuel (%)
+  conditionMultipliers: Record<string, number>;
+  screenConditionMultipliers: Record<string, number>;
+  batteryHealthPenalty: number; // € par % de batterie manquante
+  buttonConditionPenalty: Record<string, number>;
+  functionalPenalties: Record<string, number>;
+  accessoriesBonus: Record<string, number>;
+  warrantyBonusPercentage: number; // % de bonus si garantie > 6 mois
+  lockPenalties: Record<string, number>;
+  isActive: boolean;
+  lastPriceUpdate: Date;
+  priceSource: 'manual' | 'api' | 'import';
+  externalApiId?: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BuybackPricing {
+  estimatedPrice: number;
+  basePrice: number;
+  breakdown: {
+    basePrice: number;
+    conditionMultiplier: number;
+    screenMultiplier: number;
+    batteryPenalty: number;
+    buttonPenalty: number;
+    functionalPenalty: number;
+    accessoriesBonus: number;
+    warrantyBonus: number;
+    lockPenalty: number;
+    finalPrice: number;
+  };
+}
+
+export interface BuybackPricingInput {
+  deviceBrand: string;
+  deviceModel: string;
+  deviceType: DeviceType;
+  storageCapacity?: string;
+  physicalCondition: DeviceCondition;
+  batteryHealth?: number;
+  screenCondition?: 'perfect' | 'minor_scratches' | 'major_scratches' | 'cracked' | 'broken';
+  buttonCondition?: 'perfect' | 'sticky' | 'broken' | 'missing';
+  functionalCondition: {
+    powersOn?: boolean;
+    touchWorks?: boolean;
+    soundWorks?: boolean;
+    camerasWork?: boolean;
+    buttonsWork?: boolean;
+  };
+  accessories: {
+    charger?: boolean;
+    cable?: boolean;
+    headphones?: boolean;
+    originalBox?: boolean;
+    screenProtector?: boolean;
+    case?: boolean;
+    manual?: boolean;
+  };
+  hasWarranty?: boolean;
+  warrantyExpiresAt?: Date;
+  icloudLocked?: boolean;
+  googleLocked?: boolean;
+  carrierLocked?: boolean;
+}
+
 export interface Part {
   id: string;
   name: string;

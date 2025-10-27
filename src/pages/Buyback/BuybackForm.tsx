@@ -35,8 +35,10 @@ import {
   Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { Buyback, DeviceType, DeviceCondition, PaymentMethod, BuybackReason, IDType } from '../../types';
+import { Buyback, DeviceType, DeviceCondition, PaymentMethod, BuybackReason, IDType, BuybackPricing } from '../../types';
 import { buybackService, deviceModelService } from '../../services/supabaseService';
+import { buybackPricingService } from '../../services/buybackPricingService';
+import BuybackPriceBreakdown from '../../components/BuybackPriceBreakdown';
 import { toast } from 'react-hot-toast';
 
 interface BuybackFormProps {
@@ -49,6 +51,8 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [deviceModels, setDeviceModels] = useState<any[]>([]);
+  const [priceBreakdown, setPriceBreakdown] = useState<BuybackPricing | null>(null);
+  const [calculatingPrice, setCalculatingPrice] = useState(false);
   const [formData, setFormData] = useState<Partial<Buyback>>({
     // Informations client
     clientFirstName: '',
@@ -229,8 +233,68 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
     }
   };
 
-  const calculateSuggestedPrice = () => {
-    // Logique simplifiée pour calculer le prix suggéré
+  const calculateSuggestedPrice = async () => {
+    if (!formData.deviceBrand || !formData.deviceModel || !formData.deviceType || !formData.physicalCondition) {
+      return;
+    }
+
+    setCalculatingPrice(true);
+    
+    try {
+      const pricingResult = await buybackPricingService.calculateEstimatedPrice({
+        deviceBrand: formData.deviceBrand,
+        deviceModel: formData.deviceModel,
+        deviceType: formData.deviceType,
+        storageCapacity: formData.deviceStorageCapacity,
+        physicalCondition: formData.physicalCondition,
+        batteryHealth: formData.batteryHealth,
+        screenCondition: formData.screenCondition,
+        buttonCondition: formData.buttonCondition,
+        functionalCondition: formData.functionalCondition || {
+          powersOn: true,
+          touchWorks: true,
+          soundWorks: true,
+          camerasWork: true,
+          buttonsWork: true,
+        },
+        accessories: formData.accessories || {
+          charger: false,
+          cable: false,
+          headphones: false,
+          originalBox: false,
+          screenProtector: false,
+          case: false,
+          manual: false,
+        },
+        hasWarranty: formData.hasWarranty,
+        warrantyExpiresAt: formData.warrantyExpiresAt,
+        icloudLocked: formData.icloudLocked,
+        googleLocked: formData.googleLocked,
+        carrierLocked: formData.carrierLocked,
+      });
+
+      if (pricingResult.success && pricingResult.data) {
+        setPriceBreakdown(pricingResult.data);
+        setFormData(prev => ({
+          ...prev,
+          suggestedPrice: pricingResult.data!.estimatedPrice,
+          offeredPrice: prev.offeredPrice || pricingResult.data!.estimatedPrice
+        }));
+      } else {
+        console.warn('⚠️ Erreur lors du calcul du prix:', pricingResult.error);
+        // Fallback sur l'ancien système
+        calculateDefaultPrice();
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du calcul du prix:', error);
+      calculateDefaultPrice();
+    } finally {
+      setCalculatingPrice(false);
+    }
+  };
+
+  const calculateDefaultPrice = () => {
+    // Logique simplifiée pour calculer le prix suggéré (fallback)
     let basePrice = 0;
     
     // Prix de base selon le type d'appareil
@@ -271,10 +335,26 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
   };
 
   useEffect(() => {
-    if (formData.deviceType && formData.physicalCondition) {
+    if (formData.deviceType && formData.physicalCondition && formData.deviceBrand && formData.deviceModel) {
       calculateSuggestedPrice();
     }
-  }, [formData.deviceType, formData.physicalCondition]);
+  }, [
+    formData.deviceType, 
+    formData.physicalCondition, 
+    formData.deviceBrand, 
+    formData.deviceModel,
+    formData.deviceStorageCapacity,
+    formData.batteryHealth,
+    formData.screenCondition,
+    formData.buttonCondition,
+    formData.functionalCondition,
+    formData.accessories,
+    formData.hasWarranty,
+    formData.warrantyExpiresAt,
+    formData.icloudLocked,
+    formData.googleLocked,
+    formData.carrierLocked
+  ]);
 
   const handleSave = async () => {
     if (!validateStep(5)) {
@@ -738,21 +818,37 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Alert severity="info" sx={{ mb: 3 }}>
+              <Alert severity="success" sx={{ mb: 3 }}>
                 <Typography variant="body2">
-                  <strong>Version Bêta :</strong> La fonctionnalité d'évaluation automatique des prix est encore en développement. 
-                  Les prix suggérés sont calculés de manière approximative et peuvent nécessiter des ajustements manuels.
+                  <strong>Nouveau système d'estimation :</strong> Le prix est maintenant calculé automatiquement 
+                  selon le modèle exact, l'état, les accessoires et tous les critères d'évaluation.
                 </Typography>
               </Alert>
             </Grid>
+            
+            {/* Affichage du détail du calcul si disponible */}
+            {priceBreakdown && (
+              <Grid item xs={12}>
+                <BuybackPriceBreakdown 
+                  pricing={priceBreakdown} 
+                  showDetails={true}
+                  compact={false}
+                />
+              </Grid>
+            )}
+            
+            {/* Champs de prix */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Prix suggéré"
                 type="number"
                 value={formData.suggestedPrice || 0}
-                InputProps={{ readOnly: true }}
-                helperText="Calculé automatiquement selon le modèle et l'état (Version Bêta)"
+                InputProps={{ 
+                  readOnly: true,
+                  endAdornment: calculatingPrice ? <CircularProgress size={20} /> : null
+                }}
+                helperText={calculatingPrice ? "Calcul en cours..." : "Calculé automatiquement selon le modèle et l'état"}
               />
             </Grid>
             <Grid item xs={12} sm={6}>

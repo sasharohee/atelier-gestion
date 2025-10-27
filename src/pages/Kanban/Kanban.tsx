@@ -31,11 +31,11 @@ import {
   AccordionSummary,
   AccordionDetails,
   CircularProgress,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Build as BuildIcon,
   Schedule as ScheduleIcon,
   Warning as WarningIcon,
@@ -100,7 +100,6 @@ const Kanban: React.FC = () => {
     getUserById,
     updateRepair,
     addRepair,
-    deleteRepair,
     addDevice,
     addDeviceModel,
     addClient,
@@ -171,8 +170,6 @@ const Kanban: React.FC = () => {
   const [selectedRepairForInvoice, setSelectedRepairForInvoice] = useState<Repair | null>(null);
   const [interventionFormOpen, setInterventionFormOpen] = useState(false);
   const [selectedRepairForIntervention, setSelectedRepairForIntervention] = useState<Repair | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [repairToDelete, setRepairToDelete] = useState<Repair | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   
   // États pour le bon d'intervention
@@ -776,11 +773,6 @@ const Kanban: React.FC = () => {
     }
   };
 
-  const handleDeleteRepair = (repair: Repair) => {
-    setRepairToDelete(repair);
-    setDeleteDialogOpen(true);
-  };
-
   const handleTogglePayment = async (repair: Repair, e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -813,20 +805,6 @@ const Kanban: React.FC = () => {
       // En cas d'erreur, restaurer l'état précédent
       await loadRepairs();
       alert('❌ Erreur lors de la mise à jour du paiement');
-    }
-  };
-
-  const confirmDeleteRepair = async () => {
-    if (repairToDelete) {
-      try {
-        await deleteRepair(repairToDelete.id);
-        setDeleteDialogOpen(false);
-        setRepairToDelete(null);
-        alert('✅ Réparation supprimée avec succès !');
-      } catch (error) {
-        console.error('Erreur lors de la suppression de la réparation:', error);
-        alert('❌ Erreur lors de la suppression de la réparation');
-      }
     }
   };
 
@@ -1625,17 +1603,6 @@ const Kanban: React.FC = () => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Supprimer">
-                <IconButton 
-                  size="small" 
-                  onClick={(e) => { e.stopPropagation(); handleDeleteRepair(repair); }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  sx={{ color: 'error.main' }}
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
               {repair.status === 'completed' && (
                 <Tooltip title="Reçu thermique">
                   <IconButton 
@@ -1928,20 +1895,55 @@ const Kanban: React.FC = () => {
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Client *</InputLabel>
-                    <Select
-                      label="Client *"
-                      value={editRepair.clientId || ''}
-                      onChange={(e) => handleEditRepairChange('clientId', e.target.value)}
-                    >
-                      {clients.map((client) => (
-                        <MenuItem key={client.id} value={client.id}>
-                          {client.firstName} {client.lastName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    fullWidth
+                    options={clients}
+                    getOptionLabel={(client) => `${client.firstName} ${client.lastName}`}
+                    value={clients.find(client => client.id === editRepair.clientId) || null}
+                    onChange={(event, newValue) => {
+                      handleEditRepairChange('clientId', newValue?.id || '');
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Client *"
+                        placeholder="Tapez pour rechercher un client..."
+                        required
+                      />
+                    )}
+                    renderOption={(props, client) => (
+                      <Box component="li" {...props}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {client.firstName} {client.lastName}
+                          </Typography>
+                          {client.email && (
+                            <Typography variant="body2" color="text.secondary">
+                              {client.email}
+                            </Typography>
+                          )}
+                          {client.phone && (
+                            <Typography variant="body2" color="text.secondary">
+                              📞 {client.phone}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+                    filterOptions={(options, { inputValue }) => {
+                      const filterValue = inputValue.toLowerCase();
+                      return options.filter(client => 
+                        client.firstName.toLowerCase().includes(filterValue) ||
+                        client.lastName.toLowerCase().includes(filterValue) ||
+                        (client.email && client.email.toLowerCase().includes(filterValue)) ||
+                        (client.phone && client.phone.includes(filterValue))
+                      );
+                    }}
+                    noOptionsText="Aucun client trouvé"
+                    clearOnEscape
+                    selectOnFocus
+                    handleHomeEndKeys
+                  />
                   <Button
                     variant="contained"
                     size="small"
@@ -1949,7 +1951,7 @@ const Kanban: React.FC = () => {
                     sx={{ 
                       minWidth: '40px',
                       width: '40px',
-                      height: '56px', // Même hauteur que le Select
+                      height: '56px', // Même hauteur que l'Autocomplete
                       borderRadius: '4px',
                       backgroundColor: 'primary.main',
                       '&:hover': {
@@ -2519,20 +2521,55 @@ const Kanban: React.FC = () => {
               
               <Grid item xs={12} md={6}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Client *</InputLabel>
-                    <Select 
-                      label="Client *"
-                      value={newRepair.clientId || ''}
-                      onChange={(e) => handleNewRepairChange('clientId', e.target.value)}
-                    >
-                      {clients.map((client) => (
-                        <MenuItem key={client.id} value={client.id}>
-                          {client.firstName} {client.lastName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Autocomplete
+                    fullWidth
+                    options={clients}
+                    getOptionLabel={(client) => `${client.firstName} ${client.lastName}`}
+                    value={clients.find(client => client.id === newRepair.clientId) || null}
+                    onChange={(event, newValue) => {
+                      handleNewRepairChange('clientId', newValue?.id || '');
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Client *"
+                        placeholder="Tapez pour rechercher un client..."
+                        required
+                      />
+                    )}
+                    renderOption={(props, client) => (
+                      <Box component="li" {...props}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {client.firstName} {client.lastName}
+                          </Typography>
+                          {client.email && (
+                            <Typography variant="body2" color="text.secondary">
+                              {client.email}
+                            </Typography>
+                          )}
+                          {client.phone && (
+                            <Typography variant="body2" color="text.secondary">
+                              📞 {client.phone}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+                    filterOptions={(options, { inputValue }) => {
+                      const filterValue = inputValue.toLowerCase();
+                      return options.filter(client => 
+                        client.firstName.toLowerCase().includes(filterValue) ||
+                        client.lastName.toLowerCase().includes(filterValue) ||
+                        (client.email && client.email.toLowerCase().includes(filterValue)) ||
+                        (client.phone && client.phone.includes(filterValue))
+                      );
+                    }}
+                    noOptionsText="Aucun client trouvé"
+                    clearOnEscape
+                    selectOnFocus
+                    handleHomeEndKeys
+                  />
                   <Button
                     variant="contained"
                     size="small"
@@ -2540,7 +2577,7 @@ const Kanban: React.FC = () => {
                     sx={{ 
                       minWidth: '40px',
                       width: '40px',
-                      height: '56px', // Même hauteur que le Select
+                      height: '56px', // Même hauteur que l'Autocomplete
                       borderRadius: '4px',
                       backgroundColor: 'primary.main',
                       '&:hover': {
@@ -3229,75 +3266,6 @@ const Kanban: React.FC = () => {
           </DialogContent>
         </Dialog>
       )}
-
-      {/* Dialog de confirmation de suppression */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <DeleteIcon color="error" />
-            <Typography variant="h6">Confirmer la suppression</Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {repairToDelete && (
-            <Box>
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                  Êtes-vous sûr de vouloir supprimer cette réparation ?
-                </Typography>
-              </Alert>
-              
-              <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  <strong>Détails de la réparation :</strong>
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Client :</strong> {getClientById(repairToDelete.clientId)?.firstName} {getClientById(repairToDelete.clientId)?.lastName}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Appareil :</strong> {repairToDelete.deviceId ? getDeviceById(repairToDelete.deviceId)?.brand : 'N/A'} {repairToDelete.deviceId ? getDeviceById(repairToDelete.deviceId)?.model : ''}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Description :</strong> {repairToDelete.description}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Statut :</strong> {repairStatuses.find(s => s.id === repairToDelete.status)?.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Prix TTC :</strong> {formatFromEUR(repairToDelete.totalPrice, currency)}
-                </Typography>
-              </Box>
-              
-              <Alert severity="error">
-                <Typography variant="body2">
-                  <strong>Attention :</strong> Cette action est irréversible. Toutes les données de cette réparation seront définitivement supprimées.
-                </Typography>
-              </Alert>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setDeleteDialogOpen(false)}
-            variant="outlined"
-          >
-            Annuler
-          </Button>
-          <Button 
-            onClick={confirmDeleteRepair}
-            variant="contained" 
-            color="error"
-            startIcon={<DeleteIcon />}
-          >
-            Supprimer définitivement
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Formulaire de création de client */}
       <ClientForm
