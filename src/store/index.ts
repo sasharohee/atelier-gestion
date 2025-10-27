@@ -904,14 +904,22 @@ export const useAppStore = create<AppStore>()(
       
       deleteClient: async (id) => {
         try {
+          console.log('🗑️ STORE - Suppression du client:', id);
           const result = await clientService.delete(id);
+          console.log('📥 STORE - Résultat suppression:', result);
+          
           if (result.success) {
             set((state) => ({
               clients: state.clients.filter(client => client.id !== id)
             }));
+            console.log('✅ STORE - Client supprimé du store');
+          } else {
+            console.error('❌ STORE - Échec de la suppression:', result.error);
+            throw new Error(result.error || 'Échec de la suppression du client');
           }
         } catch (error) {
-          console.error('Erreur lors de la suppression du client:', error);
+          console.error('💥 STORE - Erreur lors de la suppression du client:', error);
+          throw error;
         }
       },
       

@@ -294,9 +294,23 @@ const Clients: React.FC = () => {
     try {
       console.log('🗑️ CLIENTS PAGE - Suppression en masse de', selectedClients.length, 'clients');
       
+      let deletedCount = 0;
+      let failedCount = 0;
+      const failedClients = [];
+      
       // Supprimer chaque client sélectionné
       for (const clientId of selectedClients) {
-        await deleteClient(clientId);
+        try {
+          console.log('🗑️ CLIENTS PAGE - Suppression du client:', clientId);
+          await deleteClient(clientId);
+          deletedCount++;
+          console.log('✅ CLIENTS PAGE - Client supprimé avec succès:', clientId);
+        } catch (error) {
+          console.error('❌ CLIENTS PAGE - Échec suppression client:', clientId, error);
+          failedCount++;
+          const client = clients.find(c => c.id === clientId);
+          failedClients.push(client ? `${client.firstName} ${client.lastName}` : clientId);
+        }
       }
 
       // Recharger la liste des clients
@@ -307,7 +321,15 @@ const Clients: React.FC = () => {
       setDeleteDialogOpen(false);
       
       console.log('✅ CLIENTS PAGE - Suppression en masse terminée!');
-      alert(`✅ ${selectedClients.length} client(s) supprimé(s) avec succès !`);
+      
+      // Afficher un résumé détaillé
+      if (deletedCount > 0 && failedCount === 0) {
+        alert(`✅ ${deletedCount} client(s) supprimé(s) avec succès !`);
+      } else if (deletedCount > 0 && failedCount > 0) {
+        alert(`⚠️ ${deletedCount} client(s) supprimé(s), ${failedCount} échec(s):\n${failedClients.join(', ')}`);
+      } else {
+        alert(`❌ Aucun client supprimé. ${failedCount} échec(s):\n${failedClients.join(', ')}`);
+      }
       
     } catch (err: any) {
       console.error('💥 CLIENTS PAGE - Erreur lors de la suppression en masse:', err);
