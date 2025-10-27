@@ -245,9 +245,9 @@ const CSVImport: React.FC<CSVImportProps> = ({ open, onClose, onImport }) => {
     setImportStatus('importing');
     setImportProgress(0);
 
-    try {
-      const batchSize = 5;
-      const totalBatches = Math.ceil(validClients.length / batchSize);
+         try {
+           const batchSize = 20;
+           const totalBatches = Math.ceil(validClients.length / batchSize);
       
       for (let i = 0; i < totalBatches; i++) {
         const batch = validClients.slice(i * batchSize, (i + 1) * batchSize);
