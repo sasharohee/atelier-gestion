@@ -35,7 +35,6 @@ import {
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Print as PrintIcon,
   Visibility as ViewIcon,
   MoreVert as MoreVertIcon,
@@ -92,23 +91,6 @@ const Buyback: React.FC = () => {
       toast.error('Erreur lors du chargement des rachats');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDelete = async (buyback: Buyback) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce rachat ?')) {
-      try {
-        const result = await buybackService.delete(buyback.id);
-        if (result.success) {
-          toast.success('Rachat supprimé avec succès');
-          loadBuybacks();
-        } else {
-          toast.error('Erreur lors de la suppression');
-        }
-      } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-        toast.error('Erreur lors de la suppression');
-      }
     }
   };
 
@@ -209,9 +191,6 @@ const Buyback: React.FC = () => {
       case 'print':
         setSelectedBuyback(actionBuyback);
         setShowTicket(true);
-        break;
-      case 'delete':
-        handleDelete(actionBuyback);
         break;
       case 'accept':
         handleStatusUpdate(actionBuyback, 'accepted');
@@ -510,12 +489,6 @@ const Buyback: React.FC = () => {
             <ListItemText>Marquer comme payé</ListItemText>
           </MenuItem>
         )}
-        <MenuItem onClick={() => handleMenuAction('delete')} sx={{ color: 'error.main' }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText>Supprimer</ListItemText>
-        </MenuItem>
       </Menu>
 
       {/* Formulaire */}

@@ -32,7 +32,6 @@ import {
   Save as SaveIcon,
   Cancel as CancelIcon,
   Add as AddIcon,
-  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Buyback, DeviceType, DeviceCondition, PaymentMethod, BuybackReason, IDType, BuybackPricing } from '../../types';

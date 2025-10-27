@@ -30,7 +30,6 @@ import {
 import {
   Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Print as PrintIcon,
   Visibility as ViewIcon,
   MonetizationOn as MonetizationOnIcon,
@@ -64,8 +63,6 @@ const BuybackProgressive: React.FC = () => {
   const [selectedBuyback, setSelectedBuyback] = useState<Buyback | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showTicket, setShowTicket] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [buybackToDelete, setBuybackToDelete] = useState<Buyback | null>(null);
 
   useEffect(() => {
     loadBuybacks();
@@ -148,31 +145,6 @@ const BuybackProgressive: React.FC = () => {
   const handlePrintTicket = (buyback: Buyback) => {
     setSelectedBuyback(buyback);
     setShowTicket(true);
-  };
-
-  const handleDeleteClick = (buyback: Buyback) => {
-    setBuybackToDelete(buyback);
-    setShowDeleteDialog(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!buybackToDelete) return;
-    
-    try {
-      const result = await buybackService.delete(buybackToDelete.id);
-      if (result.success) {
-        toast.success('Rachat supprimé avec succès');
-        loadBuybacks();
-      } else {
-        toast.error('Erreur lors de la suppression');
-      }
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      toast.error('Erreur lors de la suppression');
-    } finally {
-      setShowDeleteDialog(false);
-      setBuybackToDelete(null);
-    }
   };
 
   const handleUpdateStatus = async (buyback: Buyback, newStatus: BuybackStatus) => {
@@ -432,14 +404,6 @@ const BuybackProgressive: React.FC = () => {
                       >
                         <PrintIcon />
                       </IconButton>
-                      <IconButton 
-                        size="small" 
-                        title="Supprimer" 
-                        color="error"
-                        onClick={() => handleDeleteClick(buyback)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -538,25 +502,6 @@ const BuybackProgressive: React.FC = () => {
               </Grid>
             </Grid>
           </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Dialog de suppression */}
-      {showDeleteDialog && buybackToDelete && (
-        <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)}>
-          <DialogTitle>Confirmer la suppression</DialogTitle>
-          <DialogContent>
-            <Typography>
-              Êtes-vous sûr de vouloir supprimer le rachat de {buybackToDelete.clientFirstName} {buybackToDelete.clientLastName} ?
-              Cette action est irréversible.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowDeleteDialog(false)}>Annuler</Button>
-            <Button onClick={handleConfirmDelete} color="error" variant="contained">
-              Supprimer
-            </Button>
-          </DialogActions>
         </Dialog>
       )}
 
