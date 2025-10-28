@@ -35,6 +35,7 @@ import {
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
+import PriceInputFields from '../../components/PriceInputFields';
 
 const Parts: React.FC = () => {
   const { parts, addPart, deletePart, updatePart } = useAppStore();
@@ -55,6 +56,9 @@ const Parts: React.FC = () => {
     stockQuantity: 0,
     minStockLevel: 1,
     price: 0,
+    price_ht: 0,
+    price_ttc: 0,
+    price_is_ttc: false, // Parts sont par défaut en HT
     supplier: '',
     isActive: true,
   });
@@ -81,6 +85,9 @@ const Parts: React.FC = () => {
         stockQuantity: part.stockQuantity,
         minStockLevel: part.minStockLevel,
         price: part.price,
+        price_ht: part.price_ht || part.price || 0,
+        price_ttc: part.price_ttc || (part.price ? part.price * 1.20 : 0),
+        price_is_ttc: part.price_is_ttc || false,
         supplier: part.supplier,
         isActive: part.isActive,
       });
@@ -95,6 +102,9 @@ const Parts: React.FC = () => {
         stockQuantity: 0,
         minStockLevel: 1,
         price: 0,
+        price_ht: 0,
+        price_ttc: 0,
+        price_is_ttc: false,
         supplier: '',
         isActive: true,
       });
@@ -156,6 +166,9 @@ const Parts: React.FC = () => {
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
           price: formData.price,
+          price_ht: formData.price_ht,
+          price_ttc: formData.price_ttc,
+          price_is_ttc: formData.price_is_ttc,
           supplier: formData.supplier || undefined,
           isActive: formData.isActive,
         });
@@ -170,6 +183,9 @@ const Parts: React.FC = () => {
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
           price: formData.price,
+          price_ht: formData.price_ht,
+          price_ttc: formData.price_ttc,
+          price_is_ttc: formData.price_is_ttc,
           supplier: formData.supplier || undefined,
           isActive: formData.isActive,
         };
@@ -361,17 +377,25 @@ const Parts: React.FC = () => {
               />
             </Box>
             
+            <PriceInputFields
+              priceHT={formData.price_ht || 0}
+              priceTTC={formData.price_ttc || 0}
+              priceIsTTC={formData.price_is_ttc}
+              currency={currency}
+              onChange={(values) => {
+                setFormData(prev => ({
+                  ...prev,
+                  price_ht: values.price_ht,
+                  price_ttc: values.price_ttc,
+                  price_is_ttc: values.price_is_ttc,
+                  price: values.price_is_ttc ? values.price_ttc : values.price_ht // pour compatibilité
+                }));
+              }}
+              disabled={loading}
+              error={error}
+            />
+            
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                fullWidth
-                label={`Prix HT (${currency})`}
-                type="number"
-                value={formData.price}
-                onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
-                inputProps={{ min: 0, step: 0.01 }}
-                helperText="Prix hors taxes"
-              />
-              
               <TextField
                 fullWidth
                 label="Fournisseur"

@@ -199,6 +199,9 @@ export interface Service {
   description: string;
   duration: number; // en minutes
   price: number;
+  price_ht?: number;
+  price_ttc?: number;
+  price_is_ttc?: boolean;
   category: string;
   applicableDevices: string[]; // IDs des types d'appareils
   isActive: boolean;
@@ -295,6 +298,9 @@ export interface Part {
   stockQuantity: number;
   minStockLevel: number;
   price: number;
+  price_ht?: number;
+  price_ttc?: number;
+  price_is_ttc?: boolean;
   supplier?: string;
   isActive: boolean;
   createdAt: Date;
@@ -307,6 +313,9 @@ export interface Product {
   description: string;
   category: string;
   price: number;
+  price_ht?: number;
+  price_ttc?: number;
+  price_is_ttc?: boolean;
   stockQuantity: number;
   minStockLevel: number;
   isActive: boolean;
@@ -399,6 +408,8 @@ export interface Sale {
   clientId?: string;
   items: SaleItem[];
   subtotal: number;
+  subtotalHT?: number;
+  subtotalTTC?: number;
   discountPercentage?: number;
   discountAmount?: number;
   originalTotal?: number;

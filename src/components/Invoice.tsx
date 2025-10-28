@@ -38,8 +38,60 @@ interface InvoiceProps {
   onClose: () => void;
 }
 
+// Fonction pour calculer le vrai sous-total HT basé sur les price_ht des articles
+const calculateRealSubtotalHT = (sale: Sale, products: any[], services: any[], parts: any[]): number => {
+  // Vérifier que sale.items existe et est un tableau
+  if (!sale || !sale.items) {
+    return 0;
+  }
+  
+  // Parser les items si c'est une chaîne JSON
+  let items = sale.items;
+  if (typeof items === 'string') {
+    try {
+      items = JSON.parse(items);
+    } catch (error) {
+      console.error('Error parsing items in calculateRealSubtotalHT:', error);
+      return 0;
+    }
+  }
+  
+  // Vérifier que c'est maintenant un tableau
+  if (!Array.isArray(items)) {
+    return 0;
+  }
+  
+  return items.reduce((total, item) => {
+    let itemHT = 0;
+    
+    // Trouver l'article source pour obtenir son price_ht
+    let sourceItem = null;
+    switch (item.type) {
+      case 'product':
+        sourceItem = products.find(p => p.id === item.itemId);
+        break;
+      case 'service':
+        sourceItem = services.find(s => s.id === item.itemId);
+        break;
+      case 'part':
+        sourceItem = parts.find(p => p.id === item.itemId);
+        break;
+    }
+    
+    // Si on trouve l'article source et qu'il a un price_ht défini, l'utiliser
+    if (sourceItem && sourceItem.price_ht !== undefined && sourceItem.price_ht !== null) {
+      itemHT = sourceItem.price_ht;
+    } else {
+      // Sinon, calculer le prix HT en divisant par 1.20 (TVA 20%)
+      itemHT = item.unitPrice / 1.20;
+    }
+    
+    return total + (itemHT * item.quantity);
+  }, 0);
+};
+
 const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }) => {
-  const { systemSettings, loadSystemSettings } = useAppStore();
+  const { systemSettings, loadSystemSettings, products, services, parts } = useAppStore();
   const { workshopSettings } = useWorkshopSettings();
   
   // Valeur par défaut pour éviter les erreurs
@@ -600,7 +652,47 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {Array.isArray((data as Sale).items) ? (data as Sale).items.map((item, index) => (
+                      {(() => {
+                        const sale = data as Sale;
+                        console.log('🔍 Debug Invoice - Sale data:', sale);
+                        console.log('🔍 Debug Invoice - Sale items:', sale.items);
+                        console.log('🔍 Debug Invoice - Is array:', Array.isArray(sale.items));
+                        console.log('🔍 Debug Invoice - Items length:', sale.items?.length);
+                        
+                        // Parser les items si c'est une chaîne JSON
+                        let items = sale.items;
+                        if (typeof items === 'string') {
+                          try {
+                            items = JSON.parse(items);
+                            console.log('🔍 Debug Invoice - Parsed items:', items);
+                          } catch (error) {
+                            console.error('🔍 Debug Invoice - Error parsing items:', error);
+                            return false;
+                          }
+                        }
+                        
+                        // Vérification plus robuste
+                        if (!items) return false;
+                        if (Array.isArray(items)) return items.length > 0;
+                        if (typeof items === 'object') return Object.keys(items).length > 0;
+                        return false;
+                      })() ? (() => {
+                        const sale = data as Sale;
+                        let items = sale.items;
+                        
+                        // Parser les items si c'est une chaîne JSON
+                        if (typeof items === 'string') {
+                          try {
+                            items = JSON.parse(items);
+                          } catch (error) {
+                            console.error('Error parsing items:', error);
+                            return [];
+                          }
+                        }
+                        
+                        // Convertir en tableau si nécessaire
+                        const itemsArray = Array.isArray(items) ? items : Object.values(items || {});
+                        return itemsArray.map((item, index) => (
                         <TableRow key={index}>
                           <TableCell sx={{ 
                             borderBottom: '1px solid #f1f1f1', 
@@ -657,7 +749,8 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                             </Typography>
                           </TableCell>
                         </TableRow>
-                      )) : (
+                        ));
+                      })() : (
                         <TableRow>
                           <TableCell colSpan={5} sx={{ 
                             textAlign: 'center', 
@@ -697,7 +790,12 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         Sous-total HT :
                       </Typography>
                       <Typography sx={{ fontWeight: 600, fontSize: '16px' }}>
-                        {formatFromEUR((data as Sale).subtotal, currency)}
+                        {formatFromEUR(
+                          sale && products && services && parts 
+                            ? calculateRealSubtotalHT(data as Sale, products, services, parts)
+                            : (data as Sale).subtotal / 1.20, // Fallback si les données ne sont pas chargées
+                          currency
+                        )}
                       </Typography>
                     </Box>
                     <Box sx={{ 
@@ -707,10 +805,10 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                       mb: 1 
                     }}>
                       <Typography sx={{ fontSize: '16px' }}>
-                        TVA ({workshopSettingsData.vatRate}%) :
+                        Sous-total TTC :
                       </Typography>
                       <Typography sx={{ fontSize: '16px' }}>
-                        {formatFromEUR((data as Sale).tax, currency)}
+                        {formatFromEUR((data as Sale).subtotal, currency)}
                       </Typography>
                     </Box>
                     {(() => {

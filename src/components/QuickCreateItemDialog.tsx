@@ -25,6 +25,9 @@ import {
   Add as AddIcon,
   Save as SaveIcon,
 } from '@mui/icons-material';
+import { useAppStore } from '../store';
+import { useWorkshopSettings } from '../contexts/WorkshopSettingsContext';
+import PriceInputFields from './PriceInputFields';
 
 interface QuickCreateItemDialogProps {
   open: boolean;
@@ -45,6 +48,9 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
     description: '',
     category: 'smartphone',
     price: 0,
+    price_ht: 0,
+    price_ttc: 0,
+    price_is_ttc: false,
     stockQuantity: 0,
     minStockLevel: 1,
     isActive: true,
@@ -55,6 +61,9 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
     description: '',
     duration: 0,
     price: 0,
+    price_ht: 0,
+    price_ttc: 0,
+    price_is_ttc: true, // Services par défaut en TTC
     category: 'réparation',
     applicableDevices: [] as string[],
     isActive: true,
@@ -69,12 +78,19 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
     stockQuantity: 0,
     minStockLevel: 1,
     price: 0,
+    price_ht: 0,
+    price_ttc: 0,
+    price_is_ttc: false, // Parts par défaut en HT
     supplier: '',
     isActive: true,
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { workshopSettings } = useWorkshopSettings();
+  
+  // Valeur par défaut pour éviter les erreurs
+  const currency = workshopSettings?.currency || 'EUR';
 
   // Fonction pour obtenir les données du formulaire actuel
   const getCurrentFormData = () => {
@@ -188,6 +204,9 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
         description: '',
         category: 'smartphone',
         price: 0,
+        price_ht: 0,
+        price_ttc: 0,
+        price_is_ttc: false,
         stockQuantity: 0,
         minStockLevel: 1,
         isActive: true,
@@ -197,6 +216,9 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
         description: '',
         duration: 0,
         price: 0,
+        price_ht: 0,
+        price_ttc: 0,
+        price_is_ttc: true,
         category: 'réparation',
         applicableDevices: [],
         isActive: true,
@@ -210,6 +232,9 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
         stockQuantity: 0,
         minStockLevel: 1,
         price: 0,
+        price_ht: 0,
+        price_ttc: 0,
+        price_is_ttc: false,
         supplier: '',
         isActive: true,
       });
@@ -323,16 +348,23 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Prix (€)"
-                type="number"
-                value={productFormData.price}
-                onChange={(e) => setProductFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                required
+            <Grid item xs={12}>
+              <PriceInputFields
+                priceHT={productFormData.price_ht || 0}
+                priceTTC={productFormData.price_ttc || 0}
+                priceIsTTC={productFormData.price_is_ttc}
+                currency={currency}
+                onChange={(values) => {
+                  setProductFormData(prev => ({
+                    ...prev,
+                    price_ht: values.price_ht,
+                    price_ttc: values.price_ttc,
+                    price_is_ttc: values.price_is_ttc,
+                    price: values.price_is_ttc ? values.price_ttc : values.price_ht // pour compatibilité
+                  }));
+                }}
                 disabled={loading}
-                inputProps={{ min: 0, step: 0.01 }}
+                error={error}
               />
             </Grid>
 
@@ -419,16 +451,23 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Prix (€)"
-                type="number"
-                value={serviceFormData.price}
-                onChange={(e) => setServiceFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                required
+            <Grid item xs={12}>
+              <PriceInputFields
+                priceHT={serviceFormData.price_ht || 0}
+                priceTTC={serviceFormData.price_ttc || 0}
+                priceIsTTC={serviceFormData.price_is_ttc}
+                currency={currency}
+                onChange={(values) => {
+                  setServiceFormData(prev => ({
+                    ...prev,
+                    price_ht: values.price_ht,
+                    price_ttc: values.price_ttc,
+                    price_is_ttc: values.price_is_ttc,
+                    price: values.price_is_ttc ? values.price_ttc : values.price_ht // pour compatibilité
+                  }));
+                }}
                 disabled={loading}
-                inputProps={{ min: 0, step: 0.01 }}
+                error={error}
               />
             </Grid>
 
@@ -532,16 +571,23 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
               />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Prix (€)"
-                type="number"
-                value={partFormData.price}
-                onChange={(e) => setPartFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                required
+            <Grid item xs={12}>
+              <PriceInputFields
+                priceHT={partFormData.price_ht || 0}
+                priceTTC={partFormData.price_ttc || 0}
+                priceIsTTC={partFormData.price_is_ttc}
+                currency={currency}
+                onChange={(values) => {
+                  setPartFormData(prev => ({
+                    ...prev,
+                    price_ht: values.price_ht,
+                    price_ttc: values.price_ttc,
+                    price_is_ttc: values.price_is_ttc,
+                    price: values.price_is_ttc ? values.price_ttc : values.price_ht // pour compatibilité
+                  }));
+                }}
                 disabled={loading}
-                inputProps={{ min: 0, step: 0.01 }}
+                error={error}
               />
             </Grid>
 

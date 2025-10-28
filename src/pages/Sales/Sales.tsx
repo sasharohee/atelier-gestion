@@ -108,26 +108,40 @@ const Sales: React.FC = () => {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
 
-  // Calcul des totaux
+  // Fonction helper pour obtenir la source d'un item
+  const getItemSource = (item: SaleItem) => {
+    switch (item.type) {
+      case 'product': return products.find(p => p.id === item.itemId);
+      case 'service': return services.find(s => s.id === item.itemId);
+      case 'part': return parts.find(p => p.id === item.itemId);
+      default: return null;
+    }
+  };
+
+  // Calcul des totaux (SANS TVA)
   const totals = useMemo(() => {
+    // Calculer le sous-total total (tous les items)
     const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
     
-    // Gestion du taux de TVA : utiliser la valeur configurée ou 20% par défaut
-    let vatRate = 20; // Valeur par défaut
-    if (workshopSettings.vatRate !== undefined && workshopSettings.vatRate !== null) {
-      const parsedRate = parseFloat(workshopSettings.vatRate);
-      if (!isNaN(parsedRate)) {
-        vatRate = parsedRate;
-      }
-    }
+    // Total avant remise
+    const totalBeforeDiscount = subtotal;
     
-    const tax = subtotal * (vatRate / 100);
-    const totalBeforeDiscount = subtotal + tax;
+    // Calculer la remise
     const discountAmount = (totalBeforeDiscount * discountPercentage) / 100;
+    
+    // Total final
     const total = totalBeforeDiscount - discountAmount;
     
-    return { subtotal, tax, totalBeforeDiscount, discountAmount, total };
-  }, [saleItems, discountPercentage, workshopSettings.vatRate]);
+    return { 
+      subtotal, 
+      subtotalHT: 0, 
+      subtotalTTC: subtotal,
+      tax: 0, 
+      totalBeforeDiscount, 
+      discountAmount, 
+      total 
+    };
+  }, [saleItems, discountPercentage]);
 
   // Filtrage des articles selon le type et la recherche
   const filteredItems = useMemo(() => {
@@ -349,9 +363,11 @@ const Sales: React.FC = () => {
       clientId: selectedClientId || undefined,
       items: saleItemsFormatted,
       subtotal: totals.subtotal,
+      subtotalHT: 0,
+      subtotalTTC: totals.subtotal,
       discountPercentage: discountPercentage,
       discountAmount: totals.discountAmount,
-      tax: totals.tax,
+      tax: 0,
       total: totals.total,
       paymentMethod,
       status: 'completed',
@@ -1476,18 +1492,6 @@ const Sales: React.FC = () => {
                     <span style={{ fontSize: '0.875rem' }}>Sous-total:</span>
                     <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
                       {formatFromEUR(totals.subtotal, currency)}
-                    </span>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <span style={{ fontSize: '0.875rem' }}>TVA ({workshopSettings.vatRate}%):</span>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                      {formatFromEUR(totals.tax, currency)}
-                    </span>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <span style={{ fontSize: '0.875rem' }}>Total TTC:</span>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                      {formatFromEUR(totals.totalBeforeDiscount, currency)}
                     </span>
                   </Box>
                   {discountPercentage > 0 && (

@@ -46,6 +46,7 @@ import BarcodeDisplay from '../../components/BarcodeDisplay';
 import BarcodePrintDialog from '../../components/BarcodePrintDialog';
 import BarcodeScannerService from '../../services/barcodeScannerService';
 import { productService } from '../../services/supabaseService';
+import PriceInputFields from '../../components/PriceInputFields';
 
 const Products: React.FC = () => {
   const { products, addProduct, deleteProduct, updateProduct, loadProducts } = useAppStore();
@@ -67,6 +68,9 @@ const Products: React.FC = () => {
     description: '',
     category: 'smartphone',
     price: 0,
+    price_ht: 0,
+    price_ttc: 0,
+    price_is_ttc: false,
     stockQuantity: 0,
     minStockLevel: 1,
     isActive: true,
@@ -123,6 +127,9 @@ const Products: React.FC = () => {
         description: productToUse.description || '',
         category: productToUse.category || 'smartphone',
         price: productToUse.price || 0,
+        price_ht: productToUse.price_ht || productToUse.price || 0,
+        price_ttc: productToUse.price_ttc || (productToUse.price ? productToUse.price * 1.20 : 0),
+        price_is_ttc: productToUse.price_is_ttc || false,
         stockQuantity: productToUse.stockQuantity || 0,
         minStockLevel: productToUse.minStockLevel || 1,
         isActive: productToUse.isActive !== undefined ? productToUse.isActive : true,
@@ -135,6 +142,9 @@ const Products: React.FC = () => {
         description: '',
         category: 'smartphone',
         price: 0,
+        price_ht: 0,
+        price_ttc: 0,
+        price_is_ttc: false,
         stockQuantity: 0,
         minStockLevel: 1,
         isActive: true,
@@ -319,6 +329,9 @@ const Products: React.FC = () => {
           description: formData.description,
           category: formData.category,
           price: formData.price,
+          price_ht: formData.price_ht,
+          price_ttc: formData.price_ttc,
+          price_is_ttc: formData.price_is_ttc,
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
           isActive: formData.isActive,
@@ -333,6 +346,9 @@ const Products: React.FC = () => {
           description: formData.description,
           category: formData.category,
           price: formData.price,
+          price_ht: formData.price_ht,
+          price_ttc: formData.price_ttc,
+          price_is_ttc: formData.price_is_ttc,
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
           isActive: formData.isActive,
@@ -594,17 +610,25 @@ const Products: React.FC = () => {
               </Select>
             </FormControl>
             
+            <PriceInputFields
+              priceHT={formData.price_ht || 0}
+              priceTTC={formData.price_ttc || 0}
+              priceIsTTC={formData.price_is_ttc}
+              currency={currency}
+              onChange={(values) => {
+                setFormData(prev => ({
+                  ...prev,
+                  price_ht: values.price_ht,
+                  price_ttc: values.price_ttc,
+                  price_is_ttc: values.price_is_ttc,
+                  price: values.price_is_ttc ? values.price_ttc : values.price_ht // pour compatibilité
+                }));
+              }}
+              disabled={loading}
+              error={error}
+            />
+            
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                fullWidth
-                label={`Prix HT (${currency})`}
-                type="number"
-                value={formData.price}
-                onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
-                inputProps={{ min: 0, step: 0.01 }}
-                helperText="Prix hors taxes"
-              />
-              
               <TextField
                 fullWidth
                 label="Stock"

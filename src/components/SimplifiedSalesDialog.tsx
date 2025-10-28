@@ -94,26 +94,41 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
   const [quickCreateDialogOpen, setQuickCreateDialogOpen] = useState(false);
   const [quickCreateType, setQuickCreateType] = useState<'product' | 'service' | 'part'>('product');
 
-  // Calcul des totaux
+  // Fonction helper pour obtenir la source d'un item
+  const getItemSource = (item: SaleItemForm) => {
+    switch (item.type) {
+      case 'product': return products.find(p => p.id === item.itemId);
+      case 'service': return services.find(s => s.id === item.itemId);
+      case 'part': return parts.find(p => p.id === item.itemId);
+      default: return null;
+    }
+  };
+
+  // Calcul des totaux (SANS TVA)
   const totals = useMemo(() => {
+    // Calculer le sous-total total (tous les items)
     const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
     
-    // Gestion du taux de TVA : utiliser la valeur configurée ou 20% par défaut
-    let vatRate = 20; // Valeur par défaut
-    if (workshopSettings.vatRate !== undefined && workshopSettings.vatRate !== null) {
-      const parsedRate = parseFloat(workshopSettings.vatRate);
-      if (!isNaN(parsedRate)) {
-        vatRate = parsedRate;
-      }
-    }
+    // Total avant remise
+    const totalBeforeDiscount = subtotal;
     
-    const tax = subtotal * (vatRate / 100);
-    const totalBeforeDiscount = subtotal + tax;
+    // Calculer la remise
     const discountAmount = (totalBeforeDiscount * discountPercentage) / 100;
+    
+    // Total final
     const total = totalBeforeDiscount - discountAmount;
     
-    return { subtotal, tax, totalBeforeDiscount, discountAmount, total, vatRate };
-  }, [saleItems, discountPercentage, workshopSettings.vatRate]);
+    return { 
+      subtotal, 
+      subtotalHT: 0, 
+      subtotalTTC: subtotal,
+      tax: 0, 
+      totalBeforeDiscount, 
+      discountAmount, 
+      total,
+      vatRate: 0 
+    };
+  }, [saleItems, discountPercentage]);
 
   // Préparer les données pour ProductCategoryButtons
   const productItems = products
@@ -248,9 +263,11 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
       clientId: selectedClientId || undefined,
       items: saleItemsFormatted,
       subtotal: totals.subtotal,
+      subtotalHT: 0,
+      subtotalTTC: totals.subtotal,
       discountPercentage: discountPercentage,
       discountAmount: totals.discountAmount,
-      tax: totals.tax,
+      tax: 0,
       total: totals.total,
       paymentMethod,
       status: 'completed',
@@ -641,18 +658,6 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
                       <Typography variant="body2">Sous-total:</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
                         {totals.subtotal.toLocaleString('fr-FR')} €
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2">TVA ({totals.vatRate}%):</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {totals.tax.toLocaleString('fr-FR')} €
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2">Total TTC:</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {totals.totalBeforeDiscount.toLocaleString('fr-FR')} €
                       </Typography>
                     </Box>
                     {discountPercentage > 0 && (

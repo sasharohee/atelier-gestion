@@ -35,6 +35,7 @@ import {
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
+import PriceInputFields from '../../components/PriceInputFields';
 
 const Services: React.FC = () => {
   const { services, addService, updateService, deleteService } = useAppStore();
@@ -51,6 +52,9 @@ const Services: React.FC = () => {
     description: '',
     duration: 0,
     price: 0,
+    price_ht: 0,
+    price_ttc: 0,
+    price_is_ttc: true, // Services sont par défaut en TTC
     category: 'réparation' as string,
     applicableDevices: [] as string[],
     isActive: true,
@@ -84,6 +88,9 @@ const Services: React.FC = () => {
         description: service.description,
         duration: service.duration,
         price: service.price,
+        price_ht: service.price_ht || (service.price ? service.price / 1.20 : 0),
+        price_ttc: service.price_ttc || service.price || 0,
+        price_is_ttc: service.price_is_ttc !== undefined ? service.price_is_ttc : true,
         category: service.category || 'réparation',
         applicableDevices: service.applicableDevices || [],
         isActive: service.isActive !== undefined ? service.isActive : true,
@@ -96,6 +103,9 @@ const Services: React.FC = () => {
         description: '',
         duration: 0,
         price: 0,
+        price_ht: 0,
+        price_ttc: 0,
+        price_is_ttc: true,
         category: 'réparation' as string,
         applicableDevices: [] as string[],
         isActive: true,
@@ -146,6 +156,9 @@ const Services: React.FC = () => {
         description: formData.description,
         duration: formData.duration,
         price: formData.price,
+        price_ht: formData.price_ht,
+        price_ttc: formData.price_ttc,
+        price_is_ttc: formData.price_is_ttc,
         category: formData.category,
         applicableDevices: formData.applicableDevices,
         isActive: formData.isActive,
@@ -306,17 +319,25 @@ const Services: React.FC = () => {
                 inputProps={{ min: 0, step: 0.1 }}
                 helperText="Durée en heures"
               />
-              
-              <TextField
-                fullWidth
-                label={`Prix TTC (${currency})`}
-                type="number"
-                value={formData.price || 0}
-                onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
-                inputProps={{ min: 0, step: 0.01 }}
-                helperText="Prix toutes taxes comprises"
-              />
             </Box>
+            
+            <PriceInputFields
+              priceHT={formData.price_ht || 0}
+              priceTTC={formData.price_ttc || 0}
+              priceIsTTC={formData.price_is_ttc}
+              currency={currency}
+              onChange={(values) => {
+                setFormData(prev => ({
+                  ...prev,
+                  price_ht: values.price_ht,
+                  price_ttc: values.price_ttc,
+                  price_is_ttc: values.price_is_ttc,
+                  price: values.price_is_ttc ? values.price_ttc : values.price_ht // pour compatibilité
+                }));
+              }}
+              disabled={loading}
+              error={error}
+            />
             
             <FormControl fullWidth>
               <InputLabel>Catégorie</InputLabel>
