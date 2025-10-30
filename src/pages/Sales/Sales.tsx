@@ -56,13 +56,17 @@ import {
   AttachMoney as AttachMoneyIcon,
   TouchApp as TouchAppIcon,
   Download as DownloadIcon,
+  Close as CloseIcon,
+  Person as PersonIcon,
+  Discount as DiscountIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAppStore } from '../../store';
-import { Sale, SaleItem } from '../../types';
+import { Sale, SaleItem, Client } from '../../types';
 import Invoice from '../../components/Invoice';
 import SimplifiedSalesDialog from '../../components/SimplifiedSalesDialog';
+import ClientForm from '../../components/ClientForm';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
 import ThermalReceiptDialog from '../../components/ThermalReceiptDialog';
@@ -87,6 +91,7 @@ const Sales: React.FC = () => {
     getClientById,
     addSale,
     updateSale,
+    addClient,
   } = useAppStore();
   
   const { workshopSettings } = useWorkshopSettings();
@@ -107,6 +112,7 @@ const Sales: React.FC = () => {
   const [selectedSaleForInvoice, setSelectedSaleForInvoice] = useState<Sale | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
+  const [clientFormOpen, setClientFormOpen] = useState(false);
 
   // Fonction helper pour obtenir la source d'un item
   const getItemSource = (item: SaleItem) => {
@@ -118,13 +124,25 @@ const Sales: React.FC = () => {
     }
   };
 
-  // Calcul des totaux (SANS TVA)
+  // Calcul des totaux (AVEC TVA)
   const totals = useMemo(() => {
-    // Calculer le sous-total total (tous les items)
+    // Calculer le sous-total HT (tous les items)
     const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
     
+    // Gestion du taux de TVA : utiliser la valeur configurée ou 20% par défaut
+    let vatRate = 20; // Valeur par défaut
+    if (workshopSettings?.vatRate !== undefined && workshopSettings?.vatRate !== null) {
+      const parsedRate = parseFloat(workshopSettings.vatRate);
+      if (!isNaN(parsedRate)) {
+        vatRate = parsedRate;
+      }
+    }
+    
+    // Calculer la TVA
+    const tax = subtotal * (vatRate / 100);
+    
     // Total avant remise
-    const totalBeforeDiscount = subtotal;
+    const totalBeforeDiscount = subtotal + tax;
     
     // Calculer la remise
     const discountAmount = (totalBeforeDiscount * discountPercentage) / 100;
@@ -134,14 +152,15 @@ const Sales: React.FC = () => {
     
     return { 
       subtotal, 
-      subtotalHT: 0, 
-      subtotalTTC: subtotal,
-      tax: 0, 
+      subtotalHT: subtotal, 
+      subtotalTTC: subtotal + tax,
+      tax, 
+      vatRate,
       totalBeforeDiscount, 
       discountAmount, 
       total 
     };
-  }, [saleItems, discountPercentage]);
+  }, [saleItems, discountPercentage, workshopSettings?.vatRate]);
 
   // Filtrage des articles selon le type et la recherche
   const filteredItems = useMemo(() => {
@@ -363,11 +382,11 @@ const Sales: React.FC = () => {
       clientId: selectedClientId || undefined,
       items: saleItemsFormatted,
       subtotal: totals.subtotal,
-      subtotalHT: 0,
-      subtotalTTC: totals.subtotal,
+      subtotalHT: totals.subtotalHT,
+      subtotalTTC: totals.subtotalTTC,
       discountPercentage: discountPercentage,
       discountAmount: totals.discountAmount,
-      tax: 0,
+      tax: totals.tax,
       total: totals.total,
       paymentMethod,
       status: 'completed',
@@ -409,6 +428,60 @@ const Sales: React.FC = () => {
   const closeInvoice = () => {
     setInvoiceOpen(false);
     setSelectedSaleForInvoice(null);
+  };
+
+  // Créer un nouveau client
+  const handleCreateNewClient = async (clientFormData: any) => {
+    try {
+      const firstName = clientFormData.firstName?.trim() || 'Client';
+      const lastName = clientFormData.lastName?.trim() || 'Sans nom';
+      
+      const clientData = {
+        firstName,
+        lastName,
+        email: clientFormData.email || '',
+        phone: (clientFormData.countryCode || '33') + (clientFormData.mobile || ''),
+        address: clientFormData.address || '',
+        notes: clientFormData.internalNote || '',
+        category: clientFormData.category || 'particulier',
+        title: clientFormData.title || 'mr',
+        companyName: clientFormData.companyName || '',
+        vatNumber: clientFormData.vatNumber || '',
+        sirenNumber: clientFormData.sirenNumber || '',
+        countryCode: clientFormData.countryCode || '33',
+        addressComplement: clientFormData.addressComplement || '',
+        region: clientFormData.region || '',
+        postalCode: clientFormData.postalCode || '',
+        city: clientFormData.city || '',
+        billingAddressSame: clientFormData.billingAddressSame !== undefined ? clientFormData.billingAddressSame : true,
+        billingAddress: clientFormData.billingAddress || '',
+        billingAddressComplement: clientFormData.billingAddressComplement || '',
+        billingRegion: clientFormData.billingRegion || '',
+        billingPostalCode: clientFormData.billingPostalCode || '',
+        billingCity: clientFormData.billingCity || '',
+        accountingCode: clientFormData.accountingCode || '',
+        cniIdentifier: clientFormData.cniIdentifier || '',
+        attachedFilePath: clientFormData.attachedFile ? clientFormData.attachedFile.name : '',
+        internalNote: clientFormData.internalNote || '',
+        status: clientFormData.status || 'displayed',
+        smsNotification: clientFormData.smsNotification !== undefined ? clientFormData.smsNotification : true,
+        emailNotification: clientFormData.emailNotification !== undefined ? clientFormData.emailNotification : true,
+        smsMarketing: clientFormData.smsMarketing !== undefined ? clientFormData.smsMarketing : true,
+        emailMarketing: clientFormData.emailMarketing !== undefined ? clientFormData.emailMarketing : true,
+      };
+
+      const createdClient = await addClient(clientData);
+      
+      // Sélectionner automatiquement le client créé
+      if (createdClient && createdClient.id) {
+        setSelectedClientId(createdClient.id);
+      }
+      
+      setClientFormOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la création du client:', error);
+      throw error;
+    }
   };
 
   // Gérer l'impression thermique pour les ventes
@@ -1057,50 +1130,156 @@ const Sales: React.FC = () => {
       </Card>
 
       {/* Dialog nouvelle vente */}
-      <Dialog open={newSaleDialogOpen} onClose={() => setNewSaleDialogOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>Nouvelle vente</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={3} sx={{ mt: 1 }}>
+      <Dialog 
+        open={newSaleDialogOpen} 
+        onClose={() => setNewSaleDialogOpen(false)} 
+        maxWidth="xl" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+            minHeight: '90vh',
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+            color: 'white',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            py: 2.5,
+            px: 3,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <ShoppingCartIcon sx={{ fontSize: 32 }} />
+            <Typography variant="h5" component="span" sx={{ fontWeight: 600 }}>
+              Nouvelle vente
+            </Typography>
+          </Box>
+          <IconButton
+            onClick={() => {
+              setNewSaleDialogOpen(false);
+              resetForm();
+            }}
+            sx={{ 
+              color: 'white',
+              '&:hover': {
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+              }
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, bgcolor: '#f8f9fa' }}>
+          <Grid container spacing={3} sx={{ mt: 0 }}>
             {/* Informations client et paiement */}
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Client</InputLabel>
-                <Select 
-                  value={selectedClientId} 
-                  onChange={(e) => setSelectedClientId(e.target.value)}
-                  label="Client"
-                >
-                  <MenuItem value="">Client anonyme</MenuItem>
-                  {clients.map((client) => (
-                    <MenuItem key={client.id} value={client.id}>
-                      {client.firstName} {client.lastName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Méthode de paiement</InputLabel>
-                <Select 
-                  value={paymentMethod} 
-                  onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link')}
-                  label="Méthode de paiement"
-                >
-                  <MenuItem value="cash">Espèces</MenuItem>
-                  <MenuItem value="card">Carte</MenuItem>
-                  <MenuItem value="transfer">Virement</MenuItem>
-                  <MenuItem value="check">Chèque</MenuItem>
-                  <MenuItem value="payment_link">Liens paiement</MenuItem>
-                </Select>
-              </FormControl>
+            <Grid item xs={12}>
+              <Paper 
+                elevation={2}
+                sx={{ 
+                  p: 3, 
+                  borderRadius: 2,
+                  bgcolor: 'white',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                  <PersonIcon sx={{ color: 'primary.main', fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                    Informations client
+                  </Typography>
+                </Box>
+                
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Autocomplete
+                        fullWidth
+                        options={[{ id: '', firstName: 'Client', lastName: 'anonyme' }, ...clients]}
+                        value={clients.find(c => c.id === selectedClientId) || { id: '', firstName: 'Client', lastName: 'anonyme' }}
+                        onChange={(event, newValue) => {
+                          setSelectedClientId(newValue?.id || '');
+                        }}
+                        getOptionLabel={(option) => 
+                          option.id === '' 
+                            ? 'Client anonyme' 
+                            : `${option.firstName} ${option.lastName}`
+                        }
+                        renderInput={(params) => (
+                          <TextField 
+                            {...params} 
+                            label="Client" 
+                            placeholder="Rechercher un client..."
+                          />
+                        )}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                      />
+                      <Tooltip title="Créer un nouveau client">
+                        <IconButton
+                          onClick={() => setClientFormOpen(true)}
+                          sx={{
+                            bgcolor: 'primary.main',
+                            color: 'white',
+                            '&:hover': {
+                              bgcolor: 'primary.dark',
+                            },
+                          }}
+                        >
+                          <AddIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Méthode de paiement</InputLabel>
+                      <Select 
+                        value={paymentMethod} 
+                        onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link')}
+                        label="Méthode de paiement"
+                      >
+                        <MenuItem value="cash">💵 Espèces</MenuItem>
+                        <MenuItem value="card">💳 Carte</MenuItem>
+                        <MenuItem value="transfer">🏦 Virement</MenuItem>
+                        <MenuItem value="check">📝 Chèque</MenuItem>
+                        <MenuItem value="payment_link">🔗 Liens paiement</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              </Paper>
             </Grid>
 
             {/* Sélection d'articles */}
             <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                📦 Sélection d'articles
-              </Typography>
+              <Paper 
+                elevation={2}
+                sx={{ 
+                  p: 3, 
+                  borderRadius: 2,
+                  bgcolor: 'white',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  height: '100%',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                  <InventoryIcon sx={{ color: 'primary.main', fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                    Sélection d'articles
+                  </Typography>
+                  <Badge 
+                    badgeContent={filteredItems.length} 
+                    color="primary"
+                    sx={{ ml: 'auto' }}
+                  />
+                </Box>
               
               {/* Type d'article */}
               <FormControl fullWidth sx={{ mb: 2 }}>
@@ -1204,23 +1383,48 @@ const Sales: React.FC = () => {
               />
 
               {/* Informations sur les articles disponibles */}
-              <Box sx={{ mb: 2, p: 1, bgcolor: 'info.50', borderRadius: 1, border: '1px solid', borderColor: 'info.200' }}>
-                <span style={{ color: 'info.main', fontSize: '0.875rem' }}>
-                  📊 {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} disponible{filteredItems.length > 1 ? 's' : ''}
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  mb: 2,
+                  '& .MuiAlert-message': {
+                    width: '100%'
+                  }
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="body2">
+                    {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} disponible{filteredItems.length > 1 ? 's' : ''}
+                  </Typography>
                   {selectedItemType === 'part' && (
-                    <span> • Seules les pièces en stock sont affichées</span>
+                    <Typography variant="caption">
+                      Seules les pièces en stock
+                    </Typography>
                   )}
-                </span>
-              </Box>
+                </Box>
+              </Alert>
 
               {/* Liste des articles disponibles */}
               <Box sx={{ 
-                maxHeight: 350, 
+                maxHeight: 450, 
                 overflow: 'auto', 
-                border: '1px solid', 
-                borderColor: 'divider', 
-                borderRadius: 1,
-                bgcolor: 'background.paper'
+                border: '2px solid', 
+                borderColor: 'primary.light', 
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  bgcolor: '#f1f1f1',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  bgcolor: '#888',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    bgcolor: '#555',
+                  },
+                },
               }}>
                 <List dense>
                   {filteredItems.map((item) => {
@@ -1232,8 +1436,10 @@ const Sales: React.FC = () => {
                         onClick={() => addItemToSale(item)}
                         sx={{ 
                           cursor: 'pointer',
+                          transition: 'all 0.2s ease',
                           '&:hover': {
-                            bgcolor: 'action.hover'
+                            bgcolor: 'primary.light',
+                            transform: 'translateX(4px)',
                           },
                           borderBottom: '1px solid',
                           borderColor: 'divider'
@@ -1333,22 +1539,55 @@ const Sales: React.FC = () => {
                   )}
                 </List>
               </Box>
+              </Paper>
             </Grid>
 
             {/* Panier */}
             <Grid item xs={12} md={6}>
-              <Typography variant="h6" gutterBottom>
-                🛒 Panier ({saleItems.length} article{saleItems.length > 1 ? 's' : ''})
-              </Typography>
+              <Paper 
+                elevation={2}
+                sx={{ 
+                  p: 3, 
+                  borderRadius: 2,
+                  bgcolor: 'white',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  height: '100%',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                  <ShoppingCartIcon sx={{ color: 'success.main', fontSize: 28 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                    Panier
+                  </Typography>
+                  <Badge 
+                    badgeContent={saleItems.length} 
+                    color="success"
+                    sx={{ ml: 'auto' }}
+                  />
+                </Box>
               
               <Box sx={{ 
-                maxHeight: 350, 
+                maxHeight: 450, 
                 overflow: 'auto', 
-                border: '1px solid', 
-                borderColor: 'divider', 
-                borderRadius: 1, 
+                border: '2px solid', 
+                borderColor: 'success.light', 
+                borderRadius: 2, 
                 p: 2,
-                bgcolor: 'background.paper'
+                bgcolor: 'background.paper',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  bgcolor: '#f1f1f1',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  bgcolor: '#888',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    bgcolor: '#555',
+                  },
+                },
               }}>
                 {saleItems.length === 0 ? (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -1445,14 +1684,18 @@ const Sales: React.FC = () => {
                 <Box sx={{ 
                   mt: 2, 
                   p: 2, 
-                  bgcolor: 'grey.50', 
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'grey.200'
+                  bgcolor: 'warning.50', 
+                  borderRadius: 2,
+                  border: '2px solid',
+                  borderColor: 'warning.light',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
                 }}>
-                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, color: 'text.primary' }}>
-                    🎫 Réduction
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <DiscountIcon sx={{ color: 'warning.main' }} />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      Réduction
+                    </Typography>
+                  </Box>
                   <TextField
                     fullWidth
                     type="number"
@@ -1468,8 +1711,8 @@ const Sales: React.FC = () => {
                     sx={{ mb: 1 }}
                   />
                   {discountPercentage > 0 && (
-                    <Alert severity="info" sx={{ fontSize: '0.875rem' }}>
-                      Réduction de {discountPercentage}% sur le total TTC = {formatFromEUR(totals.discountAmount, currency)}
+                    <Alert severity="success" sx={{ fontSize: '0.875rem', mt: 1 }}>
+                      Réduction de {discountPercentage}% = {formatFromEUR(totals.discountAmount, currency)}
                     </Alert>
                   )}
                 </Box>
@@ -1480,55 +1723,134 @@ const Sales: React.FC = () => {
                 <Box sx={{ 
                   mt: 2, 
                   p: 2, 
-                  bgcolor: 'grey.50', 
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'grey.200'
+                  background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                  borderRadius: 2,
+                  border: '2px solid',
+                  borderColor: 'primary.main',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 }}>
-                  <span style={{ display: 'block', marginBottom: '16px', fontWeight: 600, color: 'text.primary', fontSize: '0.875rem' }}>
-                    📊 Récapitulatif
-                  </span>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <span style={{ fontSize: '0.875rem' }}>Sous-total:</span>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>
-                      {formatFromEUR(totals.subtotal, currency)}
-                    </span>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
+                    <AssessmentIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                      Récapitulatif
+                    </Typography>
                   </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <MonetizationOnIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2">Prix HT:</Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {formatFromEUR(totals.subtotal, currency)}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <AssessmentIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2">TVA ({totals.vatRate}%):</Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {formatFromEUR(totals.tax, currency)}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                    <Typography variant="body2">Total TTC:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {formatFromEUR(totals.totalBeforeDiscount, currency)}
+                    </Typography>
+                  </Box>
+                  
                   {discountPercentage > 0 && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <span style={{ fontSize: '0.875rem', color: 'success.main' }}>Réduction ({discountPercentage}%):</span>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 500, color: 'success.main' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <DiscountIcon sx={{ fontSize: 16, color: 'success.main' }} />
+                        <Typography variant="body2" sx={{ color: 'success.main' }}>
+                          Réduction ({discountPercentage}%):
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
                         -{formatFromEUR(totals.discountAmount, currency)}
-                      </span>
+                      </Typography>
                     </Box>
                   )}
-                  <Divider sx={{ my: 1 }} />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 600, fontSize: '1.25rem' }}>Total:</span>
-                    <span style={{ fontWeight: 600, color: 'primary.main', fontSize: '1.25rem' }}>
+                  
+                  <Divider sx={{ my: 1.5, borderColor: 'primary.main', borderWidth: 1 }} />
+                  
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    p: 1.5,
+                    bgcolor: 'primary.main',
+                    borderRadius: 1,
+                    color: 'white',
+                  }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      TOTAL:
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
                       {formatFromEUR(totals.total, currency)}
-                    </span>
+                    </Typography>
                   </Box>
                 </Box>
               )}
+              </Paper>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => {
-            setNewSaleDialogOpen(false);
-            resetForm();
-          }}>
+        <DialogActions 
+          sx={{ 
+            p: 3, 
+            bgcolor: '#f8f9fa',
+            borderTop: '2px solid',
+            borderColor: 'divider',
+            gap: 2,
+          }}
+        >
+          <Button 
+            onClick={() => {
+              setNewSaleDialogOpen(false);
+              resetForm();
+            }}
+            variant="outlined"
+            color="error"
+            size="large"
+            sx={{
+              minWidth: 120,
+              fontWeight: 600,
+            }}
+          >
             Annuler
           </Button>
           <Button 
             variant="contained" 
             onClick={createSale}
             disabled={saleItems.length === 0}
+            size="large"
+            startIcon={<ReceiptIcon />}
+            sx={{
+              minWidth: 200,
+              background: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
+              fontWeight: 600,
+              fontSize: '1rem',
+              py: 1.5,
+              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #45a049 0%, #5db85f 100%)',
+                boxShadow: '0 6px 16px rgba(76, 175, 80, 0.4)',
+              },
+              '&:disabled': {
+                background: 'grey.300',
+                color: 'grey.500',
+              },
+            }}
           >
-            Créer la vente ({formatFromEUR(totals.total, currency)})
+            Créer la vente ({formatFromEUR(totals.subtotal, currency)} HT / {formatFromEUR(totals.total, currency)} TTC)
           </Button>
-                  </DialogActions>
+        </DialogActions>
         </Dialog>
 
         {/* Composant Facture */}
@@ -1569,6 +1891,14 @@ const Sales: React.FC = () => {
             }}
           />
         )}
+
+        {/* Dialogue de création de client */}
+        <ClientForm
+          open={clientFormOpen}
+          onClose={() => setClientFormOpen(false)}
+          onSubmit={handleCreateNewClient}
+          existingEmails={clients.map(client => client.email?.toLowerCase() || '')}
+        />
 
       </Box>
     );

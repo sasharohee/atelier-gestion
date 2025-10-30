@@ -23,6 +23,7 @@ import {
   Chip,
   Alert,
   Tooltip,
+  Autocomplete,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -34,13 +35,15 @@ import {
   Euro as EuroIcon,
   AttachMoney as AttachMoneyIcon,
   TouchApp as TouchAppIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../store';
-import { Sale, SaleItem } from '../types';
+import { Sale, SaleItem, Client } from '../types';
 import NumericKeypad from './NumericKeypad';
 import ProductCategoryButtons from './ProductCategoryButtons';
 import QuickCreateItemDialog from './QuickCreateItemDialog';
 import Invoice from './Invoice';
+import ClientForm from './ClientForm';
 import { useWorkshopSettings } from '../contexts/WorkshopSettingsContext';
 
 interface SaleItemForm {
@@ -71,6 +74,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
     addProduct,
     addService,
     addPart,
+    addClient,
   } = useAppStore();
   
   const { workshopSettings } = useWorkshopSettings();
@@ -93,6 +97,9 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
   // États pour la création rapide d'articles
   const [quickCreateDialogOpen, setQuickCreateDialogOpen] = useState(false);
   const [quickCreateType, setQuickCreateType] = useState<'product' | 'service' | 'part'>('product');
+  
+  // États pour la création de client
+  const [clientFormOpen, setClientFormOpen] = useState(false);
 
   // Calcul des totaux
   const totals = useMemo(() => {
@@ -337,6 +344,60 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
     }
   };
 
+  // Créer un nouveau client
+  const handleCreateNewClient = async (clientFormData: any) => {
+    try {
+      const firstName = clientFormData.firstName?.trim() || 'Client';
+      const lastName = clientFormData.lastName?.trim() || 'Sans nom';
+      
+      const clientData = {
+        firstName,
+        lastName,
+        email: clientFormData.email || '',
+        phone: (clientFormData.countryCode || '33') + (clientFormData.mobile || ''),
+        address: clientFormData.address || '',
+        notes: clientFormData.internalNote || '',
+        category: clientFormData.category || 'particulier',
+        title: clientFormData.title || 'mr',
+        companyName: clientFormData.companyName || '',
+        vatNumber: clientFormData.vatNumber || '',
+        sirenNumber: clientFormData.sirenNumber || '',
+        countryCode: clientFormData.countryCode || '33',
+        addressComplement: clientFormData.addressComplement || '',
+        region: clientFormData.region || '',
+        postalCode: clientFormData.postalCode || '',
+        city: clientFormData.city || '',
+        billingAddressSame: clientFormData.billingAddressSame !== undefined ? clientFormData.billingAddressSame : true,
+        billingAddress: clientFormData.billingAddress || '',
+        billingAddressComplement: clientFormData.billingAddressComplement || '',
+        billingRegion: clientFormData.billingRegion || '',
+        billingPostalCode: clientFormData.billingPostalCode || '',
+        billingCity: clientFormData.billingCity || '',
+        accountingCode: clientFormData.accountingCode || '',
+        cniIdentifier: clientFormData.cniIdentifier || '',
+        attachedFilePath: clientFormData.attachedFile ? clientFormData.attachedFile.name : '',
+        internalNote: clientFormData.internalNote || '',
+        status: clientFormData.status || 'displayed',
+        smsNotification: clientFormData.smsNotification !== undefined ? clientFormData.smsNotification : true,
+        emailNotification: clientFormData.emailNotification !== undefined ? clientFormData.emailNotification : true,
+        smsMarketing: clientFormData.smsMarketing !== undefined ? clientFormData.smsMarketing : true,
+        emailMarketing: clientFormData.emailMarketing !== undefined ? clientFormData.emailMarketing : true,
+      };
+
+      const createdClient = await addClient(clientData);
+      
+      // Sélectionner automatiquement le client créé
+      if (createdClient && createdClient.id) {
+        setSelectedClientId(createdClient.id);
+      }
+      
+      setClientFormOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la création du client:', error);
+      throw error;
+    }
+  };
+
   const getPaymentMethodLabel = (method: string) => {
     const labels = {
       cash: 'Espèces',
@@ -571,21 +632,45 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
 
                 {/* Informations client et paiement */}
                 <Box sx={{ mb: 2 }}>
-                  <FormControl fullWidth size="small" sx={{ mb: 1 }}>
-                    <InputLabel>Client</InputLabel>
-                    <Select 
-                      value={selectedClientId} 
-                      onChange={(e) => setSelectedClientId(e.target.value)}
-                      label="Client"
-                    >
-                      <MenuItem value="">Client anonyme</MenuItem>
-                      {clients.map((client) => (
-                        <MenuItem key={client.id} value={client.id}>
-                          {client.firstName} {client.lastName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                    <Autocomplete
+                      fullWidth
+                      size="small"
+                      options={[{ id: '', firstName: 'Client', lastName: 'anonyme' }, ...clients]}
+                      value={clients.find(c => c.id === selectedClientId) || { id: '', firstName: 'Client', lastName: 'anonyme' }}
+                      onChange={(event, newValue) => {
+                        setSelectedClientId(newValue?.id || '');
+                      }}
+                      getOptionLabel={(option) => 
+                        option.id === '' 
+                          ? 'Client anonyme' 
+                          : `${option.firstName} ${option.lastName}`
+                      }
+                      renderInput={(params) => (
+                        <TextField 
+                          {...params} 
+                          label="Client" 
+                          placeholder="Rechercher un client..."
+                        />
+                      )}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                    />
+                    <Tooltip title="Créer un nouveau client">
+                      <IconButton
+                        size="small"
+                        onClick={() => setClientFormOpen(true)}
+                        sx={{
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          },
+                        }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
 
                   <FormControl fullWidth size="small">
                     <InputLabel>Méthode de paiement</InputLabel>
@@ -641,7 +726,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
                       📊 Récapitulatif
                     </Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2">Sous-total:</Typography>
+                      <Typography variant="body2">Prix HT:</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
                         {totals.subtotal.toLocaleString('fr-FR')} €
                       </Typography>
@@ -700,7 +785,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
               },
             }}
           >
-            Créer la vente ({totals.total.toLocaleString('fr-FR')} €)
+            Créer la vente ({totals.subtotal.toLocaleString('fr-FR')} € HT / {totals.total.toLocaleString('fr-FR')} € TTC)
           </Button>
         </DialogActions>
       </Dialog>
@@ -726,6 +811,14 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
           ...services.filter(s => s.subcategory).map(s => s.subcategory!),
           ...parts.filter(p => p.subcategory).map(p => p.subcategory!),
         ])).sort()}
+      />
+
+      {/* Dialogue de création de client */}
+      <ClientForm
+        open={clientFormOpen}
+        onClose={() => setClientFormOpen(false)}
+        onSubmit={handleCreateNewClient}
+        existingEmails={clients.map(client => client.email?.toLowerCase() || '')}
       />
     </>
   );

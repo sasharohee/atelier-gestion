@@ -790,12 +790,20 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         Sous-total HT :
                       </Typography>
                       <Typography sx={{ fontWeight: 600, fontSize: '16px' }}>
-                        {formatFromEUR(
-                          sale && products && services && parts 
-                            ? calculateRealSubtotalHT(data as Sale, products, services, parts)
-                            : (data as Sale).subtotal / 1.20, // Fallback si les données ne sont pas chargées
-                          currency
-                        )}
+                        {formatFromEUR((data as Sale).subtotal, currency)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      mb: 1 
+                    }}>
+                      <Typography sx={{ fontSize: '16px' }}>
+                        TVA ({workshopSettingsData.vatRate}%) :
+                      </Typography>
+                      <Typography sx={{ fontSize: '16px' }}>
+                        {formatFromEUR((data as Sale).tax || 0, currency)}
                       </Typography>
                     </Box>
                     <Box sx={{ 
@@ -808,7 +816,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                         Sous-total TTC :
                       </Typography>
                       <Typography sx={{ fontSize: '16px' }}>
-                        {formatFromEUR((data as Sale).subtotal, currency)}
+                        {formatFromEUR((data as Sale).subtotal + ((data as Sale).tax || 0), currency)}
                       </Typography>
                     </Box>
                     {(() => {
