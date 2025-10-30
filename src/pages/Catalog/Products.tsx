@@ -26,6 +26,7 @@ import {
   Alert,
   Switch,
   FormControlLabel,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -67,6 +68,7 @@ const Products: React.FC = () => {
     name: '',
     description: '',
     category: 'smartphone',
+    subcategory: '',
     price: 0,
     price_ht: 0,
     price_ttc: 0,
@@ -126,6 +128,7 @@ const Products: React.FC = () => {
         name: productToUse.name || '',
         description: productToUse.description || '',
         category: productToUse.category || 'smartphone',
+        subcategory: productToUse.subcategory || '',
         price: productToUse.price || 0,
         price_ht: productToUse.price_ht || productToUse.price || 0,
         price_ttc: productToUse.price_ttc || (productToUse.price ? productToUse.price * 1.20 : 0),
@@ -141,6 +144,7 @@ const Products: React.FC = () => {
         name: '',
         description: '',
         category: 'smartphone',
+        subcategory: '',
         price: 0,
         price_ht: 0,
         price_ttc: 0,
@@ -321,6 +325,8 @@ const Products: React.FC = () => {
 
     try {
       // Log pour debug
+      console.log('📝 handleSubmit - formData complet:', formData);
+      console.log('📝 handleSubmit - subcategory value:', formData.subcategory);
 
       if (editingProduct) {
         // Mode édition
@@ -328,6 +334,7 @@ const Products: React.FC = () => {
           name: formData.name,
           description: formData.description,
           category: formData.category,
+          subcategory: formData.subcategory || null,
           price: formData.price,
           price_ht: formData.price_ht,
           price_ttc: formData.price_ttc,
@@ -338,6 +345,7 @@ const Products: React.FC = () => {
           barcode: formData.barcode || null, // S'assurer que c'est null si vide
         };
         
+        console.log('📝 handleSubmit - updateData avant envoi:', updateData);
         await updateProduct(editingProduct, updateData);
       } else {
         // Mode création
@@ -345,6 +353,7 @@ const Products: React.FC = () => {
           name: formData.name,
           description: formData.description,
           category: formData.category,
+          subcategory: formData.subcategory || null,
           price: formData.price,
           price_ht: formData.price_ht,
           price_ttc: formData.price_ttc,
@@ -609,6 +618,34 @@ const Products: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
+            
+            <Autocomplete
+              freeSolo
+              options={Array.from(new Set(
+                products
+                  .filter(p => p.subcategory)
+                  .map(p => p.subcategory!)
+              )).sort()}
+              value={formData.subcategory || null}
+              onChange={(event, newValue) => {
+                console.log('🎯 Autocomplete onChange - newValue:', newValue);
+                handleInputChange('subcategory', newValue || '');
+              }}
+              onInputChange={(event, newInputValue, reason) => {
+                console.log('🎯 Autocomplete onInputChange - newInputValue:', newInputValue, 'reason:', reason);
+                // Enregistrer la valeur lors de la saisie libre
+                if (reason === 'input') {
+                  handleInputChange('subcategory', newInputValue || '');
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Sous-catégorie"
+                  placeholder="Créer une sous-catégorie ou sélectionner"
+                />
+              )}
+            />
             
             <PriceInputFields
               priceHT={formData.price_ht || 0}

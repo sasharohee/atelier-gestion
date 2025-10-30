@@ -988,6 +988,7 @@ export const useAppStore = create<AppStore>()(
               duration: result.data.duration,
               price: result.data.price,
               category: result.data.category,
+              subcategory: result.data.subcategory || undefined,
               applicableDevices: result.data.applicable_devices || result.data.applicableDevices,
               isActive: result.data.is_active !== undefined ? result.data.is_active : result.data.isActive,
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
@@ -1013,6 +1014,7 @@ export const useAppStore = create<AppStore>()(
               duration: result.data.duration,
               price: result.data.price,
               category: result.data.category,
+              subcategory: result.data.subcategory || undefined,
               applicableDevices: result.data.applicable_devices || result.data.applicableDevices,
               isActive: result.data.is_active !== undefined ? result.data.is_active : result.data.isActive,
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
@@ -1054,6 +1056,7 @@ export const useAppStore = create<AppStore>()(
               description: result.data.description,
               partNumber: result.data.part_number || result.data.partNumber,
               brand: result.data.brand,
+              subcategory: result.data.subcategory || undefined,
               compatibleDevices: result.data.compatible_devices || result.data.compatibleDevices,
               stockQuantity: result.data.stock_quantity !== null && result.data.stock_quantity !== undefined 
                 ? result.data.stock_quantity 
@@ -1168,6 +1171,7 @@ export const useAppStore = create<AppStore>()(
               name: result.data.name || '',
               description: result.data.description || '',
               category: result.data.category || 'accessoire',
+              subcategory: result.data.subcategory || undefined,
               price: result.data.price || 0,
               stockQuantity: result.data.stock_quantity || result.data.stockQuantity || 0,
               minStockLevel: result.data.min_stock_level || result.data.minStockLevel || 1,
@@ -1193,6 +1197,7 @@ export const useAppStore = create<AppStore>()(
               name: result.data.name || '',
               description: result.data.description || '',
               category: result.data.category || 'accessoire',
+              subcategory: result.data.subcategory || undefined,
               price: result.data.price || 0,
               stockQuantity: result.data.stock_quantity || result.data.stockQuantity || 0,
               minStockLevel: result.data.min_stock_level || result.data.minStockLevel || 1,
@@ -1913,6 +1918,7 @@ export const useAppStore = create<AppStore>()(
               duration: service.duration,
               price: service.price,
               category: service.category,
+              subcategory: service.subcategory || undefined,
               applicableDevices: service.applicable_devices || service.applicableDevices,
               isActive: service.is_active !== undefined ? service.is_active : service.isActive,
               createdAt: service.created_at ? new Date(service.created_at) : new Date(),
@@ -1939,6 +1945,7 @@ export const useAppStore = create<AppStore>()(
                 description: part.description,
                 partNumber: part.part_number || part.partNumber,
                 brand: part.brand,
+                subcategory: part.subcategory || undefined,
                 compatibleDevices: part.compatible_devices || part.compatibleDevices,
                 stockQuantity: part.stock_quantity !== null && part.stock_quantity !== undefined 
                   ? part.stock_quantity 
@@ -1976,6 +1983,7 @@ export const useAppStore = create<AppStore>()(
                 name: product.name || '',
                 description: product.description || '',
                 category: product.category || 'accessoire',
+                subcategory: product.subcategory || undefined,
                 price: product.price || 0,
                 stockQuantity: product.stock_quantity !== null && product.stock_quantity !== undefined 
                   ? product.stock_quantity 

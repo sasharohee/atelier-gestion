@@ -1906,6 +1906,7 @@ export const partService = {
       description: part.description,
       part_number: part.partNumber,
       brand: part.brand,
+      subcategory: part.subcategory || null,
       compatible_devices: part.compatibleDevices,
       stock_quantity: part.stockQuantity,
       min_stock_level: part.minStockLevel,
@@ -1941,6 +1942,7 @@ export const partService = {
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.partNumber !== undefined) dbUpdates.part_number = updates.partNumber;
     if (updates.brand !== undefined) dbUpdates.brand = updates.brand;
+    if (updates.subcategory !== undefined) dbUpdates.subcategory = updates.subcategory || null;
     if (updates.compatibleDevices !== undefined) dbUpdates.compatible_devices = updates.compatibleDevices;
     if (updates.stockQuantity !== undefined) dbUpdates.stock_quantity = updates.stockQuantity;
     if (updates.minStockLevel !== undefined) dbUpdates.min_stock_level = updates.minStockLevel;
@@ -2056,6 +2058,7 @@ export const productService = {
       name: product.name,
       description: product.description,
       category: product.category,
+      subcategory: product.subcategory || null,
       price: product.price,
       stock_quantity: product.stockQuantity,
       min_stock_level: product.minStockLevel,
@@ -2093,6 +2096,7 @@ export const productService = {
     if (updates.name !== undefined) dbUpdates.name = updates.name;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.subcategory !== undefined) dbUpdates.subcategory = updates.subcategory || null;
     if (updates.price !== undefined) dbUpdates.price = updates.price;
     if (updates.stockQuantity !== undefined) dbUpdates.stock_quantity = updates.stockQuantity;
     if (updates.minStockLevel !== undefined) dbUpdates.min_stock_level = updates.minStockLevel;
@@ -2646,6 +2650,7 @@ export const serviceService = {
       duration: service.duration,
       price: service.price,
       category: service.category,
+      subcategory: service.subcategory || undefined,
       applicableDevices: service.applicable_devices || [],
       isActive: service.is_active,
       createdAt: new Date(service.created_at),
@@ -2679,6 +2684,7 @@ export const serviceService = {
       duration: data.duration,
       price: data.price,
       category: data.category,
+      subcategory: data.subcategory || undefined,
       applicableDevices: data.applicable_devices || [],
       isActive: data.is_active,
       createdAt: new Date(data.created_at),
@@ -2702,6 +2708,7 @@ export const serviceService = {
       duration: service.duration,
       price: service.price,
       category: service.category,
+      subcategory: service.subcategory || null,
       applicable_devices: service.applicableDevices,
       is_active: service.isActive,
       user_id: user.id,
@@ -2725,6 +2732,7 @@ export const serviceService = {
       duration: data.duration,
       price: data.price,
       category: data.category,
+      subcategory: data.subcategory || undefined,
       applicableDevices: data.applicable_devices || [],
       isActive: data.is_active,
       createdAt: new Date(data.created_at),
@@ -2751,6 +2759,7 @@ export const serviceService = {
     if (updates.duration !== undefined) updateData.duration = updates.duration;
     if (updates.price !== undefined) updateData.price = updates.price;
     if (updates.category !== undefined) updateData.category = updates.category;
+    if (updates.subcategory !== undefined) updateData.subcategory = updates.subcategory || null;
     if (updates.applicableDevices !== undefined) updateData.applicable_devices = updates.applicableDevices;
     if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
 
@@ -2772,6 +2781,7 @@ export const serviceService = {
       duration: data.duration,
       price: data.price,
       category: data.category,
+      subcategory: data.subcategory || undefined,
       applicableDevices: data.applicable_devices || [],
       isActive: data.is_active,
       createdAt: new Date(data.created_at),

@@ -26,6 +26,7 @@ import {
   Alert,
   Switch,
   FormControlLabel,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -56,6 +57,7 @@ const Services: React.FC = () => {
     price_ttc: 0,
     price_is_ttc: true, // Services sont par défaut en TTC
     category: 'réparation' as string,
+    subcategory: '',
     applicableDevices: [] as string[],
     isActive: true,
   });
@@ -92,6 +94,7 @@ const Services: React.FC = () => {
         price_ttc: service.price_ttc || service.price || 0,
         price_is_ttc: service.price_is_ttc !== undefined ? service.price_is_ttc : true,
         category: service.category || 'réparation',
+        subcategory: service.subcategory || '',
         applicableDevices: service.applicableDevices || [],
         isActive: service.isActive !== undefined ? service.isActive : true,
       });
@@ -107,6 +110,7 @@ const Services: React.FC = () => {
         price_ttc: 0,
         price_is_ttc: true,
         category: 'réparation' as string,
+        subcategory: '',
         applicableDevices: [] as string[],
         isActive: true,
       });
@@ -160,6 +164,7 @@ const Services: React.FC = () => {
         price_ttc: formData.price_ttc,
         price_is_ttc: formData.price_is_ttc,
         category: formData.category,
+        subcategory: formData.subcategory || null,
         applicableDevices: formData.applicableDevices,
         isActive: formData.isActive,
       };
@@ -353,6 +358,31 @@ const Services: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
+            
+            <Autocomplete
+              freeSolo
+              options={Array.from(new Set(
+                services
+                  .filter(s => s.subcategory)
+                  .map(s => s.subcategory!)
+              )).sort()}
+              value={formData.subcategory || null}
+              onChange={(event, newValue) => {
+                handleInputChange('subcategory', newValue || '');
+              }}
+              onInputChange={(event, newInputValue, reason) => {
+                if (reason === 'input') {
+                  handleInputChange('subcategory', newInputValue || '');
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Sous-catégorie"
+                  placeholder="Créer une sous-catégorie ou sélectionner"
+                />
+              )}
+            />
             
             <FormControl fullWidth>
               <InputLabel>Appareils compatibles</InputLabel>

@@ -26,6 +26,7 @@ import {
   Alert,
   Switch,
   FormControlLabel,
+  Autocomplete,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -52,6 +53,7 @@ const Parts: React.FC = () => {
     description: '',
     partNumber: '',
     brand: '',
+    subcategory: '',
     compatibleDevices: [] as string[],
     stockQuantity: 0,
     minStockLevel: 1,
@@ -81,6 +83,7 @@ const Parts: React.FC = () => {
         description: part.description,
         partNumber: part.partNumber,
         brand: part.brand,
+        subcategory: part.subcategory || '',
         compatibleDevices: part.compatibleDevices || [],
         stockQuantity: part.stockQuantity,
         minStockLevel: part.minStockLevel,
@@ -98,6 +101,7 @@ const Parts: React.FC = () => {
         description: '',
         partNumber: '',
         brand: '',
+        subcategory: '',
         compatibleDevices: [],
         stockQuantity: 0,
         minStockLevel: 1,
@@ -162,6 +166,7 @@ const Parts: React.FC = () => {
           description: formData.description,
           partNumber: formData.partNumber,
           brand: formData.brand,
+          subcategory: formData.subcategory || null,
           compatibleDevices: formData.compatibleDevices,
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
@@ -179,6 +184,7 @@ const Parts: React.FC = () => {
           description: formData.description,
           partNumber: formData.partNumber,
           brand: formData.brand,
+          subcategory: formData.subcategory || null,
           compatibleDevices: formData.compatibleDevices,
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
@@ -340,6 +346,31 @@ const Parts: React.FC = () => {
                 required
               />
             </Box>
+            
+            <Autocomplete
+              freeSolo
+              options={Array.from(new Set(
+                parts
+                  .filter(p => p.subcategory)
+                  .map(p => p.subcategory!)
+              )).sort()}
+              value={formData.subcategory || null}
+              onChange={(event, newValue) => {
+                handleInputChange('subcategory', newValue || '');
+              }}
+              onInputChange={(event, newInputValue, reason) => {
+                if (reason === 'input') {
+                  handleInputChange('subcategory', newInputValue || '');
+                }
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Sous-catégorie"
+                  placeholder="Créer une sous-catégorie ou sélectionner"
+                />
+              )}
+            />
             
             <FormControl fullWidth>
               <InputLabel>Appareils compatibles</InputLabel>
