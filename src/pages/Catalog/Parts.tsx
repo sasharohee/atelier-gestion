@@ -78,6 +78,12 @@ const Parts: React.FC = () => {
     setError(null);
     if (part) {
       setEditingPart(part.id);
+      
+      // Le champ 'price' contient toujours le prix HT
+      // On calcule le TTC à partir du HT
+      const priceHT = part.price || 0;
+      const priceTTC = Math.round(priceHT * 1.20 * 100) / 100;
+      
       setFormData({
         name: part.name,
         description: part.description,
@@ -87,10 +93,10 @@ const Parts: React.FC = () => {
         compatibleDevices: part.compatibleDevices || [],
         stockQuantity: part.stockQuantity,
         minStockLevel: part.minStockLevel,
-        price: part.price,
-        price_ht: part.price_ht || part.price || 0,
-        price_ttc: part.price_ttc || (part.price ? part.price * 1.20 : 0),
-        price_is_ttc: part.price_is_ttc || false,
+        price: priceHT,
+        price_ht: priceHT,
+        price_ttc: priceTTC,
+        price_is_ttc: false, // Le prix est toujours HT dans la base
         supplier: part.supplier,
         isActive: part.isActive,
       });
@@ -108,7 +114,7 @@ const Parts: React.FC = () => {
         price: 0,
         price_ht: 0,
         price_ttc: 0,
-        price_is_ttc: false,
+        price_is_ttc: false, // On commence avec HT
         supplier: '',
         isActive: true,
       });
@@ -170,7 +176,7 @@ const Parts: React.FC = () => {
           compatibleDevices: formData.compatibleDevices,
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
-          price: formData.price,
+          price: formData.price_ht, // Toujours enregistrer le prix HT dans le champ price
           price_ht: formData.price_ht,
           price_ttc: formData.price_ttc,
           price_is_ttc: formData.price_is_ttc,
@@ -188,7 +194,7 @@ const Parts: React.FC = () => {
           compatibleDevices: formData.compatibleDevices,
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
-          price: formData.price,
+          price: formData.price_ht, // Toujours enregistrer le prix HT dans le champ price
           price_ht: formData.price_ht,
           price_ttc: formData.price_ttc,
           price_is_ttc: formData.price_is_ttc,
@@ -419,7 +425,7 @@ const Parts: React.FC = () => {
                   price_ht: values.price_ht,
                   price_ttc: values.price_ttc,
                   price_is_ttc: values.price_is_ttc,
-                  price: values.price_is_ttc ? values.price_ttc : values.price_ht // pour compatibilité
+                  price: values.price_ht // Le prix du produit est toujours le HT
                 }));
               }}
               disabled={loading}

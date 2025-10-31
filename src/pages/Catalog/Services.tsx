@@ -85,14 +85,20 @@ const Services: React.FC = () => {
     if (service) {
       // Mode édition
       setEditingService(service.id);
+      
+      // Le champ 'price' contient toujours le prix HT
+      // On calcule le TTC à partir du HT
+      const priceHT = service.price || 0;
+      const priceTTC = Math.round(priceHT * 1.20 * 100) / 100;
+      
       setFormData({
         name: service.name,
         description: service.description,
         duration: service.duration,
-        price: service.price,
-        price_ht: service.price_ht || (service.price ? service.price / 1.20 : 0),
-        price_ttc: service.price_ttc || service.price || 0,
-        price_is_ttc: service.price_is_ttc !== undefined ? service.price_is_ttc : true,
+        price: priceHT,
+        price_ht: priceHT,
+        price_ttc: priceTTC,
+        price_is_ttc: false, // Le prix est toujours HT dans la base
         category: service.category || 'réparation',
         subcategory: service.subcategory || '',
         applicableDevices: service.applicableDevices || [],
@@ -108,7 +114,7 @@ const Services: React.FC = () => {
         price: 0,
         price_ht: 0,
         price_ttc: 0,
-        price_is_ttc: true,
+        price_is_ttc: false, // On commence avec HT
         category: 'réparation' as string,
         subcategory: '',
         applicableDevices: [] as string[],
@@ -159,10 +165,7 @@ const Services: React.FC = () => {
         name: formData.name,
         description: formData.description,
         duration: formData.duration,
-        price: formData.price,
-        price_ht: formData.price_ht,
-        price_ttc: formData.price_ttc,
-        price_is_ttc: formData.price_is_ttc,
+        price: formData.price_ht, // Toujours enregistrer le prix HT dans le champ price
         category: formData.category,
         subcategory: formData.subcategory || null,
         applicableDevices: formData.applicableDevices,
@@ -337,7 +340,7 @@ const Services: React.FC = () => {
                   price_ht: values.price_ht,
                   price_ttc: values.price_ttc,
                   price_is_ttc: values.price_is_ttc,
-                  price: values.price_is_ttc ? values.price_ttc : values.price_ht // pour compatibilité
+                  price: values.price_ht // Le prix du produit est toujours le HT
                 }));
               }}
               disabled={loading}

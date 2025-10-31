@@ -297,6 +297,9 @@ export interface Part {
   stockQuantity: number;
   minStockLevel: number;
   price: number;
+  price_ht?: number;
+  price_ttc?: number;
+  price_is_ttc?: boolean;
   supplier?: string;
   isActive: boolean;
   createdAt: Date;

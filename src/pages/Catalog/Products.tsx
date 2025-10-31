@@ -124,15 +124,20 @@ const Products: React.FC = () => {
         });
       }
       
+      // Le champ 'price' contient toujours le prix HT
+      // On calcule le TTC à partir du HT
+      const priceHT = productToUse.price || 0;
+      const priceTTC = Math.round(priceHT * 1.20 * 100) / 100;
+      
       setFormData({
         name: productToUse.name || '',
         description: productToUse.description || '',
         category: productToUse.category || 'smartphone',
         subcategory: productToUse.subcategory || '',
-        price: productToUse.price || 0,
-        price_ht: productToUse.price_ht || productToUse.price || 0,
-        price_ttc: productToUse.price_ttc || (productToUse.price ? productToUse.price * 1.20 : 0),
-        price_is_ttc: productToUse.price_is_ttc || false,
+        price: priceHT,
+        price_ht: priceHT,
+        price_ttc: priceTTC,
+        price_is_ttc: false, // Le prix est toujours HT dans la base
         stockQuantity: productToUse.stockQuantity || 0,
         minStockLevel: productToUse.minStockLevel || 1,
         isActive: productToUse.isActive !== undefined ? productToUse.isActive : true,
@@ -148,7 +153,7 @@ const Products: React.FC = () => {
         price: 0,
         price_ht: 0,
         price_ttc: 0,
-        price_is_ttc: false,
+        price_is_ttc: false, // On commence avec HT
         stockQuantity: 0,
         minStockLevel: 1,
         isActive: true,
@@ -335,10 +340,7 @@ const Products: React.FC = () => {
           description: formData.description,
           category: formData.category,
           subcategory: formData.subcategory || null,
-          price: formData.price,
-          price_ht: formData.price_ht,
-          price_ttc: formData.price_ttc,
-          price_is_ttc: formData.price_is_ttc,
+          price: formData.price_ht, // Toujours enregistrer le prix HT dans le champ price
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
           isActive: formData.isActive,
@@ -354,10 +356,7 @@ const Products: React.FC = () => {
           description: formData.description,
           category: formData.category,
           subcategory: formData.subcategory || null,
-          price: formData.price,
-          price_ht: formData.price_ht,
-          price_ttc: formData.price_ttc,
-          price_is_ttc: formData.price_is_ttc,
+          price: formData.price_ht, // Toujours enregistrer le prix HT dans le champ price
           stockQuantity: formData.stockQuantity,
           minStockLevel: formData.minStockLevel,
           isActive: formData.isActive,
