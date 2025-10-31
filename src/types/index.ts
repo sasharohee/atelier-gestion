@@ -290,8 +290,8 @@ export interface Part {
   id: string;
   name: string;
   description: string;
-  partNumber: string;
-  brand: string;
+  partNumber?: string;
+  brand?: string;
   subcategory?: string;
   compatibleDevices: string[]; // IDs des appareils compatibles
   stockQuantity: number;

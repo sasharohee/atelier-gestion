@@ -146,8 +146,8 @@ const Parts: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.partNumber || !formData.brand) {
-      setError('Le nom, la référence et la marque sont obligatoires');
+    if (!formData.name) {
+      setError('Le nom est obligatoire');
       return;
     }
 
@@ -170,8 +170,8 @@ const Parts: React.FC = () => {
         await updatePart(editingPart, {
           name: formData.name,
           description: formData.description,
-          partNumber: formData.partNumber,
-          brand: formData.brand,
+          partNumber: formData.partNumber || undefined,
+          brand: formData.brand || undefined,
           subcategory: formData.subcategory || null,
           compatibleDevices: formData.compatibleDevices,
           stockQuantity: formData.stockQuantity,
@@ -188,8 +188,8 @@ const Parts: React.FC = () => {
         const newPart = {
           name: formData.name,
           description: formData.description,
-          partNumber: formData.partNumber,
-          brand: formData.brand,
+          partNumber: formData.partNumber || undefined,
+          brand: formData.brand || undefined,
           subcategory: formData.subcategory || null,
           compatibleDevices: formData.compatibleDevices,
           stockQuantity: formData.stockQuantity,
@@ -338,18 +338,16 @@ const Parts: React.FC = () => {
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 fullWidth
-                label="Référence *"
+                label="Référence"
                 value={formData.partNumber}
                 onChange={(e) => handleInputChange('partNumber', e.target.value)}
-                required
               />
               
               <TextField
                 fullWidth
-                label="Marque *"
+                label="Marque"
                 value={formData.brand}
                 onChange={(e) => handleInputChange('brand', e.target.value)}
-                required
               />
             </Box>
             
