@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sélection Multiple et Suppression en Masse - Clients</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #4CAF50;
+            background-color: #E8F5E8;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #2196F3;
+            background-color: #E3F2FD;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            color: #FF9800;
+            background-color: #FFF3E0;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .feature {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #2196F3;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        .test-case {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #2196F3;
+        }
+        .code-block {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            border-left: 4px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✨ Test : Sélection Multiple et Suppression en Masse - Clients</h1>
+        
+        <div class="success">
+            <h3>✅ Nouvelle fonctionnalité ajoutée :</h3>
+            <p>Les utilisateurs peuvent maintenant sélectionner plusieurs clients et les supprimer en une seule opération. Cette fonctionnalité améliore considérablement l'efficacité de la gestion des clients.</p>
+        </div>
+
+        <div class="info">
+            <h3>🎯 Fonctionnalités implémentées :</h3>
+            <ul>
+                <li><strong>Checkbox individuelle</strong> : Sélection de clients individuels</li>
+                <li><strong>Sélection globale</strong> : Checkbox "Tout sélectionner" dans l'en-tête</li>
+                <li><strong>Indicateur visuel</strong> : Chip montrant le nombre de clients sélectionnés</li>
+                <li><strong>Bouton de suppression</strong> : Apparaît uniquement quand des clients sont sélectionnés</li>
+                <li><strong>Confirmation</strong> : Dialog de confirmation avant suppression</li>
+                <li><strong>Gestion d'erreur</strong> : Gestion robuste des erreurs et états de chargement</li>
+            </ul>
+        </div>
+
+        <div class="feature">
+            <h3>🔧 Fonctionnalités techniques :</h3>
+            
+            <div class="test-case">
+                <h4>1. Interface utilisateur</h4>
+                <div class="code-block">
+// Checkbox dans l'en-tête de table
+<TableCell padding="checkbox">
+  <Checkbox
+    indeterminate={selectedClients.length > 0 && selectedClients.length < clients.length}
+    checked={clients.length > 0 && selectedClients.length === clients.length}
+    onChange={handleSelectAll}
+    color="primary"
+  />
+</TableCell>
+
+// Checkbox pour chaque client
+<TableCell padding="checkbox">
+  <Checkbox
+    checked={selectedClients.includes(client.id)}
+    onChange={() => handleSelectClient(client.id)}
+    color="primary"
+  />
+</TableCell>
+                </div>
+            </div>
+
+            <div class="test-case">
+                <h4>2. Gestion des états</h4>
+                <div class="code-block">
+// États pour la sélection multiple
+const [selectedClients, setSelectedClients] = useState<string[]>([]);
+const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+const [isDeleting, setIsDeleting] = useState(false);
+
+// Fonctions de gestion
+const handleSelectAll = () => {
+  if (selectedClients.length === clients.length) {
+    setSelectedClients([]);
+  } else {
+    setSelectedClients(clients.map(client => client.id));
+  }
+};
+                </div>
+            </div>
+
+            <div class="test-case">
+                <h4>3. Suppression en masse</h4>
+                <div class="code-block">
+const confirmBulkDelete = async () => {
+  setIsDeleting(true);
+  try {
+    // Supprimer chaque client sélectionné
+    for (const clientId of selectedClients) {
+      await deleteClient(clientId);
+    }
+    // Recharger la liste et réinitialiser la sélection
+    await loadClients();
+    setSelectedClients([]);
+    alert(`✅ ${selectedClients.length} client(s) supprimé(s) !`);
+  } catch (err) {
+    // Gestion d'erreur
+  } finally {
+    setIsDeleting(false);
+  }
+};
+                </div>
+            </div>
+        </div>
+
+        <div class="success">
+            <h3>✨ Avantages de la fonctionnalité :</h3>
+            <ul>
+                <li>⚡ <strong>Efficacité</strong> : Suppression de plusieurs clients en une opération</li>
+                <li>🎯 <strong>Précision</strong> : Sélection individuelle ou globale</li>
+                <li>🛡️ <strong>Sécurité</strong> : Confirmation obligatoire avant suppression</li>
+                <li>📊 <strong>Feedback</strong> : Indicateur visuel du nombre de clients sélectionnés</li>
+                <li>🔄 <strong>État</strong> : Gestion des états de chargement et d'erreur</li>
+                <li>🎨 <strong>UX</strong> : Interface intuitive et moderne</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ Comportement attendu :</h3>
+            <ul>
+                <li><strong>Sélection individuelle</strong> : Clic sur checkbox pour sélectionner/désélectionner</li>
+                <li><strong>Sélection globale</strong> : Clic sur checkbox d'en-tête pour tout sélectionner/désélectionner</li>
+                <li><strong>Indicateur visuel</strong> : Chip "X sélectionné(s)" apparaît quand des clients sont sélectionnés</li>
+                <li><strong>Bouton suppression</strong> : Apparaît uniquement avec des clients sélectionnés</li>
+                <li><strong>Confirmation</strong> : Dialog de confirmation avant suppression définitive</li>
+            </ul>
+        </div>
+
+        <div class="feature">
+            <h3>🧪 Tests à effectuer :</h3>
+            
+            <div class="test-case">
+                <h4>Test 1 : Sélection individuelle</h4>
+                <ol>
+                    <li>Aller sur la page Clients</li>
+                    <li>Cliquer sur les checkboxes de plusieurs clients</li>
+                    <li>Vérifier que le chip "X sélectionné(s)" apparaît</li>
+                    <li>Vérifier que le bouton "Supprimer sélection" apparaît</li>
+                </ol>
+            </div>
+
+            <div class="test-case">
+                <h4>Test 2 : Sélection globale</h4>
+                <ol>
+                    <li>Cliquer sur la checkbox d'en-tête</li>
+                    <li>Vérifier que tous les clients sont sélectionnés</li>
+                    <li>Cliquer à nouveau pour tout désélectionner</li>
+                    <li>Vérifier que le chip et le bouton disparaissent</li>
+                </ol>
+            </div>
+
+            <div class="test-case">
+                <h4>Test 3 : Suppression en masse</h4>
+                <ol>
+                    <li>Sélectionner plusieurs clients</li>
+                    <li>Cliquer sur "Supprimer sélection"</li>
+                    <li>Confirmer dans le dialog</li>
+                    <li>Vérifier que les clients sont supprimés</li>
+                    <li>Vérifier le message de confirmation</li>
+                </ol>
+            </div>
+
+            <div class="test-case">
+                <h4>Test 4 : Annulation</h4>
+                <ol>
+                    <li>Sélectionner des clients</li>
+                    <li>Cliquer sur "Supprimer sélection"</li>
+                    <li>Cliquer sur "Annuler" dans le dialog</li>
+                    <li>Vérifier que les clients ne sont pas supprimés</li>
+                </ol>
+            </div>
+        </div>
+
+        <button onclick="window.open('https://atelier-gestion-r9qagbsgn-sasharohees-projects.vercel.app/app/transaction/clients', '_blank')">
+            🚀 Tester la sélection multiple
+        </button>
+
+        <div class="info">
+            <h3>📋 Interface utilisateur :</h3>
+            <ul>
+                <li><strong>Checkbox d'en-tête</strong> : Sélection/désélection de tous les clients</li>
+                <li><strong>Checkbox individuelle</strong> : Sélection de clients spécifiques</li>
+                <li><strong>Chip indicateur</strong> : "X sélectionné(s)" quand des clients sont sélectionnés</li>
+                <li><strong>Bouton suppression</strong> : "Supprimer sélection" avec icône de suppression</li>
+                <li><strong>Dialog confirmation</strong> : Confirmation avant suppression définitive</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h3>🎉 Résultat final :</h3>
+            <p>Les utilisateurs peuvent maintenant gérer efficacement leurs clients avec la sélection multiple et la suppression en masse. Cette fonctionnalité améliore considérablement l'expérience utilisateur et la productivité.</p>
+        </div>
+
+        <div class="info">
+            <h3>🔗 Déploiement :</h3>
+            <ul>
+                <li><strong>GitHub</strong> : Commit <code>4296b0f</code> - "✨ Add bulk selection and deletion for clients"</li>
+                <li><strong>Vercel</strong> : Déploiement réussi</li>
+                <li><strong>URL Production</strong> : https://atelier-gestion-r9qagbsgn-sasharohees-projects.vercel.app</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

@@ -352,6 +352,8 @@ export interface Repair {
   discountPercentage?: number;
   discountAmount?: number;
   originalPrice?: number;
+  deposit?: number; // Acompte payé par le client
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'check' | 'payment_link'; // Mode de paiement
   isPaid: boolean;
   source?: 'kanban' | 'sav' | 'sale'; // Source de création de la réparation
   createdAt: Date;

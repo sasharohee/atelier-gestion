@@ -534,6 +534,25 @@ class PrintTemplatesService {
 
     yPos += 10;
 
+    // Acompte et reste à payer
+    if (repair.deposit && repair.deposit > 0) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Acompte payé:', 150, yPos);
+      doc.text(`${repair.deposit.toFixed(2)} €`, 190, yPos, { align: 'right' });
+      yPos += 6;
+      
+      const remaining = repair.totalPrice - repair.deposit;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 102, 204); // Bleu
+      doc.text('Reste à payer:', 150, yPos);
+      doc.text(`${remaining.toFixed(2)} €`, 190, yPos, { align: 'right' });
+      doc.setTextColor(0, 0, 0);
+      yPos += 8;
+    } else {
+      yPos += 4;
+    }
+
     // Statut de paiement
     if (repair.isPaid) {
       doc.setFontSize(11);

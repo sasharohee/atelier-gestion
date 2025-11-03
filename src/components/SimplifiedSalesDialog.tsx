@@ -24,6 +24,7 @@ import {
   Alert,
   Tooltip,
   Autocomplete,
+  Snackbar,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -100,11 +101,23 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
   
   // États pour la création de client
   const [clientFormOpen, setClientFormOpen] = useState(false);
+  
+  // État pour la notification de succès
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // Fonction pour arrondir à 2 décimales
+  const roundToTwo = (num: number): number => {
+    return Math.round(num * 100) / 100;
+  };
+
+  // Fonction pour formater les prix avec exactement 2 décimales
+  const formatPrice = (num: number): string => {
+    return num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
 
   // Calcul des totaux
   const totals = useMemo(() => {
-    const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    
     // Gestion du taux de TVA : utiliser la valeur configurée ou 20% par défaut
     let vatRate = 20; // Valeur par défaut
     if (workshopSettings.vatRate !== undefined && workshopSettings.vatRate !== null) {
@@ -114,10 +127,32 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
       }
     }
     
-    const tax = subtotal * (vatRate / 100);
-    const totalBeforeDiscount = subtotal + tax;
-    const discountAmount = (totalBeforeDiscount * discountPercentage) / 100;
-    const total = totalBeforeDiscount - discountAmount;
+    // Calculer par unité puis multiplier pour éviter les erreurs d'arrondi
+    let subtotal = 0;
+    let tax = 0;
+    let totalTTC = 0;
+    
+    saleItems.forEach(item => {
+      // Calculer pour UNE unité
+      const unitHT = roundToTwo(item.unitPrice);
+      const unitTax = roundToTwo(unitHT * (vatRate / 100));
+      const unitTTC = roundToTwo(unitHT + unitTax);
+      
+      // Multiplier par la quantité
+      const lineHT = roundToTwo(unitHT * item.quantity);
+      const lineTax = roundToTwo(unitTax * item.quantity);
+      const lineTTC = roundToTwo(unitTTC * item.quantity);
+      
+      subtotal += lineHT;
+      tax += lineTax;
+      totalTTC += lineTTC;
+    });
+    
+    subtotal = roundToTwo(subtotal);
+    tax = roundToTwo(tax);
+    const totalBeforeDiscount = roundToTwo(totalTTC);
+    const discountAmount = roundToTwo((totalBeforeDiscount * discountPercentage) / 100);
+    const total = roundToTwo(totalBeforeDiscount - discountAmount);
     
     return { subtotal, tax, totalBeforeDiscount, discountAmount, total, vatRate };
   }, [saleItems, discountPercentage, workshopSettings.vatRate]);
@@ -169,7 +204,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
       // Augmenter la quantité si l'article existe déjà
       setSaleItems(prev => prev.map(saleItem => 
         saleItem.itemId === item.id 
-          ? { ...saleItem, quantity: saleItem.quantity + 1, totalPrice: (saleItem.quantity + 1) * saleItem.unitPrice }
+          ? { ...saleItem, quantity: saleItem.quantity + 1, totalPrice: roundToTwo((saleItem.quantity + 1) * saleItem.unitPrice) }
           : saleItem
       ));
     } else {
@@ -179,8 +214,8 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
         itemId: item.id,
         name: item.name,
         quantity: 1,
-        unitPrice: item.price,
-        totalPrice: item.price,
+        unitPrice: roundToTwo(item.price),
+        totalPrice: roundToTwo(item.price),
       };
       setSaleItems(prev => [...prev, newItem]);
     }
@@ -200,7 +235,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
     
     setSaleItems(prev => prev.map(item => 
       item.itemId === itemId 
-        ? { ...item, quantity, totalPrice: quantity * item.unitPrice }
+        ? { ...item, quantity, totalPrice: roundToTwo(quantity * item.unitPrice) }
         : item
     ));
   };
@@ -215,11 +250,11 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
   // Valider la modification du prix
   const validatePriceChange = () => {
     if (editingItemId && keypadValue) {
-      const newPrice = parseFloat(keypadValue);
+      const newPrice = roundToTwo(parseFloat(keypadValue));
       if (!isNaN(newPrice) && newPrice > 0) {
         setSaleItems(prev => prev.map(item => 
           item.itemId === editingItemId 
-            ? { ...item, unitPrice: newPrice, totalPrice: item.quantity * newPrice }
+            ? { ...item, unitPrice: newPrice, totalPrice: roundToTwo(item.quantity * newPrice) }
             : item
         ));
       }
@@ -384,16 +419,39 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
         emailMarketing: clientFormData.emailMarketing !== undefined ? clientFormData.emailMarketing : true,
       };
 
-      const createdClient = await addClient(clientData);
-      
-      // Sélectionner automatiquement le client créé
-      if (createdClient && createdClient.id) {
-        setSelectedClientId(createdClient.id);
-      }
+      await addClient(clientData);
       
       setClientFormOpen(false);
+      
+      // Attendre que le store soit mis à jour puis trouver et sélectionner le client créé
+      setTimeout(() => {
+        const newClientCreated = clients.find(c => 
+          c.firstName === firstName && 
+          c.lastName === lastName && 
+          c.email === clientFormData.email
+        );
+        
+        if (newClientCreated) {
+          setSelectedClientId(newClientCreated.id);
+          setSnackbarMessage(`✅ Client ${firstName} ${lastName} créé avec succès !`);
+          setSnackbarOpen(true);
+        } else {
+          // Si on ne trouve pas le client par email, chercher par nom
+          const newClientByName = clients.find(c => 
+            c.firstName === firstName && 
+            c.lastName === lastName
+          );
+          if (newClientByName) {
+            setSelectedClientId(newClientByName.id);
+            setSnackbarMessage(`✅ Client ${firstName} ${lastName} créé avec succès !`);
+            setSnackbarOpen(true);
+          }
+        }
+      }, 300);
     } catch (error) {
       console.error('Erreur lors de la création du client:', error);
+      setSnackbarMessage('❌ Erreur lors de la création du client');
+      setSnackbarOpen(true);
       throw error;
     }
   };
@@ -445,6 +503,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
                 onItemSelect={addItemToSale}
                 onCreateItem={handleCreateItem}
                 disabled={isKeypadActive}
+                vatRate={workshopSettings?.vatRate ? parseFloat(workshopSettings.vatRate) : 20}
               />
             </Grid>
 
@@ -568,7 +627,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
                                   Quantité: {item.quantity}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  Prix unitaire: {item.unitPrice.toLocaleString('fr-FR')} €
+                                  Prix unitaire: {formatPrice(item.unitPrice)} €
                                 </Typography>
                               </Box>
                             }
@@ -613,7 +672,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
                                   color: 'primary.main'
                                 }}
                               >
-                                {item.totalPrice.toLocaleString('fr-FR')} €
+                                {formatPrice(item.totalPrice)} €
                               </Typography>
                               <IconButton 
                                 size="small" 
@@ -636,21 +695,36 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
                     <Autocomplete
                       fullWidth
                       size="small"
-                      options={[{ id: '', firstName: 'Client', lastName: 'anonyme' }, ...clients]}
-                      value={clients.find(c => c.id === selectedClientId) || { id: '', firstName: 'Client', lastName: 'anonyme' }}
+                      options={[{ id: '', firstName: 'Client', lastName: 'anonyme', email: '', phone: '' } as any, ...clients]}
+                      value={selectedClientId ? clients.find(c => c.id === selectedClientId) || null : null}
                       onChange={(event, newValue) => {
                         setSelectedClientId(newValue?.id || '');
                       }}
                       getOptionLabel={(option) => 
                         option.id === '' 
                           ? 'Client anonyme' 
-                          : `${option.firstName} ${option.lastName}`
+                          : `${option.firstName} ${option.lastName}${option.email ? ` - ${option.email}` : ''}${option.phone ? ` - ${option.phone}` : ''}`
                       }
+                      filterOptions={(options, { inputValue }) => {
+                        if (!inputValue) return options;
+                        const searchTerm = inputValue.toLowerCase();
+                        return options.filter(option => {
+                          if (option.id === '') return 'client anonyme'.includes(searchTerm);
+                          const firstName = (option.firstName || '').toLowerCase();
+                          const lastName = (option.lastName || '').toLowerCase();
+                          const email = (option.email || '').toLowerCase();
+                          const phone = (option.phone || '').toLowerCase();
+                          return firstName.includes(searchTerm) || 
+                                 lastName.includes(searchTerm) || 
+                                 email.includes(searchTerm) || 
+                                 phone.includes(searchTerm);
+                        });
+                      }}
                       renderInput={(params) => (
                         <TextField 
                           {...params} 
                           label="Client" 
-                          placeholder="Rechercher un client..."
+                          placeholder="Rechercher par nom, email ou téléphone..."
                         />
                       )}
                       isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -706,7 +780,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
                     />
                     {discountPercentage > 0 && (
                       <Alert severity="info" sx={{ mt: 1, fontSize: '0.8rem' }}>
-                        Réduction de {discountPercentage}% = {totals.discountAmount.toLocaleString('fr-FR')} €
+                        Réduction de {discountPercentage}% = {formatPrice(totals.discountAmount)} €
                       </Alert>
                     )}
                   </Box>
@@ -728,26 +802,26 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                       <Typography variant="body2">Prix HT:</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {totals.subtotal.toLocaleString('fr-FR')} €
+                        {formatPrice(totals.subtotal)} €
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                       <Typography variant="body2">TVA ({totals.vatRate}%):</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {totals.tax.toLocaleString('fr-FR')} €
+                        {formatPrice(totals.tax)} €
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                       <Typography variant="body2">Total TTC:</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {totals.totalBeforeDiscount.toLocaleString('fr-FR')} €
+                        {formatPrice(totals.totalBeforeDiscount)} €
                       </Typography>
                     </Box>
                     {discountPercentage > 0 && (
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                         <Typography variant="body2" color="success.main">Réduction ({discountPercentage}%):</Typography>
                         <Typography variant="body2" sx={{ fontWeight: 500, color: 'success.main' }}>
-                          -{totals.discountAmount.toLocaleString('fr-FR')} €
+                          -{formatPrice(totals.discountAmount)} €
                         </Typography>
                       </Box>
                     )}
@@ -755,7 +829,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                       <Typography variant="h6" sx={{ fontWeight: 600 }}>Total:</Typography>
                       <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
-                        {totals.total.toLocaleString('fr-FR')} €
+                        {formatPrice(totals.total)} €
                       </Typography>
                     </Box>
                   </Paper>
@@ -785,7 +859,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
               },
             }}
           >
-            Créer la vente ({totals.subtotal.toLocaleString('fr-FR')} € HT / {totals.total.toLocaleString('fr-FR')} € TTC)
+            Créer la vente ({formatPrice(totals.subtotal)} € HT / {formatPrice(totals.total)} € TTC)
           </Button>
         </DialogActions>
       </Dialog>
@@ -811,6 +885,7 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
           ...services.filter(s => s.subcategory).map(s => s.subcategory!),
           ...parts.filter(p => p.subcategory).map(p => p.subcategory!),
         ])).sort()}
+        vatRate={workshopSettings?.vatRate ? parseFloat(workshopSettings.vatRate) : 20}
       />
 
       {/* Dialogue de création de client */}
@@ -819,6 +894,15 @@ const SimplifiedSalesDialog: React.FC<SimplifiedSalesDialogProps> = ({
         onClose={() => setClientFormOpen(false)}
         onSubmit={handleCreateNewClient}
         existingEmails={clients.map(client => client.email?.toLowerCase() || '')}
+      />
+
+      {/* Notification de succès */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       />
     </>
   );

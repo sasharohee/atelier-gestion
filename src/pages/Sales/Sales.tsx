@@ -33,6 +33,7 @@ import {
   InputAdornment,
   Tooltip,
   Badge,
+  Snackbar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -113,6 +114,10 @@ const Sales: React.FC = () => {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const [clientFormOpen, setClientFormOpen] = useState(false);
+  
+  // État pour la notification de succès
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   // Fonction helper pour obtenir la source d'un item
   const getItemSource = (item: SaleItem) => {
@@ -124,11 +129,13 @@ const Sales: React.FC = () => {
     }
   };
 
+  // Fonction pour arrondir à 2 décimales
+  const roundToTwo = (num: number): number => {
+    return Math.round(num * 100) / 100;
+  };
+
   // Calcul des totaux (AVEC TVA)
   const totals = useMemo(() => {
-    // Calculer le sous-total HT (tous les items)
-    const subtotal = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    
     // Gestion du taux de TVA : utiliser la valeur configurée ou 20% par défaut
     let vatRate = 20; // Valeur par défaut
     if (workshopSettings?.vatRate !== undefined && workshopSettings?.vatRate !== null) {
@@ -138,22 +145,41 @@ const Sales: React.FC = () => {
       }
     }
     
-    // Calculer la TVA
-    const tax = subtotal * (vatRate / 100);
+    // Calculer par unité puis multiplier pour éviter les erreurs d'arrondi
+    let subtotal = 0;
+    let tax = 0;
+    let totalTTC = 0;
     
-    // Total avant remise
-    const totalBeforeDiscount = subtotal + tax;
+    saleItems.forEach(item => {
+      // Calculer pour UNE unité
+      const unitHT = roundToTwo(item.unitPrice);
+      const unitTax = roundToTwo(unitHT * (vatRate / 100));
+      const unitTTC = roundToTwo(unitHT + unitTax);
+      
+      // Multiplier par la quantité
+      const lineHT = roundToTwo(unitHT * item.quantity);
+      const lineTax = roundToTwo(unitTax * item.quantity);
+      const lineTTC = roundToTwo(unitTTC * item.quantity);
+      
+      subtotal += lineHT;
+      tax += lineTax;
+      totalTTC += lineTTC;
+    });
+    
+    subtotal = roundToTwo(subtotal);
+    tax = roundToTwo(tax);
+    const totalBeforeDiscount = roundToTwo(totalTTC);
     
     // Calculer la remise
-    const discountAmount = (totalBeforeDiscount * discountPercentage) / 100;
+    const discountAmount = roundToTwo((totalBeforeDiscount * discountPercentage) / 100);
     
     // Total final
-    const total = totalBeforeDiscount - discountAmount;
+    const total = roundToTwo(totalBeforeDiscount - discountAmount);
     
     return { 
       subtotal, 
       subtotalHT: subtotal, 
-      subtotalTTC: subtotal + tax,
+      subtotalTTC: totalBeforeDiscount,
       tax, 
       vatRate,
       totalBeforeDiscount, 
@@ -324,7 +350,7 @@ const Sales: React.FC = () => {
       // Augmenter la quantité si l'article existe déjà
       setSaleItems(prev => prev.map(saleItem => 
         saleItem.itemId === item.id 
-          ? { ...saleItem, quantity: saleItem.quantity + 1, totalPrice: (saleItem.quantity + 1) * saleItem.unitPrice }
+          ? { ...saleItem, quantity: saleItem.quantity + 1, totalPrice: roundToTwo((saleItem.quantity + 1) * saleItem.unitPrice) }
           : saleItem
       ));
     } else {
@@ -334,8 +360,8 @@ const Sales: React.FC = () => {
         itemId: item.id,
         name: item.name,
         quantity: 1,
-        unitPrice: item.price,
-        totalPrice: item.price,
+        unitPrice: roundToTwo(item.price),
+        totalPrice: roundToTwo(item.price),
       };
       setSaleItems(prev => [...prev, newItem]);
     }
@@ -355,7 +381,7 @@ const Sales: React.FC = () => {
     
     setSaleItems(prev => prev.map(item => 
       item.itemId === itemId 
-        ? { ...item, quantity, totalPrice: quantity * item.unitPrice }
+        ? { ...item, quantity, totalPrice: roundToTwo(quantity * item.unitPrice) }
         : item
     ));
   };
@@ -470,16 +496,39 @@ const Sales: React.FC = () => {
         emailMarketing: clientFormData.emailMarketing !== undefined ? clientFormData.emailMarketing : true,
       };
 
-      const createdClient = await addClient(clientData);
-      
-      // Sélectionner automatiquement le client créé
-      if (createdClient && createdClient.id) {
-        setSelectedClientId(createdClient.id);
-      }
+      await addClient(clientData);
       
       setClientFormOpen(false);
+      
+      // Attendre que le store soit mis à jour puis trouver et sélectionner le client créé
+      setTimeout(() => {
+        const newClientCreated = clients.find(c => 
+          c.firstName === firstName && 
+          c.lastName === lastName && 
+          c.email === clientFormData.email
+        );
+        
+        if (newClientCreated) {
+          setSelectedClientId(newClientCreated.id);
+          setSnackbarMessage(`✅ Client ${firstName} ${lastName} créé avec succès !`);
+          setSnackbarOpen(true);
+        } else {
+          // Si on ne trouve pas le client par email, chercher par nom
+          const newClientByName = clients.find(c => 
+            c.firstName === firstName && 
+            c.lastName === lastName
+          );
+          if (newClientByName) {
+            setSelectedClientId(newClientByName.id);
+            setSnackbarMessage(`✅ Client ${firstName} ${lastName} créé avec succès !`);
+            setSnackbarOpen(true);
+          }
+        }
+      }, 300);
     } catch (error) {
       console.error('Erreur lors de la création du client:', error);
+      setSnackbarMessage('❌ Erreur lors de la création du client');
+      setSnackbarOpen(true);
       throw error;
     }
   };
@@ -1201,21 +1250,36 @@ const Sales: React.FC = () => {
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       <Autocomplete
                         fullWidth
-                        options={[{ id: '', firstName: 'Client', lastName: 'anonyme' }, ...clients]}
-                        value={clients.find(c => c.id === selectedClientId) || { id: '', firstName: 'Client', lastName: 'anonyme' }}
+                        options={[{ id: '', firstName: 'Client', lastName: 'anonyme', email: '', phone: '' } as any, ...clients]}
+                        value={selectedClientId ? clients.find(c => c.id === selectedClientId) || null : null}
                         onChange={(event, newValue) => {
                           setSelectedClientId(newValue?.id || '');
                         }}
                         getOptionLabel={(option) => 
                           option.id === '' 
                             ? 'Client anonyme' 
-                            : `${option.firstName} ${option.lastName}`
+                            : `${option.firstName} ${option.lastName}${option.email ? ` - ${option.email}` : ''}${option.phone ? ` - ${option.phone}` : ''}`
                         }
+                        filterOptions={(options, { inputValue }) => {
+                          if (!inputValue) return options;
+                          const searchTerm = inputValue.toLowerCase();
+                          return options.filter(option => {
+                            if (option.id === '') return 'client anonyme'.includes(searchTerm);
+                            const firstName = (option.firstName || '').toLowerCase();
+                            const lastName = (option.lastName || '').toLowerCase();
+                            const email = (option.email || '').toLowerCase();
+                            const phone = (option.phone || '').toLowerCase();
+                            return firstName.includes(searchTerm) || 
+                                   lastName.includes(searchTerm) || 
+                                   email.includes(searchTerm) || 
+                                   phone.includes(searchTerm);
+                          });
+                        }}
                         renderInput={(params) => (
                           <TextField 
                             {...params} 
                             label="Client" 
-                            placeholder="Rechercher un client..."
+                            placeholder="Rechercher par nom, email ou téléphone..."
                           />
                         )}
                         isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -1491,8 +1555,8 @@ const Sales: React.FC = () => {
                                   {item.category}
                                 </span>
                               )}
-                              <span style={{ color: 'text.secondary' }}>
-                                💰 {formatFromEUR(item.price, currency)}
+                              <span style={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                                💰 {formatFromEUR(item.price, currency)} HT / {formatFromEUR(item.price * (1 + (parseFloat(workshopSettings?.vatRate || '20') / 100)), currency)} TTC
                               </span>
                               {selectedItemType === 'part' && (
                                 <span style={{ color: 'text.secondary' }}>
@@ -1900,8 +1964,18 @@ const Sales: React.FC = () => {
           existingEmails={clients.map(client => client.email?.toLowerCase() || '')}
         />
 
+        {/* Notification de succès */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={4000}
+          onClose={() => setSnackbarOpen(false)}
+          message={snackbarMessage}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        />
+
       </Box>
     );
   };
 
 export default Sales;
+

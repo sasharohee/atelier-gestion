@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Noms Optionnels - Clients</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #4CAF50;
+            background-color: #E8F5E8;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #2196F3;
+            background-color: #E3F2FD;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            color: #FF9800;
+            background-color: #FFF3E0;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .feature {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #2196F3;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        .test-case {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👤 Test : Noms Optionnels pour les Clients</h1>
+        
+        <div class="success">
+            <h3>✅ Modifications apportées :</h3>
+            <ul>
+                <li><strong>Champs nom/prénom non obligatoires</strong> : Retrait de l'attribut <code>required</code></li>
+                <li><strong>Validation flexible</strong> : Au moins un identifiant requis (nom, prénom ou email)</li>
+                <li><strong>Gestion des cas vides</strong> : Valeurs par défaut "Client Sans nom"</li>
+                <li><strong>Import CSV flexible</strong> : Support des clients sans nom/prénom</li>
+                <li><strong>Affichage intelligent</strong> : Gestion gracieuse des noms manquants</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🎯 Cas d'usage supportés :</h3>
+            <ul>
+                <li>✅ <strong>Client avec email uniquement</strong> : Pour les contacts par email</li>
+                <li>✅ <strong>Client avec entreprise uniquement</strong> : Pour les sociétés</li>
+                <li>✅ <strong>Client avec téléphone uniquement</strong> : Pour les contacts téléphoniques</li>
+                <li>✅ <strong>Import de listes incomplètes</strong> : CSV avec données partielles</li>
+            </ul>
+        </div>
+
+        <div class="feature">
+            <h3>🧪 Tests à effectuer :</h3>
+            
+            <div class="test-case">
+                <h4>Test 1 : Création avec email uniquement</h4>
+                <ol>
+                    <li>Aller dans "Clients" → "Nouveau Client"</li>
+                    <li>Laisser Prénom et Nom vides</li>
+                    <li>Remplir seulement l'email</li>
+                    <li>Vérifier que le bouton "Créer" est activé</li>
+                    <li>Créer le client</li>
+                    <li>Vérifier l'affichage "Client Sans nom"</li>
+                </ol>
+            </div>
+
+            <div class="test-case">
+                <h4>Test 2 : Création avec entreprise uniquement</h4>
+                <ol>
+                    <li>Aller dans "Clients" → "Nouveau Client"</li>
+                    <li>Laisser Prénom et Nom vides</li>
+                    <li>Remplir seulement le nom de l'entreprise</li>
+                    <li>Créer le client</li>
+                    <li>Vérifier l'affichage avec le nom de l'entreprise</li>
+                </ol>
+            </div>
+
+            <div class="test-case">
+                <h4>Test 3 : Import CSV avec données partielles</h4>
+                <ol>
+                    <li>Créer un CSV avec seulement des emails</li>
+                    <li>Importer le fichier</li>
+                    <li>Vérifier que les clients sont marqués comme "valides"</li>
+                    <li>Vérifier l'affichage "Client Sans nom"</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ Règles de validation :</h3>
+            <ul>
+                <li><strong>Au moins un identifiant requis</strong> : Prénom, Nom, Email ou Entreprise</li>
+                <li><strong>Email valide si fourni</strong> : Format email correct</li>
+                <li><strong>Pas de doublons d'email</strong> : Vérification des emails existants</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h3>✨ Avantages :</h3>
+            <ul>
+                <li>📧 <strong>Flexibilité maximale</strong> : Création de clients avec données partielles</li>
+                <li>🏢 <strong>Support entreprises</strong> : Clients avec seulement nom d'entreprise</li>
+                <li>📞 <strong>Contacts téléphoniques</strong> : Clients avec seulement numéro</li>
+                <li>📊 <strong>Import facilité</strong> : CSV avec données incomplètes</li>
+                <li>🎯 <strong>Cas d'usage réels</strong> : Adaptation aux besoins métier</li>
+            </ul>
+        </div>
+
+        <button onclick="window.open('https://atelier-gestion-547nqxmdl-sasharohees-projects.vercel.app/app/transaction/clients', '_blank')">
+            🚀 Tester l'application
+        </button>
+
+        <div class="info">
+            <h3>📋 Exemples de clients supportés :</h3>
+            <ul>
+                <li>✅ <strong>Email uniquement</strong> : contact@entreprise.com</li>
+                <li>✅ <strong>Entreprise uniquement</strong> : "Entreprise ABC"</li>
+                <li>✅ <strong>Téléphone uniquement</strong> : "06 12 34 56 78"</li>
+                <li>✅ <strong>Prénom uniquement</strong> : "Jean"</li>
+                <li>✅ <strong>Nom uniquement</strong> : "Dupont"</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h3>🎉 Résultat attendu :</h3>
+            <p>Vous pouvez maintenant créer des clients avec n'importe quelle combinaison d'informations. Le système s'adapte automatiquement et affiche intelligemment les informations disponibles.</p>
+        </div>
+    </div>
+</body>
+</html>

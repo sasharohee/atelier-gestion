@@ -33,6 +33,7 @@ interface QuickCreateItemDialogProps {
   type: 'product' | 'service' | 'part';
   onSave: (itemData: any) => void;
   existingSubcategories?: string[];
+  vatRate?: number;
 }
 
 const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
@@ -41,7 +42,12 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
   type,
   onSave,
   existingSubcategories = [],
+  vatRate = 20,
 }) => {
+  // Fonction pour arrondir à 2 décimales
+  const roundToTwo = (num: number): number => {
+    return Math.round(num * 100) / 100;
+  };
   // États pour les formulaires complets selon le type
   const [productFormData, setProductFormData] = useState({
     name: '',
@@ -363,13 +369,34 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Prix (€)"
+                label="Prix HT (€)"
                 type="number"
                 value={productFormData.price}
-                onChange={(e) => setProductFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => {
+                  const priceHT = parseFloat(e.target.value) || 0;
+                  setProductFormData(prev => ({ ...prev, price: roundToTwo(priceHT) }));
+                }}
                 required
                 disabled={loading}
                 inputProps={{ min: 0, step: 0.01 }}
+                helperText={`Prix HT: ${productFormData.price.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Prix TTC (€)"
+                type="number"
+                value={roundToTwo(productFormData.price * (1 + vatRate / 100))}
+                onChange={(e) => {
+                  const priceTTC = parseFloat(e.target.value) || 0;
+                  const priceHT = roundToTwo(priceTTC / (1 + vatRate / 100));
+                  setProductFormData(prev => ({ ...prev, price: priceHT }));
+                }}
+                disabled={loading}
+                inputProps={{ min: 0, step: 0.01 }}
+                helperText={`Prix TTC: ${roundToTwo(productFormData.price * (1 + vatRate / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
               />
             </Grid>
 
@@ -483,13 +510,34 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Prix (€)"
+                label="Prix HT (€)"
                 type="number"
                 value={serviceFormData.price}
-                onChange={(e) => setServiceFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => {
+                  const priceHT = parseFloat(e.target.value) || 0;
+                  setServiceFormData(prev => ({ ...prev, price: roundToTwo(priceHT) }));
+                }}
                 required
                 disabled={loading}
                 inputProps={{ min: 0, step: 0.01 }}
+                helperText={`Prix HT: ${serviceFormData.price.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Prix TTC (€)"
+                type="number"
+                value={roundToTwo(serviceFormData.price * (1 + vatRate / 100))}
+                onChange={(e) => {
+                  const priceTTC = parseFloat(e.target.value) || 0;
+                  const priceHT = roundToTwo(priceTTC / (1 + vatRate / 100));
+                  setServiceFormData(prev => ({ ...prev, price: priceHT }));
+                }}
+                disabled={loading}
+                inputProps={{ min: 0, step: 0.01 }}
+                helperText={`Prix TTC: ${roundToTwo(serviceFormData.price * (1 + vatRate / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
               />
             </Grid>
 
@@ -620,13 +668,34 @@ const QuickCreateItemDialog: React.FC<QuickCreateItemDialogProps> = ({
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Prix (€)"
+                label="Prix HT (€)"
                 type="number"
                 value={partFormData.price}
-                onChange={(e) => setPartFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => {
+                  const priceHT = parseFloat(e.target.value) || 0;
+                  setPartFormData(prev => ({ ...prev, price: roundToTwo(priceHT) }));
+                }}
                 required
                 disabled={loading}
                 inputProps={{ min: 0, step: 0.01 }}
+                helperText={`Prix HT: ${partFormData.price.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Prix TTC (€)"
+                type="number"
+                value={roundToTwo(partFormData.price * (1 + vatRate / 100))}
+                onChange={(e) => {
+                  const priceTTC = parseFloat(e.target.value) || 0;
+                  const priceHT = roundToTwo(priceTTC / (1 + vatRate / 100));
+                  setPartFormData(prev => ({ ...prev, price: priceHT }));
+                }}
+                disabled={loading}
+                inputProps={{ min: 0, step: 0.01 }}
+                helperText={`Prix TTC: ${roundToTwo(partFormData.price * (1 + vatRate / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
               />
             </Grid>
 

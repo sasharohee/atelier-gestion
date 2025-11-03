@@ -32,6 +32,7 @@ import {
   AccordionDetails,
   CircularProgress,
   Autocomplete,
+  Snackbar,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -128,6 +129,8 @@ const Kanban: React.FC = () => {
     isUrgent: false,
     totalPrice: 0,
     discountPercentage: 0,
+    deposit: 0, // Acompte payé par le client
+    paymentMethod: 'cash' as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link', // Mode de paiement
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     assignedTechnicianId: '' as string,
     selectedServices: [] as string[],
@@ -272,6 +275,8 @@ const Kanban: React.FC = () => {
     isUrgent: false,
     totalPrice: 0,
     discountPercentage: 0,
+    deposit: 0, // Acompte payé par le client
+    paymentMethod: 'cash' as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link', // Mode de paiement
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 jours par défaut
     assignedTechnicianId: '' as string,
     selectedServices: [] as string[], // Services sélectionnés pour le modèle
@@ -329,6 +334,10 @@ const Kanban: React.FC = () => {
   const [clientFormOpen, setClientFormOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
+  
+  // État pour la notification de succès
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const getStatusColor = (status: string) => {
     return repairStatusColors[status as keyof typeof repairStatusColors] || '#757575';
@@ -744,6 +753,8 @@ const Kanban: React.FC = () => {
           isUrgent: editRepair.isUrgent,
           discountPercentage: editRepair.discountPercentage,
           discountAmount: discountAmount,
+          deposit: editRepair.deposit || 0, // Acompte payé par le client
+          paymentMethod: editRepair.paymentMethod || 'cash', // Mode de paiement
           services: repairServices,
         };
         
@@ -892,6 +903,8 @@ const Kanban: React.FC = () => {
         totalPrice: finalPrice, // Prix final après services et réduction
         discountPercentage: newRepair.discountPercentage,
         discountAmount: discountAmount,
+        deposit: newRepair.deposit || 0, // Acompte payé par le client
+        paymentMethod: newRepair.paymentMethod || 'cash', // Mode de paiement
         dueDate: new Date(newRepair.dueDate),
         services: repairServices, // Services sélectionnés
         parts: [],
@@ -1000,6 +1013,8 @@ const Kanban: React.FC = () => {
       isUrgent: repair.isUrgent,
       totalPrice: repair.totalPrice,
       discountPercentage: repair.discountPercentage || 0,
+      deposit: repair.deposit || 0, // Acompte payé par le client
+      paymentMethod: repair.paymentMethod || 'cash', // Mode de paiement
       dueDate: repair.dueDate ? new Date(repair.dueDate).toISOString().split('T')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       assignedTechnicianId: repair.assignedTechnicianId || '',
       selectedServices: mappedServices,
@@ -1018,6 +1033,8 @@ const Kanban: React.FC = () => {
       isUrgent: false,
       totalPrice: 0,
       discountPercentage: 0,
+      deposit: 0, // Réinitialiser l'acompte
+      paymentMethod: 'cash', // Réinitialiser le mode de paiement
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       assignedTechnicianId: '' as string,
       selectedServices: [] as string[], // Réinitialiser les services sélectionnés
@@ -1222,33 +1239,49 @@ const Kanban: React.FC = () => {
 
       await addClient(clientData as Client);
       
-      // Trouver le nouveau client créé dans la liste mise à jour
-      const newClientCreated = clients.find(c => 
-        c.firstName === clientFormData.firstName && 
-        c.lastName === clientFormData.lastName && 
-        c.email === clientFormData.email
-      );
-      
-      // Sélectionner automatiquement le nouveau client
-      if (newClientCreated) {
-        handleNewRepairChange('clientId', newClientCreated.id);
-      }
-      
       // Fermer le formulaire
       setClientFormOpen(false);
       
-      alert('✅ Client créé avec succès et sélectionné !');
+      // Attendre que le store soit mis à jour puis trouver et sélectionner le client créé
+      setTimeout(() => {
+        const newClientCreated = clients.find(c => 
+          c.firstName === clientFormData.firstName && 
+          c.lastName === clientFormData.lastName && 
+          c.email === clientFormData.email
+        );
+        
+        // Sélectionner automatiquement le nouveau client
+        if (newClientCreated) {
+          handleNewRepairChange('clientId', newClientCreated.id);
+          setSnackbarMessage(`✅ Client ${clientFormData.firstName} ${clientFormData.lastName} créé avec succès et sélectionné !`);
+          setSnackbarOpen(true);
+        } else {
+          // Si on ne trouve pas le client par email, chercher par nom
+          const newClientByName = clients.find(c => 
+            c.firstName === clientFormData.firstName && 
+            c.lastName === clientFormData.lastName
+          );
+          if (newClientByName) {
+            handleNewRepairChange('clientId', newClientByName.id);
+            setSnackbarMessage(`✅ Client ${clientFormData.firstName} ${clientFormData.lastName} créé avec succès et sélectionné !`);
+            setSnackbarOpen(true);
+          }
+        }
+      }, 300);
     } catch (error: any) {
       console.error('Erreur lors de la création du client:', error);
       
       // Gestion spécifique des erreurs
+      let errorMessage = '';
       if (error.message && error.message.includes('duplicate key value violates unique constraint "clients_email_key"')) {
-        alert(`❌ Un client avec l'email "${clientFormData.email}" existe déjà dans la base de données.\n\nVeuillez utiliser un email différent.`);
+        errorMessage = `❌ Un client avec l'email "${clientFormData.email}" existe déjà dans la base de données. Veuillez utiliser un email différent.`;
       } else if (error.message && error.message.includes('duplicate key')) {
-        alert('❌ Un client avec ces informations existe déjà.\n\nVeuillez vérifier les données saisies.');
+        errorMessage = '❌ Un client avec ces informations existe déjà. Veuillez vérifier les données saisies.';
       } else {
-        alert('❌ Erreur lors de la création du client.\n\nVeuillez vérifier les informations saisies et réessayer.');
+        errorMessage = '❌ Erreur lors de la création du client. Veuillez vérifier les informations saisies et réessayer.';
       }
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
     }
   };
 
@@ -1898,7 +1931,7 @@ const Kanban: React.FC = () => {
                   <Autocomplete
                     fullWidth
                     options={clients}
-                    getOptionLabel={(client) => `${client.firstName} ${client.lastName}`}
+                    getOptionLabel={(client) => `${client.firstName} ${client.lastName}${client.email ? ` - ${client.email}` : ''}${client.phone ? ` - ${client.phone}` : ''}`}
                     value={clients.find(client => client.id === editRepair.clientId) || null}
                     onChange={(event, newValue) => {
                       handleEditRepairChange('clientId', newValue?.id || '');
@@ -1907,7 +1940,7 @@ const Kanban: React.FC = () => {
                       <TextField
                         {...params}
                         label="Client *"
-                        placeholder="Tapez pour rechercher un client..."
+                        placeholder="Rechercher par nom, email ou téléphone..."
                         required
                       />
                     )}
@@ -1919,12 +1952,12 @@ const Kanban: React.FC = () => {
                           </Typography>
                           {client.email && (
                             <Typography variant="body2" color="text.secondary">
-                              {client.email}
+                              📧 {client.email}
                             </Typography>
                           )}
                           {client.phone && (
                             <Typography variant="body2" color="text.secondary">
-                              📞 {client.phone}
+                              📱 {client.phone}
                             </Typography>
                           )}
                         </Box>
@@ -2137,6 +2170,38 @@ const Kanban: React.FC = () => {
                     Prix final: {formatFromEUR(((editRepair.totalPrice * (100 - editRepair.discountPercentage)) / 100), currency)}
                   </Typography>
                 )}
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label={`Acompte payé (${currencySymbol})`}
+                  type="number"
+                  value={editRepair.deposit}
+                  onChange={(e) => handleEditRepairChange('deposit', parseFloat(e.target.value) || 0)}
+                  inputProps={{ 
+                    min: 0,
+                    step: 0.01
+                  }}
+                  helperText="Montant de l'acompte versé par le client"
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Mode de paiement</InputLabel>
+                  <Select
+                    label="Mode de paiement"
+                    value={editRepair.paymentMethod}
+                    onChange={(e) => handleEditRepairChange('paymentMethod', e.target.value)}
+                  >
+                    <MenuItem value="cash">Espèces</MenuItem>
+                    <MenuItem value="card">Carte bancaire</MenuItem>
+                    <MenuItem value="check">Chèque</MenuItem>
+                    <MenuItem value="transfer">Virement</MenuItem>
+                    <MenuItem value="payment_link">Lien de paiement</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
               
               <Grid item xs={12} md={4}>
@@ -2524,7 +2589,7 @@ const Kanban: React.FC = () => {
                   <Autocomplete
                     fullWidth
                     options={clients}
-                    getOptionLabel={(client) => `${client.firstName} ${client.lastName}`}
+                    getOptionLabel={(client) => `${client.firstName} ${client.lastName}${client.email ? ` - ${client.email}` : ''}${client.phone ? ` - ${client.phone}` : ''}`}
                     value={clients.find(client => client.id === newRepair.clientId) || null}
                     onChange={(event, newValue) => {
                       handleNewRepairChange('clientId', newValue?.id || '');
@@ -2533,7 +2598,7 @@ const Kanban: React.FC = () => {
                       <TextField
                         {...params}
                         label="Client *"
-                        placeholder="Tapez pour rechercher un client..."
+                        placeholder="Rechercher par nom, email ou téléphone..."
                         required
                       />
                     )}
@@ -2545,12 +2610,12 @@ const Kanban: React.FC = () => {
                           </Typography>
                           {client.email && (
                             <Typography variant="body2" color="text.secondary">
-                              {client.email}
+                              📧 {client.email}
                             </Typography>
                           )}
                           {client.phone && (
                             <Typography variant="body2" color="text.secondary">
-                              📞 {client.phone}
+                              📱 {client.phone}
                             </Typography>
                           )}
                         </Box>
@@ -2856,6 +2921,38 @@ const Kanban: React.FC = () => {
                     Prix final: {formatFromEUR(((newRepair.totalPrice * (100 - newRepair.discountPercentage)) / 100), currency)}
                   </Typography>
                 )}
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label={`Acompte payé (${currencySymbol})`}
+                  type="number"
+                  value={newRepair.deposit}
+                  onChange={(e) => handleNewRepairChange('deposit', parseFloat(e.target.value) || 0)}
+                  inputProps={{ 
+                    min: 0,
+                    step: 0.01
+                  }}
+                  helperText="Montant de l'acompte versé par le client"
+                />
+              </Grid>
+              
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Mode de paiement</InputLabel>
+                  <Select
+                    label="Mode de paiement"
+                    value={newRepair.paymentMethod}
+                    onChange={(e) => handleNewRepairChange('paymentMethod', e.target.value)}
+                  >
+                    <MenuItem value="cash">Espèces</MenuItem>
+                    <MenuItem value="card">Carte bancaire</MenuItem>
+                    <MenuItem value="check">Chèque</MenuItem>
+                    <MenuItem value="transfer">Virement</MenuItem>
+                    <MenuItem value="payment_link">Lien de paiement</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
               
               <Grid item xs={12} md={4}>
@@ -3545,6 +3642,15 @@ const Kanban: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Notification de succès */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={4000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      />
     </Box>
   );
 };

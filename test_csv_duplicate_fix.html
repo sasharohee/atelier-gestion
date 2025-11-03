@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Correction Import CSV - Gestion des Doublons</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #4CAF50;
+            background-color: #E8F5E8;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #2196F3;
+            background-color: #E3F2FD;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .warning {
+            color: #FF9800;
+            background-color: #FFF3E0;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .feature {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #2196F3;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        .test-case {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #2196F3;
+        }
+        .csv-example {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Test : Correction Import CSV - Gestion des Doublons</h1>
+        
+        <div class="success">
+            <h3>✅ Problème résolu :</h3>
+            <p>L'import CSV affichait une erreur "client existe déjà" au lieu d'ignorer simplement les doublons. Maintenant, l'import ignore gracieusement les clients existants et affiche un résumé détaillé.</p>
+        </div>
+
+        <div class="info">
+            <h3>🎯 Nouvelle logique d'import :</h3>
+            <ul>
+                <li><strong>Détection des doublons</strong> : Vérification par email existant</li>
+                <li><strong>Ignorer les doublons</strong> : Pas d'erreur, simplement ignorer</li>
+                <li><strong>Résumé détaillé</strong> : Affichage du nombre d'importés vs ignorés</li>
+                <li><strong>Gestion gracieuse</strong> : Import continue même avec des doublons</li>
+            </ul>
+        </div>
+
+        <div class="feature">
+            <h3>📊 Comportement attendu :</h3>
+            
+            <div class="test-case">
+                <h4>Scénario 1 : Import avec doublons</h4>
+                <p><strong>Avant :</strong> ❌ "Erreur : Un client avec l'email 'test@example.com' existe déjà"</p>
+                <p><strong>Maintenant :</strong> ✅ "Import terminé : 3 client(s) importé(s), 2 client(s) ignoré(s) (déjà présents)"</p>
+            </div>
+
+            <div class="test-case">
+                <h4>Scénario 2 : Import sans doublons</h4>
+                <p><strong>Résultat :</strong> ✅ "Import terminé : 5 client(s) importé(s)"</p>
+            </div>
+
+            <div class="test-case">
+                <h4>Scénario 3 : Import avec seulement des doublons</h4>
+                <p><strong>Résultat :</strong> ✅ "Import terminé : 0 client(s) importé(s), 5 client(s) ignoré(s) (déjà présents)"</p>
+            </div>
+        </div>
+
+        <div class="success">
+            <h3>✨ Avantages de la correction :</h3>
+            <ul>
+                <li>🔄 <strong>Import sans interruption</strong> : Plus d'arrêt sur les doublons</li>
+                <li>📊 <strong>Résumé détaillé</strong> : Savoir exactement ce qui s'est passé</li>
+                <li>⚡ <strong>Performance améliorée</strong> : Import plus rapide</li>
+                <li>🎯 <strong>UX améliorée</strong> : Pas d'erreurs frustrantes</li>
+                <li>📈 <strong>Flexibilité</strong> : Réimport possible sans problème</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ Détection des doublons :</h3>
+            <ul>
+                <li><strong>Critère principal</strong> : Email identique (insensible à la casse)</li>
+                <li><strong>Clients sans email</strong> : Pas de vérification de doublon</li>
+                <li><strong>Logique robuste</strong> : Gestion des emails vides ou null</li>
+            </ul>
+        </div>
+
+        <div class="feature">
+            <h3>🧪 Tests à effectuer :</h3>
+            
+            <div class="test-case">
+                <h4>Test 1 : Import avec doublons d'email</h4>
+                <ol>
+                    <li>Créer un CSV avec des emails déjà présents</li>
+                    <li>Importer le fichier</li>
+                    <li>Vérifier le message de résumé</li>
+                    <li>Vérifier que seuls les nouveaux clients sont ajoutés</li>
+                </ol>
+            </div>
+
+            <div class="test-case">
+                <h4>Test 2 : Import de clients sans email</h4>
+                <ol>
+                    <li>Créer un CSV avec seulement des noms d'entreprises</li>
+                    <li>Importer le fichier</li>
+                    <li>Vérifier que tous les clients sont importés</li>
+                </ol>
+            </div>
+
+            <div class="test-case">
+                <h4>Test 3 : Réimport du même fichier</h4>
+                <ol>
+                    <li>Importer un fichier CSV</li>
+                    <li>Réimporter le même fichier</li>
+                    <li>Vérifier que tous les clients sont ignorés</li>
+                    <li>Vérifier le message "0 importé, X ignorés"</li>
+                </ol>
+            </div>
+        </div>
+
+        <button onclick="window.open('https://atelier-gestion-q5nsr7k9i-sasharohees-projects.vercel.app/app/transaction/clients', '_blank')">
+            🚀 Tester l'import CSV
+        </button>
+
+        <div class="info">
+            <h3>📋 Exemple de CSV avec doublons :</h3>
+            <div class="csv-example">
+Prénom;Nom;Email;Société
+Jean;Dupont;jean@example.com;Entreprise A
+Marie;Martin;marie@example.com;Entreprise B
+Pierre;Durand;jean@example.com;Entreprise C
+Sophie;Leroy;sophie@example.com;Entreprise D
+            </div>
+            <p><strong>Résultat attendu :</strong> 3 importés, 1 ignoré (jean@example.com en doublon)</p>
+        </div>
+
+        <div class="success">
+            <h3>🎉 Résultat attendu :</h3>
+            <p>L'import CSV devrait maintenant fonctionner sans erreur, même avec des clients existants. Vous verrez un résumé clair du nombre de clients importés et ignorés.</p>
+        </div>
+    </div>
+</body>
+</html>

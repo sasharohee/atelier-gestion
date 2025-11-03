@@ -240,6 +240,7 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                       <div><strong>Date :</strong> ${format(new Date(data.createdAt), 'dd/MM/yyyy', { locale: fr })}</div>
                       <div><strong>Statut :</strong> ${getStatusLabel(isRepair ? (data as Repair).status : (data as Sale).status)}</div>
                       ${isRepair ? `<div><strong>Paiement :</strong> ${(data as Repair).isPaid ? 'Payé' : 'Non payé'}</div>` : ''}
+                      ${isRepair && (data as Repair).paymentMethod ? `<div><strong>Mode de paiement :</strong> ${getPaymentMethodLabel((data as Repair).paymentMethod!)}</div>` : ''}
                       ${!isRepair ? `<div><strong>Paiement :</strong> ${getPaymentMethodLabel((data as Sale).paymentMethod)}</div>` : ''}
                     </div>
                   </div>
@@ -249,6 +250,8 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                   <div class="repair-details">
                     <h3>Détails de la réparation</h3>
                     <p><strong>Prix de la réparation (TTC) :</strong> ${formatFromEUR((data as Repair).totalPrice, currency)}</p>
+                    ${(data as Repair).deposit && (data as Repair).deposit! > 0 ? `<p><strong>Acompte payé :</strong> ${formatFromEUR((data as Repair).deposit!, currency)}</p>` : ''}
+                    ${(data as Repair).deposit && (data as Repair).deposit! > 0 ? `<p><strong>Reste à payer :</strong> ${formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)}</p>` : ''}
                     ${(data as Repair).notes ? `<p><strong>Notes :</strong> ${(data as Repair).notes}</p>` : ''}
                   </div>
                 ` : `
@@ -461,9 +464,16 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                   <strong>Statut :</strong> {getStatusLabel(isRepair ? (data as Repair).status : (data as Sale).status)}
                 </Typography>
                 {isRepair && (
-                  <Typography sx={{ fontSize: '14px', mb: 0.5, color: '#666' }}>
-                    <strong>Paiement :</strong> {(data as Repair).isPaid ? 'Payé' : 'Non payé'}
-                  </Typography>
+                  <>
+                    <Typography sx={{ fontSize: '14px', mb: 0.5, color: '#666' }}>
+                      <strong>Paiement :</strong> {(data as Repair).isPaid ? 'Payé' : 'Non payé'}
+                    </Typography>
+                    {(data as Repair).paymentMethod && (
+                      <Typography sx={{ fontSize: '14px', mb: 0.5, color: '#666' }}>
+                        <strong>Mode de paiement :</strong> {getPaymentMethodLabel((data as Repair).paymentMethod!)}
+                      </Typography>
+                    )}
+                  </>
                 )}
                 {!isRepair && (
                   <Typography sx={{ fontSize: '14px', color: '#666' }}>
@@ -504,6 +514,16 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                       ) : null;
                     })()}
                   </Typography>
+                  {(data as Repair).deposit && (data as Repair).deposit! > 0 && (
+                    <Typography sx={{ fontSize: '16px', mb: 1 }}>
+                      <strong>Acompte payé :</strong> {formatFromEUR((data as Repair).deposit!, currency)}
+                    </Typography>
+                  )}
+                  {(data as Repair).deposit && (data as Repair).deposit! > 0 && (
+                    <Typography sx={{ fontSize: '16px', mb: 1, color: 'primary.main' }}>
+                      <strong>Reste à payer :</strong> {formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)}
+                    </Typography>
+                  )}
                   {(data as Repair).notes && (
                     <Typography sx={{ fontSize: '14px', color: '#666' }}>
                       <strong>Notes :</strong> {(data as Repair).notes}

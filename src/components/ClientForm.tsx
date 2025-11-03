@@ -36,6 +36,7 @@ import {
 
 interface ClientFormData {
   // Détails Client
+  isAnonymous?: boolean;
   category: string;
   title: string;
   firstName: string;
@@ -84,6 +85,7 @@ interface ClientFormProps {
 const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSubmit, existingEmails = [], initialData, isEditing = false }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [formData, setFormData] = useState<ClientFormData>({
+    isAnonymous: false,
     category: '',
     title: '',
     firstName: '',
@@ -118,6 +120,27 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSubmit, existi
 
   const handleInputChange = (field: keyof ClientFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAnonymousChange = (checked: boolean) => {
+    if (checked) {
+      // Pré-remplir avec "Client Anonyme"
+      setFormData(prev => ({
+        ...prev,
+        isAnonymous: true,
+        firstName: 'Client',
+        lastName: 'Anonyme',
+        category: 'particulier',
+      }));
+    } else {
+      // Réinitialiser uniquement si les valeurs sont "Client" et "Anonyme"
+      setFormData(prev => ({
+        ...prev,
+        isAnonymous: false,
+        firstName: prev.firstName === 'Client' ? '' : prev.firstName,
+        lastName: prev.lastName === 'Anonyme' ? '' : prev.lastName,
+      }));
+    }
   };
 
 
@@ -155,6 +178,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSubmit, existi
 
   const resetForm = () => {
     setFormData({
+      isAnonymous: false,
       category: '',
       title: '',
       firstName: '',
@@ -274,6 +298,37 @@ const ClientForm: React.FC<ClientFormProps> = ({ open, onClose, onSubmit, existi
               <Alert severity="info" sx={{ mb: 3 }}>
                 Remplissez les informations de base du client
               </Alert>
+            </Grid>
+
+            {/* Case à cocher Client Anonyme */}
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.isAnonymous || false}
+                    onChange={(e) => handleAnonymousChange(e.target.checked)}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <PersonIcon sx={{ color: '#6b7280' }} />
+                    <Typography sx={{ fontWeight: 500 }}>
+                      Client anonyme
+                    </Typography>
+                  </Box>
+                }
+                sx={{
+                  border: '2px dashed #e5e7eb',
+                  borderRadius: 1,
+                  p: 1.5,
+                  bgcolor: formData.isAnonymous ? '#f9fafb' : 'transparent',
+                  transition: 'all 0.2s',
+                  '&:hover': {
+                    bgcolor: '#f9fafb',
+                  }
+                }}
+              />
             </Grid>
 
             {/* Catégorie Client */}

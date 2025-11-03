@@ -44,6 +44,7 @@ interface ProductCategoryButtonsProps {
   onItemSelect: (item: ProductItem) => void;
   onCreateItem: (type: 'product' | 'service' | 'part', category?: string) => void;
   disabled?: boolean;
+  vatRate?: number;
 }
 
 const ProductCategoryButtons: React.FC<ProductCategoryButtonsProps> = ({
@@ -53,6 +54,7 @@ const ProductCategoryButtons: React.FC<ProductCategoryButtonsProps> = ({
   onItemSelect,
   onCreateItem,
   disabled = false,
+  vatRate = 20,
 }) => {
   // État pour la navigation par catégorie
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -734,20 +736,20 @@ const ProductCategoryButtons: React.FC<ProductCategoryButtonsProps> = ({
                           {item.name}
                         </Typography>
 
-                        {/* Prix */}
+                        {/* Prix HT / TTC */}
                         <Typography 
                           variant="caption" 
                           sx={{ 
                             fontWeight: 700,
                             color: 'white',
-                            fontSize: '0.8rem',
+                            fontSize: '0.7rem',
                             bgcolor: 'rgba(0,0,0,0.2)',
                             px: 1,
                             py: 0.25,
                             borderRadius: 1,
                           }}
                         >
-                          {item.price.toLocaleString('fr-FR')} €
+                          {item.price.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € HT / {(item.price * (1 + vatRate / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € TTC
                         </Typography>
 
                         {/* Badge stock pour les pièces */}
@@ -757,8 +759,8 @@ const ProductCategoryButtons: React.FC<ProductCategoryButtonsProps> = ({
                             size="small"
                             sx={{
                               position: 'absolute',
-                              bottom: 4,
-                              left: 4,
+                              top: 4,
+                              right: 4,
                               height: 16,
                               fontSize: '0.6rem',
                               bgcolor: item.stock > 0 ? '#2e7d32' : '#f44336',

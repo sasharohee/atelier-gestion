@@ -1579,6 +1579,8 @@ export const repairService = {
         discountPercentage: repair.discount_percentage,
         discountAmount: repair.discount_amount,
         originalPrice: repair.original_price,
+        deposit: repair.deposit || 0, // Acompte payé par le client
+        paymentMethod: repair.payment_method || 'cash', // Mode de paiement
       // Utiliser le statut de paiement depuis la table séparée
       isPaid: repair.repair_payment_status?.[0]?.is_paid || false,
       source: repair.source || 'kanban', // Source par défaut pour les anciennes réparations
@@ -1634,6 +1636,8 @@ export const repairService = {
       discountPercentage: data.discount_percentage,
       discountAmount: data.discount_amount,
       originalPrice: data.original_price,
+      deposit: data.deposit || 0, // Acompte payé par le client
+      paymentMethod: data.payment_method || 'cash', // Mode de paiement
       // Utiliser le statut de paiement depuis la table séparée
       isPaid: data.repair_payment_status?.[0]?.is_paid || false,
       source: data.source || 'kanban', // Source par défaut pour les anciennes réparations
@@ -1692,6 +1696,8 @@ export const repairService = {
         discount_percentage: repair.discountPercentage || 0,
         discount_amount: repair.discountAmount || 0,
         original_price: repair.originalPrice || repair.totalPrice,
+        deposit: repair.deposit || 0, // Acompte payé par le client
+        payment_method: repair.paymentMethod || 'cash', // Mode de paiement
       is_paid: repair.isPaid,
       source: source, // Ajouter la source de création
       user_id: user.id,
@@ -1753,6 +1759,8 @@ export const repairService = {
             if (updates.discountPercentage !== undefined) updateData.discount_percentage = updates.discountPercentage;
         if (updates.discountAmount !== undefined) updateData.discount_amount = updates.discountAmount;
         if (updates.originalPrice !== undefined) updateData.original_price = updates.originalPrice;
+        if (updates.deposit !== undefined) updateData.deposit = updates.deposit;
+        if (updates.paymentMethod !== undefined) updateData.payment_method = updates.paymentMethod;
     if (updates.isPaid !== undefined) updateData.is_paid = updates.isPaid;
 
     console.log('📤 Données à envoyer à Supabase:', updateData);

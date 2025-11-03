@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Email Optionnel - Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #4CAF50;
+            background-color: #E8F5E8;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #2196F3;
+            background-color: #E3F2FD;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        .test-steps {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 Test : Email Optionnel pour les Clients</h1>
+        
+        <div class="success">
+            <h3>✅ Modifications apportées :</h3>
+            <ul>
+                <li><strong>Champ email non obligatoire</strong> : Retrait de l'attribut <code>required</code></li>
+                <li><strong>Validation mise à jour</strong> : L'email n'est plus requis pour valider le formulaire</li>
+                <li><strong>Vérification des doublons</strong> : Ne vérifie les doublons que si un email est fourni</li>
+                <li><strong>Interface utilisateur</strong> : Placeholder et helper text mis à jour</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🎯 Changements techniques :</h3>
+            <ul>
+                <li><strong>ClientForm.tsx</strong> : Retrait de l'obligation email dans la validation</li>
+                <li><strong>Clients.tsx</strong> : Vérification des doublons conditionnelle</li>
+                <li><strong>Interface</strong> : "Email optionnel" au lieu de "Email requis"</li>
+            </ul>
+        </div>
+
+        <div class="test-steps">
+            <h3>🧪 Étapes de test :</h3>
+            <ol>
+                <li><strong>Ouvrir l'application</strong> : Aller sur la page Clients</li>
+                <li><strong>Créer un nouveau client</strong> : Cliquer sur "Nouveau Client"</li>
+                <li><strong>Remplir les champs obligatoires</strong> : Prénom et Nom uniquement</li>
+                <li><strong>Laisser l'email vide</strong> : Ne pas remplir le champ email</li>
+                <li><strong>Vérifier la validation</strong> : Le bouton "Créer" doit être activé</li>
+                <li><strong>Créer le client</strong> : Confirmer la création</li>
+                <li><strong>Vérifier le résultat</strong> : Le client doit être créé sans email</li>
+            </ol>
+        </div>
+
+        <div class="success">
+            <h3>✨ Résultat attendu :</h3>
+            <p>Vous devriez pouvoir créer un client en ne remplissant que le prénom et le nom, sans fournir d'adresse email. Le formulaire doit accepter cette configuration et créer le client avec succès.</p>
+        </div>
+
+        <button onclick="window.open('https://atelier-gestion-efl0il2bp-sasharohees-projects.vercel.app/app/transaction/clients', '_blank')">
+            🚀 Tester l'application
+        </button>
+
+        <div class="info">
+            <h3>📋 Cas de test supplémentaires :</h3>
+            <ul>
+                <li>✅ Créer un client avec email</li>
+                <li>✅ Créer un client sans email</li>
+                <li>✅ Créer un client avec email existant (doit afficher une erreur)</li>
+                <li>✅ Créer un client avec email vide (doit fonctionner)</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
