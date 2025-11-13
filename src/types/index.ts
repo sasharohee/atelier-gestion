@@ -328,6 +328,18 @@ export interface RepairStatus {
   order: number;
 }
 
+export interface RepairPayment {
+  id: string;
+  repairId: string;
+  paymentType: 'deposit' | 'final' | 'partial';
+  amount: number;
+  paymentMethod: 'cash' | 'card' | 'transfer' | 'check' | 'payment_link';
+  paymentDate: Date;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Repair {
   id: string;
   repairNumber?: string; // Numéro de réparation unique (ex: REP-20241201-1234)
@@ -353,7 +365,10 @@ export interface Repair {
   discountAmount?: number;
   originalPrice?: number;
   deposit?: number; // Acompte payé par le client
-  paymentMethod?: 'cash' | 'card' | 'transfer' | 'check' | 'payment_link'; // Mode de paiement
+  depositPaymentMethod?: 'cash' | 'card' | 'transfer' | 'check' | 'payment_link'; // Mode de paiement de l'acompte
+  finalPaymentMethod?: 'cash' | 'card' | 'transfer' | 'check' | 'payment_link'; // Mode de paiement du solde final
+  paymentMethod?: 'cash' | 'card' | 'transfer' | 'check' | 'payment_link'; // Mode de paiement (pour compatibilité)
+  payments?: RepairPayment[]; // Historique des paiements
   isPaid: boolean;
   source?: 'kanban' | 'sav' | 'sale'; // Source de création de la réparation
   createdAt: Date;
@@ -664,6 +679,7 @@ export interface PrintTemplate {
       email: string;
     };
   };
+  depositValidated?: boolean; // Indique si l'acompte a été validé
 }
 
 export interface SAVStats {

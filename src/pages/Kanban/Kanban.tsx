@@ -51,6 +51,7 @@ import {
   CheckCircle as CheckCircleIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
   ErrorOutline as ErrorOutlineIcon,
+  Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
@@ -130,7 +131,10 @@ const Kanban: React.FC = () => {
     totalPrice: 0,
     discountPercentage: 0,
     deposit: 0, // Acompte payé par le client
-    paymentMethod: 'cash' as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link', // Mode de paiement
+    depositPaymentMethod: 'cash' as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link', // Mode de paiement de l'acompte
+    finalPaymentMethod: '' as '' | 'cash' | 'card' | 'transfer' | 'check' | 'payment_link', // Mode de paiement du solde final
+    paymentMethod: 'cash' as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link', // Mode de paiement (pour compatibilité)
+    isPaid: false, // Statut de paiement
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     assignedTechnicianId: '' as string,
     selectedServices: [] as string[],
@@ -754,7 +758,9 @@ const Kanban: React.FC = () => {
           discountPercentage: editRepair.discountPercentage,
           discountAmount: discountAmount,
           deposit: editRepair.deposit || 0, // Acompte payé par le client
-          paymentMethod: editRepair.paymentMethod || 'cash', // Mode de paiement
+          depositPaymentMethod: editRepair.depositPaymentMethod, // Mode de paiement de l'acompte
+          finalPaymentMethod: editRepair.finalPaymentMethod, // Mode de paiement du solde final
+          paymentMethod: editRepair.paymentMethod || 'cash', // Mode de paiement (pour compatibilité)
           services: repairServices,
         };
         
@@ -818,6 +824,155 @@ const Kanban: React.FC = () => {
       alert('❌ Erreur lors de la mise à jour du paiement');
     }
   };
+
+  const handleValidateDeposit = async (repair: Repair) => {
+    try {
+      if (!repair.deposit || repair.deposit === 0) {
+        alert('⚠️ Aucun acompte n\'a été défini pour cette réparation.');
+        return;
+      }
+
+      const confirmMessage = `Confirmer la validation du paiement de l'acompte de ${formatFromEUR(repair.deposit, currency)} ?`;
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+
+      console.log('💰 Validation de l\'acompte pour la réparation:', repair.id);
+      
+      // Enregistrer le paiement dans l'historique
+      try {
+        await repairService.addPayment(repair.id, {
+          paymentType: 'deposit',
+          amount: repair.deposit,
+          paymentMethod: repair.depositPaymentMethod || repair.paymentMethod || 'cash',
+          paymentDate: new Date(),
+          notes: 'Acompte validé'
+        });
+        
+        console.log('✅ Paiement de l\'acompte enregistré dans l\'historique');
+      } catch (error) {
+        console.error('⚠️ Erreur lors de l\'enregistrement du paiement:', error);
+        // Continuer même si l'enregistrement échoue
+      }
+
+      // Recharger les réparations pour refléter les changements
+      await loadRepairs();
+      
+      // Mettre à jour le statut local
+      setDepositValidated(prev => ({
+        ...prev,
+        [repair.id]: true
+      }));
+      
+      alert(`✅ Paiement de l'acompte de ${formatFromEUR(repair.deposit, currency)} validé avec succès !`);
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la validation de l\'acompte:', error);
+      alert('❌ Erreur lors de la validation du paiement. Veuillez réessayer.');
+    }
+  };
+
+  const handleUnvalidateDeposit = async (repair: Repair) => {
+    try {
+      if (!repair.deposit || repair.deposit === 0) {
+        alert('⚠️ Aucun acompte n\'a été défini pour cette réparation.');
+        return;
+      }
+
+      const confirmMessage = `Confirmer la dévalidation du paiement de l'acompte de ${formatFromEUR(repair.deposit, currency)} ?`;
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+
+      console.log('💰 Dévalidation de l\'acompte pour la réparation:', repair.id);
+      
+      // Récupérer les paiements pour trouver celui de type 'deposit'
+      try {
+        const paymentsResult = await repairService.getPaymentsByRepairId(repair.id);
+        
+        if (paymentsResult.success && 'data' in paymentsResult && paymentsResult.data) {
+          // Trouver le paiement de type 'deposit'
+          const depositPayment = paymentsResult.data.find(
+            (payment: any) => payment.paymentType === 'deposit'
+          );
+          
+          if (depositPayment) {
+            // Supprimer le paiement de l'historique
+            const deleteResult = await repairService.deletePayment(depositPayment.id);
+            
+            if (deleteResult.success) {
+              console.log('✅ Paiement de l\'acompte supprimé de l\'historique');
+            } else {
+              console.error('⚠️ Erreur lors de la suppression du paiement:', deleteResult);
+            }
+          } else {
+            console.warn('⚠️ Aucun paiement d\'acompte trouvé dans l\'historique');
+          }
+        } else {
+          console.warn('⚠️ Impossible de récupérer les paiements');
+        }
+      } catch (error) {
+        console.error('⚠️ Erreur lors de la suppression du paiement:', error);
+        // Continuer même si la suppression échoue
+      }
+
+      // Recharger les réparations pour refléter les changements
+      await loadRepairs();
+      
+      // Mettre à jour le statut local
+      setDepositValidated(prev => ({
+        ...prev,
+        [repair.id]: false
+      }));
+      
+      alert(`✅ Paiement de l'acompte de ${formatFromEUR(repair.deposit, currency)} dévalidé avec succès !`);
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la dévalidation de l\'acompte:', error);
+      alert('❌ Erreur lors de la dévalidation du paiement. Veuillez réessayer.');
+    }
+  };
+
+  // Vérifier si l'acompte est validé (si un paiement de type 'deposit' existe)
+  const [depositValidated, setDepositValidated] = useState<Record<string, boolean>>({});
+  
+  useEffect(() => {
+    // Charger le statut de validation des acomptes pour toutes les réparations
+    const loadDepositStatus = async () => {
+      const statusMap: Record<string, boolean> = {};
+      
+      // Traiter les réparations en parallèle pour améliorer les performances
+      const statusPromises = repairs
+        .filter(repair => repair.deposit && repair.deposit > 0)
+        .map(async (repair) => {
+          try {
+            const paymentsResult = await repairService.getPaymentsByRepairId(repair.id);
+            if (paymentsResult.success && 'data' in paymentsResult && paymentsResult.data) {
+              const hasDepositPayment = paymentsResult.data.some(
+                (payment: any) => payment.paymentType === 'deposit'
+              );
+              return { repairId: repair.id, validated: hasDepositPayment };
+            }
+            return { repairId: repair.id, validated: false };
+          } catch (error) {
+            console.error(`Erreur lors du chargement du statut pour la réparation ${repair.id}:`, error);
+            return { repairId: repair.id, validated: false };
+          }
+        });
+      
+      const results = await Promise.all(statusPromises);
+      results.forEach(({ repairId, validated }) => {
+        statusMap[repairId] = validated;
+      });
+      
+      setDepositValidated(statusMap);
+    };
+    
+    if (repairs.length > 0) {
+      loadDepositStatus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repairs.length]); // Ne se déclenche que lorsque le nombre de réparations change
 
   const handleCreateRepair = async () => {
     try {
@@ -1014,7 +1169,10 @@ const Kanban: React.FC = () => {
       totalPrice: repair.totalPrice,
       discountPercentage: repair.discountPercentage || 0,
       deposit: repair.deposit || 0, // Acompte payé par le client
-      paymentMethod: repair.paymentMethod || 'cash', // Mode de paiement
+      depositPaymentMethod: repair.depositPaymentMethod || 'cash', // Mode de paiement de l'acompte
+      finalPaymentMethod: repair.finalPaymentMethod || '', // Mode de paiement du solde final
+      paymentMethod: repair.paymentMethod || 'cash', // Mode de paiement (pour compatibilité)
+      isPaid: repair.isPaid || false, // Statut de paiement
       dueDate: repair.dueDate ? new Date(repair.dueDate).toISOString().split('T')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       assignedTechnicianId: repair.assignedTechnicianId || '',
       selectedServices: mappedServices,
@@ -1597,6 +1755,13 @@ const Kanban: React.FC = () => {
     const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
     const technician = repair.assignedTechnicianId ? getUserById(repair.assignedTechnicianId) : null;
     
+    // Trouver le statut actuel de la réparation
+    const currentStatus = repairStatuses.find(s => s.id === repair.status);
+    const isNewStatus = currentStatus ? 
+      (currentStatus.name.toLowerCase().includes('nouvelle') || 
+       currentStatus.name.toLowerCase().includes('new') ||
+       currentStatus.order === 0 || 
+       currentStatus.order === 1) : false;
     
     // Ne pas afficher le retard pour les réparations terminées ou restituées
     const isOverdue = (repair.status === 'completed' || repair.status === 'returned') 
@@ -1636,6 +1801,75 @@ const Kanban: React.FC = () => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+              
+              {/* Reçu thermique pour statut "nouvelle" avec acompte */}
+              {repair.deposit && repair.deposit > 0 && isNewStatus && (
+                <>
+                  <Tooltip title="Reçu thermique (acompte)">
+                    <IconButton 
+                      size="small" 
+                      onClick={(e) => { e.stopPropagation(); handleOpenThermalReceipt(repair); }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      sx={{ 
+                        color: '#3b82f6',
+                        backgroundColor: '#eff6ff',
+                        '&:hover': {
+                          backgroundColor: '#dbeafe',
+                        }
+                      }}
+                    >
+                      <ReceiptIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  
+                  {/* Afficher le bouton de validation ou de dévalidation selon l'état */}
+                  {depositValidated[repair.id] ? (
+                    <Tooltip title="Dévalider le paiement de l'acompte">
+                      <IconButton 
+                        size="small" 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          handleUnvalidateDeposit(repair);
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        sx={{ 
+                          color: '#ef4444',
+                          backgroundColor: '#fef2f2',
+                          '&:hover': {
+                            backgroundColor: '#fee2e2',
+                          }
+                        }}
+                      >
+                        <CancelIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip title="Valider le paiement de l'acompte">
+                      <IconButton 
+                        size="small" 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          handleValidateDeposit(repair);
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        sx={{ 
+                          color: '#10b981',
+                          backgroundColor: '#f0fdf4',
+                          '&:hover': {
+                            backgroundColor: '#dcfce7',
+                          }
+                        }}
+                      >
+                        <CheckCircleIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </>
+              )}
+              
               {repair.status === 'completed' && (
                 <Tooltip title="Reçu thermique">
                   <IconButton 
@@ -1773,6 +2007,42 @@ const Kanban: React.FC = () => {
             </Typography>
           </Box>
 
+          {/* Affichage de l'acompte si présent */}
+          {repair.deposit && repair.deposit > 0 && (
+            <Box sx={{ 
+              mt: 0.5,
+              p: 1,
+              backgroundColor: depositValidated[repair.id] ? '#f0fdf4' : '#eff6ff',
+              borderRadius: 1,
+              border: depositValidated[repair.id] ? '1px solid #10b981' : '1px solid #3b82f6',
+            }}>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: depositValidated[repair.id] ? '#10b981' : '#3b82f6',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                }}
+              >
+                💰 Acompte versé : {formatFromEUR(repair.deposit, currency)}
+                {depositValidated[repair.id] && (
+                  <span style={{ marginLeft: '4px', fontSize: '12px' }}>✓ PAYÉ</span>
+                )}
+              </Typography>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: '#6b7280',
+                  display: 'block',
+                  mt: 0.25,
+                }}
+              >
+                Reste : {formatFromEUR(repair.totalPrice - repair.deposit, currency)}
+              </Typography>
+            </Box>
+          )}
 
         </CardContent>
       </Card>
@@ -2172,6 +2442,7 @@ const Kanban: React.FC = () => {
                 )}
               </Grid>
               
+              {/* Section Acompte */}
               <Grid item xs={12} md={4}>
                 <TextField
                   fullWidth
@@ -2183,18 +2454,57 @@ const Kanban: React.FC = () => {
                     min: 0,
                     step: 0.01
                   }}
-                  helperText="Montant de l'acompte versé par le client"
+                  helperText="Montant de l'acompte versé"
                 />
               </Grid>
               
               <Grid item xs={12} md={4}>
                 <FormControl fullWidth>
-                  <InputLabel>Mode de paiement</InputLabel>
+                  <InputLabel>Mode paiement acompte</InputLabel>
                   <Select
-                    label="Mode de paiement"
-                    value={editRepair.paymentMethod}
-                    onChange={(e) => handleEditRepairChange('paymentMethod', e.target.value)}
+                    label="Mode paiement acompte"
+                    value={editRepair.depositPaymentMethod || 'cash'}
+                    onChange={(e) => handleEditRepairChange('depositPaymentMethod', e.target.value)}
+                    disabled={!editRepair.deposit || editRepair.deposit === 0}
                   >
+                    <MenuItem value="cash">Espèces</MenuItem>
+                    <MenuItem value="card">Carte bancaire</MenuItem>
+                    <MenuItem value="check">Chèque</MenuItem>
+                    <MenuItem value="transfer">Virement</MenuItem>
+                    <MenuItem value="payment_link">Lien de paiement</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Afficher le reste à payer */}
+              <Grid item xs={12} md={4}>
+                <TextField
+                  fullWidth
+                  label={`Reste à payer (${currencySymbol})`}
+                  type="number"
+                  value={Math.max(0, (editRepair.totalPrice * (100 - (editRepair.discountPercentage || 0)) / 100) - (editRepair.deposit || 0)).toFixed(2)}
+                  InputProps={{ readOnly: true }}
+                  helperText="Calculé automatiquement"
+                  sx={{
+                    '& .MuiInputBase-input': { 
+                      fontWeight: 'bold', 
+                      color: 'primary.main' 
+                    }
+                  }}
+                />
+              </Grid>
+
+              {/* Section Paiement Final */}
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth>
+                  <InputLabel>Mode paiement final</InputLabel>
+                  <Select
+                    label="Mode paiement final"
+                    value={editRepair.finalPaymentMethod || ''}
+                    onChange={(e) => handleEditRepairChange('finalPaymentMethod', e.target.value)}
+                    disabled={!editRepair.isPaid}
+                  >
+                    <MenuItem value="">Non payé</MenuItem>
                     <MenuItem value="cash">Espèces</MenuItem>
                     <MenuItem value="card">Carte bancaire</MenuItem>
                     <MenuItem value="check">Chèque</MenuItem>
@@ -3359,6 +3669,7 @@ const Kanban: React.FC = () => {
               repair={selectedRepairForInvoice}
               client={getClientById(selectedRepairForInvoice.clientId)}
               onClose={closeInvoice}
+              depositValidated={depositValidated[selectedRepairForInvoice.id] || false}
             />
           </DialogContent>
         </Dialog>
@@ -3491,6 +3802,7 @@ const Kanban: React.FC = () => {
             siret: workshopSettings?.siret,
             vatNumber: workshopSettings?.vatNumber,
           }}
+          depositValidated={depositValidated[thermalReceiptRepair.id] || false}
         />
       )}
 

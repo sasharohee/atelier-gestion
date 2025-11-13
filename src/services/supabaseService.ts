@@ -1580,7 +1580,9 @@ export const repairService = {
         discountAmount: repair.discount_amount,
         originalPrice: repair.original_price,
         deposit: repair.deposit || 0, // Acompte payé par le client
-        paymentMethod: repair.payment_method || 'cash', // Mode de paiement
+        depositPaymentMethod: repair.deposit_payment_method, // Mode de paiement de l'acompte
+        finalPaymentMethod: repair.final_payment_method, // Mode de paiement du solde final
+        paymentMethod: repair.payment_method || 'cash', // Mode de paiement (pour compatibilité)
       // Utiliser le statut de paiement depuis la table séparée
       isPaid: repair.repair_payment_status?.[0]?.is_paid || false,
       source: repair.source || 'kanban', // Source par défaut pour les anciennes réparations
@@ -1637,7 +1639,9 @@ export const repairService = {
       discountAmount: data.discount_amount,
       originalPrice: data.original_price,
       deposit: data.deposit || 0, // Acompte payé par le client
-      paymentMethod: data.payment_method || 'cash', // Mode de paiement
+      depositPaymentMethod: data.deposit_payment_method, // Mode de paiement de l'acompte
+      finalPaymentMethod: data.final_payment_method, // Mode de paiement du solde final
+      paymentMethod: data.payment_method || 'cash', // Mode de paiement (pour compatibilité)
       // Utiliser le statut de paiement depuis la table séparée
       isPaid: data.repair_payment_status?.[0]?.is_paid || false,
       source: data.source || 'kanban', // Source par défaut pour les anciennes réparations
@@ -1697,7 +1701,9 @@ export const repairService = {
         discount_amount: repair.discountAmount || 0,
         original_price: repair.originalPrice || repair.totalPrice,
         deposit: repair.deposit || 0, // Acompte payé par le client
-        payment_method: repair.paymentMethod || 'cash', // Mode de paiement
+        deposit_payment_method: repair.depositPaymentMethod, // Mode de paiement de l'acompte
+        final_payment_method: repair.finalPaymentMethod, // Mode de paiement du solde final
+        payment_method: repair.paymentMethod || 'cash', // Mode de paiement (pour compatibilité)
       is_paid: repair.isPaid,
       source: source, // Ajouter la source de création
       user_id: user.id,
@@ -1760,6 +1766,8 @@ export const repairService = {
         if (updates.discountAmount !== undefined) updateData.discount_amount = updates.discountAmount;
         if (updates.originalPrice !== undefined) updateData.original_price = updates.originalPrice;
         if (updates.deposit !== undefined) updateData.deposit = updates.deposit;
+        if (updates.depositPaymentMethod !== undefined) updateData.deposit_payment_method = updates.depositPaymentMethod;
+        if (updates.finalPaymentMethod !== undefined) updateData.final_payment_method = updates.finalPaymentMethod;
         if (updates.paymentMethod !== undefined) updateData.payment_method = updates.paymentMethod;
     if (updates.isPaid !== undefined) updateData.is_paid = updates.isPaid;
 
@@ -1861,6 +1869,95 @@ export const repairService = {
       console.error('❌ Erreur lors de l\'appel RPC:', rpcError);
       return handleSupabaseError(rpcError);
     }
+  },
+
+  // Ajouter un paiement à l'historique
+  async addPayment(repairId: string, payment: { paymentType: 'deposit' | 'final' | 'partial', amount: number, paymentMethod: 'cash' | 'card' | 'transfer' | 'check' | 'payment_link', paymentDate: Date, notes?: string }) {
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+
+    const { data, error } = await supabase
+      .from('repair_payments')
+      .insert({
+        repair_id: repairId,
+        payment_type: payment.paymentType,
+        amount: payment.amount,
+        payment_method: payment.paymentMethod,
+        payment_date: payment.paymentDate.toISOString(),
+        notes: payment.notes
+      })
+      .select()
+      .single();
+    
+    if (error) return handleSupabaseError(error);
+    
+    // Convertir les données de snake_case vers camelCase
+    const convertedData = {
+      id: data.id,
+      repairId: data.repair_id,
+      paymentType: data.payment_type as 'deposit' | 'final' | 'partial',
+      amount: data.amount,
+      paymentMethod: data.payment_method as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link',
+      paymentDate: new Date(data.payment_date),
+      notes: data.notes,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at)
+    };
+    
+    return handleSupabaseSuccess(convertedData);
+  },
+
+  // Récupérer l'historique des paiements d'une réparation
+  async getPaymentsByRepairId(repairId: string) {
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+
+    const { data, error } = await supabase
+      .from('repair_payments')
+      .select('*')
+      .eq('repair_id', repairId)
+      .order('payment_date', { ascending: true });
+    
+    if (error) return handleSupabaseError(error);
+    
+    // Convertir les données de snake_case vers camelCase
+    const convertedData = data?.map(payment => ({
+      id: payment.id,
+      repairId: payment.repair_id,
+      paymentType: payment.payment_type as 'deposit' | 'final' | 'partial',
+      amount: payment.amount,
+      paymentMethod: payment.payment_method as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link',
+      paymentDate: new Date(payment.payment_date),
+      notes: payment.notes,
+      createdAt: new Date(payment.created_at),
+      updatedAt: new Date(payment.updated_at)
+    })) || [];
+    
+    return handleSupabaseSuccess(convertedData);
+  },
+
+  // Supprimer un paiement de l'historique
+  async deletePayment(paymentId: string) {
+    // Obtenir l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return handleSupabaseError(new Error('Utilisateur non connecté'));
+    }
+
+    const { error } = await supabase
+      .from('repair_payments')
+      .delete()
+      .eq('id', paymentId);
+    
+    if (error) return handleSupabaseError(error);
+    
+    return handleSupabaseSuccess({ success: true });
   }
 };
 

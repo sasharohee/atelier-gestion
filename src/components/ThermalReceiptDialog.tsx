@@ -41,6 +41,7 @@ interface ThermalReceiptDialogProps {
     siret?: string;
     vatNumber?: string;
   };
+  depositValidated?: boolean; // Indique si l'acompte a été validé
 }
 
 const ThermalReceiptDialog: React.FC<ThermalReceiptDialogProps> = ({
@@ -52,6 +53,7 @@ const ThermalReceiptDialog: React.FC<ThermalReceiptDialogProps> = ({
   device,
   technician,
   workshopInfo,
+  depositValidated = false,
 }) => {
   const [format, setFormat] = useState<ThermalReceiptFormat>('80mm');
   const [showConditions, setShowConditions] = useState(true);
@@ -75,6 +77,7 @@ const ThermalReceiptDialog: React.FC<ThermalReceiptDialogProps> = ({
         showConditions,
         showServices,
         showParts,
+        depositValidated,
       };
 
       thermalPrintService.printReceipt(data, options);

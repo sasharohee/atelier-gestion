@@ -36,6 +36,7 @@ interface InvoiceProps {
   client?: Client;
   open: boolean;
   onClose: () => void;
+  depositValidated?: boolean; // Indique si l'acompte a été validé
 }
 
 // Fonction pour calculer le vrai sous-total HT basé sur les price_ht des articles
@@ -90,7 +91,7 @@ const calculateRealSubtotalHT = (sale: Sale, products: any[], services: any[], p
   }, 0);
 };
 
-const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }) => {
+const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, depositValidated = false }) => {
   const { systemSettings, loadSystemSettings, products, services, parts } = useAppStore();
   const { workshopSettings } = useWorkshopSettings();
   
@@ -250,8 +251,12 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                   <div class="repair-details">
                     <h3>Détails de la réparation</h3>
                     <p><strong>Prix de la réparation (TTC) :</strong> ${formatFromEUR((data as Repair).totalPrice, currency)}</p>
-                    ${(data as Repair).deposit && (data as Repair).deposit! > 0 ? `<p><strong>Acompte payé :</strong> ${formatFromEUR((data as Repair).deposit!, currency)}</p>` : ''}
-                    ${(data as Repair).deposit && (data as Repair).deposit! > 0 ? `<p><strong>Reste à payer :</strong> ${formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)}</p>` : ''}
+                     ${(data as Repair).deposit && (data as Repair).deposit! > 0 ? `
+                       <h4 style="margin-top: 15px; margin-bottom: 10px;">Historique des paiements</h4>
+                       <p><strong>Acompte (${getPaymentMethodLabel((data as Repair).depositPaymentMethod || (data as Repair).paymentMethod || 'cash')}) :</strong> ${formatFromEUR((data as Repair).deposit!, currency)} ${depositValidated ? '<span style="color: #10b981; font-weight: bold;">✓ PAYÉ</span>' : '<span style="color: #f59e0b; font-weight: bold;">⏳ EN ATTENTE</span>'}</p>
+                       ${(data as Repair).isPaid && (data as Repair).finalPaymentMethod ? `<p><strong>Solde (${getPaymentMethodLabel((data as Repair).finalPaymentMethod!)}) :</strong> ${formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)} <span style="color: #10b981; font-weight: bold;">✓ PAYÉ</span></p>` : ''}
+                       ${!(data as Repair).isPaid ? `<p style="color: #0066cc; font-weight: bold;"><strong>Reste à payer :</strong> ${formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)}</p>` : ''}
+                     ` : ''}
                     ${(data as Repair).notes ? `<p><strong>Notes :</strong> ${(data as Repair).notes}</p>` : ''}
                   </div>
                 ` : `
@@ -515,14 +520,32 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose }
                     })()}
                   </Typography>
                   {(data as Repair).deposit && (data as Repair).deposit! > 0 && (
-                    <Typography sx={{ fontSize: '16px', mb: 1 }}>
-                      <strong>Acompte payé :</strong> {formatFromEUR((data as Repair).deposit!, currency)}
-                    </Typography>
-                  )}
-                  {(data as Repair).deposit && (data as Repair).deposit! > 0 && (
-                    <Typography sx={{ fontSize: '16px', mb: 1, color: 'primary.main' }}>
-                      <strong>Reste à payer :</strong> {formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)}
-                    </Typography>
+                     <Box sx={{ mt: 2, mb: 1 }}>
+                       <Typography sx={{ fontSize: '16px', fontWeight: 600, mb: 1 }}>
+                         Historique des paiements :
+                       </Typography>
+                       <Typography sx={{ fontSize: '14px', mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                         <strong>Acompte ({getPaymentMethodLabel((data as Repair).depositPaymentMethod || (data as Repair).paymentMethod || 'cash')}) :</strong> 
+                         <span>{formatFromEUR((data as Repair).deposit!, currency)}</span>
+                         {depositValidated ? (
+                           <span style={{ color: '#10b981', fontWeight: 'bold' }}>✓ PAYÉ</span>
+                         ) : (
+                           <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>⏳ EN ATTENTE</span>
+                         )}
+                       </Typography>
+                       {(data as Repair).isPaid && (data as Repair).finalPaymentMethod && (
+                         <Typography sx={{ fontSize: '14px', mb: 0.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                           <strong>Solde ({getPaymentMethodLabel((data as Repair).finalPaymentMethod!)}) :</strong> 
+                           <span>{formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)}</span>
+                           <span style={{ color: '#10b981', fontWeight: 'bold' }}>✓ PAYÉ</span>
+                         </Typography>
+                       )}
+                       {!(data as Repair).isPaid && (
+                         <Typography sx={{ fontSize: '16px', mt: 1, color: 'primary.main', fontWeight: 600 }}>
+                           <strong>Reste à payer :</strong> {formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)}
+                         </Typography>
+                       )}
+                     </Box>
                   )}
                   {(data as Repair).notes && (
                     <Typography sx={{ fontSize: '14px', color: '#666' }}>

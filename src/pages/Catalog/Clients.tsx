@@ -24,8 +24,6 @@ import {
   DialogActions,
   Chip,
   Snackbar,
-  TextField,
-  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,7 +38,6 @@ import {
   Business as BusinessIcon,
   SelectAll as SelectAllIcon,
   DeleteSweep as DeleteSweepIcon,
-  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import ClientForm from '../../components/ClientForm';
@@ -65,9 +62,6 @@ const Clients: React.FC = () => {
   // État pour la notification de succès
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  
-  // État pour la recherche
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const loadClientsData = async () => {
@@ -280,10 +274,10 @@ const Clients: React.FC = () => {
 
   // Fonctions pour la sélection multiple
   const handleSelectAll = () => {
-    if (selectedClients.length === filteredClients.length) {
+    if (selectedClients.length === clients.length) {
       setSelectedClients([]);
     } else {
-      setSelectedClients(filteredClients.map(client => client.id));
+      setSelectedClients(clients.map(client => client.id));
     }
   };
 
@@ -579,36 +573,6 @@ const Clients: React.FC = () => {
     alert(`✅ ${clients.length} clients exportés avec succès !`);
   };
 
-  // Filtrer les clients selon la recherche
-  const filteredClients = clients.filter(client => {
-    if (!searchQuery.trim()) return true;
-    
-    const query = searchQuery.toLowerCase();
-    const fullName = `${client.firstName || ''} ${client.lastName || ''}`.toLowerCase();
-    const email = (client.email || '').toLowerCase();
-    const phone = (client.phone || '').toLowerCase();
-    const companyName = (client.companyName || '').toLowerCase();
-    const address = (client.address || '').toLowerCase();
-    const city = (client.city || '').toLowerCase();
-    const postalCode = (client.postalCode || '').toLowerCase();
-    const vatNumber = (client.vatNumber || '').toLowerCase();
-    const sirenNumber = (client.sirenNumber || '').toLowerCase();
-    const accountingCode = (client.accountingCode || '').toLowerCase();
-    const cniIdentifier = (client.cniIdentifier || '').toLowerCase();
-    
-    return fullName.includes(query) ||
-           email.includes(query) ||
-           phone.includes(query) ||
-           companyName.includes(query) ||
-           address.includes(query) ||
-           city.includes(query) ||
-           postalCode.includes(query) ||
-           vatNumber.includes(query) ||
-           sirenNumber.includes(query) ||
-           accountingCode.includes(query) ||
-           cniIdentifier.includes(query);
-  });
-
   return (
     <Box>
       <Box sx={{ mb: 4 }}>
@@ -642,35 +606,6 @@ const Clients: React.FC = () => {
             </Box>
           </Box>
         </Box>
-      </Box>
-
-      {/* Barre de recherche */}
-      <Box sx={{ mb: 3 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Rechercher un client par nom, email, téléphone, entreprise, adresse..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            backgroundColor: 'white',
-            '& .MuiOutlinedInput-root': {
-              '&:hover fieldset': {
-                borderColor: '#6b7280',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#4b5563',
-              },
-            },
-          }}
-        />
       </Box>
 
       <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -786,10 +721,10 @@ const Clients: React.FC = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box>
                 <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {filteredClients.length}
+                  {clients.length}
                 </Typography>
                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  {searchQuery ? 'Résultats trouvés' : 'Total clients'}
+                  Total clients
                 </Typography>
               </Box>
               <Box sx={{ 
@@ -815,7 +750,7 @@ const Clients: React.FC = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box>
                 <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {filteredClients.filter(c => c.companyName && c.companyName.trim() !== '').length}
+                  {clients.filter(c => c.companyName && c.companyName.trim() !== '').length}
                 </Typography>
                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
                   Entreprises
@@ -844,7 +779,7 @@ const Clients: React.FC = () => {
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box>
                 <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {filteredClients.filter(c => c.email && c.email.trim() !== '').length}
+                  {clients.filter(c => c.email && c.email.trim() !== '').length}
                 </Typography>
                 <Typography variant="body2" sx={{ opacity: 0.9 }}>
                   Avec email
@@ -886,8 +821,8 @@ const Clients: React.FC = () => {
                   <TableRow>
                     <TableCell padding="checkbox">
                       <Checkbox
-                        indeterminate={selectedClients.length > 0 && selectedClients.length < filteredClients.length}
-                        checked={filteredClients.length > 0 && selectedClients.length === filteredClients.length}
+                        indeterminate={selectedClients.length > 0 && selectedClients.length < clients.length}
+                        checked={clients.length > 0 && selectedClients.length === clients.length}
                         onChange={handleSelectAll}
                         color="primary"
                       />
@@ -902,16 +837,16 @@ const Clients: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filteredClients.length === 0 ? (
+                  {clients.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
                         <Typography variant="body2" color="text.secondary">
-                          {searchQuery ? 'Aucun client ne correspond à votre recherche' : 'Aucun client trouvé'}
+                          Aucun client trouvé
                         </Typography>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredClients.map((client) => (
+                    clients.map((client) => (
                       <TableRow key={client.id}>
                         <TableCell padding="checkbox">
                           <Checkbox

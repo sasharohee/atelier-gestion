@@ -300,6 +300,7 @@ class PrintTemplatesService {
    */
   printDepositReceipt(template: PrintTemplate): void {
     const { repair, client, device, workshopInfo } = template.data;
+    const depositValidated = template.depositValidated || false;
     const doc = new jsPDF();
 
     let yPos = 20;
@@ -396,6 +397,40 @@ class PrintTemplatesService {
     doc.text(`Prix estimé: ${repair.totalPrice.toFixed(2)} €`, 20, yPos);
     yPos += 5;
     doc.text(`Délai estimé: ${format(new Date(repair.dueDate), 'dd/MM/yyyy', { locale: fr })}`, 20, yPos);
+    yPos += 5;
+    
+    // Acompte si présent
+    if (repair.deposit && repair.deposit > 0) {
+      const depositMethod = repair.depositPaymentMethod || repair.paymentMethod || 'cash';
+      const depositMethodLabel = {
+        cash: 'Espèces',
+        card: 'Carte bancaire',
+        check: 'Chèque',
+        transfer: 'Virement',
+        payment_link: 'Lien de paiement'
+      }[depositMethod] || 'Espèces';
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Acompte versé (${depositMethodLabel}): ${repair.deposit.toFixed(2)} €`, 20, yPos);
+      
+      // Ajouter "✓ PAYÉ" ou "⏳ EN ATTENTE" selon l'état de validation
+      doc.setFontSize(9);
+      if (depositValidated) {
+        doc.setTextColor(16, 185, 129); // Vert
+        doc.text('✓ PAYÉ', 145, yPos);
+      } else {
+        doc.setTextColor(245, 158, 11); // Orange
+        doc.text('⏳ EN ATTENTE', 135, yPos);
+      }
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      yPos += 5;
+      
+      const remaining = repair.totalPrice - repair.deposit;
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Reste à payer: ${remaining.toFixed(2)} €`, 20, yPos);
+    }
+    
     yPos += 15;
 
     // Conditions
@@ -433,6 +468,7 @@ class PrintTemplatesService {
    */
   printInvoice(template: PrintTemplate): void {
     const { repair, client, workshopInfo } = template.data;
+    const depositValidated = template.depositValidated || false;
     const doc = new jsPDF();
 
     let yPos = 20;
@@ -534,21 +570,79 @@ class PrintTemplatesService {
 
     yPos += 10;
 
-    // Acompte et reste à payer
+    // Historique des paiements
     if (repair.deposit && repair.deposit > 0) {
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Acompte payé:', 150, yPos);
-      doc.text(`${repair.deposit.toFixed(2)} €`, 190, yPos, { align: 'right' });
+      doc.setFont('helvetica', 'bold');
+      doc.text('Historique des paiements:', 20, yPos);
       yPos += 6;
       
-      const remaining = repair.totalPrice - repair.deposit;
+      // Acompte
+      doc.setFont('helvetica', 'normal');
+      const depositMethod = repair.depositPaymentMethod || repair.paymentMethod || 'cash';
+      const depositMethodLabel = {
+        cash: 'Espèces',
+        card: 'Carte bancaire',
+        check: 'Chèque',
+        transfer: 'Virement',
+        payment_link: 'Lien de paiement'
+      }[depositMethod] || 'Espèces';
+      
+      doc.text(`Acompte (${depositMethodLabel}):`, 150, yPos);
+      doc.text(`${repair.deposit.toFixed(2)} €`, 190, yPos, { align: 'right' });
+      
+      // Ajouter "✓ PAYÉ" ou "⏳ EN ATTENTE" selon l'état de validation
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 102, 204); // Bleu
-      doc.text('Reste à payer:', 150, yPos);
-      doc.text(`${remaining.toFixed(2)} €`, 190, yPos, { align: 'right' });
+      if (depositValidated) {
+        doc.setTextColor(16, 185, 129); // Vert
+        doc.text('✓ PAYÉ', 150, yPos + 3);
+      } else {
+        doc.setTextColor(245, 158, 11); // Orange
+        doc.text('⏳ EN ATTENTE', 150, yPos + 3);
+      }
       doc.setTextColor(0, 0, 0);
-      yPos += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      yPos += 6;
+      
+      // Solde (si payé)
+      if (repair.isPaid && repair.finalPaymentMethod) {
+        const remaining = repair.totalPrice - repair.deposit;
+        const finalMethodLabel = {
+          cash: 'Espèces',
+          card: 'Carte bancaire',
+          check: 'Chèque',
+          transfer: 'Virement',
+          payment_link: 'Lien de paiement'
+        }[repair.finalPaymentMethod] || 'Espèces';
+        
+        doc.text(`Solde (${finalMethodLabel}):`, 150, yPos);
+        doc.text(`${remaining.toFixed(2)} €`, 190, yPos, { align: 'right' });
+        
+        // Ajouter "✓ PAYÉ" à côté du solde
+        doc.setFontSize(8);
+        doc.setTextColor(16, 185, 129); // Vert
+        doc.setFont('helvetica', 'bold');
+        doc.text('✓ PAYÉ', 150, yPos + 3);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        yPos += 6;
+      }
+      
+      // Reste à payer
+      const remaining = repair.totalPrice - repair.deposit;
+      if (remaining > 0 && !repair.isPaid) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 102, 204); // Bleu
+        doc.text('Reste à payer:', 150, yPos);
+        doc.text(`${remaining.toFixed(2)} €`, 190, yPos, { align: 'right' });
+        doc.setTextColor(0, 0, 0);
+        yPos += 8;
+      } else {
+        yPos += 2;
+      }
     } else {
       yPos += 4;
     }

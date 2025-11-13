@@ -367,6 +367,32 @@ const Quotes: React.FC = () => {
   };
 
   // Télécharger le devis en PDF
+  const escapeHtml = (input: string) =>
+    input
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+  const sanitizeString = (value?: string, fallback = '') => {
+    const base = value ?? '';
+    const trimmed = base.trim();
+    const toUse = trimmed.length > 0 ? trimmed : fallback;
+    return escapeHtml(toUse);
+  };
+
+  const formatAddressForHtml = (address: string) => {
+    if (!address) {
+      return '';
+    }
+    return address
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean)
+      .join('<br>');
+  };
+
   const downloadQuote = (quote: Quote) => {
     // Vérifier que le devis existe et a des données valides
     if (!quote || !quote.id) {
@@ -390,6 +416,13 @@ const Quotes: React.FC = () => {
     const clientName = client ? `${client.firstName} ${client.lastName}` : 'Client anonyme';
     const clientEmail = client?.email || '';
     const clientPhone = client?.phone || '';
+
+    const workshopName = sanitizeString(workshopSettings?.name, 'Atelier de Réparation');
+    const workshopAddress = formatAddressForHtml(
+      sanitizeString(workshopSettings?.address, '123 Rue de la Paix\n75001 Paris, France')
+    );
+    const workshopPhone = sanitizeString(workshopSettings?.phone, '07 59 23 91 70');
+    const workshopEmail = sanitizeString(workshopSettings?.email, 'contact.ateliergestion@gmail.com');
 
     const quoteContent = `
       <!DOCTYPE html>
@@ -564,11 +597,10 @@ const Quotes: React.FC = () => {
 
         <div class="quote-details">
           <div class="workshop-info">
-            <h3>Atelier de Réparation</h3>
-            <p>123 Rue de la Paix</p>
-            <p>75001 Paris, France</p>
-            <p>Tél: 07 59 23 91 70</p>
-            <p>Email: contact.ateliergestion@gmail.com</p>
+            <h3>${workshopName}</h3>
+            <p>${workshopAddress}</p>
+            <p>Tél: ${workshopPhone}</p>
+            <p>Email: ${workshopEmail}</p>
           </div>
           <div class="client-info">
             <h3>Devis pour</h3>
@@ -676,6 +708,13 @@ const Quotes: React.FC = () => {
     const clientEmail = client?.email || '';
     const clientPhone = client?.phone || '';
 
+    const workshopName = sanitizeString(workshopSettings?.name, 'Atelier de Réparation');
+    const workshopAddress = formatAddressForHtml(
+      sanitizeString(workshopSettings?.address, '123 Rue de la Paix\n75001 Paris, France')
+    );
+    const workshopPhone = sanitizeString(workshopSettings?.phone, '07 59 23 91 70');
+    const workshopEmail = sanitizeString(workshopSettings?.email, 'contact.ateliergestion@gmail.com');
+
     const quoteContent = `
       <!DOCTYPE html>
       <html lang="fr">
@@ -849,11 +888,10 @@ const Quotes: React.FC = () => {
 
         <div class="quote-details">
           <div class="workshop-info">
-            <h3>Atelier de Réparation</h3>
-            <p>123 Rue de la Paix</p>
-            <p>75001 Paris, France</p>
-            <p>Tél: 07 59 23 91 70</p>
-            <p>Email: contact.ateliergestion@gmail.com</p>
+            <h3>${workshopName}</h3>
+            <p>${workshopAddress}</p>
+            <p>Tél: ${workshopPhone}</p>
+            <p>Email: ${workshopEmail}</p>
           </div>
           <div class="client-info">
             <h3>Devis pour</h3>
