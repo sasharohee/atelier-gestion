@@ -1021,10 +1021,12 @@ const Kanban: React.FC = () => {
       }
 
       // Créer un appareil à partir du modèle sélectionné
+      // Utiliser un UUID pour garantir l'unicité du numéro de série
+      const uniqueSerialNumber = `REPAIR-${crypto.randomUUID()}`;
       const deviceData: Omit<Device, 'id' | 'createdAt' | 'updatedAt'> = {
         brand: selectedModel.brandName || (selectedModel as any).brand || 'Unknown',
         model: selectedModel.model || 'Unknown',
-        serialNumber: `REPAIR-${Date.now()}`, // Numéro de série temporaire pour la réparation
+        serialNumber: uniqueSerialNumber, // Numéro de série unique pour la réparation
         type: (selectedModel.categoryName || (selectedModel as any).type || 'other') as DeviceType,
         specifications: {},
       };

@@ -1701,8 +1701,9 @@ export const repairService = {
         discount_amount: repair.discountAmount || 0,
         original_price: repair.originalPrice || repair.totalPrice,
         deposit: repair.deposit || 0, // Acompte payé par le client
-        deposit_payment_method: repair.depositPaymentMethod, // Mode de paiement de l'acompte
-        final_payment_method: repair.finalPaymentMethod, // Mode de paiement du solde final
+        // Ne pas envoyer deposit_payment_method et final_payment_method si les colonnes n'existent pas
+        // deposit_payment_method: repair.depositPaymentMethod, // Mode de paiement de l'acompte
+        // final_payment_method: repair.finalPaymentMethod, // Mode de paiement du solde final
         payment_method: repair.paymentMethod || 'cash', // Mode de paiement (pour compatibilité)
       is_paid: repair.isPaid,
       source: source, // Ajouter la source de création
