@@ -775,8 +775,41 @@ const Kanban: React.FC = () => {
         }
         
         console.log('📤 Mise à jour avec:', updates);
+        console.log('📊 Statut avant mise à jour:', selectedRepair.status);
+        console.log('📊 Nouveau statut:', editRepair.status);
+        console.log('📊 Statut dans updates:', updates.status);
         
+        // Vérifier que le statut est bien défini
+        if (!updates.status) {
+          console.error('❌ ERREUR: Le statut est undefined dans les updates!');
+          alert('❌ Erreur: Le statut n\'est pas défini. Veuillez sélectionner un statut.');
+          return;
+        }
+        
+        // Mettre à jour la réparation
         await updateRepair(selectedRepair.id, updates);
+        
+        // Attendre un peu pour que le store se mette à jour
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Recharger les réparations pour mettre à jour le kanban
+        await loadRepairs();
+        
+        // Attendre encore un peu pour que le rechargement soit terminé
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Vérifier que le statut a bien été mis à jour
+        const updatedRepair = repairs.find(r => r.id === selectedRepair.id);
+        console.log('📊 Statut après mise à jour:', updatedRepair?.status);
+        console.log('📊 Statut attendu:', updates.status);
+        
+        if (updatedRepair?.status !== updates.status) {
+          console.error('❌ ERREUR: Le statut n\'a pas été mis à jour correctement!');
+          console.error('❌ Statut attendu:', updates.status);
+          console.error('❌ Statut actuel:', updatedRepair?.status);
+          // Essayer de recharger une dernière fois
+          await loadRepairs();
+        }
         
         setEditDialogOpen(false);
         setSelectedRepair(null);
@@ -1098,10 +1131,19 @@ const Kanban: React.FC = () => {
   };
 
   const handleEditRepairChange = (field: string, value: any) => {
-    setEditRepair(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    if (field === 'status') {
+      console.log('🔄 Changement de statut dans le formulaire:', value);
+    }
+    setEditRepair(prev => {
+      const updated = {
+        ...prev,
+        [field]: value
+      };
+      if (field === 'status') {
+        console.log('📊 Nouveau statut dans editRepair:', updated.status);
+      }
+      return updated;
+    });
   };
 
   // Initialiser le formulaire de modification avec les données de la réparation

@@ -1748,7 +1748,10 @@ export const repairService = {
     
     if (updates.clientId !== undefined) updateData.client_id = updates.clientId;
     if (updates.deviceId !== undefined) updateData.device_id = updates.deviceId;
-    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.status !== undefined) {
+      updateData.status = updates.status;
+      console.log('📊 Statut à mettre à jour:', updates.status);
+    }
     if (updates.assignedTechnicianId !== undefined) updateData.assigned_technician_id = updates.assignedTechnicianId;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.issue !== undefined) updateData.issue = updates.issue;
@@ -1766,8 +1769,10 @@ export const repairService = {
         if (updates.discountAmount !== undefined) updateData.discount_amount = updates.discountAmount;
         if (updates.originalPrice !== undefined) updateData.original_price = updates.originalPrice;
         if (updates.deposit !== undefined) updateData.deposit = updates.deposit;
-        if (updates.depositPaymentMethod !== undefined) updateData.deposit_payment_method = updates.depositPaymentMethod;
-        if (updates.finalPaymentMethod !== undefined) updateData.final_payment_method = updates.finalPaymentMethod;
+        // Ne pas envoyer deposit_payment_method et final_payment_method si les colonnes n'existent pas
+        // Ces colonnes peuvent ne pas exister dans toutes les bases de données
+        // if (updates.depositPaymentMethod !== undefined) updateData.deposit_payment_method = updates.depositPaymentMethod;
+        // if (updates.finalPaymentMethod !== undefined) updateData.final_payment_method = updates.finalPaymentMethod;
         if (updates.paymentMethod !== undefined) updateData.payment_method = updates.paymentMethod;
     if (updates.isPaid !== undefined) updateData.is_paid = updates.isPaid;
 

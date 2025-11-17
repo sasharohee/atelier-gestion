@@ -1299,6 +1299,8 @@ export const useAppStore = create<AppStore>()(
           
           if (result.success && 'data' in result && result.data) {
             console.log('✅ Données reçues du service:', result.data);
+            console.log('📊 Statut dans les données du service:', result.data.status);
+            console.log('📊 Statut attendu (des updates):', updates.status);
             
             // Utiliser isPaid des updates s'il est fourni, sinon garder l'actuel
             const paymentStatus = isPaid !== undefined ? isPaid : (get().repairs.find(r => r.id === id)?.isPaid || false);
@@ -1335,6 +1337,7 @@ export const useAppStore = create<AppStore>()(
             };
             
             console.log('🔄 Réparation transformée:', transformedRepair);
+            console.log('📊 Statut dans transformedRepair:', transformedRepair.status);
             console.log('💳 isPaid dans transformedRepair:', transformedRepair.isPaid);
             
             set((state) => {
@@ -1352,6 +1355,7 @@ export const useAppStore = create<AppStore>()(
               
               // Vérifier que la réparation a bien été mise à jour
               const updatedRepair = updatedRepairs.find(r => r.id === id);
+              console.log('📊 Statut dans le store après mise à jour:', updatedRepair?.status);
               console.log('💳 Réparation mise à jour dans le store:', updatedRepair?.isPaid);
               console.log('💳 Comparaison - Avant:', currentRepair?.isPaid, 'Après:', updatedRepair?.isPaid);
               
