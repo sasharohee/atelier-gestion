@@ -26,12 +26,18 @@ diagnostic_*.html
 
 # Documentation and guides
 *.md
-*.html
 *.txt
 GUIDE_*.html
 SOLUTION_*.html
 INSTRUCTIONS_*.html
 DIAGNOSTIC_*.html
+quote-*.html
+email_*.html
+create_*.html
+clear_*.html
+verify_*.html
+generate_*.html
+check_*.html
 
 # Deployment scripts
 deploy*.sh
