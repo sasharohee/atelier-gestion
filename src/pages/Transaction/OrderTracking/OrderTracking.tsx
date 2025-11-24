@@ -55,6 +55,7 @@ import orderService from '../../../services/orderService';
 
 const OrderTracking: React.FC = () => {
   const { workshopSettings } = useWorkshopSettings();
+  const { addExpense } = useAppStore();
   
   // Valeur par défaut pour éviter les erreurs
   const currency = workshopSettings?.currency || 'EUR';
@@ -235,6 +236,35 @@ const OrderTracking: React.FC = () => {
           console.log('📊 Liste des commandes mise à jour:', updated.length, 'commandes');
           return updated;
         });
+
+        // Créer automatiquement une dépense correspondante
+        try {
+          console.log('💰 Création automatique de dépense pour la commande...');
+          const expenseTitle = newOrder.orderNumber 
+            ? `Commande ${newOrder.orderNumber} - ${newOrder.supplierName || 'Fournisseur'}`
+            : `Commande - ${newOrder.supplierName || 'Fournisseur'}`;
+          
+          const expenseDescription = newOrder.notes 
+            ? newOrder.notes 
+            : `Commande passée auprès de ${newOrder.supplierName || 'fournisseur'}`;
+          
+          await addExpense({
+            title: expenseTitle,
+            description: expenseDescription,
+            amount: newOrder.totalAmount || 0,
+            supplier: newOrder.supplierName || undefined,
+            invoiceNumber: newOrder.orderNumber || undefined,
+            paymentMethod: 'card',
+            status: 'paid',
+            expenseDate: newOrder.orderDate ? new Date(newOrder.orderDate) : new Date(),
+            dueDate: newOrder.expectedDeliveryDate ? new Date(newOrder.expectedDeliveryDate) : undefined,
+            tags: ['commande', 'automatique'],
+          });
+          console.log('✅ Dépense créée automatiquement pour la commande');
+        } catch (expenseError) {
+          // Ne pas interrompre le processus si la création de la dépense échoue
+          console.error('⚠️ Erreur lors de la création automatique de la dépense:', expenseError);
+        }
       }
       
       handleCloseDialog();

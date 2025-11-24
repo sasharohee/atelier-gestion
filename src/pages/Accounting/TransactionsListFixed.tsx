@@ -20,18 +20,19 @@ import {
 } from '@mui/material';
 import { Search } from '@mui/icons-material';
 import { useAppStore } from '../../store';
-import { useCurrencyFormatter } from '../../utils/currency';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
+import { repairService } from '../../services/supabaseService';
 
 interface Transaction {
   id: string;
-  type: 'sale' | 'repair' | 'expense';
+  type: 'sale' | 'repair' | 'expense' | 'deposit';
   date: string;
   description: string;
   amount: number;
   clientName?: string;
   status: string;
+  account?: string; // Colonne "compte" pour identifier les acomptes
 }
 
 const TransactionsListFixed: React.FC = () => {
@@ -83,6 +84,44 @@ const TransactionsListFixed: React.FC = () => {
           status: repair.status || 'completed'
         });
       });
+
+      // Créer des transactions séparées pour les acomptes
+      for (const repair of repairs) {
+        if (repair.deposit && repair.deposit > 0) {
+          const client = clients.find(c => c.id === repair.clientId);
+          
+          // Essayer de récupérer la date de validation de l'acompte via les paiements
+          let depositDate = new Date(repair.createdAt);
+          let depositStatus = 'pending';
+          
+          try {
+            const paymentsResult = await repairService.getPaymentsByRepairId(repair.id);
+            if (paymentsResult.success && 'data' in paymentsResult && paymentsResult.data) {
+              const depositPayment = paymentsResult.data.find(
+                (payment: any) => payment.paymentType === 'deposit'
+              );
+              if (depositPayment) {
+                depositDate = new Date(depositPayment.paymentDate || depositPayment.createdAt);
+                depositStatus = 'paid';
+              }
+            }
+          } catch (error) {
+            console.warn(`Erreur lors de la récupération des paiements pour la réparation ${repair.id}:`, error);
+          }
+
+          const repairNumber = repair.repairNumber || repair.id.substring(0, 8);
+          realTransactions.push({
+            id: `${repair.id}-deposit`,
+            type: 'deposit',
+            date: depositDate.toISOString().split('T')[0],
+            description: `Acompte - Réparation #${repairNumber}`,
+            amount: repair.deposit,
+            clientName: client ? `${client.firstName} ${client.lastName}` : 'N/A',
+            status: depositStatus,
+            account: 'Acompte'
+          });
+        }
+      }
 
       // Convertir les dépenses en transactions
       expenses.forEach(expense => {
@@ -154,6 +193,7 @@ const TransactionsListFixed: React.FC = () => {
       case 'sale': return 'Vente';
       case 'repair': return 'Réparation';
       case 'expense': return 'Dépense';
+      case 'deposit': return 'Acompte';
       default: return type;
     };
   };
@@ -199,6 +239,7 @@ const TransactionsListFixed: React.FC = () => {
                 <MenuItem value="all">Tous</MenuItem>
                 <MenuItem value="sale">Vente</MenuItem>
                 <MenuItem value="repair">Réparation</MenuItem>
+                <MenuItem value="deposit">Acompte</MenuItem>
                 <MenuItem value="expense">Dépense</MenuItem>
               </Select>
             </FormControl>
@@ -215,6 +256,7 @@ const TransactionsListFixed: React.FC = () => {
               <TableCell>Type</TableCell>
               <TableCell>Description</TableCell>
               <TableCell>Client</TableCell>
+              <TableCell>Compte</TableCell>
               <TableCell align="right">Montant</TableCell>
               <TableCell>Statut</TableCell>
             </TableRow>
@@ -231,12 +273,21 @@ const TransactionsListFixed: React.FC = () => {
                 <TableCell>
                   <Chip 
                     label={getTypeLabel(transaction.type)} 
-                    color={transaction.type === 'expense' ? 'error' : 'primary'}
+                    color={
+                      transaction.type === 'expense' 
+                        ? 'error' 
+                        : transaction.type === 'deposit'
+                        ? 'info'
+                        : 'primary'
+                    }
                     size="small"
                   />
                 </TableCell>
                 <TableCell>{transaction.description}</TableCell>
                 <TableCell>{transaction.clientName || 'N/A'}</TableCell>
+                <TableCell>
+                  {transaction.account || '-'}
+                </TableCell>
                 <TableCell 
                   align="right" 
                   sx={{ 

@@ -24,6 +24,8 @@ import {
   DateRange,
 } from '@mui/icons-material';
 import { useAppStore } from '../../store';
+import { repairService } from '../../services/supabaseService';
+import { jsPDF } from 'jspdf';
 
 interface ExportHistory {
   id: string;
@@ -39,6 +41,8 @@ const ExportsCenterFixed: React.FC = () => {
   const [selectedFormat, setSelectedFormat] = useState<string>('excel');
   const [selectedData, setSelectedData] = useState<string>('transactions');
   const [dateRange, setDateRange] = useState<string>('last30days');
+  const [customStartDate, setCustomStartDate] = useState<string>('');
+  const [customEndDate, setCustomEndDate] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [exportHistory, setExportHistory] = useState<ExportHistory[]>([]);
 
@@ -144,6 +148,50 @@ const ExportsCenterFixed: React.FC = () => {
     { value: 'custom', label: 'Période personnalisée' }
   ];
 
+  // Fonction pour calculer les dates selon la période sélectionnée
+  const getDateRange = (): { startDate: Date | null; endDate: Date | null } => {
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999); // Fin de journée
+    
+    let startDate: Date | null = null;
+
+    switch (dateRange) {
+      case 'last7days':
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'last30days':
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'last3months':
+        startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 3);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'lastyear':
+        startDate = new Date();
+        startDate.setFullYear(startDate.getFullYear() - 1);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'custom':
+        if (customStartDate && customEndDate) {
+          startDate = new Date(customStartDate);
+          startDate.setHours(0, 0, 0, 0);
+          const customEnd = new Date(customEndDate);
+          customEnd.setHours(23, 59, 59, 999);
+          return { startDate, endDate: customEnd };
+        }
+        return { startDate: null, endDate: null };
+      default:
+        return { startDate: null, endDate: null };
+    }
+
+    return { startDate, endDate };
+  };
+
   const handleExport = async () => {
     try {
       setIsLoading(true);
@@ -167,28 +215,31 @@ const ExportsCenterFixed: React.FC = () => {
         clients: updatedClients.length 
       });
 
+      // Calculer la période de filtrage
+      const { startDate, endDate } = getDateRange();
+      
       // Générer les données selon le type sélectionné avec les vraies données
       let dataToExport: any[] = [];
       let fileName = '';
       
       switch (selectedData) {
         case 'transactions':
-          dataToExport = generateTransactionsData(updatedSales, updatedRepairs, updatedExpenses, updatedClients);
+          dataToExport = await generateTransactionsData(updatedSales, updatedRepairs, updatedExpenses, updatedClients, startDate, endDate);
           fileName = 'transactions_comptables';
           break;
           
         case 'invoices':
-          dataToExport = generateInvoicesData(updatedSales, updatedRepairs, updatedClients);
+          dataToExport = generateInvoicesData(updatedSales, updatedRepairs, updatedClients, startDate, endDate);
           fileName = 'factures';
           break;
           
         case 'expenses':
-          dataToExport = generateExpensesData(updatedExpenses);
+          dataToExport = generateExpensesData(updatedExpenses, startDate, endDate);
           fileName = 'depenses';
           break;
           
         case 'financial_report':
-          dataToExport = generateFinancialReportData(updatedSales, updatedRepairs, updatedExpenses);
+          dataToExport = generateFinancialReportData(updatedSales, updatedRepairs, updatedExpenses, startDate, endDate);
           fileName = 'rapport_financier';
           break;
           
@@ -226,75 +277,149 @@ const ExportsCenterFixed: React.FC = () => {
     }
   };
 
+  // Fonction pour filtrer par date
+  const filterByDate = (date: Date | string, startDate: Date | null, endDate: Date | null): boolean => {
+    if (!startDate && !endDate) return true; // Pas de filtre
+    
+    const itemDate = typeof date === 'string' ? new Date(date) : date;
+    
+    if (startDate && itemDate < startDate) return false;
+    if (endDate && itemDate > endDate) return false;
+    
+    return true;
+  };
+
   // Fonctions de génération de données avec les vraies données
-  const generateTransactionsData = (salesData: any[], repairsData: any[], expensesData: any[], clientsData: any[]) => {
+  const generateTransactionsData = async (salesData: any[], repairsData: any[], expensesData: any[], clientsData: any[], startDate: Date | null, endDate: Date | null) => {
     const transactions: any[] = [];
 
-    // Ajouter les ventes
+    // Ajouter les ventes (filtrées par date)
     salesData.forEach(sale => {
+      const saleDate = new Date(sale.createdAt);
+      if (!filterByDate(saleDate, startDate, endDate)) return;
+      
       const client = clientsData.find(c => c.id === sale.clientId);
       transactions.push({
-        Date: new Date(sale.createdAt).toLocaleDateString('fr-FR'),
+        Date: saleDate.toLocaleDateString('fr-FR'),
         Type: 'Vente',
         Description: `Vente #${sale.id.substring(0, 8)}`,
         Client: client ? `${client.firstName} ${client.lastName}` : 'N/A',
+        Compte: '',
         Montant: sale.total || 0,
         Statut: sale.status === 'completed' ? 'Terminé' : 'En cours'
       });
     });
 
-    // Ajouter les réparations
+    // Ajouter les réparations (filtrées par date)
     repairsData.forEach(repair => {
+      const repairDate = new Date(repair.createdAt);
+      if (!filterByDate(repairDate, startDate, endDate)) return;
+      
       const client = clientsData.find(c => c.id === repair.clientId);
       transactions.push({
-        Date: new Date(repair.createdAt).toLocaleDateString('fr-FR'),
+        Date: repairDate.toLocaleDateString('fr-FR'),
         Type: 'Réparation',
         Description: `Réparation #${repair.id.substring(0, 8)}`,
         Client: client ? `${client.firstName} ${client.lastName}` : 'N/A',
+        Compte: '',
         Montant: repair.totalPrice || 0,
         Statut: repair.status === 'completed' ? 'Terminé' : 'En cours'
       });
     });
 
-    // Ajouter les dépenses
+    // Ajouter les acomptes (filtrés par date)
+    for (const repair of repairsData) {
+      if (repair.deposit && repair.deposit > 0) {
+        const client = clientsData.find(c => c.id === repair.clientId);
+        
+        // Essayer de récupérer la date de validation de l'acompte via les paiements
+        let depositDate = new Date(repair.createdAt);
+        let depositStatus = 'En attente';
+        
+        try {
+          const paymentsResult = await repairService.getPaymentsByRepairId(repair.id);
+          if (paymentsResult.success && 'data' in paymentsResult && paymentsResult.data) {
+            const depositPayment = paymentsResult.data.find(
+              (payment: any) => payment.paymentType === 'deposit'
+            );
+            if (depositPayment) {
+              depositDate = new Date(depositPayment.paymentDate || depositPayment.createdAt);
+              depositStatus = 'Payé';
+            }
+          }
+        } catch (error) {
+          console.warn(`Erreur lors de la récupération des paiements pour la réparation ${repair.id}:`, error);
+        }
+
+        // Filtrer par date
+        if (!filterByDate(depositDate, startDate, endDate)) continue;
+
+        const repairNumber = repair.repairNumber || repair.id.substring(0, 8);
+        transactions.push({
+          Date: depositDate.toLocaleDateString('fr-FR'),
+          Type: 'Acompte',
+          Description: `Acompte - Réparation #${repairNumber}`,
+          Client: client ? `${client.firstName} ${client.lastName}` : 'N/A',
+          Compte: 'Acompte',
+          Montant: repair.deposit,
+          Statut: depositStatus
+        });
+      }
+    }
+
+    // Ajouter les dépenses (filtrées par date)
     expensesData.forEach(expense => {
+      const expenseDate = new Date(expense.expenseDate);
+      if (!filterByDate(expenseDate, startDate, endDate)) return;
+      
       transactions.push({
-        Date: new Date(expense.expenseDate).toLocaleDateString('fr-FR'),
+        Date: expenseDate.toLocaleDateString('fr-FR'),
         Type: 'Dépense',
         Description: expense.title || 'Dépense',
         Client: '',
+        Compte: '',
         Montant: -(expense.amount || 0),
         Statut: expense.status === 'paid' ? 'Payé' : 'En attente'
       });
     });
 
     // Trier par date (plus récent en premier)
-    return transactions.sort((a, b) => new Date(b.Date.split('/').reverse().join('-')).getTime() - new Date(a.Date.split('/').reverse().join('-')).getTime());
+    return transactions.sort((a, b) => {
+      const dateA = new Date(a.Date.split('/').reverse().join('-'));
+      const dateB = new Date(b.Date.split('/').reverse().join('-'));
+      return dateB.getTime() - dateA.getTime();
+    });
   };
 
-  const generateInvoicesData = (salesData: any[], repairsData: any[], clientsData: any[]) => {
+  const generateInvoicesData = (salesData: any[], repairsData: any[], clientsData: any[], startDate: Date | null, endDate: Date | null) => {
     const invoices: any[] = [];
 
-    // Ajouter les ventes comme factures
+    // Ajouter les ventes comme factures (filtrées par date)
     salesData.forEach(sale => {
+      const saleDate = new Date(sale.createdAt);
+      if (!filterByDate(saleDate, startDate, endDate)) return;
+      
       const client = clientsData.find(c => c.id === sale.clientId);
       invoices.push({
         'Numéro': `FAC-${sale.id.substring(0, 8)}`,
         Client: client ? `${client.firstName} ${client.lastName}` : 'N/A',
-        'Date Émission': new Date(sale.createdAt).toLocaleDateString('fr-FR'),
+        'Date Émission': saleDate.toLocaleDateString('fr-FR'),
         'Date Échéance': new Date(new Date(sale.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'),
         Montant: sale.total || 0,
         Statut: sale.status === 'completed' ? 'Payée' : 'En attente'
       });
     });
 
-    // Ajouter les réparations comme factures
+    // Ajouter les réparations comme factures (filtrées par date)
     repairsData.forEach(repair => {
+      const repairDate = new Date(repair.createdAt);
+      if (!filterByDate(repairDate, startDate, endDate)) return;
+      
       const client = clientsData.find(c => c.id === repair.clientId);
       invoices.push({
         'Numéro': `FAC-${repair.id.substring(0, 8)}`,
         Client: client ? `${client.firstName} ${client.lastName}` : 'N/A',
-        'Date Émission': new Date(repair.createdAt).toLocaleDateString('fr-FR'),
+        'Date Émission': repairDate.toLocaleDateString('fr-FR'),
         'Date Échéance': new Date(new Date(repair.createdAt).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR'),
         Montant: repair.totalPrice || 0,
         Statut: repair.isPaid ? 'Payée' : 'En attente'
@@ -304,24 +429,32 @@ const ExportsCenterFixed: React.FC = () => {
     return invoices.sort((a, b) => new Date(b['Date Émission'].split('/').reverse().join('-')).getTime() - new Date(a['Date Émission'].split('/').reverse().join('-')).getTime());
   };
 
-  const generateExpensesData = (expensesData: any[]) => {
-    return expensesData.map(expense => ({
-      Titre: expense.title || 'Dépense',
-      Catégorie: expense.tags?.[0] || 'Général',
-      Fournisseur: expense.supplier || 'N/A',
-      Date: new Date(expense.expenseDate).toLocaleDateString('fr-FR'),
-      Montant: expense.amount || 0,
-      Statut: expense.status === 'paid' ? 'Payé' : 'En attente'
-    })).sort((a, b) => new Date(b.Date.split('/').reverse().join('-')).getTime() - new Date(a.Date.split('/').reverse().join('-')).getTime());
+  const generateExpensesData = (expensesData: any[], startDate: Date | null, endDate: Date | null) => {
+    return expensesData
+      .filter(expense => {
+        const expenseDate = new Date(expense.expenseDate);
+        return filterByDate(expenseDate, startDate, endDate);
+      })
+      .map(expense => ({
+        Titre: expense.title || 'Dépense',
+        Catégorie: expense.tags?.[0] || 'Général',
+        Fournisseur: expense.supplier || 'N/A',
+        Date: new Date(expense.expenseDate).toLocaleDateString('fr-FR'),
+        Montant: expense.amount || 0,
+        Statut: expense.status === 'paid' ? 'Payé' : 'En attente'
+      }))
+      .sort((a, b) => new Date(b.Date.split('/').reverse().join('-')).getTime() - new Date(a.Date.split('/').reverse().join('-')).getTime());
   };
 
-  const generateFinancialReportData = (salesData: any[], repairsData: any[], expensesData: any[]) => {
+  const generateFinancialReportData = (salesData: any[], repairsData: any[], expensesData: any[], startDate: Date | null, endDate: Date | null) => {
     // Calculer les revenus et dépenses par mois
     const monthlyData = new Map<string, { revenus: number, depenses: number }>();
     
-    // Revenus par mois
+    // Revenus par mois (filtrés par date)
     [...salesData, ...repairsData].forEach(item => {
       const date = new Date(item.createdAt);
+      if (!filterByDate(date, startDate, endDate)) return;
+      
       const month = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
       const amount = item.total || item.totalPrice || 0;
       
@@ -331,9 +464,11 @@ const ExportsCenterFixed: React.FC = () => {
       monthlyData.get(month)!.revenus += amount;
     });
 
-    // Dépenses par mois
+    // Dépenses par mois (filtrées par date)
     expensesData.forEach(expense => {
       const date = new Date(expense.expenseDate);
+      if (!filterByDate(date, startDate, endDate)) return;
+      
       const month = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
       const amount = expense.amount || 0;
       
@@ -380,29 +515,135 @@ const ExportsCenterFixed: React.FC = () => {
 
   // Fonction d'export PDF
   const exportToPDF = (data: any[], fileName: string) => {
-    // Créer un PDF simple avec les données
-    const headers = Object.keys(data[0]);
-    let pdfContent = `RAPPORT: ${fileName.toUpperCase()}\n`;
-    pdfContent += `Généré le: ${new Date().toLocaleDateString('fr-FR')}\n\n`;
-    
-    // En-têtes
-    pdfContent += headers.join('\t') + '\n';
-    pdfContent += '-'.repeat(headers.join('\t').length) + '\n';
-    
-    // Données
-    data.forEach(row => {
-      pdfContent += headers.map(header => row[header] || '').join('\t') + '\n';
-    });
-    
-    const blob = new Blob([pdfContent], { type: 'text/plain;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${fileName}.txt`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      if (!data || data.length === 0) {
+        alert('Aucune donnée à exporter');
+        return;
+      }
+
+      // Créer un nouveau document PDF en mode paysage pour plus d'espace
+      const doc = new jsPDF('landscape', 'mm', 'a4');
+      
+      // Configuration
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 10;
+      let yPosition = margin;
+      const lineHeight = 6;
+      const maxY = pageHeight - margin - 15; // Réserver de l'espace pour le pied de page
+      
+      // En-tête
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text(fileName.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 8;
+      
+      // Date de génération
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      const dateStr = new Date().toLocaleDateString('fr-FR');
+      const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      doc.text(`Généré le: ${dateStr} à ${timeStr}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 8;
+      
+      // Récupérer les en-têtes
+      const headers = Object.keys(data[0]);
+      const columnCount = headers.length;
+      const availableWidth = pageWidth - 2 * margin;
+      const columnWidth = availableWidth / columnCount;
+      
+      // Fonction pour tronquer le texte si nécessaire
+      const truncateText = (text: string, maxWidth: number): string => {
+        const textWidth = doc.getTextWidth(text);
+        if (textWidth <= maxWidth) return text;
+        
+        // Tronquer progressivement
+        let truncated = text;
+        while (doc.getTextWidth(truncated + '...') > maxWidth && truncated.length > 0) {
+          truncated = truncated.slice(0, -1);
+        }
+        return truncated + '...';
+      };
+      
+      // Fonction pour dessiner les en-têtes
+      const drawHeaders = () => {
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setFillColor(240, 240, 240);
+        doc.rect(margin, yPosition - 4, availableWidth, lineHeight, 'F');
+        
+        headers.forEach((header, index) => {
+          const x = margin + (index * columnWidth);
+          const headerText = truncateText(header, columnWidth - 4);
+          doc.text(headerText, x + 2, yPosition, { maxWidth: columnWidth - 4 });
+        });
+        
+        yPosition += lineHeight;
+        
+        // Ligne de séparation
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(margin, yPosition, pageWidth - margin, yPosition);
+        yPosition += 2;
+      };
+      
+      // Dessiner les en-têtes initiaux
+      drawHeaders();
+      
+      // Ajouter les données
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      
+      data.forEach((row, rowIndex) => {
+        // Vérifier si on doit ajouter une nouvelle page
+        if (yPosition + lineHeight > maxY) {
+          doc.addPage();
+          yPosition = margin;
+          drawHeaders();
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+        }
+        
+        // Alterner les couleurs de fond pour la lisibilité
+        if (rowIndex % 2 === 0) {
+          doc.setFillColor(250, 250, 250);
+          doc.rect(margin, yPosition - 4, availableWidth, lineHeight, 'F');
+        }
+        
+        // Ajouter les données de la ligne
+        headers.forEach((header, index) => {
+          const x = margin + (index * columnWidth);
+          const value = String(row[header] || '');
+          const displayValue = truncateText(value, columnWidth - 4);
+          doc.text(displayValue, x + 2, yPosition, { maxWidth: columnWidth - 4 });
+        });
+        
+        yPosition += lineHeight;
+      });
+      
+      // Pied de page sur chaque page
+      const totalPages = doc.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(128, 128, 128);
+        doc.text(
+          `Page ${i} sur ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 8,
+          { align: 'center' }
+        );
+      }
+      
+      // Télécharger le PDF
+      doc.save(`${fileName}.pdf`);
+      
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
+    }
   };
 
   const getFormatIcon = (format: string) => {
@@ -534,6 +775,8 @@ const ExportsCenterFixed: React.FC = () => {
                     fullWidth
                     size="small"
                     sx={{ mb: 1 }}
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
                     InputLabelProps={{ shrink: true }}
                   />
                   <TextField
@@ -541,6 +784,8 @@ const ExportsCenterFixed: React.FC = () => {
                     type="date"
                     fullWidth
                     size="small"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
                     InputLabelProps={{ shrink: true }}
                   />
                 </Box>
