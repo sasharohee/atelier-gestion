@@ -228,7 +228,6 @@ const Kanban: React.FC = () => {
         const result = await deviceCategoryService.getAll();
         if (result.success && result.data) {
           setDbCategories(result.data);
-          console.log('✅ Catégories d\'appareils chargées depuis la base de données:', result.data.length);
         } else {
           console.warn('⚠️ Aucune catégorie d\'appareil trouvée ou erreur:', result.error);
           setDbCategories([]);
@@ -251,7 +250,6 @@ const Kanban: React.FC = () => {
         setBrandsLoading(true);
         const brands = await brandService.getAll();
         setDbBrands(brands);
-        console.log('✅ Marques chargées depuis la base de données:', brands.length);
       } catch (error) {
         console.error('❌ Erreur lors du chargement des marques:', error);
         setDbBrands([]);
@@ -429,12 +427,7 @@ const Kanban: React.FC = () => {
 
   const getFilteredModels = () => {
     // Utiliser les modèles du store centralisé
-    console.log('🔍 getFilteredModels appelé avec:', { selectedCategory, selectedBrand, totalModels: deviceModels.length });
-    
     const filtered = deviceModels.filter(model => {
-      // Debug: Afficher la structure du modèle pour le filtrage
-      console.log('🔍 Modèle pour filtrage:', model);
-      
       // Filtrage par marque - essayer les deux propriétés possibles
       const brandMatch = !selectedBrand || model.brandName === selectedBrand || (model as any).brand === selectedBrand;
       
@@ -444,50 +437,43 @@ const Kanban: React.FC = () => {
       const isActive = model.isActive;
       const finalMatch = brandMatch && categoryMatch && isActive;
       
-      console.log(`📱 Modèle ${model.brandName || (model as any).brand} ${model.model}: brandMatch=${brandMatch}, categoryMatch=${categoryMatch}, isActive=${isActive}, finalMatch=${finalMatch}`);
-      
       return finalMatch;
     });
     
-    console.log(`🎯 Modèles filtrés: ${filtered.length}/${deviceModels.length}`);
     return filtered;
   };
 
   // Fonction pour récupérer les services associés au modèle sélectionné
   const getServicesForSelectedModel = () => {
     if (!newRepair.deviceId) {
-      console.log('🔍 getServicesForSelectedModel: Pas de deviceId sélectionné');
       return [];
     }
     
-    console.log('🔍 getServicesForSelectedModel: deviceId =', newRepair.deviceId);
-    console.log('🔍 Services locaux disponibles:', localDeviceModelServices.length);
+    // Utiliser deviceModelServices du store en priorité, sinon localDeviceModelServices
+    const servicesToUse = deviceModelServices.length > 0 ? deviceModelServices : localDeviceModelServices;
     
-    // Utiliser les services locaux chargés
-    // Debug: Afficher la structure des services pour voir les propriétés disponibles
-    console.log('🔍 Premier service pour debug:', localDeviceModelServices[0]);
-    
-    const filteredServices = localDeviceModelServices.filter(service => 
-      service.device_model_id === newRepair.deviceId || service.deviceModelId === newRepair.deviceId
+    const filteredServices = servicesToUse.filter(service => 
+      service.device_model_id === newRepair.deviceId || 
+      service.deviceModelId === newRepair.deviceId ||
+      (service as any).device_model_id === newRepair.deviceId
     );
-    console.log('🔍 Services filtrés par deviceModelId:', filteredServices);
     
     return filteredServices;
   };
 
   const getServicesForEditModel = () => {
     if (!editRepair.deviceId) {
-      console.log('🔍 getServicesForEditModel: Pas de deviceId sélectionné');
       return [];
     }
     
-    console.log('🔍 getServicesForEditModel: deviceId =', editRepair.deviceId);
-    console.log('🔍 Services locaux disponibles:', localDeviceModelServices.length);
+    // Utiliser deviceModelServices du store en priorité, sinon localDeviceModelServices
+    const servicesToUse = deviceModelServices.length > 0 ? deviceModelServices : localDeviceModelServices;
     
-    const filteredServices = localDeviceModelServices.filter(service => 
-      service.device_model_id === editRepair.deviceId || service.deviceModelId === editRepair.deviceId
+    const filteredServices = servicesToUse.filter(service => 
+      service.device_model_id === editRepair.deviceId || 
+      service.deviceModelId === editRepair.deviceId ||
+      (service as any).device_model_id === editRepair.deviceId
     );
-    console.log('🔍 Services filtrés par deviceModelId pour édition:', filteredServices);
     return filteredServices;
   };
 
@@ -495,9 +481,7 @@ const Kanban: React.FC = () => {
   useEffect(() => {
     const loadUsersData = async () => {
       try {
-        console.log('🔄 Chargement des utilisateurs dans le suivi des réparations...');
         await loadUsers();
-        console.log('✅ Utilisateurs chargés dans le suivi des réparations');
       } catch (error) {
         console.error('❌ Erreur lors du chargement des utilisateurs:', error);
       }
@@ -510,9 +494,7 @@ const Kanban: React.FC = () => {
   useEffect(() => {
     const loadModelsData = async () => {
       try {
-        console.log('🔄 Chargement des modèles d\'appareils dans le suivi des réparations...');
         await loadDeviceModels();
-        console.log('✅ Modèles d\'appareils chargés dans le suivi des réparations');
       } catch (error) {
         console.error('❌ Erreur lors du chargement des modèles d\'appareils:', error);
       }
@@ -524,14 +506,12 @@ const Kanban: React.FC = () => {
   // État local pour les services par modèle
   const [localDeviceModelServices, setLocalDeviceModelServices] = useState([]);
 
-  // Charger les services par modèle au montage du composant
+  // Charger les services par modèle au montage du composant et synchroniser avec le store
   useEffect(() => {
     const loadServicesData = async () => {
       try {
-        console.log('🔄 Chargement des services par modèle dans le suivi des réparations...');
         const result = await deviceModelServiceService.getAll();
         if (result.success && result.data) {
-          console.log('✅ Services par modèle chargés:', result.data.length);
           setLocalDeviceModelServices(result.data);
         } else {
           console.warn('⚠️ Aucun service par modèle trouvé ou erreur:', result.error);
@@ -546,14 +526,16 @@ const Kanban: React.FC = () => {
     loadServicesData();
   }, []);
 
+  // Synchroniser localDeviceModelServices avec deviceModelServices du store
+  useEffect(() => {
+    if (deviceModelServices.length > 0) {
+      setLocalDeviceModelServices(deviceModelServices);
+    }
+  }, [deviceModelServices]);
+
   // Debug: Afficher les informations des utilisateurs quand ils changent (sans recharger)
   useEffect(() => {
     if (users.length > 0) {
-      console.log('📊 Utilisateurs dans le store:', users);
-      console.log('🔍 Détail des utilisateurs chargés:');
-      users.forEach((user, index) => {
-        console.log(`${index + 1}. ${user.firstName} ${user.lastName} (${user.role}) - ID: ${user.id}`);
-      });
     }
   }, [users]);
 
@@ -611,20 +593,6 @@ const Kanban: React.FC = () => {
     return basePrice + servicesTotalPrice;
   };
 
-  // Debug: Afficher les modèles d'appareils
-  useEffect(() => {
-    console.log('📱 Modèles d\'appareils dans le store:', deviceModels.length);
-    if (deviceModels.length > 0) {
-      console.log('🔍 Détail des modèles chargés:');
-      deviceModels.forEach((model, index) => {
-        console.log(`${index + 1}. ${(model as any).brand} ${(model as any).model} (${(model as any).type}) - Actif: ${model.isActive}`);
-      });
-      
-      // Afficher les types uniques
-      const uniqueTypes = Array.from(new Set(deviceModels.map(m => (m as any).type)));
-      console.log('🎯 Types uniques trouvés:', uniqueTypes);
-    }
-  }, [deviceModels]);
 
   // Fonction utilitaire pour sécuriser les dates
   const safeFormatDate = (date: any, formatString: string) => {
@@ -643,34 +611,26 @@ const Kanban: React.FC = () => {
     // Restaurer le style du body
     document.body.style.userSelect = '';
     
-    console.log('🎯 handleDragEnd appelé avec:', result);
-    
     if (!result.destination) {
-      console.log('❌ Pas de destination, arrêt');
       return;
     }
 
     const { source, destination, draggableId } = result;
-    console.log('📋 Détails du drag:', { source, destination, draggableId });
     
     if (source.droppableId === destination.droppableId) {
-      console.log('⚠️ Même colonne, pas de changement de statut');
       return;
     }
 
     // Mettre à jour le statut de la réparation
     const repair = repairs.find(r => r.id === draggableId);
-    console.log('🔍 Réparation trouvée:', repair);
     
     if (repair) {
-      console.log('🔄 Mise à jour du statut de', repair.status, 'vers', destination.droppableId);
       
       // Préparer les mises à jour
       const updates: any = { status: destination.droppableId };
       
       // Si la réparation passe en "terminé" ou "restitué", retirer l'urgence et le retard
       if (destination.droppableId === 'completed' || destination.droppableId === 'returned') {
-        console.log('✅ Réparation terminée/restituée - Retrait de l\'urgence et du retard');
         updates.isUrgent = false;
         // Pour le retard, on peut soit le laisser tel quel (historique) soit le retirer
         // Ici on choisit de le retirer en mettant à jour la date d'échéance
@@ -696,22 +656,41 @@ const Kanban: React.FC = () => {
   };
 
   const handleEditRepair = async (repair: Repair) => {
-    setSelectedRepair(repair);
+    // Recharger la réparation complète depuis la base de données pour avoir les services à jour
+    const repairResult = await repairService.getById(repair.id);
+    
+    if (!repairResult.success || !('data' in repairResult) || !repairResult.data) {
+      console.error('❌ Erreur lors du rechargement de la réparation:', repairResult);
+      alert('Erreur lors du chargement de la réparation');
+      return;
+    }
+    
+    const repairWithServices = repairResult.data;
+    
+    setSelectedRepair(repairWithServices);
     
     // S'assurer que les données sont chargées avant d'initialiser le formulaire
     if (deviceModels.length === 0) {
-      console.log('🔍 Chargement des modèles d\'appareils...');
       await loadDeviceModels();
     }
     
-    if (deviceModelServices.length === 0) {
-      console.log('🔍 Chargement des services des modèles...');
-      await loadDeviceModelServices();
+    // Toujours recharger les services pour s'assurer qu'ils sont à jour
+    await loadDeviceModelServices();
+    
+    // Recharger aussi les services locaux
+    try {
+      const { deviceModelServiceService } = await import('../../services/deviceModelServiceService');
+      const result = await deviceModelServiceService.getAll();
+      if (result.success && result.data) {
+        setLocalDeviceModelServices(result.data);
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du rechargement des services:', error);
     }
     
     // Attendre un tick pour que les données soient mises à jour
     setTimeout(() => {
-      initializeEditForm(repair);
+      initializeEditForm(repairWithServices);
     }, 100);
     
     setEditDialogOpen(true);
@@ -725,8 +704,6 @@ const Kanban: React.FC = () => {
   const handleSaveRepair = async () => {
     if (selectedRepair) {
       try {
-        console.log('🔄 Sauvegarde de la réparation:', selectedRepair);
-        console.log('🔄 Données du formulaire de modification:', editRepair);
         
         // Calculer le prix final avec réduction
         const totalBeforeDiscount = editRepair.totalPrice;
@@ -758,15 +735,14 @@ const Kanban: React.FC = () => {
           discountPercentage: editRepair.discountPercentage,
           discountAmount: discountAmount,
           deposit: editRepair.deposit || 0, // Acompte payé par le client
-          depositPaymentMethod: editRepair.depositPaymentMethod, // Mode de paiement de l'acompte
-          finalPaymentMethod: editRepair.finalPaymentMethod, // Mode de paiement du solde final
+          depositPaymentMethod: editRepair.depositPaymentMethod || undefined, // Mode de paiement de l'acompte (convertir chaîne vide en undefined)
+          finalPaymentMethod: editRepair.finalPaymentMethod && editRepair.finalPaymentMethod.trim() !== '' ? editRepair.finalPaymentMethod : undefined, // Mode de paiement du solde final (convertir chaîne vide en undefined)
           paymentMethod: editRepair.paymentMethod || 'cash', // Mode de paiement (pour compatibilité)
           services: repairServices,
         };
         
         // Si la réparation passe en "terminé" ou "restitué", retirer l'urgence et le retard
         if (editRepair.status === 'completed' || editRepair.status === 'returned') {
-          console.log('✅ Réparation terminée/restituée - Retrait automatique de l\'urgence et du retard');
           updates.isUrgent = false;
           // Pour le retard, mettre la date d'échéance à aujourd'hui si elle est en retard
           if (updates.dueDate && new Date(updates.dueDate) < new Date()) {
@@ -774,10 +750,6 @@ const Kanban: React.FC = () => {
           }
         }
         
-        console.log('📤 Mise à jour avec:', updates);
-        console.log('📊 Statut avant mise à jour:', selectedRepair.status);
-        console.log('📊 Nouveau statut:', editRepair.status);
-        console.log('📊 Statut dans updates:', updates.status);
         
         // Vérifier que le statut est bien défini
         if (!updates.status) {
@@ -800,8 +772,6 @@ const Kanban: React.FC = () => {
         
         // Vérifier que le statut a bien été mis à jour
         const updatedRepair = repairs.find(r => r.id === selectedRepair.id);
-        console.log('📊 Statut après mise à jour:', updatedRepair?.status);
-        console.log('📊 Statut attendu:', updates.status);
         
         if (updatedRepair?.status !== updates.status) {
           console.error('❌ ERREUR: Le statut n\'a pas été mis à jour correctement!');
@@ -814,7 +784,6 @@ const Kanban: React.FC = () => {
         setEditDialogOpen(false);
         setSelectedRepair(null);
         
-        console.log('✅ Réparation mise à jour avec succès');
         alert('✅ Réparation mise à jour avec succès !');
       } catch (error) {
         console.error('❌ Erreur lors de la mise à jour:', error);
@@ -841,12 +810,11 @@ const Kanban: React.FC = () => {
         const result = await repairService.updatePaymentStatus(repair.id, newPaymentStatus);
         
         if (result.success) {
-          console.log('✅ Mise à jour réussie en arrière-plan');
         } else {
-          console.log('⚠️ Mise à jour échouée en arrière-plan, mais l\'interface est mise à jour');
+          // Mise à jour échouée en arrière-plan, mais l'interface est mise à jour
         }
       } catch (backgroundError) {
-        console.log('⚠️ Erreur en arrière-plan ignorée, l\'interface reste mise à jour');
+        // Erreur en arrière-plan ignorée, l'interface reste mise à jour
       }
       
     } catch (error) {
@@ -870,7 +838,6 @@ const Kanban: React.FC = () => {
         return;
       }
 
-      console.log('💰 Validation de l\'acompte pour la réparation:', repair.id);
       
       // Enregistrer le paiement dans l'historique
       try {
@@ -882,7 +849,6 @@ const Kanban: React.FC = () => {
           notes: 'Acompte validé'
         });
         
-        console.log('✅ Paiement de l\'acompte enregistré dans l\'historique');
       } catch (error) {
         console.error('⚠️ Erreur lors de l\'enregistrement du paiement:', error);
         // Continuer même si l'enregistrement échoue
@@ -917,7 +883,6 @@ const Kanban: React.FC = () => {
         return;
       }
 
-      console.log('💰 Dévalidation de l\'acompte pour la réparation:', repair.id);
       
       // Récupérer les paiements pour trouver celui de type 'deposit'
       try {
@@ -934,7 +899,6 @@ const Kanban: React.FC = () => {
             const deleteResult = await repairService.deletePayment(depositPayment.id);
             
             if (deleteResult.success) {
-              console.log('✅ Paiement de l\'acompte supprimé de l\'historique');
             } else {
               console.error('⚠️ Erreur lors de la suppression du paiement:', deleteResult);
             }
@@ -1031,7 +995,6 @@ const Kanban: React.FC = () => {
         specifications: {},
       };
 
-      console.log('🔍 Création de l\'appareil à partir du modèle:', deviceData);
       
       // Utiliser directement deviceService.create pour obtenir l'ID créé
       const { deviceService } = await import('../../services/supabaseService');
@@ -1042,7 +1005,6 @@ const Kanban: React.FC = () => {
       }
       
       const createdDeviceId = deviceResult.data.id;
-      console.log('🔍 Appareil créé avec ID:', createdDeviceId);
       
       // Ajouter l'appareil au store local pour qu'il soit immédiatement disponible
       const createdDevice: Device = {
@@ -1101,18 +1063,14 @@ const Kanban: React.FC = () => {
         isPaid: false,
       };
 
-      console.log('🔍 Données de la réparation à créer:', repairData);
       
       const createdRepair = await addRepair(repairData as Repair, 'kanban'); // Marquer comme créé depuis Kanban
-      console.log('🔍 Réparation créée:', createdRepair);
       
       // Recharger les réparations et les appareils pour mettre à jour l'affichage
       await loadRepairs();
       await loadDevices();
       
       // Vérifier que la réparation a bien été ajoutée au store
-      console.log('🔍 Réparations dans le store après création:', repairs.length);
-      console.log('🔍 Appareils dans le store après création:', devices.length);
       
       // Réinitialiser le formulaire
       resetNewRepairForm();
@@ -1134,7 +1092,6 @@ const Kanban: React.FC = () => {
 
   const handleEditRepairChange = (field: string, value: any) => {
     if (field === 'status') {
-      console.log('🔄 Changement de statut dans le formulaire:', value);
     }
     setEditRepair(prev => {
       const updated = {
@@ -1142,7 +1099,6 @@ const Kanban: React.FC = () => {
         [field]: value
       };
       if (field === 'status') {
-        console.log('📊 Nouveau statut dans editRepair:', updated.status);
       }
       return updated;
     });
@@ -1150,13 +1106,19 @@ const Kanban: React.FC = () => {
 
   // Initialiser le formulaire de modification avec les données de la réparation
   const initializeEditForm = (repair: Repair) => {
+    
+    // Vérifier que les données nécessaires sont chargées
+    if (deviceModels.length === 0) {
+      console.warn('⚠️ Aucun modèle d\'appareil disponible');
+    }
+    
+    if (deviceModelServices.length === 0 && localDeviceModelServices.length === 0) {
+      console.warn('⚠️ Aucun service de modèle disponible - le mapping pourrait échouer');
+    }
+    
     const client = getClientById(repair.clientId);
     const device = getDeviceById(repair.deviceId);
     
-    console.log('🔍 Initialisation du formulaire de modification:');
-    console.log('🔍 Réparation:', repair);
-    console.log('🔍 Appareil:', device);
-    console.log('🔍 Tous les modèles disponibles:', deviceModels);
     
     // Trouver le modèle d'appareil correspondant à l'appareil créé
     // Essayer plusieurs méthodes de comparaison
@@ -1185,23 +1147,93 @@ const Kanban: React.FC = () => {
       }
     }
     
-    console.log('🔍 Modèle trouvé:', deviceModel);
-    console.log('🔍 Services de la réparation:', repair.services);
-    console.log('🔍 Services du modèle disponibles:', deviceModelServices);
+    // Utiliser deviceModelServices du store en priorité, sinon localDeviceModelServices
+    const servicesToUse = deviceModelServices.length > 0 ? deviceModelServices : localDeviceModelServices;
     
-    // Mapper les services existants
-    const mappedServices = repair.services ? repair.services.map(s => {
-      console.log('🔍 Mapping service:', s);
-      // Trouver l'ID du service dans deviceModelServices à partir du serviceId
-      const serviceInModel = deviceModelServices.find(dms => 
-        dms.serviceId === s.serviceId || 
-        (dms as any).serviceId === s.serviceId
-      );
-      console.log('🔍 Service trouvé dans le modèle:', serviceInModel);
-      return serviceInModel?.id || s.serviceId;
-    }) : [];
+    // Mapper les services existants - Approche simplifiée et plus robuste
+    const mappedServices: string[] = [];
     
-    console.log('🔍 Services mappés:', mappedServices);
+    if (repair.services && repair.services.length > 0) {
+      repair.services.forEach((s, index) => {
+        
+        // Étape 1: Chercher d'abord par serviceId seulement (plus simple)
+        const servicesByServiceId = servicesToUse.filter(dms => {
+          const serviceId = dms.serviceId || (dms as any).service_id || (dms as any).serviceId;
+          return serviceId === s.serviceId;
+        });
+        
+        
+        let serviceInModel = null;
+        
+        if (servicesByServiceId.length === 0) {
+          // Aucun service trouvé par serviceId
+          console.warn(`⚠️ Aucun service trouvé avec serviceId: ${s.serviceId}`);
+        } else if (servicesByServiceId.length === 1) {
+          // Un seul service correspond, l'utiliser directement
+          serviceInModel = servicesByServiceId[0];
+        } else {
+          // Plusieurs services correspondent, filtrer par deviceModelId si disponible
+          
+          if (deviceModel) {
+            const servicesByModel = servicesByServiceId.filter(dms => {
+              const modelId = dms.device_model_id || (dms as any).deviceModelId || dms.deviceModelId;
+              return modelId === deviceModel.id;
+            });
+            
+            if (servicesByModel.length > 0) {
+              serviceInModel = servicesByModel[0];
+            } else {
+              // Aucun service ne correspond au deviceModelId, utiliser le premier trouvé
+              serviceInModel = servicesByServiceId[0];
+              console.warn(`⚠️ Aucun service ne correspond au deviceModelId (${deviceModel.id}), utilisation du premier service trouvé:`, serviceInModel.id);
+            }
+          } else {
+            // Pas de deviceModel, utiliser le premier service trouvé
+            serviceInModel = servicesByServiceId[0];
+            console.warn('⚠️ Pas de deviceModel trouvé, utilisation du premier service:', serviceInModel.id);
+          }
+        }
+        
+        if (serviceInModel) {
+          mappedServices.push(serviceInModel.id);
+        } else {
+          console.warn(`⚠️ Service non mappé: ${s.serviceId}`);
+        }
+      });
+    } else {
+    }
+    
+    
+    // Fallback : Si aucun service n'a été mappé mais qu'il y a des services dans la réparation,
+    // essayer d'utiliser directement les serviceId comme valeurs sélectionnées
+    // Cela permettra au moins d'indiquer qu'il y a des services associés
+    let finalSelectedServices = mappedServices;
+    
+    if (mappedServices.length === 0 && repair.services && repair.services.length > 0) {
+      console.warn('⚠️ Aucun service mappé, tentative de fallback avec les serviceId directs...');
+      
+      // Essayer de trouver les services par serviceId seulement, sans vérifier deviceModelId
+      const fallbackServices: string[] = [];
+      repair.services.forEach(s => {
+        const foundService = servicesToUse.find(dms => {
+          const serviceId = dms.serviceId || (dms as any).service_id || (dms as any).serviceId;
+          return serviceId === s.serviceId;
+        });
+        
+        if (foundService) {
+          fallbackServices.push(foundService.id);
+        } else {
+          console.warn(`⚠️ Service non trouvé même en fallback: ${s.serviceId}`);
+        }
+      });
+      
+      if (fallbackServices.length > 0) {
+        finalSelectedServices = fallbackServices;
+      } else {
+        console.error('❌ Échec du fallback, aucun service ne peut être mappé');
+      }
+    }
+    
     
     setEditRepair({
       clientId: repair.clientId,
@@ -1219,8 +1251,9 @@ const Kanban: React.FC = () => {
       isPaid: repair.isPaid || false, // Statut de paiement
       dueDate: repair.dueDate ? new Date(repair.dueDate).toISOString().split('T')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       assignedTechnicianId: repair.assignedTechnicianId || '',
-      selectedServices: mappedServices,
+      selectedServices: finalSelectedServices,
     });
+    
   };
 
 
@@ -1299,7 +1332,6 @@ const Kanban: React.FC = () => {
         // Retourner à l'onglet réparation
         setActiveTab(0);
         
-        console.log('✅ Modèle créé avec succès:', result.data);
       } else {
         console.error('❌ Erreur lors de la création du modèle:', result.error);
         setError(result.error || 'Erreur lors de la création du modèle');
@@ -1528,9 +1560,6 @@ const Kanban: React.FC = () => {
   // Fonction pour générer le bon d'intervention depuis l'onglet
   const handleGenerateInterventionFromTab = async () => {
     try {
-      console.log('🔍 Début de la génération du bon d\'intervention');
-      console.log('📋 Données de réparation:', newRepair);
-      console.log('📋 Données d\'intervention:', interventionData);
       
       // Vérifier que les informations de base sont remplies
       if (!newRepair.clientId || !newRepair.deviceId || !newRepair.description) {
@@ -1547,9 +1576,6 @@ const Kanban: React.FC = () => {
       // Récupérer les informations du client et du modèle
       const client = getClientById(newRepair.clientId);
       const selectedModel = deviceModels.find(m => m.id === newRepair.deviceId);
-      
-      console.log('👤 Client trouvé:', client);
-      console.log('📱 Modèle trouvé:', selectedModel);
       
       if (!client || !selectedModel) {
         alert('❌ Erreur : informations client ou modèle manquantes.');
@@ -1619,14 +1645,10 @@ const Kanban: React.FC = () => {
         backupBeforeAccess: interventionData.backupBeforeAccess,
       };
 
-      console.log('📄 Données complètes pour le PDF:', completeInterventionData);
-
       // Générer le PDF en utilisant la fonction du composant InterventionForm
-      console.log('🔄 Tentative de génération du PDF...');
       try {
         // Import dynamique pour éviter les problèmes de require
         const InterventionFormModule = await import('../../components/InterventionForm');
-        console.log('✅ Module InterventionForm importé');
         
                   if (InterventionFormModule.generateInterventionPDF) {
             // Préparer les paramètres de l'atelier
@@ -1640,9 +1662,7 @@ const Kanban: React.FC = () => {
               workshop_vat: systemSettings.find(s => s.key === 'workshop_vat')?.value || ''
             };
             
-            console.log('🏢 Paramètres de l\'atelier:', workshopSettings);
             InterventionFormModule.generateInterventionPDF(completeInterventionData, tempRepair, workshopSettings);
-            console.log('✅ PDF généré avec succès');
           
           alert('✅ Bon d\'intervention généré avec succès !\n\nVous pouvez maintenant créer la réparation dans l\'onglet "Réparation".');
         } else {
@@ -1662,9 +1682,6 @@ const Kanban: React.FC = () => {
   // Fonction pour générer le bon d'intervention depuis l'onglet de modification
   const handleGenerateInterventionFromEditTab = async () => {
     try {
-      console.log('🔍 Début de la génération du bon d\'intervention depuis l\'édition');
-      console.log('📋 Données de réparation en édition:', editRepair);
-      console.log('📋 Données d\'intervention en édition:', editInterventionData);
       
       // Vérifier que les informations de base sont remplies
       if (!editRepair.clientId || !editRepair.deviceId || !editRepair.description) {
@@ -1681,9 +1698,6 @@ const Kanban: React.FC = () => {
       // Récupérer les informations du client et du modèle
       const client = getClientById(editRepair.clientId);
       const selectedModel = deviceModels.find(m => m.id === editRepair.deviceId);
-      
-      console.log('👤 Client trouvé:', client);
-      console.log('📱 Modèle trouvé:', selectedModel);
       
       if (!client || !selectedModel) {
         alert('❌ Erreur : informations client ou modèle manquantes.');
@@ -1753,14 +1767,10 @@ const Kanban: React.FC = () => {
         backupBeforeAccess: editInterventionData.backupBeforeAccess,
       };
 
-      console.log('📄 Données complètes pour le PDF:', completeInterventionData);
-
       // Générer le PDF en utilisant la fonction du composant InterventionForm
-      console.log('🔄 Tentative de génération du PDF...');
       try {
         // Import dynamique pour éviter les problèmes de require
         const InterventionFormModule = await import('../../components/InterventionForm');
-        console.log('✅ Module InterventionForm importé');
         
         if (InterventionFormModule.generateInterventionPDF) {
           // Préparer les paramètres de l'atelier
@@ -1774,9 +1784,7 @@ const Kanban: React.FC = () => {
             workshop_vat: systemSettings.find(s => s.key === 'workshop_vat')?.value || ''
           };
           
-          console.log('🏢 Paramètres de l\'atelier:', workshopSettings);
           InterventionFormModule.generateInterventionPDF(completeInterventionData, tempRepair, workshopSettings);
-          console.log('✅ PDF généré avec succès');
         
           alert('✅ Bon d\'intervention généré avec succès !\n\nVous pouvez maintenant sauvegarder la réparation.');
         } else {
@@ -3108,9 +3116,6 @@ const Kanban: React.FC = () => {
                       disabled={getFilteredModels().length === 0}
                     >
                       {getFilteredModels().map((model) => {
-                        // Debug: Afficher la structure du modèle
-                        console.log('🔍 Modèle debug:', model);
-                        
                         // Utiliser les propriétés avec fallbacks pour compatibilité
                         const brandName = model.brandName || (model as any).brand || 'N/A';
                         const modelName = model.model || (model as any).name || 'N/A';

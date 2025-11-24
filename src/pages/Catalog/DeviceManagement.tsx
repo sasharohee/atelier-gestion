@@ -218,30 +218,10 @@ const DeviceManagement: React.FC = () => {
       const servicesResult = await deviceModelServiceService.getAll();
       if (servicesResult.success && servicesResult.data) {
         setAllDeviceModelServices(servicesResult.data);
-        console.log('🔍 allDeviceModelServices:', servicesResult.data);
-        console.log('🔍 Premier élément:', servicesResult.data[0]);
-        if (servicesResult.data[0]) {
-          console.log('🔍 Détails du premier élément:');
-          console.log('  - modelName:', servicesResult.data[0].modelName);
-          console.log('  - brandName:', servicesResult.data[0].brandName);
-          console.log('  - categoryName:', servicesResult.data[0].categoryName);
-          console.log('  - serviceName:', servicesResult.data[0].serviceName);
-          console.log('  - effectivePrice:', servicesResult.data[0].effectivePrice);
-          console.log('  - effectiveDuration:', servicesResult.data[0].effectiveDuration);
-          console.log('🔍 Avec underscores:');
-          console.log('  - model_name:', servicesResult.data[0].model_name);
-          console.log('  - brand_name:', servicesResult.data[0].brand_name);
-          console.log('  - category_name:', servicesResult.data[0].category_name);
-          console.log('  - service_name:', servicesResult.data[0].service_name);
-          console.log('  - effective_price:', servicesResult.data[0].effective_price);
-          console.log('  - effective_duration:', servicesResult.data[0].effective_duration);
-        }
       } else {
         console.warn('⚠️ Aucun service par modèle trouvé ou erreur:', servicesResult.error);
         setAllDeviceModelServices([]);
       }
-      
-      console.log('✅ Données chargées avec succès');
     } catch (err) {
       console.error('❌ Erreur lors du chargement des données:', err);
       setError('Erreur lors du chargement des données');
@@ -272,7 +252,6 @@ const DeviceManagement: React.FC = () => {
         setCategoryDialogOpen(false);
         resetCategoryForm();
         
-        console.log('✅ Catégorie créée avec succès:', result.data);
       } else {
         console.error('❌ Erreur lors de la création de la catégorie:', result.error);
         setError(result.error || 'Erreur lors de la création de la catégorie');
@@ -305,7 +284,6 @@ const DeviceManagement: React.FC = () => {
         setCategoryDialogOpen(false);
         resetCategoryForm();
         
-        console.log('✅ Catégorie mise à jour avec succès:', result.data);
       } else {
         console.error('❌ Erreur lors de la mise à jour de la catégorie:', result.error);
         setError(result.error || 'Erreur lors de la mise à jour de la catégorie');
@@ -328,7 +306,6 @@ const DeviceManagement: React.FC = () => {
         // Mettre à jour la liste des catégories
         await loadData();
         
-        console.log('✅ Catégorie supprimée avec succès');
       } else {
         console.error('❌ Erreur lors de la suppression de la catégorie:', result.error);
         setError(result.error || 'Erreur lors de la suppression de la catégorie');
@@ -382,7 +359,6 @@ const DeviceManagement: React.FC = () => {
         setModelDialogOpen(false);
         resetModelForm();
         
-        console.log('✅ Modèle créé avec succès:', result.data);
       } else {
         console.error('❌ Erreur lors de la création du modèle:', result.error);
         setError(result.error || 'Erreur lors de la création du modèle');
@@ -416,7 +392,6 @@ const DeviceManagement: React.FC = () => {
         setModelDialogOpen(false);
         resetModelForm();
         
-        console.log('✅ Modèle mis à jour avec succès:', result.data);
       } else {
         console.error('❌ Erreur lors de la mise à jour du modèle:', result.error);
         setError(result.error || 'Erreur lors de la mise à jour du modèle');
@@ -439,7 +414,6 @@ const DeviceManagement: React.FC = () => {
         // Mettre à jour la liste des modèles
         await loadData();
         
-        console.log('✅ Modèle supprimé avec succès');
       } else {
         console.error('❌ Erreur lors de la suppression du modèle:', result.error);
         setError(result.error || 'Erreur lors de la suppression du modèle');
@@ -495,7 +469,6 @@ const DeviceManagement: React.FC = () => {
       setBrandDialogOpen(false);
       resetBrandForm();
       
-      console.log('✅ Marque créée avec succès:', result);
     } catch (error) {
       console.error('❌ Erreur lors de la création de la marque:', error);
       setError('Erreur lors de la création de la marque');
@@ -526,7 +499,6 @@ const DeviceManagement: React.FC = () => {
       resetBrandForm();
       setSelectedBrand(null);
       
-      console.log('✅ Marque mise à jour avec succès:', result);
     } catch (error) {
       console.error('❌ Erreur lors de la mise à jour de la marque:', error);
       setError('Erreur lors de la mise à jour de la marque');
@@ -544,7 +516,6 @@ const DeviceManagement: React.FC = () => {
       // Mettre à jour la liste des marques
       await loadData();
       
-      console.log('✅ Marque supprimée avec succès');
     } catch (error) {
       console.error('❌ Erreur lors de la suppression de la marque:', error);
       setError('Erreur lors de la suppression de la marque');
@@ -605,7 +576,6 @@ const DeviceManagement: React.FC = () => {
         await loadData();
         setServiceAssociationDialogOpen(false);
         resetServiceAssociationForm();
-        console.log('✅ Association service-modèle créée avec succès');
       } else {
         throw new Error(result.error || 'Erreur lors de la création');
       }
@@ -626,7 +596,6 @@ const DeviceManagement: React.FC = () => {
       // Mettre à jour la liste
       await loadData();
       
-      console.log('✅ Association supprimée avec succès');
     } catch (error) {
       console.error('❌ Erreur lors de la suppression de l\'association:', error);
       setError('Erreur lors de la suppression de l\'association');
@@ -706,11 +675,6 @@ const DeviceManagement: React.FC = () => {
       
       const headers = parseCSVLine(lines[0]);
       
-      console.log('📄 Fichier CSV analysé:', {
-        totalLines: lines.length,
-        headers: headers,
-        firstDataLine: lines[1] || 'Aucune donnée'
-      });
       
       let successCount = 0;
       let errorCount = 0;
@@ -725,17 +689,12 @@ const DeviceManagement: React.FC = () => {
             category[header] = values[index] || '';
           });
 
-          console.log(`🔍 Traitement de la catégorie ${i}:`, category);
-
           try {
             // Vérifier que le nom de la catégorie existe
             if (!category.name || category.name.trim() === '') {
-              console.warn(`⚠️ Catégorie ${i} ignorée: nom manquant`);
               errorCount++;
               continue;
             }
-
-            console.log(`📤 Création de la catégorie: ${category.name}`);
 
             const result = await deviceCategoryService.create({
               name: category.name,
@@ -744,7 +703,6 @@ const DeviceManagement: React.FC = () => {
             });
             
             if (result.success) {
-              console.log(`✅ Catégorie créée avec succès: ${category.name}`);
               successCount++;
             } else {
               console.error(`❌ Erreur lors de la création de la catégorie ${category.name}:`, result.error);
@@ -765,12 +723,9 @@ const DeviceManagement: React.FC = () => {
             brand[header] = values[index] || '';
           });
 
-          console.log(`🔍 Traitement de la marque ${i}:`, brand);
-
           try {
             // Vérifier que le nom de la marque existe
             if (!brand.name || brand.name.trim() === '') {
-              console.warn(`⚠️ Marque ${i} ignorée: nom manquant`);
               errorCount++;
               continue;
             }
@@ -783,15 +738,9 @@ const DeviceManagement: React.FC = () => {
                 const category = allCategories.find(c => c.name.toLowerCase() === catName.toLowerCase());
                 if (category) {
                   categoryIds.push(category.id);
-                  console.log(`✅ Catégorie trouvée: ${catName} (ID: ${category.id})`);
-                } else {
-                  console.warn(`⚠️ Catégorie non trouvée: ${catName}. Veuillez d'abord créer cette catégorie.`);
-                  // Ne pas créer automatiquement les catégories pour éviter les doublons
                 }
               }
             }
-
-            console.log(`📤 Création de la marque: ${brand.name} avec catégories:`, categoryIds);
 
             try {
               await brandService.create({
@@ -799,7 +748,6 @@ const DeviceManagement: React.FC = () => {
                 description: brand.description || '',
                 categoryIds: categoryIds,
               });
-              console.log(`✅ Marque créée avec succès: ${brand.name}`);
               successCount++;
             } catch (brandError) {
               console.error(`❌ Erreur lors de la création de la marque ${brand.name}:`, brandError);
@@ -820,12 +768,9 @@ const DeviceManagement: React.FC = () => {
             model[header] = values[index] || '';
           });
 
-          console.log(`🔍 Traitement du modèle ${i}:`, model);
-
           try {
             // Vérifier que le nom du modèle existe
             if (!model.name || model.name.trim() === '') {
-              console.warn(`⚠️ Modèle ${i} ignoré: nom manquant`);
               errorCount++;
               continue;
             }
@@ -846,8 +791,6 @@ const DeviceManagement: React.FC = () => {
               continue;
             }
 
-            console.log(`📤 Création du modèle: ${model.name} pour marque: ${brand.name} et catégorie: ${category.name}`);
-
             const result = await deviceModelService.create({
               name: model.name,
               description: model.description || '',
@@ -856,7 +799,6 @@ const DeviceManagement: React.FC = () => {
             });
             
             if (result.success) {
-              console.log(`✅ Modèle créé avec succès: ${model.name}`);
               successCount++;
             } else {
               console.error(`❌ Erreur lors de la création du modèle ${model.name}:`, result.error);

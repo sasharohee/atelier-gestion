@@ -1535,6 +1535,26 @@ export const deviceService = {
 
 // Service pour les réparations
 export const repairService = {
+  // Fonction helper pour charger les services d'une réparation
+  async loadRepairServices(repairId: string) {
+    const { data, error } = await supabase
+      .from('repair_services')
+      .select('*')
+      .eq('repair_id', repairId);
+    
+    if (error) {
+      console.error('Erreur lors du chargement des services:', error);
+      return [];
+    }
+    
+    return data?.map(service => ({
+      id: service.id,
+      serviceId: service.service_id,
+      quantity: service.quantity,
+      price: service.price
+    })) || [];
+  },
+
   async getAll() {
     // Obtenir l'utilisateur connecté
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -1554,8 +1574,19 @@ export const repairService = {
     
     if (error) return handleSupabaseError(error);
     
+    // Charger les services pour toutes les réparations
+    const repairsWithServices = await Promise.all(
+      (data || []).map(async (repair) => {
+        const services = await repairService.loadRepairServices(repair.id);
+        return {
+          ...repair,
+          services
+        };
+      })
+    );
+    
     // Convertir les données de snake_case vers camelCase
-    const convertedData = data?.map(repair => ({
+    const convertedData = repairsWithServices.map(repair => ({
       id: repair.id,
       repairNumber: repair.repair_number,
       clientId: repair.client_id,
@@ -1573,7 +1604,7 @@ export const repairService = {
       dueDate: repair.due_date,
       isUrgent: repair.is_urgent,
       notes: repair.notes,
-      services: [], // Tableau vide par défaut
+      services: repair.services || [], // Services chargés depuis la base de données
       parts: [], // Tableau vide par défaut
               totalPrice: repair.total_price,
         discountPercentage: repair.discount_percentage,
@@ -1588,7 +1619,7 @@ export const repairService = {
       source: repair.source || 'kanban', // Source par défaut pour les anciennes réparations
       createdAt: repair.created_at,
       updatedAt: repair.updated_at
-    })) || [];
+    }));
     
     return handleSupabaseSuccess(convertedData);
   },
@@ -1613,6 +1644,9 @@ export const repairService = {
     
     if (error) return handleSupabaseError(error);
     
+    // Charger les services de la réparation
+    const services = await repairService.loadRepairServices(id);
+    
     // Convertir les données de snake_case vers camelCase
     const convertedData = data ? {
       id: data.id,
@@ -1632,7 +1666,7 @@ export const repairService = {
       dueDate: data.due_date,
       isUrgent: data.is_urgent,
       notes: data.notes,
-      services: [], // Tableau vide par défaut
+      services: services || [], // Services chargés depuis la base de données
       parts: [], // Tableau vide par défaut
       totalPrice: data.total_price,
       discountPercentage: data.discount_percentage,
@@ -1729,6 +1763,29 @@ export const repairService = {
       .single();
     
     if (error) return handleSupabaseError(error);
+    
+    // Sauvegarder les services si fournis
+    if (repair.services && repair.services.length > 0 && data) {
+      const servicesData = repair.services.map((service: any) => ({
+        repair_id: data.id,
+        service_id: service.serviceId,
+        quantity: service.quantity || 1,
+        price: service.price || 0,
+        user_id: user.id // Ajouter user_id pour respecter la contrainte NOT NULL
+      }));
+      
+      const { error: servicesError } = await supabase
+        .from('repair_services')
+        .insert(servicesData);
+      
+      if (servicesError) {
+        console.error('❌ Erreur lors de l\'insertion des services:', servicesError);
+        // Ne pas échouer la création de la réparation si les services échouent
+      } else {
+        console.log('✅ Services sauvegardés avec succès');
+      }
+    }
+    
     return handleSupabaseSuccess(data);
   },
 
@@ -1770,10 +1827,13 @@ export const repairService = {
         if (updates.discountAmount !== undefined) updateData.discount_amount = updates.discountAmount;
         if (updates.originalPrice !== undefined) updateData.original_price = updates.originalPrice;
         if (updates.deposit !== undefined) updateData.deposit = updates.deposit;
-        // Ne pas envoyer deposit_payment_method et final_payment_method si les colonnes n'existent pas
-        // Ces colonnes peuvent ne pas exister dans toutes les bases de données
-        // if (updates.depositPaymentMethod !== undefined) updateData.deposit_payment_method = updates.depositPaymentMethod;
-        // if (updates.finalPaymentMethod !== undefined) updateData.final_payment_method = updates.finalPaymentMethod;
+        // Convertir les chaînes vides en null pour respecter les contraintes CHECK
+        if (updates.depositPaymentMethod !== undefined) {
+          updateData.deposit_payment_method = updates.depositPaymentMethod && updates.depositPaymentMethod.trim() !== '' ? updates.depositPaymentMethod : null;
+        }
+        if (updates.finalPaymentMethod !== undefined) {
+          updateData.final_payment_method = updates.finalPaymentMethod && updates.finalPaymentMethod.trim() !== '' ? updates.finalPaymentMethod : null;
+        }
         if (updates.paymentMethod !== undefined) updateData.payment_method = updates.paymentMethod;
     if (updates.isPaid !== undefined) updateData.is_paid = updates.isPaid;
 
@@ -1791,7 +1851,56 @@ export const repairService = {
     
     if (error) {
       console.error('❌ Erreur Supabase:', error);
+      
+      // Si l'erreur concerne les colonnes de mode de paiement manquantes, donner un message clair
+      if (error.message && (error.message.includes('deposit_payment_method') || error.message.includes('final_payment_method'))) {
+        if (error.code === 'PGRST204') {
+          // Colonnes manquantes
+          console.error('⚠️ Les colonnes deposit_payment_method et final_payment_method n\'existent pas dans la base de données.');
+          console.error('📝 Veuillez exécuter le script SQL: migrations/add_payment_methods_columns.sql');
+          console.error('🔗 Dans Supabase: SQL Editor > New Query > Coller le contenu du fichier > Run');
+        } else if (error.code === '23514') {
+          // Contrainte CHECK violée
+          console.error('⚠️ La valeur du mode de paiement n\'est pas valide.');
+          console.error('💡 Les valeurs acceptées sont: cash, card, transfer, check, payment_link, ou vide/null');
+        }
+      }
+      
       return handleSupabaseError(error);
+    }
+    
+    // Gérer les services si fournis
+    if (updates.services !== undefined) {
+      // Supprimer les anciens services
+      const { error: deleteError } = await supabase
+        .from('repair_services')
+        .delete()
+        .eq('repair_id', id);
+      
+      if (deleteError) {
+        console.error('❌ Erreur lors de la suppression des services:', deleteError);
+      } else {
+        // Insérer les nouveaux services
+        if (updates.services.length > 0) {
+          const servicesData = updates.services.map((service: any) => ({
+            repair_id: id,
+            service_id: service.serviceId,
+            quantity: service.quantity || 1,
+            price: service.price || 0,
+            user_id: user.id // Ajouter user_id pour respecter la contrainte NOT NULL
+          }));
+          
+          const { error: insertError } = await supabase
+            .from('repair_services')
+            .insert(servicesData);
+          
+          if (insertError) {
+            console.error('❌ Erreur lors de l\'insertion des services:', insertError);
+          } else {
+            console.log('✅ Services sauvegardés avec succès');
+          }
+        }
+      }
     }
     
     console.log('✅ Mise à jour réussie:', data);

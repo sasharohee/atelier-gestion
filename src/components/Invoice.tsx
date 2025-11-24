@@ -17,6 +17,7 @@ import {
   DialogActions,
   IconButton,
   Chip,
+  Grid,
 } from '@mui/material';
 import {
   Print as PrintIcon,
@@ -92,7 +93,7 @@ const calculateRealSubtotalHT = (sale: Sale, products: any[], services: any[], p
 };
 
 const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, depositValidated = false }) => {
-  const { systemSettings, loadSystemSettings, products, services, parts } = useAppStore();
+  const { systemSettings, loadSystemSettings, products, services, parts, devices, getDeviceById } = useAppStore();
   const { workshopSettings } = useWorkshopSettings();
   
   // Valeur par défaut pour éviter les erreurs
@@ -164,6 +165,53 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
       'payment_link': 'Liens paiement'
     };
     return labels[method] || method;
+  };
+
+  // Fonctions de mapping pour les services et pièces
+  const getMappedServices = () => {
+    if (!repair || !repair.services || repair.services.length === 0) {
+      return [];
+    }
+    
+    return repair.services.map(repairService => {
+      const service = services.find(s => s.id === repairService.serviceId);
+      return {
+        id: repairService.id,
+        name: service?.name || `Service #${repairService.serviceId.slice(0, 8)}`,
+        description: service?.description || '',
+        quantity: repairService.quantity,
+        unitPrice: repairService.price,
+        totalPrice: repairService.price * repairService.quantity
+      };
+    });
+  };
+
+  const getMappedParts = () => {
+    if (!repair || !repair.parts || repair.parts.length === 0) {
+      return [];
+    }
+    
+    return repair.parts.map(repairPart => {
+      const part = parts.find(p => p.id === repairPart.partId);
+      return {
+        id: repairPart.id,
+        name: part?.name || `Pièce #${repairPart.partId.slice(0, 8)}`,
+        description: part?.description || '',
+        partNumber: part?.partNumber || '',
+        quantity: repairPart.quantity,
+        unitPrice: repairPart.price,
+        totalPrice: repairPart.price * repairPart.quantity,
+        isUsed: repairPart.isUsed
+      };
+    });
+  };
+
+  // Récupérer les informations de l'appareil
+  const getDeviceInfo = () => {
+    if (!repair || !repair.deviceId) {
+      return null;
+    }
+    return getDeviceById(repair.deviceId);
   };
 
   const handlePrint = () => {
@@ -247,19 +295,122 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                   </div>
                 </div>
 
-                ${isRepair ? `
-                  <div class="repair-details">
-                    <h3>Détails de la réparation</h3>
-                    <p><strong>Prix de la réparation (TTC) :</strong> ${formatFromEUR((data as Repair).totalPrice, currency)}</p>
-                     ${(data as Repair).deposit && (data as Repair).deposit! > 0 ? `
-                       <h4 style="margin-top: 15px; margin-bottom: 10px;">Historique des paiements</h4>
-                       <p><strong>Acompte (${getPaymentMethodLabel((data as Repair).depositPaymentMethod || (data as Repair).paymentMethod || 'cash')}) :</strong> ${formatFromEUR((data as Repair).deposit!, currency)} ${depositValidated ? '<span style="color: #10b981; font-weight: bold;">✓ PAYÉ</span>' : '<span style="color: #f59e0b; font-weight: bold;">⏳ EN ATTENTE</span>'}</p>
-                       ${(data as Repair).isPaid && (data as Repair).finalPaymentMethod ? `<p><strong>Solde (${getPaymentMethodLabel((data as Repair).finalPaymentMethod!)}) :</strong> ${formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)} <span style="color: #10b981; font-weight: bold;">✓ PAYÉ</span></p>` : ''}
-                       ${!(data as Repair).isPaid ? `<p style="color: #0066cc; font-weight: bold;"><strong>Reste à payer :</strong> ${formatFromEUR((data as Repair).totalPrice - (data as Repair).deposit!, currency)}</p>` : ''}
-                     ` : ''}
-                    ${(data as Repair).notes ? `<p><strong>Notes :</strong> ${(data as Repair).notes}</p>` : ''}
+                ${isRepair ? (() => {
+                  const repair = data as Repair;
+                  const device = getDeviceInfo();
+                  const mappedServices = getMappedServices();
+                  const mappedParts = getMappedParts();
+                  
+                  return `
+                  ${device ? `
+                    <div class="repair-details" style="margin-bottom: 30px;">
+                      <h3 style="margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px;">Informations appareil</h3>
+                      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; border: 1px solid #e0e0e0;">
+                        <p><strong>Marque :</strong> ${device.brand}</p>
+                        <p><strong>Modèle :</strong> ${device.model}</p>
+                        <p><strong>Type :</strong> ${device.type}</p>
+                      </div>
+                    </div>
+                  ` : ''}
+                  
+                  <div class="repair-details" style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px;">Détails de la réparation</h3>
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; border: 1px solid #e0e0e0;">
+                      <p><strong>Prix de la réparation (TTC) :</strong> ${formatFromEUR(repair.totalPrice, currency)}</p>
+                      ${repair.discountPercentage && repair.discountPercentage > 0 ? `<p style="color: #10b981;"><strong>Réduction fidélité (${repair.discountPercentage}%) :</strong> -${formatFromEUR(repair.discountAmount || 0, currency)}</p>` : ''}
+                      ${repair.deposit && repair.deposit! > 0 ? `
+                        <h4 style="margin-top: 15px; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Historique des paiements</h4>
+                        <p><strong>Acompte (${getPaymentMethodLabel(repair.depositPaymentMethod || repair.paymentMethod || 'cash')}) :</strong> ${formatFromEUR(repair.deposit!, currency)} ${depositValidated ? '<span style="color: #10b981; font-weight: bold;">✓ PAYÉ</span>' : '<span style="color: #f59e0b; font-weight: bold;">⏳ EN ATTENTE</span>'}</p>
+                        ${repair.isPaid && repair.finalPaymentMethod ? `<p><strong>Solde (${getPaymentMethodLabel(repair.finalPaymentMethod!)}) :</strong> ${formatFromEUR(repair.totalPrice - repair.deposit!, currency)} <span style="color: #10b981; font-weight: bold;">✓ PAYÉ</span></p>` : ''}
+                        ${!repair.isPaid ? `<p style="color: #0066cc; font-weight: bold;"><strong>Reste à payer :</strong> ${formatFromEUR(repair.totalPrice - repair.deposit!, currency)}</p>` : ''}
+                      ` : ''}
+                      ${repair.notes ? `<p style="margin-top: 10px;"><strong>Notes :</strong> ${repair.notes}</p>` : ''}
+                    </div>
                   </div>
-                ` : `
+                  
+                  ${mappedServices.length > 0 ? `
+                    <div style="margin-bottom: 30px;">
+                      <h3 style="margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px;">Services effectués</h3>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Service</th>
+                            <th style="text-align: right;">Prix unitaire</th>
+                            <th style="text-align: center;">Quantité</th>
+                            <th style="text-align: right;">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${mappedServices.map(service => `
+                            <tr>
+                              <td>
+                                <strong>${service.name}</strong>
+                                ${service.description ? `<br><span style="font-size: 12px; color: #666;">${service.description}</span>` : ''}
+                              </td>
+                              <td style="text-align: right;">${formatFromEUR(service.unitPrice, currency)}</td>
+                              <td style="text-align: center;">${service.quantity}</td>
+                              <td style="text-align: right;"><strong>${formatFromEUR(service.totalPrice, currency)}</strong></td>
+                            </tr>
+                          `).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                  ` : ''}
+                  
+                  ${mappedParts.length > 0 ? `
+                    <div style="margin-bottom: 30px;">
+                      <h3 style="margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px;">Pièces utilisées</h3>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Pièce</th>
+                            <th style="text-align: right;">Prix unitaire</th>
+                            <th style="text-align: center;">Quantité</th>
+                            <th style="text-align: center;">Statut</th>
+                            <th style="text-align: right;">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${mappedParts.map(part => `
+                            <tr>
+                              <td>
+                                <strong>${part.name}</strong>
+                                ${part.partNumber ? `<br><span style="font-size: 12px; color: #666;">Réf: ${part.partNumber}</span>` : ''}
+                                ${part.description ? `<br><span style="font-size: 12px; color: #666;">${part.description}</span>` : ''}
+                              </td>
+                              <td style="text-align: right;">${formatFromEUR(part.unitPrice, currency)}</td>
+                              <td style="text-align: center;">${part.quantity}</td>
+                              <td style="text-align: center;">${part.isUsed ? '<span style="color: #10b981; font-weight: 600;">Utilisée</span>' : '<span style="color: #666;">Non utilisée</span>'}</td>
+                              <td style="text-align: right;"><strong>${formatFromEUR(part.totalPrice, currency)}</strong></td>
+                            </tr>
+                          `).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                  ` : ''}
+                  
+                  <div class="totals-section">
+                    <div class="total-row">
+                      <span>Sous-total HT :</span>
+                      <span>${formatFromEUR(repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100), currency)}</span>
+                    </div>
+                    <div class="total-row">
+                      <span>TVA (${workshopSettingsData.vatRate}%) :</span>
+                      <span>${formatFromEUR(repair.totalPrice - (repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100)), currency)}</span>
+                    </div>
+                    ${repair.discountPercentage && repair.discountPercentage > 0 ? `
+                      <div class="total-row" style="color: #10b981;">
+                        <span>Réduction fidélité (${repair.discountPercentage}%) :</span>
+                        <span>-${formatFromEUR(repair.discountAmount || 0, currency)}</span>
+                      </div>
+                    ` : ''}
+                    <div class="total-row">
+                      <span>TOTAL TTC :</span>
+                      <span>${formatFromEUR(repair.totalPrice, currency)}</span>
+                    </div>
+                  </div>
+                `;
+                })() : `
                   <table>
                     <thead>
                       <tr>
@@ -492,6 +643,52 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
             {isRepair ? (
               // Affichage pour les réparations
               <Box sx={{ mb: 5 }}>
+                {/* Informations appareil */}
+                {(() => {
+                  const device = getDeviceInfo();
+                  if (device) {
+                    return (
+                      <Box sx={{ mb: 4 }}>
+                        <Typography variant="h6" sx={{ 
+                          fontWeight: 600, 
+                          color: '#333', 
+                          mb: 2, 
+                          pb: 0.5, 
+                          borderBottom: '1px solid #eee',
+                          fontSize: '16px'
+                        }}>
+                          Informations appareil
+                        </Typography>
+                        <Box sx={{ 
+                          p: 2, 
+                          backgroundColor: '#f8f9fa', 
+                          borderRadius: 1,
+                          border: '1px solid #e0e0e0'
+                        }}>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                              <Typography sx={{ fontSize: '14px', mb: 0.5 }}>
+                                <strong>Marque :</strong> {device.brand}
+                              </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                              <Typography sx={{ fontSize: '14px', mb: 0.5 }}>
+                                <strong>Modèle :</strong> {device.model}
+                              </Typography>
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                              <Typography sx={{ fontSize: '14px', mb: 0.5 }}>
+                                <strong>Type :</strong> {device.type}
+                              </Typography>
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      </Box>
+                    );
+                  }
+                  return null;
+                })()}
+
                 <Typography variant="h6" sx={{ 
                   fontWeight: 600, 
                   color: '#333', 
@@ -553,6 +750,168 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                     </Typography>
                   )}
                 </Box>
+
+                {/* Tableau des services */}
+                {(() => {
+                  const mappedServices = getMappedServices();
+                  if (mappedServices.length > 0) {
+                    return (
+                      <Box sx={{ mb: 4 }}>
+                        <Typography variant="h6" sx={{ 
+                          fontWeight: 600, 
+                          color: '#333', 
+                          mb: 2, 
+                          pb: 0.5, 
+                          borderBottom: '1px solid #eee',
+                          fontSize: '16px'
+                        }}>
+                          Services effectués
+                        </Typography>
+                        <TableContainer component={Paper} variant="outlined">
+                          <Table>
+                            <TableHead>
+                              <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', py: 1.5 }}>
+                                  Service
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', py: 1.5, textAlign: 'right' }}>
+                                  Prix unitaire
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', py: 1.5, textAlign: 'center' }}>
+                                  Quantité
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', py: 1.5, textAlign: 'right' }}>
+                                  Total
+                                </TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {mappedServices.map((service) => (
+                                <TableRow key={service.id}>
+                                  <TableCell sx={{ borderBottom: '1px solid #f1f1f1', py: 1.5 }}>
+                                    <Typography sx={{ fontWeight: 600, color: '#333', fontSize: '14px' }}>
+                                      {service.name}
+                                    </Typography>
+                                    {service.description && (
+                                      <Typography sx={{ fontSize: '12px', color: '#666', mt: 0.5 }}>
+                                        {service.description}
+                                      </Typography>
+                                    )}
+                                  </TableCell>
+                                  <TableCell sx={{ borderBottom: '1px solid #f1f1f1', py: 1.5, textAlign: 'right' }}>
+                                    <Typography sx={{ fontSize: '14px' }}>
+                                      {formatFromEUR(service.unitPrice, currency)}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell sx={{ borderBottom: '1px solid #f1f1f1', py: 1.5, textAlign: 'center' }}>
+                                    <Typography sx={{ fontSize: '14px' }}>
+                                      {service.quantity}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell sx={{ borderBottom: '1px solid #f1f1f1', py: 1.5, textAlign: 'right' }}>
+                                    <Typography sx={{ fontWeight: 600, fontSize: '14px', color: '#333' }}>
+                                      {formatFromEUR(service.totalPrice, currency)}
+                                    </Typography>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Tableau des pièces */}
+                {(() => {
+                  const mappedParts = getMappedParts();
+                  if (mappedParts.length > 0) {
+                    return (
+                      <Box sx={{ mb: 4 }}>
+                        <Typography variant="h6" sx={{ 
+                          fontWeight: 600, 
+                          color: '#333', 
+                          mb: 2, 
+                          pb: 0.5, 
+                          borderBottom: '1px solid #eee',
+                          fontSize: '16px'
+                        }}>
+                          Pièces utilisées
+                        </Typography>
+                        <TableContainer component={Paper} variant="outlined">
+                          <Table>
+                            <TableHead>
+                              <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', py: 1.5 }}>
+                                  Pièce
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', py: 1.5, textAlign: 'right' }}>
+                                  Prix unitaire
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', py: 1.5, textAlign: 'center' }}>
+                                  Quantité
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', py: 1.5, textAlign: 'center' }}>
+                                  Statut
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '14px', color: '#333', borderBottom: '1px solid #eee', py: 1.5, textAlign: 'right' }}>
+                                  Total
+                                </TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {mappedParts.map((part) => (
+                                <TableRow key={part.id}>
+                                  <TableCell sx={{ borderBottom: '1px solid #f1f1f1', py: 1.5 }}>
+                                    <Typography sx={{ fontWeight: 600, color: '#333', fontSize: '14px' }}>
+                                      {part.name}
+                                    </Typography>
+                                    {part.partNumber && (
+                                      <Typography sx={{ fontSize: '12px', color: '#666', mt: 0.5 }}>
+                                        Réf: {part.partNumber}
+                                      </Typography>
+                                    )}
+                                    {part.description && (
+                                      <Typography sx={{ fontSize: '12px', color: '#666', mt: 0.5 }}>
+                                        {part.description}
+                                      </Typography>
+                                    )}
+                                  </TableCell>
+                                  <TableCell sx={{ borderBottom: '1px solid #f1f1f1', py: 1.5, textAlign: 'right' }}>
+                                    <Typography sx={{ fontSize: '14px' }}>
+                                      {formatFromEUR(part.unitPrice, currency)}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell sx={{ borderBottom: '1px solid #f1f1f1', py: 1.5, textAlign: 'center' }}>
+                                    <Typography sx={{ fontSize: '14px' }}>
+                                      {part.quantity}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell sx={{ borderBottom: '1px solid #f1f1f1', py: 1.5, textAlign: 'center' }}>
+                                    <Chip
+                                      label={part.isUsed ? 'Utilisée' : 'Non utilisée'}
+                                      size="small"
+                                      color={part.isUsed ? 'success' : 'default'}
+                                      variant="outlined"
+                                    />
+                                  </TableCell>
+                                  <TableCell sx={{ borderBottom: '1px solid #f1f1f1', py: 1.5, textAlign: 'right' }}>
+                                    <Typography sx={{ fontWeight: 600, fontSize: '14px', color: '#333' }}>
+                                      {formatFromEUR(part.totalPrice, currency)}
+                                    </Typography>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    );
+                  }
+                  return null;
+                })()}
                 
                 {/* Totaux pour les réparations */}
                 <Box sx={{ 
