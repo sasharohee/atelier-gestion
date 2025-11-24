@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+
+# Database exports and scripts
+database-export/
+database-real-export/
+database-schema/
+database-scripts/
+migrations/
+schema-model/
+scripts/
+table/
+tables/
+
+# Test files
+test_*.js
+test_*.html
+*.test.js
+*.test.ts
+*.test.tsx
+
+# Debug files
+debug_*.js
+diagnostic_*.js
+diagnostic_*.html
+
+# Documentation and guides
+*.md
+*.html
+*.txt
+GUIDE_*.html
+SOLUTION_*.html
+INSTRUCTIONS_*.html
+DIAGNOSTIC_*.html
+
+# Deployment scripts
+deploy*.sh
+*.sh
+
+# SQL files
+*.sql
+
+# Config files
+flyway*.toml
+flyway.conf
+
+# CSV files
+*.csv
+
+# Other
+.env*
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+*.log
+*.tmp
+*.temp
+dist/
+build/
+.vercel/
+.supabase/
+
