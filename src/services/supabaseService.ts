@@ -2284,6 +2284,9 @@ export const productService = {
       min_stock_level: product.minStockLevel,
       is_active: product.isActive,
       barcode: product.barcode,
+      buyback_id: product.buybackId || null,
+      purchase_price: product.purchasePrice || null,
+      vat_on_margin: product.vatOnMargin || false,
       user_id: user.id,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -2322,6 +2325,9 @@ export const productService = {
     if (updates.minStockLevel !== undefined) dbUpdates.min_stock_level = updates.minStockLevel;
     if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
     if (updates.barcode !== undefined) dbUpdates.barcode = updates.barcode;
+    if (updates.buybackId !== undefined) dbUpdates.buyback_id = updates.buybackId || null;
+    if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice || null;
+    if (updates.vatOnMargin !== undefined) dbUpdates.vat_on_margin = updates.vatOnMargin || false;
 
     // Log pour debug
     console.log('🔍 productService.update - Données reçues:', updates);

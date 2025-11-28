@@ -38,6 +38,7 @@ interface InvoiceProps {
   open: boolean;
   onClose: () => void;
   depositValidated?: boolean; // Indique si l'acompte a été validé
+  fromKanban?: boolean; // Indique si la facture vient de la page kanban
 }
 
 // Fonction pour calculer le vrai sous-total HT basé sur les price_ht des articles
@@ -92,7 +93,7 @@ const calculateRealSubtotalHT = (sale: Sale, products: any[], services: any[], p
   }, 0);
 };
 
-const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, depositValidated = false }) => {
+const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, depositValidated = false, fromKanban = false }) => {
   const { systemSettings, loadSystemSettings, products, services, parts, devices, getDeviceById } = useAppStore();
   const { workshopSettings } = useWorkshopSettings();
   
@@ -289,7 +290,8 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                       <div><strong>Date :</strong> ${format(new Date(data.createdAt), 'dd/MM/yyyy', { locale: fr })}</div>
                       <div><strong>Statut :</strong> ${getStatusLabel(isRepair ? (data as Repair).status : (data as Sale).status)}</div>
                       ${isRepair ? `<div><strong>Paiement :</strong> ${(data as Repair).isPaid ? 'Payé' : 'Non payé'}</div>` : ''}
-                      ${isRepair && (data as Repair).paymentMethod ? `<div><strong>Mode de paiement :</strong> ${getPaymentMethodLabel((data as Repair).paymentMethod!)}</div>` : ''}
+                      ${!fromKanban && isRepair && (data as Repair).isPaid && (data as Repair).finalPaymentMethod ? `<div><strong>Mode de paiement :</strong> ${getPaymentMethodLabel((data as Repair).finalPaymentMethod!)}</div>` : ''}
+                      ${!fromKanban && isRepair && !(data as Repair).isPaid && (data as Repair).paymentMethod ? `<div><strong>Mode de paiement :</strong> ${getPaymentMethodLabel((data as Repair).paymentMethod!)}</div>` : ''}
                       ${!isRepair ? `<div><strong>Paiement :</strong> ${getPaymentMethodLabel((data as Sale).paymentMethod)}</div>` : ''}
                     </div>
                   </div>
@@ -624,10 +626,19 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                     <Typography sx={{ fontSize: '14px', mb: 0.5, color: '#666' }}>
                       <strong>Paiement :</strong> {(data as Repair).isPaid ? 'Payé' : 'Non payé'}
                     </Typography>
-                    {(data as Repair).paymentMethod && (
-                      <Typography sx={{ fontSize: '14px', mb: 0.5, color: '#666' }}>
-                        <strong>Mode de paiement :</strong> {getPaymentMethodLabel((data as Repair).paymentMethod!)}
-                      </Typography>
+                    {!fromKanban && (
+                      <>
+                        {(data as Repair).isPaid && (data as Repair).finalPaymentMethod && (
+                          <Typography sx={{ fontSize: '14px', mb: 0.5, color: '#666' }}>
+                            <strong>Mode de paiement :</strong> {getPaymentMethodLabel((data as Repair).finalPaymentMethod!)}
+                          </Typography>
+                        )}
+                        {!(data as Repair).isPaid && (data as Repair).paymentMethod && (
+                          <Typography sx={{ fontSize: '14px', mb: 0.5, color: '#666' }}>
+                            <strong>Mode de paiement :</strong> {getPaymentMethodLabel((data as Repair).paymentMethod!)}
+                          </Typography>
+                        )}
+                      </>
                     )}
                   </>
                 )}

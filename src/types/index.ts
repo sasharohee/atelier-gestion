@@ -317,6 +317,9 @@ export interface Product {
   minStockLevel: number;
   isActive: boolean;
   barcode?: string;
+  buybackId?: string; // ID du rachat source (pour produits d'occasion)
+  purchasePrice?: number; // Prix d'achat pour calcul TVA sur marge
+  vatOnMargin?: boolean; // Indique si TVA sur marge appliquée
   createdAt: Date;
   updatedAt: Date;
 }

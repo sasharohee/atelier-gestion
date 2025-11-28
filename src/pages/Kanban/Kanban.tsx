@@ -3719,6 +3719,7 @@ const Kanban: React.FC = () => {
               client={getClientById(selectedRepairForInvoice.clientId)}
               onClose={closeInvoice}
               depositValidated={depositValidated[selectedRepairForInvoice.id] || false}
+              fromKanban={true}
             />
           </DialogContent>
         </Dialog>

@@ -26,6 +26,8 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -46,6 +48,7 @@ import { buybackService } from '../../services/supabaseService';
 import { toast } from 'react-hot-toast';
 import BuybackForm from './BuybackForm';
 import BuybackTicket from '../../components/BuybackTicket';
+import BuybackProductsTvaMarge from './BuybackProductsTvaMarge';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
 
@@ -63,6 +66,7 @@ const BuybackProgressive: React.FC = () => {
   const [selectedBuyback, setSelectedBuyback] = useState<Buyback | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showTicket, setShowTicket] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
     loadBuybacks();
@@ -184,7 +188,18 @@ const BuybackProgressive: React.FC = () => {
         Rachat d'appareils
       </Typography>
 
-      {/* Statistiques */}
+      {/* Onglets */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+          <Tab label="Rachats" />
+          <Tab label="Produits TVA sur marge" />
+        </Tabs>
+      </Paper>
+
+      {/* Contenu de l'onglet Rachats */}
+      {activeTab === 0 && (
+        <>
+          {/* Statistiques */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card>
@@ -512,6 +527,13 @@ const BuybackProgressive: React.FC = () => {
           open={showTicket}
           onClose={() => setShowTicket(false)}
         />
+      )}
+        </>
+      )}
+
+      {/* Contenu de l'onglet Produits TVA sur marge */}
+      {activeTab === 1 && (
+        <BuybackProductsTvaMarge />
       )}
     </Box>
   );

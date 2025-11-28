@@ -1176,6 +1176,10 @@ export const useAppStore = create<AppStore>()(
               stockQuantity: result.data.stock_quantity || result.data.stockQuantity || 0,
               minStockLevel: result.data.min_stock_level || result.data.minStockLevel || 1,
               isActive: result.data.is_active !== undefined ? result.data.is_active : (result.data.isActive !== undefined ? result.data.isActive : true),
+              barcode: result.data.barcode || undefined,
+              buybackId: result.data.buyback_id || result.data.buybackId || undefined,
+              purchasePrice: result.data.purchase_price || result.data.purchasePrice || undefined,
+              vatOnMargin: result.data.vat_on_margin !== undefined ? result.data.vat_on_margin : (result.data.vatOnMargin !== undefined ? result.data.vatOnMargin : false),
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
               updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
             };
@@ -1202,6 +1206,10 @@ export const useAppStore = create<AppStore>()(
               stockQuantity: result.data.stock_quantity || result.data.stockQuantity || 0,
               minStockLevel: result.data.min_stock_level || result.data.minStockLevel || 1,
               isActive: result.data.is_active !== undefined ? result.data.is_active : (result.data.isActive !== undefined ? result.data.isActive : true),
+              barcode: result.data.barcode || undefined,
+              buybackId: result.data.buyback_id || result.data.buybackId || undefined,
+              purchasePrice: result.data.purchase_price || result.data.purchasePrice || undefined,
+              vatOnMargin: result.data.vat_on_margin !== undefined ? result.data.vat_on_margin : (result.data.vatOnMargin !== undefined ? result.data.vatOnMargin : false),
               createdAt: result.data.created_at ? new Date(result.data.created_at) : new Date(),
               updatedAt: result.data.updated_at ? new Date(result.data.updated_at) : new Date(),
             };
@@ -1995,6 +2003,9 @@ export const useAppStore = create<AppStore>()(
                 minStockLevel: product.min_stock_level || product.minStockLevel || 1,
                 isActive: product.is_active !== undefined ? product.is_active : (product.isActive !== undefined ? product.isActive : true),
                 barcode: product.barcode || null,
+                buybackId: product.buyback_id || product.buybackId || undefined,
+                purchasePrice: product.purchase_price || product.purchasePrice || undefined,
+                vatOnMargin: product.vat_on_margin !== undefined ? product.vat_on_margin : (product.vatOnMargin !== undefined ? product.vatOnMargin : false),
                 createdAt: product.created_at ? new Date(product.created_at) : new Date(),
                 updatedAt: product.updated_at ? new Date(product.updated_at) : new Date(),
               };
