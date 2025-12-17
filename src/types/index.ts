@@ -553,12 +553,18 @@ export interface SubscriptionStatus {
   last_name: string;
   email: string;
   is_active: boolean;
-  subscription_type: 'free' | 'premium' | 'enterprise';
+  subscription_type: 'free' | 'premium' | 'enterprise' | 'premium_monthly' | 'premium_yearly';
   created_at: string;
   updated_at: string;
   activated_at?: string;
   activated_by?: string;
   notes?: string;
+  // Champs Stripe
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
+  stripe_price_id_monthly?: string;
+  stripe_price_id_yearly?: string;
+  stripe_current_period_end?: string;
 }
 
 export interface SubscriptionPlan {

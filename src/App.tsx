@@ -48,6 +48,7 @@ const Expenses = lazy(() => import('./pages/Expenses/Expenses'));
 const QuoteRequests = lazy(() => import('./pages/QuoteRequests/QuoteRequestsManagement'));
 const Administration = lazy(() => import('./pages/Administration/Administration'));
 const Settings = lazy(() => import('./pages/Settings/Settings'));
+const Subscription = lazy(() => import('./pages/Subscription/Subscription'));
 import Buyback from './pages/Buyback/BuybackProgressive';
 const Accounting = lazy(() => import('./pages/Accounting/Accounting'));
 const SubscriptionBlocked = lazy(() => import('./pages/Auth/SubscriptionBlocked'));
@@ -254,6 +255,7 @@ function App() {
                             </AccountingPasswordGuard>
                           } />
                           <Route path="/settings" element={<Settings />} />
+                          <Route path="/subscription" element={<Subscription />} />
                         </Routes>
                       </Suspense>
                       

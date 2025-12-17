@@ -60,6 +60,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useSubscription } from '../../hooks/useSubscription';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { redirectToCheckout, checkPaymentSuccess, checkPaymentCancelled } from '../../services/stripeService';
+import toast from 'react-hot-toast';
 
 const SubscriptionBlocked: React.FC = () => {
   const { user } = useAuth();
@@ -68,6 +70,12 @@ const SubscriptionBlocked: React.FC = () => {
   const theme = useTheme(); // Déplacer useTheme() avant tous les returns conditionnels
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [refreshMessage, setRefreshMessage] = React.useState<string | null>(null);
+  const [isLoadingCheckout, setIsLoadingCheckout] = React.useState(false);
+  const [checkoutPriceId, setCheckoutPriceId] = React.useState<string | null>(null);
+
+  // Récupérer les price IDs depuis les variables d'environnement
+  const stripePriceIdMonthly = import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY;
+  const stripePriceIdYearly = import.meta.env.VITE_STRIPE_PRICE_ID_YEARLY;
 
 
   const handleRefresh = async () => {
@@ -99,6 +107,42 @@ const SubscriptionBlocked: React.FC = () => {
   const handleContactSupport = () => {
     window.open('mailto:contact.ateliergestion@gmail.com?subject=Activation de mon abonnement', '_blank');
   };
+
+  // Gérer le checkout Stripe
+  const handleCheckout = async (priceId: string, type: 'monthly' | 'yearly') => {
+    if (!priceId) {
+      toast.error('Configuration Stripe manquante. Veuillez contacter le support.');
+      return;
+    }
+
+    setIsLoadingCheckout(true);
+    setCheckoutPriceId(priceId);
+
+    try {
+      const successUrl = `${window.location.origin}/app?checkout=success`;
+      const cancelUrl = `${window.location.origin}/app/subscription-blocked?checkout=cancelled`;
+      
+      await redirectToCheckout(priceId, successUrl, cancelUrl);
+    } catch (error) {
+      console.error('Erreur lors de la création de la session Checkout:', error);
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la création de la session de paiement');
+      setIsLoadingCheckout(false);
+      setCheckoutPriceId(null);
+    }
+  };
+
+  // Vérifier si le paiement a réussi ou été annulé
+  React.useEffect(() => {
+    if (checkPaymentSuccess()) {
+      toast.success('Paiement réussi ! Vérification de votre abonnement...');
+      // Rafraîchir le statut après un court délai pour laisser le webhook se déclencher
+      setTimeout(() => {
+        refreshStatus();
+      }, 2000);
+    } else if (checkPaymentCancelled()) {
+      toast.error('Paiement annulé');
+    }
+  }, [refreshStatus]);
 
   if (loading) {
     return (
@@ -369,59 +413,6 @@ const SubscriptionBlocked: React.FC = () => {
                         </Fade>
                       )}
 
-                      {/* Instructions modernes */}
-                      <Box sx={{ mb: 4 }}>
-                        <Typography variant="h6" gutterBottom fontWeight="bold" color="primary.main">
-                          Procédure d'Activation
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                          Suivez ces étapes pour activer votre compte
-                        </Typography>
-                        
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {[
-                            { icon: <ScheduleIcon />, text: "Activation sous 24h par un administrateur", color: theme.palette.success.main },
-                            { icon: <CheckIcon />, text: "Confirmation par email", color: theme.palette.info.main }
-                          ].map((step, index) => (
-                            <Box
-                              key={index}
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                p: 2,
-                                borderRadius: 2,
-                                background: alpha(step.color, 0.1),
-                                border: `1px solid ${alpha(step.color, 0.2)}`,
-                                transition: 'all 0.3s ease',
-                                '&:hover': {
-                                  background: alpha(step.color, 0.15),
-                                  transform: 'translateX(5px)'
-                                }
-                              }}
-                            >
-                              <Box
-                                sx={{
-                                  width: 40,
-                                  height: 40,
-                                  borderRadius: '50%',
-                                  background: step.color,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  mr: 2,
-                                  color: 'white'
-                                }}
-                              >
-                                {step.icon}
-                              </Box>
-                              <Typography variant="body1" fontWeight="medium">
-                                {step.text}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Box>
-                      </Box>
-
                       {/* Actions modernes */}
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <Button
@@ -591,7 +582,8 @@ const SubscriptionBlocked: React.FC = () => {
                           size="large"
                           fullWidth
                           startIcon={<EuroIcon />}
-                          onClick={() => window.open('https://buy.stripe.com/7sYcN43Vw4cna0S3ii7g400', '_blank')}
+                          onClick={() => handleCheckout(stripePriceIdMonthly || '', 'monthly')}
+                          disabled={isLoadingCheckout || !stripePriceIdMonthly}
                           sx={{
                             py: 2,
                             background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
@@ -602,10 +594,17 @@ const SubscriptionBlocked: React.FC = () => {
                             },
                             transition: 'all 0.3s ease',
                             fontSize: '1.1rem',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            '&:disabled': {
+                              opacity: 0.6
+                            }
                           }}
                         >
-                          S'abonner - 20€/mois
+                          {isLoadingCheckout && checkoutPriceId === stripePriceIdMonthly ? (
+                            'Redirection vers le paiement...'
+                          ) : (
+                            'S\'abonner - 20€/mois'
+                          )}
                         </Button>
                       </Box>
 
@@ -672,7 +671,8 @@ const SubscriptionBlocked: React.FC = () => {
                           size="large"
                           fullWidth
                           startIcon={<StarIcon />}
-                          onClick={() => window.open('https://buy.stripe.com/7sYaEWeAabEPgpgbOO7g403', '_blank')}
+                          onClick={() => handleCheckout(stripePriceIdYearly || '', 'yearly')}
+                          disabled={isLoadingCheckout || !stripePriceIdYearly}
                           sx={{
                             py: 2,
                             background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
@@ -683,10 +683,17 @@ const SubscriptionBlocked: React.FC = () => {
                             },
                             transition: 'all 0.3s ease',
                             fontSize: '1.1rem',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            '&:disabled': {
+                              opacity: 0.6
+                            }
                           }}
                         >
-                          S'abonner - 200€/an (Économie 40€)
+                          {isLoadingCheckout && checkoutPriceId === stripePriceIdYearly ? (
+                            'Redirection vers le paiement...'
+                          ) : (
+                            'S\'abonner - 200€/an (Économie 40€)'
+                          )}
                         </Button>
                       </Box>
 

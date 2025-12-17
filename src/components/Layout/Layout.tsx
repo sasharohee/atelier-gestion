@@ -89,6 +89,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       '/app/buyback': 'Rachat d\'appareils',
       '/app/administration': 'Administration',
       '/app/settings': 'Réglages',
+      '/app/subscription': 'Abonnement',
     };
     return titles[path] || 'Page';
   };

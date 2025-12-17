@@ -393,6 +393,21 @@ const Quotes: React.FC = () => {
       .join('<br>');
   };
 
+  // Normaliser les items du devis (au cas où ils viennent de JSONB non parsé)
+  const normalizeQuoteItems = (items: any): any[] => {
+    if (!items) return [];
+    if (Array.isArray(items)) return items;
+    if (typeof items === 'string') {
+      try {
+        const parsed = JSON.parse(items);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
   const downloadQuote = (quote: Quote) => {
     // Vérifier que le devis existe et a des données valides
     if (!quote || !quote.id) {
@@ -625,15 +640,20 @@ const Quotes: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            ${Array.isArray(quote.items) ? quote.items.map(item => `
-              <tr>
-                <td>${item.name || 'Article'}</td>
-                <td>${item.description || '-'}</td>
-                <td>${item.quantity || 1}</td>
-                <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
-                <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
-              </tr>
-            `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666;">Aucun article dans ce devis</td></tr>'}
+            ${(() => {
+              const normalizedItems = normalizeQuoteItems(quote.items);
+              return normalizedItems.length > 0 
+                ? normalizedItems.map(item => `
+                  <tr>
+                    <td>${sanitizeString(item.name, 'Article')}</td>
+                    <td>${sanitizeString(item.description, '-')}</td>
+                    <td>${item.quantity || 1}</td>
+                    <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
+                    <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
+                  </tr>
+                `).join('')
+                : '<tr><td colspan="5" style="text-align: center; color: #666;">Aucun article dans ce devis</td></tr>';
+            })()}
           </tbody>
         </table>
 
@@ -916,15 +936,20 @@ const Quotes: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            ${Array.isArray(quote.items) ? quote.items.map(item => `
-              <tr>
-                <td>${item.name || 'Article'}</td>
-                <td>${item.description || '-'}</td>
-                <td>${item.quantity || 1}</td>
-                <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
-                <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
-              </tr>
-            `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666;">Aucun article dans ce devis</td></tr>'}
+            ${(() => {
+              const normalizedItems = normalizeQuoteItems(quote.items);
+              return normalizedItems.length > 0 
+                ? normalizedItems.map(item => `
+                  <tr>
+                    <td>${sanitizeString(item.name, 'Article')}</td>
+                    <td>${sanitizeString(item.description, '-')}</td>
+                    <td>${item.quantity || 1}</td>
+                    <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
+                    <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
+                  </tr>
+                `).join('')
+                : '<tr><td colspan="5" style="text-align: center; color: #666;">Aucun article dans ce devis</td></tr>';
+            })()}
           </tbody>
         </table>
 
@@ -1222,9 +1247,6 @@ const Quotes: React.FC = () => {
                     <TableCell>
                       <Typography variant="body2" sx={{ fontWeight: 500 }}>
                         {formatFromEUR(quote.total, currency)}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {quote.items.length} article(s)
                       </Typography>
                     </TableCell>
                     <TableCell>

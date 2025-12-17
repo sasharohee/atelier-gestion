@@ -114,10 +114,10 @@ export const useUltraFastAccess = () => {
       let isActive = false;
       
       if (user && !authError) {
-        // Vérification d'accès rapide (seulement is_active)
+        // Vérification d'accès rapide (is_active + stripe_current_period_end pour vérifier l'expiration)
         const { data, error } = await supabase
           .from('subscription_status')
-          .select('is_active')
+          .select('is_active, stripe_current_period_end')
           .eq('user_id', user.id)
           .single();
         
@@ -128,7 +128,36 @@ export const useUltraFastAccess = () => {
           const userRole = user.user_metadata?.role || 'technician';
           isActive = isAdmin || userRole === 'admin';
         } else {
-          isActive = data?.is_active || false;
+          // Vérifier si l'abonnement est actif ET non expiré
+          let subscriptionActive = data?.is_active || false;
+          
+          // Si l'abonnement est marqué actif mais la période est expirée, le désactiver
+          if (subscriptionActive && data?.stripe_current_period_end) {
+            const periodEnd = new Date(data.stripe_current_period_end);
+            const now = new Date();
+            
+            if (periodEnd < now) {
+              // Abonnement expiré - désactiver
+              subscriptionActive = false;
+              console.log(`⚠️ Abonnement expiré pour ${user.email} - Blocage automatique`);
+              
+              // Mettre à jour la base de données en arrière-plan
+              supabase
+                .from('subscription_status')
+                .update({
+                  is_active: false,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('user_id', user.id)
+                .then(({ error }) => {
+                  if (error) {
+                    console.error('Erreur lors de la mise à jour du statut expiré:', error);
+                  }
+                });
+            }
+          }
+          
+          isActive = subscriptionActive;
         }
       }
 

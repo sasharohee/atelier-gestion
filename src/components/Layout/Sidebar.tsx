@@ -162,6 +162,12 @@ const menuItems = [
 
 const bottomMenuItems = [
   {
+    text: 'Abonnement',
+    icon: <StarIcon />,
+    path: '/app/subscription',
+    color: '#f59e0b',
+  },
+  {
     text: 'Réglages',
     icon: <SettingsIcon />,
     path: '/app/settings',
