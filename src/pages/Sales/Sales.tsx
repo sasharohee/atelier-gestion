@@ -63,7 +63,6 @@ import {
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { jsPDF } from 'jspdf';
 import { useAppStore } from '../../store';
 import { Sale, SaleItem, Client } from '../../types';
 import Invoice from '../../components/Invoice';
@@ -94,8 +93,6 @@ const Sales: React.FC = () => {
     addSale,
     updateSale,
     addClient,
-    systemSettings,
-    loadSystemSettings,
   } = useAppStore();
   
   const { workshopSettings } = useWorkshopSettings();
@@ -551,304 +548,210 @@ const Sales: React.FC = () => {
       return;
     }
 
-    // Charger les paramètres système si nécessaire
-    if (systemSettings.length === 0) {
-      loadSystemSettings();
-    }
-
-    // Extraire les paramètres de l'atelier depuis les paramètres système
-    const getSettingValue = (key: string, defaultValue: string = '') => {
-      const setting = systemSettings.find(s => s.key === key);
-      return setting ? setting.value : defaultValue;
-    };
-
-    // Utilisation des paramètres depuis le hook WorkshopSettingsContext
-    const workshopSettingsData = {
-      name: getSettingValue('workshop_name', 'Atelier de réparation'),
-      address: getSettingValue('workshop_address', '123 Rue de la Paix, 75001 Paris'),
-      phone: getSettingValue('workshop_phone', '07 59 23 91 70'),
-      email: getSettingValue('workshop_email', 'contact.ateliergestion@gmail.com'),
-      siret: getSettingValue('workshop_siret', ''),
-      vatNumber: getSettingValue('workshop_vat_number', ''),
-      vatRate: getSettingValue('vat_rate', '20'),
-      currency: getSettingValue('currency', 'EUR')
-    };
-
-    // Créer le PDF
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    let yPosition = margin;
-
-    // Fonction helper pour ajouter du texte
-    const addText = (text: string, x: number, y: number, options?: any) => {
-      doc.text(text, x, y, options);
-      return y + (options?.lineHeight || 5);
-    };
-
-    // Fonction helper pour vérifier si on doit ajouter une nouvelle page
-    const checkPageBreak = (requiredSpace: number = 20) => {
-      if (yPosition + requiredSpace > pageHeight - margin) {
-        doc.addPage();
-        yPosition = margin;
-        return true;
-      }
-      return false;
-    };
-
-    // Client
-    const client = sale.clientId ? getClientById(sale.clientId) : null;
-    
-    // Parser les items si c'est une chaîne JSON
-    let items = sale.items;
-    if (typeof items === 'string') {
-      try {
-        items = JSON.parse(items);
-      } catch (error) {
-        console.error('Error parsing items in downloadInvoice:', error);
-        items = [];
-      }
-    }
-    
-    // Convertir en tableau si nécessaire
-    const itemsArray = Array.isArray(items) ? items : Object.values(items || {});
-
-    // ===== EN-TÊTE =====
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    yPosition = addText(workshopSettingsData.name, pageWidth / 2, yPosition, { align: 'center' });
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    yPosition = addText(workshopSettingsData.address, pageWidth / 2, yPosition, { align: 'center' });
-    
-    let contactInfo = `Tél: ${workshopSettingsData.phone} • Email: ${workshopSettingsData.email}`;
-    if (workshopSettingsData.siret) {
-      contactInfo += `\nSIRET: ${workshopSettingsData.siret}`;
-    }
-    if (workshopSettingsData.vatNumber) {
-      contactInfo += ` • TVA: ${workshopSettingsData.vatNumber}`;
-    }
-    
-    doc.setFontSize(9);
-    const contactLines = doc.splitTextToSize(contactInfo, pageWidth - 2 * margin);
-    contactLines.forEach((line: string) => {
-      yPosition = addText(line, pageWidth / 2, yPosition, { align: 'center' });
+    // Debug: vérifier la structure des données
+    console.log('Données de la vente pour téléchargement:', {
+      id: sale.id,
+      items: sale.items,
+      itemsType: typeof sale.items,
+      isArray: Array.isArray(sale.items),
+      subtotal: sale.subtotal,
+      total: sale.total
     });
-    
-    yPosition += 5;
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 10;
 
-    // ===== DÉTAILS CLIENT ET FACTURE =====
-    const leftColumn = margin;
-    const rightColumn = pageWidth / 2 + 10;
-    const columnWidth = (pageWidth - 2 * margin - 10) / 2;
+    // Créer le contenu HTML de la facture
+    const client = sale.clientId ? getClientById(sale.clientId) : null;
+    const clientName = client ? `${client.firstName} ${client.lastName}` : 'Client anonyme';
+    const clientEmail = client?.email || '';
+    const clientPhone = client?.phone || '';
 
-    // Section Client
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    yPosition = addText('FACTURÉ À', leftColumn, yPosition);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    if (client) {
-      yPosition = addText(`${client.firstName} ${client.lastName}`, leftColumn, yPosition);
-      if (client.email) yPosition = addText(client.email, leftColumn, yPosition);
-      if (client.phone) yPosition = addText(client.phone, leftColumn, yPosition);
-      if (client.address) {
-        const addressLines = doc.splitTextToSize(client.address, columnWidth);
-        addressLines.forEach((line: string) => {
-          yPosition = addText(line, leftColumn, yPosition);
-        });
-      }
-    } else {
-      yPosition = addText('Client anonyme', leftColumn, yPosition);
-    }
-
-    // Section Détails Facture
-    const invoiceYStart = yPosition - (client ? (client.email ? 20 : client.phone ? 15 : 10) : 5);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('DÉTAILS DE LA FACTURE', rightColumn, invoiceYStart);
-    
-    doc.setFontSize(12);
-    doc.setTextColor(25, 118, 210);
-    doc.text(`#${sale.id.slice(0, 8)}`, rightColumn, invoiceYStart + 7);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Date : ${safeFormatDate(sale.createdAt, 'dd/MM/yyyy')}`, rightColumn, invoiceYStart + 14);
-    doc.text(`Statut : ${getStatusLabel(sale.status)}`, rightColumn, invoiceYStart + 19);
-    doc.text(`Paiement : ${getPaymentMethodLabel(sale.paymentMethod)}`, rightColumn, invoiceYStart + 24);
-    
-    yPosition = Math.max(yPosition, invoiceYStart + 30);
-    yPosition += 10;
-
-    // ===== TABLEAU DES ARTICLES =====
-    checkPageBreak(30);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    
-    // En-têtes du tableau
-    const tableStartY = yPosition;
-    doc.setFillColor(248, 249, 250);
-    doc.rect(margin, tableStartY, pageWidth - 2 * margin, 8, 'F');
-    
-    doc.text('Article', margin + 2, tableStartY + 6);
-    doc.text('Type', margin + 60, tableStartY + 6);
-    doc.text('Prix unit.', margin + 100, tableStartY + 6);
-    doc.text('Qté', margin + 130, tableStartY + 6);
-    doc.text('Total', pageWidth - margin - 30, tableStartY + 6, { align: 'right' });
-    
-    yPosition = tableStartY + 8;
-    doc.setLineWidth(0.2);
-    doc.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 3;
-
-    // Lignes du tableau
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    
-    if (itemsArray.length > 0) {
-      itemsArray.forEach((item: any) => {
-        checkPageBreak(10);
-        
-        const itemName = item.name || 'Article';
-        const itemType = item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce';
-        const unitPrice = formatFromEUR(item.unitPrice || 0, workshopSettingsData.currency);
-        const quantity = item.quantity || 1;
-        const totalPrice = formatFromEUR(item.totalPrice || 0, workshopSettingsData.currency);
-        
-        // Nom de l'article (peut être tronqué si trop long)
-        const nameLines = doc.splitTextToSize(itemName, 55);
-        nameLines.forEach((line: string, index: number) => {
-          if (index === 0) {
-            doc.text(line, margin + 2, yPosition);
-          } else {
-            yPosition += 4;
-            doc.text(line, margin + 2, yPosition);
+    const invoiceContent = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Facture ${sale.id}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: white;
+            color: #333;
           }
-        });
-        
-        // Type
-        doc.text(itemType, margin + 60, yPosition);
-        
-        // Prix unitaire
-        doc.text(unitPrice, margin + 100, yPosition);
-        
-        // Quantité
-        doc.text(quantity.toString(), margin + 130, yPosition);
-        
-        // Total
-        doc.text(totalPrice, pageWidth - margin - 2, yPosition, { align: 'right' });
-        
-        yPosition += 6;
-        doc.setLineWidth(0.1);
-        doc.line(margin, yPosition, pageWidth - margin, yPosition);
-        yPosition += 3;
-      });
-    } else {
-      doc.text('Aucun article disponible', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 6;
-    }
-    
-    yPosition += 5;
+          .invoice-header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #1976d2;
+            padding-bottom: 20px;
+          }
+          .invoice-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 10px;
+          }
+          .invoice-number {
+            font-size: 16px;
+            color: #666;
+          }
+          .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+          }
+          .workshop-info, .client-info {
+            width: 45%;
+          }
+          .workshop-info h3, .client-info h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 18px;
+          }
+          .workshop-info p, .client-info p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          .items-table th, .items-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+          }
+          .items-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #333;
+          }
+          .items-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          .totals {
+            float: right;
+            width: 300px;
+            margin-top: 20px;
+          }
+          .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+          }
+          .total-line.final {
+            font-weight: bold;
+            font-size: 18px;
+            border-top: 2px solid #1976d2;
+            padding-top: 10px;
+            color: #1976d2;
+          }
+          .invoice-footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+          }
+          @media print {
+            body { margin: 0; padding: 15px; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="invoice-header">
+          <div class="invoice-title">FACTURE</div>
+          <div class="invoice-number">N° ${sale.id}</div>
+        </div>
 
-    // ===== TOTAUX =====
-    checkPageBreak(40);
-    
-    const totalsX = pageWidth - margin - 60;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    
-    doc.text('Sous-total HT :', totalsX, yPosition);
-    doc.text(formatFromEUR(sale.subtotal || 0, workshopSettingsData.currency), pageWidth - margin - 2, yPosition, { align: 'right' });
-    yPosition += 6;
-    
-    doc.text(`TVA (${workshopSettingsData.vatRate}%) :`, totalsX, yPosition);
-    doc.text(formatFromEUR(sale.tax || 0, workshopSettingsData.currency), pageWidth - margin - 2, yPosition, { align: 'right' });
-    yPosition += 6;
-    
-    if ((sale.discountPercentage || 0) > 0) {
-      doc.setTextColor(16, 185, 129);
-      doc.text(`Réduction fidélité (${sale.discountPercentage}%) :`, totalsX, yPosition);
-      doc.text(`-${formatFromEUR(sale.discountAmount || 0, workshopSettingsData.currency)}`, pageWidth - margin - 2, yPosition, { align: 'right' });
-      doc.setTextColor(0, 0, 0);
-      yPosition += 6;
-    }
-    
-    doc.setLineWidth(0.5);
-    doc.line(totalsX, yPosition, pageWidth - margin, yPosition);
-    yPosition += 5;
-    
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(25, 118, 210);
-    doc.text('TOTAL TTC :', totalsX, yPosition);
-    doc.text(formatFromEUR(sale.total || 0, workshopSettingsData.currency), pageWidth - margin - 2, yPosition, { align: 'right' });
-    doc.setTextColor(0, 0, 0);
-    yPosition += 10;
+        <div class="invoice-details">
+          <div class="workshop-info">
+            <h3>Atelier de Réparation</h3>
+            <p>123 Rue de la Paix</p>
+            <p>75001 Paris, France</p>
+            <p>Tél: 07 59 23 91 70</p>
+            <p>Email: contact.ateliergestion@gmail.com</p>
+          </div>
+          <div class="client-info">
+            <h3>Facturé à</h3>
+            <p><strong>${clientName}</strong></p>
+            ${clientEmail ? `<p>Email: ${clientEmail}</p>` : ''}
+            ${clientPhone ? `<p>Tél: ${clientPhone}</p>` : ''}
+          </div>
+        </div>
 
-    // ===== CONDITIONS DE PAIEMENT =====
-    checkPageBreak(30);
-    
-    doc.setFillColor(248, 249, 250);
-    doc.rect(margin, yPosition, pageWidth - 2 * margin, 25, 'F');
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    yPosition = addText('CONDITIONS DE PAIEMENT', margin + 5, yPosition + 5);
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    yPosition = addText(`• Paiement immédiat par ${getPaymentMethodLabel(sale.paymentMethod).toLowerCase()}`, margin + 5, yPosition);
-    yPosition = addText('• Facture valable 30 jours à compter de la date d\'émission', margin + 5, yPosition);
-    yPosition = addText('• Aucun escompte en cas de paiement anticipé', margin + 5, yPosition);
-    yPosition = addText(`• Pour toute question, contactez-nous au ${workshopSettingsData.phone} ou par email à ${workshopSettingsData.email}`, margin + 5, yPosition);
-    
-    yPosition += 10;
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th>Article</th>
+              <th>Quantité</th>
+              <th>Prix unitaire</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${Array.isArray(sale.items) ? sale.items.map(item => `
+              <tr>
+                <td>${item.name || 'Article'}</td>
+                <td>${item.quantity || 1}</td>
+                <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
+                <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="4" style="text-align: center; color: #666;">Aucun article dans cette vente</td></tr>'}
+          </tbody>
+        </table>
 
-    // ===== PIED DE PAGE =====
-    checkPageBreak(20);
-    
-    doc.setLineWidth(0.5);
-    doc.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 5;
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(workshopSettingsData.name, pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 6;
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Tél: ${workshopSettingsData.phone} • Email: ${workshopSettingsData.email}`, pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 5;
-    
-    if (workshopSettingsData.siret) {
-      doc.text(`SIRET: ${workshopSettingsData.siret}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 5;
-    }
-    
-    if (workshopSettingsData.vatNumber) {
-      doc.text(`TVA: ${workshopSettingsData.vatNumber}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 5;
-    }
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(25, 118, 210);
-    doc.text('Merci de votre confiance !', pageWidth / 2, yPosition, { align: 'center' });
+        <div class="totals">
+          <div class="total-line">
+            <span>Sous-total HT:</span>
+            <span>${formatFromEUR(sale.subtotal || 0, currency)}</span>
+          </div>
+          <div class="total-line">
+            <span>TVA (${workshopSettings.vatRate || 20}%):</span>
+            <span>${formatFromEUR(sale.tax || 0, currency)}</span>
+          </div>
+          ${(sale.discountPercentage || 0) > 0 ? `
+            <div class="total-line">
+              <span>Remise (${sale.discountPercentage}%):</span>
+              <span>-${formatFromEUR(sale.discountAmount || 0, currency)}</span>
+            </div>
+          ` : ''}
+          <div class="total-line final">
+            <span>TOTAL TTC:</span>
+            <span>${formatFromEUR(sale.total || 0, currency)}</span>
+          </div>
+        </div>
 
-    // Sauvegarder le PDF
-    const fileName = `Facture_${sale.id.slice(0, 8)}_${safeFormatDate(sale.createdAt, 'yyyy-MM-dd')}.pdf`;
-    doc.save(fileName);
+        <div class="invoice-footer">
+          <p>Date d'émission: ${safeFormatDate(sale.createdAt, 'dd/MM/yyyy')}</p>
+          <p>Méthode de paiement: ${getPaymentMethodLabel(sale.paymentMethod)}</p>
+          <p>Merci de votre confiance !</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Créer un blob avec le contenu HTML
+    const blob = new Blob([invoiceContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Créer un lien de téléchargement
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Facture_${sale.id}_${safeFormatDate(sale.createdAt, 'yyyy-MM-dd')}.html`;
+    
+    // Déclencher le téléchargement
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Nettoyer l'URL
+    URL.revokeObjectURL(url);
   };
 
   // Changer le statut de paiement
@@ -2075,4 +1978,3 @@ const Sales: React.FC = () => {
   };
 
 export default Sales;
-

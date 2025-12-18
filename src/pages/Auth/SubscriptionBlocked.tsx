@@ -58,6 +58,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useSubscription } from '../../hooks/useSubscription';
+import { useUltraFastAccess } from '../../hooks/useUltraFastAccess';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { redirectToCheckout, checkPaymentSuccess, checkPaymentCancelled } from '../../services/stripeService';
@@ -66,12 +67,14 @@ import toast from 'react-hot-toast';
 const SubscriptionBlocked: React.FC = () => {
   const { user } = useAuth();
   const { subscriptionStatus, refreshStatus, loading } = useSubscription();
+  const { refreshAccess, isAccessActive } = useUltraFastAccess();
   const navigate = useNavigate();
   const theme = useTheme(); // Déplacer useTheme() avant tous les returns conditionnels
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [refreshMessage, setRefreshMessage] = React.useState<string | null>(null);
   const [isLoadingCheckout, setIsLoadingCheckout] = React.useState(false);
   const [checkoutPriceId, setCheckoutPriceId] = React.useState<string | null>(null);
+  const [isCheckingAccess, setIsCheckingAccess] = React.useState(false);
 
   // Récupérer les price IDs depuis les variables d'environnement
   const stripePriceIdMonthly = import.meta.env.VITE_STRIPE_PRICE_ID_MONTHLY;
@@ -83,7 +86,45 @@ const SubscriptionBlocked: React.FC = () => {
     setRefreshMessage('Vérification en cours...');
     
     try {
+      // Invalider les deux caches et rafraîchir les statuts
+      await refreshAccess();
       await refreshStatus();
+      
+      // Vérifier directement dans la base de données si l'accès est maintenant actif
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: status } = await supabase
+            .from('subscription_status')
+            .select('is_active, stripe_current_period_end')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (status?.is_active) {
+            // Vérifier aussi que la période n'est pas expirée
+            let isPeriodValid = true;
+            if (status.stripe_current_period_end) {
+              const periodEnd = new Date(status.stripe_current_period_end);
+              const now = new Date();
+              isPeriodValid = periodEnd > now;
+            }
+            
+            if (isPeriodValid) {
+              // Accès activé ! Rediriger vers le dashboard
+              setRefreshMessage('Accès activé ! Redirection en cours...');
+              toast.success('Votre abonnement est maintenant actif !');
+              
+              setTimeout(() => {
+                navigate('/app/dashboard');
+              }, 1500);
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors de la vérification de l\'accès:', error);
+      }
+      
       setRefreshMessage('Statut vérifié ! Rechargement de la page...');
       
       // Recharger la page après un court délai
@@ -119,7 +160,7 @@ const SubscriptionBlocked: React.FC = () => {
     setCheckoutPriceId(priceId);
 
     try {
-      const successUrl = `${window.location.origin}/app?checkout=success`;
+      const successUrl = `${window.location.origin}/app/subscription-blocked?checkout=success`;
       const cancelUrl = `${window.location.origin}/app/subscription-blocked?checkout=cancelled`;
       
       await redirectToCheckout(priceId, successUrl, cancelUrl);
@@ -135,14 +176,123 @@ const SubscriptionBlocked: React.FC = () => {
   React.useEffect(() => {
     if (checkPaymentSuccess()) {
       toast.success('Paiement réussi ! Vérification de votre abonnement...');
-      // Rafraîchir le statut après un court délai pour laisser le webhook se déclencher
-      setTimeout(() => {
-        refreshStatus();
-      }, 2000);
+      setIsCheckingAccess(true);
+      setRefreshMessage('Paiement réussi ! Activation de votre accès en cours...');
+      
+      // Fonction pour vérifier périodiquement l'accès
+      const checkAccessPeriodically = async (attempt: number = 0) => {
+        const maxAttempts = 10; // 10 tentatives maximum (environ 20 secondes)
+        
+        if (attempt >= maxAttempts) {
+          setIsCheckingAccess(false);
+          setRefreshMessage('Vérification terminée. Si votre accès n\'est pas encore activé, veuillez rafraîchir la page.');
+          return;
+        }
+        
+        // Attendre 2 secondes pour laisser le webhook se déclencher
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Invalider les caches et rafraîchir les statuts
+        await refreshAccess();
+        await refreshStatus();
+        
+        // Vérifier directement dans la base de données
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: status } = await supabase
+              .from('subscription_status')
+              .select('is_active, stripe_current_period_end')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (status?.is_active) {
+              // Vérifier aussi que la période n'est pas expirée
+              let isPeriodValid = true;
+              if (status.stripe_current_period_end) {
+                const periodEnd = new Date(status.stripe_current_period_end);
+                const now = new Date();
+                isPeriodValid = periodEnd > now;
+              }
+              
+              if (isPeriodValid) {
+                // Accès activé ! Rediriger vers le dashboard
+                setIsCheckingAccess(false);
+                setRefreshMessage('Accès activé ! Redirection en cours...');
+                toast.success('Votre abonnement est maintenant actif !');
+                
+                // Attendre un peu pour que l'utilisateur voie le message
+                setTimeout(() => {
+                  navigate('/app/dashboard');
+                }, 1500);
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Erreur lors de la vérification de l\'accès:', error);
+        }
+        
+        // Si l'accès n'est pas encore activé, réessayer
+        if (attempt < maxAttempts - 1) {
+          checkAccessPeriodically(attempt + 1);
+        } else {
+          setIsCheckingAccess(false);
+          setRefreshMessage('Vérification terminée. Si votre accès n\'est pas encore activé, veuillez rafraîchir la page.');
+        }
+      };
+      
+      // Démarrer la vérification périodique
+      checkAccessPeriodically();
+      
     } else if (checkPaymentCancelled()) {
       toast.error('Paiement annulé');
     }
-  }, [refreshStatus]);
+  }, [refreshStatus, refreshAccess, navigate]);
+
+  // Vérifier périodiquement si l'accès a été activé (même sans retour de Stripe Checkout)
+  // Cela permet de détecter les mises à jour du webhook en arrière-plan
+  React.useEffect(() => {
+    // Ne pas vérifier si on est déjà en train de vérifier après un paiement
+    if (isCheckingAccess) return;
+    
+    // Vérifier toutes les 10 secondes si l'accès est maintenant actif
+    const interval = setInterval(async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: status } = await supabase
+            .from('subscription_status')
+            .select('is_active, stripe_current_period_end')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (status?.is_active) {
+            // Vérifier aussi que la période n'est pas expirée
+            let isPeriodValid = true;
+            if (status.stripe_current_period_end) {
+              const periodEnd = new Date(status.stripe_current_period_end);
+              const now = new Date();
+              isPeriodValid = periodEnd > now;
+            }
+            
+            if (isPeriodValid) {
+              // Accès activé ! Invalider les caches et rediriger
+              await refreshAccess();
+              await refreshStatus();
+              toast.success('Votre abonnement est maintenant actif !');
+              navigate('/app/dashboard');
+            }
+          }
+        }
+      } catch (error) {
+        // Ignorer les erreurs silencieusement
+        console.log('Vérification périodique de l\'accès:', error);
+      }
+    }, 10000); // Vérifier toutes les 10 secondes
+    
+    return () => clearInterval(interval);
+  }, [isCheckingAccess, refreshAccess, refreshStatus, navigate]);
 
   if (loading) {
     return (
