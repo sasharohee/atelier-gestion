@@ -77,46 +77,26 @@ export const useSubscription = () => {
         console.log(`✅ Statut par défaut créé pour ${userEmail}: ${isAdmin ? 'ADMIN' : 'UTILISATEUR'}`);
       } else if (data) {
         // ✅ ENREGISTREMENT TROUVÉ DANS LA TABLE
-        // Vérifier si l'abonnement a expiré
+        // Faire confiance au statut is_active mis à jour par le webhook Stripe
+        // Ne pas désactiver automatiquement côté client pour éviter les blocages intempestifs
         let isActive = data.is_active;
-        let needsUpdate = false;
         
+        // Vérifier l'expiration seulement pour logging, mais ne pas bloquer automatiquement
+        // Le webhook Stripe gère correctement la mise à jour de is_active
         if (data.stripe_current_period_end) {
           const periodEnd = new Date(data.stripe_current_period_end);
           const now = new Date();
           
+          // Si la période est expirée, on fait confiance au webhook Stripe qui devrait avoir mis à jour is_active
+          // On ne désactive pas automatiquement pour éviter les blocages intempestifs
           if (periodEnd < now && data.is_active) {
-            // L'abonnement a expiré - bloquer l'accès
-            isActive = false;
-            needsUpdate = true;
-            console.log(`⚠️ Abonnement expiré pour ${user.email}. Date de fin: ${periodEnd.toISOString()} - Blocage de l'accès`);
+            console.log(`⚠️ Période d'abonnement expirée pour ${user.email}, mais is_active=${data.is_active} - Faire confiance au webhook Stripe`);
+            // Ne pas mettre à jour la base de données automatiquement
+            // Le webhook Stripe gère cela correctement
           }
         }
         
-        // Si l'abonnement n'est pas actif dans Stripe, s'assurer qu'il est bloqué
-        if (!data.is_active && data.stripe_subscription_id) {
-          isActive = false;
-          console.log(`⚠️ Abonnement inactif pour ${user.email} - Accès bloqué`);
-        }
-        
-        // Mettre à jour la base de données si nécessaire (abonnement expiré)
-        if (needsUpdate) {
-          supabase
-            .from('subscription_status')
-            .update({
-              is_active: false,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', user.id)
-            .then(({ error }) => {
-              if (error) {
-                console.error('Erreur lors de la mise à jour du statut expiré:', error);
-              } else {
-                console.log('✅ Statut expiré mis à jour dans la base de données');
-              }
-            });
-        }
-        
+        // Utiliser directement is_active de la base de données
         finalStatus = {
           ...data,
           is_active: isActive

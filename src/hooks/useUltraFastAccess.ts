@@ -128,35 +128,26 @@ export const useUltraFastAccess = () => {
           const userRole = user.user_metadata?.role || 'technician';
           isActive = isAdmin || userRole === 'admin';
         } else {
-          // Vérifier si l'abonnement est actif ET non expiré
+          // Faire confiance au statut is_active mis à jour par le webhook Stripe
+          // Ne pas désactiver automatiquement côté client pour éviter les blocages intempestifs
           let subscriptionActive = data?.is_active || false;
           
-          // Si l'abonnement est marqué actif mais la période est expirée, le désactiver
+          // Vérifier l'expiration seulement pour logging, mais ne pas bloquer automatiquement
+          // Le webhook Stripe gère correctement la mise à jour de is_active
           if (subscriptionActive && data?.stripe_current_period_end) {
             const periodEnd = new Date(data.stripe_current_period_end);
             const now = new Date();
             
+            // Si la période est expirée, on fait confiance au webhook Stripe qui devrait avoir mis à jour is_active
+            // On ne désactive pas automatiquement pour éviter les blocages intempestifs
             if (periodEnd < now) {
-              // Abonnement expiré - désactiver
-              subscriptionActive = false;
-              console.log(`⚠️ Abonnement expiré pour ${user.email} - Blocage automatique`);
-              
-              // Mettre à jour la base de données en arrière-plan
-              supabase
-                .from('subscription_status')
-                .update({
-                  is_active: false,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('user_id', user.id)
-                .then(({ error }) => {
-                  if (error) {
-                    console.error('Erreur lors de la mise à jour du statut expiré:', error);
-                  }
-                });
+              console.log(`⚠️ Période d'abonnement expirée pour ${user.email}, mais is_active=${subscriptionActive} - Faire confiance au webhook Stripe`);
+              // Ne pas mettre à jour la base de données automatiquement
+              // Le webhook Stripe gère cela correctement
             }
           }
           
+          // Utiliser directement is_active de la base de données
           isActive = subscriptionActive;
         }
       }
