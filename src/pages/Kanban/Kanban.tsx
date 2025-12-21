@@ -52,6 +52,7 @@ import {
   CheckCircleOutline as CheckCircleOutlineIcon,
   ErrorOutline as ErrorOutlineIcon,
   Cancel as CancelIcon,
+  Label as LabelIcon,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
@@ -77,6 +78,7 @@ import CategoryIconGrid from '../../components/CategoryIconGrid';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR, getCurrencySymbol } from '../../utils/currencyUtils';
 import ThermalReceiptDialog from '../../components/ThermalReceiptDialog';
+import RepairLabelDialog from '../../components/RepairLabel/RepairLabelDialog';
 
 const Kanban: React.FC = () => {
   const navigate = useNavigate();
@@ -118,6 +120,8 @@ const Kanban: React.FC = () => {
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [thermalReceiptDialogOpen, setThermalReceiptDialogOpen] = useState(false);
+  const [labelDialogOpen, setLabelDialogOpen] = useState(false);
+  const [selectedRepairForLabel, setSelectedRepairForLabel] = useState<Repair | null>(null);
   const [thermalReceiptRepair, setThermalReceiptRepair] = useState<Repair | null>(null);
   
   // État pour le formulaire de modification (comme newRepair mais pour l'édition)
@@ -1853,6 +1857,36 @@ const Kanban: React.FC = () => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
+              
+              {/* Bouton étiquette pour statut "nouvelle" */}
+              {isNewStatus && (
+                <Tooltip title="Générer étiquette">
+                  <IconButton 
+                    size="small" 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      const repairClient = getClientById(repair.clientId);
+                      if (!repairClient || !repairClient.email) {
+                        alert('Erreur : Impossible de trouver les informations du client pour cette réparation.');
+                        return;
+                      }
+                      setSelectedRepairForLabel(repair);
+                      setLabelDialogOpen(true);
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    sx={{ 
+                      color: '#8b5cf6',
+                      backgroundColor: '#f3e8ff',
+                      '&:hover': {
+                        backgroundColor: '#e9d5ff',
+                      }
+                    }}
+                  >
+                    <LabelIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
               
               {/* Reçu thermique pour statut "nouvelle" avec acompte */}
               {repair.deposit && repair.deposit > 0 && isNewStatus && (
@@ -3855,6 +3889,28 @@ const Kanban: React.FC = () => {
           depositValidated={depositValidated[thermalReceiptRepair.id] || false}
         />
       )}
+
+      {/* Dialog pour l'étiquette de réparation */}
+      {selectedRepairForLabel && (() => {
+        const repairClient = getClientById(selectedRepairForLabel.clientId);
+        // Ne pas afficher le dialog si le client n'existe pas
+        if (!repairClient) {
+          return null;
+        }
+        return (
+          <RepairLabelDialog
+            open={labelDialogOpen}
+            onClose={() => {
+              setLabelDialogOpen(false);
+              setSelectedRepairForLabel(null);
+            }}
+            repair={selectedRepairForLabel}
+            client={repairClient}
+            device={selectedRepairForLabel.deviceId ? getDeviceById(selectedRepairForLabel.deviceId) : null}
+            workshopName={workshopSettings?.name || 'Atelier'}
+          />
+        );
+      })()}
 
       {/* Dialogue pour créer une nouvelle catégorie */}
       <Dialog open={categoryDialogOpen} onClose={() => setCategoryDialogOpen(false)} maxWidth="sm" fullWidth>

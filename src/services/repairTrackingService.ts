@@ -325,6 +325,39 @@ class RepairTrackingService {
       return false;
     }
   }
+
+  /**
+   * Génère l'URL de suivi de réparation avec les paramètres de requête
+   */
+  generateTrackingUrl(repairNumber: string, clientEmail: string): string {
+    // Utiliser le domaine de production pour les QR codes
+    // En développement, on peut détecter si on est en localhost
+    let baseUrl = 'https://atelier-gestion.com';
+    
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      // Si on est en localhost ou en développement, on peut utiliser localhost
+      // Mais pour les QR codes, on veut toujours utiliser le domaine de production
+      // pour que les clients puissent scanner même en développement
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('localhost')) {
+        // En développement, on peut garder localhost pour tester
+        // Mais pour la production, on utilise toujours atelier-gestion.com
+        baseUrl = 'https://atelier-gestion.com';
+      } else if (hostname.includes('atelier-gestion.com') || hostname.includes('vercel.app')) {
+        // Si on est déjà sur le domaine de production ou Vercel, utiliser le protocole HTTPS
+        baseUrl = `https://${hostname}`;
+      } else {
+        // Sinon, utiliser le domaine de production par défaut
+        baseUrl = 'https://atelier-gestion.com';
+      }
+    }
+    
+    const params = new URLSearchParams({
+      repairNumber: repairNumber,
+      email: clientEmail,
+    });
+    return `${baseUrl}/repair-tracking?${params.toString()}`;
+  }
 }
 
 export const repairTrackingService = new RepairTrackingService();

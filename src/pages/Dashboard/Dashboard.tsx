@@ -596,6 +596,85 @@ const Dashboard: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Bannière Joyeuses Fêtes de Noël */}
+      <Card 
+        sx={{ 
+          mb: 4, 
+          background: 'linear-gradient(135deg, #1a472a 0%, #2d5a3a 50%, #1a472a 100%)',
+          color: 'white',
+          position: 'relative',
+          overflow: 'hidden',
+          border: '2px solid #c9a227',
+          boxShadow: '0 8px 32px rgba(26, 71, 42, 0.4), 0 0 20px rgba(201, 162, 39, 0.3)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `
+              radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 20%),
+              radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 20%),
+              radial-gradient(circle at 50% 50%, rgba(201, 162, 39, 0.1) 0%, transparent 30%)
+            `,
+            pointerEvents: 'none',
+          },
+        }}
+      >
+        <CardContent sx={{ position: 'relative', zIndex: 1, py: 3 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            flexDirection: 'column',
+            textAlign: 'center',
+            gap: 1
+          }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 700, 
+                color: '#fff',
+                textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                flexWrap: 'wrap',
+                justifyContent: 'center'
+              }}
+            >
+              <span style={{ fontSize: '2rem' }}>🎄</span>
+              <span style={{ 
+                background: 'linear-gradient(180deg, #fff 0%, #ffd700 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+                Joyeuses Fêtes de Noël !
+              </span>
+              <span style={{ fontSize: '2rem' }}>🎅</span>
+            </Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexWrap: 'wrap',
+                justifyContent: 'center'
+              }}
+            >
+              <span>✨</span>
+              Nous vous souhaitons d'excellentes fêtes de fin d'année !
+              <span>🎁</span>
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+
       {/* Liens rapides vers les pages essentielles */}
       <Card sx={{ mb: 4, boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)' }}>
         <CardContent sx={{ p: 3 }}>
