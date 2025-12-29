@@ -645,20 +645,18 @@ const DeviceManagement: React.FC = () => {
     // Générer le contenu CSV avec les en-têtes uniquement
     const csvContent = headers.join(',') + '\n';
     
-    // Créer un Blob avec le contenu CSV
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
+    // Encoder le contenu pour un data URL (plus fiable sur Vercel)
+    const encodedContent = encodeURIComponent(csvContent);
+    const dataUrl = `data:text/csv;charset=utf-8,${encodedContent}`;
     
     // Créer et déclencher le téléchargement
     const link = document.createElement('a');
-    link.href = url;
+    link.href = dataUrl;
     link.download = fileName;
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    // Nettoyer l'URL
-    window.URL.revokeObjectURL(url);
   };
 
   const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
