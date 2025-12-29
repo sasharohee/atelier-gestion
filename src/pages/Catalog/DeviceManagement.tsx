@@ -627,15 +627,38 @@ const DeviceManagement: React.FC = () => {
 
   // Fonctions pour l'importation CSV
   const handleDownloadTemplate = (type: 'brands' | 'models' | 'categories') => {
-    const fileName = type === 'brands' ? 'brands_import.csv' : 
-                   type === 'models' ? 'models_import.csv' : 
-                   'categories_import.csv';
+    let headers: string[] = [];
+    let fileName = '';
+    
+    // Définir les en-têtes selon le type
+    if (type === 'categories') {
+      headers = ['name', 'description', 'icon'];
+      fileName = 'categories_import.csv';
+    } else if (type === 'brands') {
+      headers = ['name', 'description', 'categoryIds'];
+      fileName = 'brands_import.csv';
+    } else {
+      headers = ['name', 'description', 'brandName', 'categoryName'];
+      fileName = 'models_import.csv';
+    }
+    
+    // Générer le contenu CSV avec les en-têtes uniquement
+    const csvContent = headers.join(',') + '\n';
+    
+    // Créer un Blob avec le contenu CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    
+    // Créer et déclencher le téléchargement
     const link = document.createElement('a');
-    link.href = `/${fileName}`;
+    link.href = url;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // Nettoyer l'URL
+    window.URL.revokeObjectURL(url);
   };
 
   const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
