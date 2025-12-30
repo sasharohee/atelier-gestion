@@ -416,7 +416,24 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                     </div>
                   </div>
                 `;
-                })() : `
+                })() : (() => {
+                  const sale = data as Sale;
+                  let items = sale.items;
+                  
+                  // Parser les items si c'est une chaîne JSON
+                  if (typeof items === 'string') {
+                    try {
+                      items = JSON.parse(items);
+                    } catch (error) {
+                      console.error('Error parsing items in handlePrint:', error);
+                      items = [];
+                    }
+                  }
+                  
+                  // Convertir en tableau si nécessaire
+                  const itemsArray = Array.isArray(items) ? items : (items && typeof items === 'object' ? Object.values(items) : []);
+                  
+                  return `
                   <table>
                     <thead>
                       <tr>
@@ -428,13 +445,13 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                       </tr>
                     </thead>
                     <tbody>
-                      ${Array.isArray((data as Sale).items) ? (data as Sale).items.map(item => `
+                      ${itemsArray.length > 0 ? itemsArray.map(item => `
                         <tr>
-                          <td><span class="item-name">${item.name}</span></td>
+                          <td><span class="item-name">${item.name || 'Article'}</span></td>
                           <td><span class="item-type">${item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'}</span></td>
-                          <td style="text-align: right;"><span class="price">${formatFromEUR(item.unitPrice, currency)}</span></td>
-                          <td style="text-align: center;">${item.quantity}</td>
-                          <td style="text-align: right;"><span class="price">${formatFromEUR(item.totalPrice, currency)}</span></td>
+                          <td style="text-align: right;"><span class="price">${formatFromEUR(item.unitPrice || 0, currency)}</span></td>
+                          <td style="text-align: center;">${item.quantity || 1}</td>
+                          <td style="text-align: right;"><span class="price">${formatFromEUR(item.totalPrice || 0, currency)}</span></td>
                         </tr>
                       `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666; font-style: italic;">Aucun article disponible</td></tr>'}
                     </tbody>
@@ -454,7 +471,8 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                       <span>${formatFromEUR((data as Sale).total, currency)}</span>
                     </div>
                   </div>
-                `}
+                `;
+                })()}
 
                 <div class="conditions">
                   <h3>CONDITIONS DE PAIEMENT</h3>

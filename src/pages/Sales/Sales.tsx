@@ -695,14 +695,31 @@ const Sales: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            ${Array.isArray(sale.items) ? sale.items.map(item => `
-              <tr>
-                <td>${item.name || 'Article'}</td>
-                <td>${item.quantity || 1}</td>
-                <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
-                <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
-              </tr>
-            `).join('') : '<tr><td colspan="4" style="text-align: center; color: #666;">Aucun article dans cette vente</td></tr>'}
+            ${(() => {
+              let items = sale.items;
+              
+              // Parser les items si c'est une chaîne JSON
+              if (typeof items === 'string') {
+                try {
+                  items = JSON.parse(items);
+                } catch (error) {
+                  console.error('Error parsing items in downloadInvoice:', error);
+                  items = [];
+                }
+              }
+              
+              // Convertir en tableau si nécessaire
+              const itemsArray = Array.isArray(items) ? items : (items && typeof items === 'object' ? Object.values(items) : []);
+              
+              return itemsArray.length > 0 ? itemsArray.map(item => `
+                <tr>
+                  <td>${item.name || 'Article'}</td>
+                  <td>${item.quantity || 1}</td>
+                  <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
+                  <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
+                </tr>
+              `).join('') : '<tr><td colspan="4" style="text-align: center; color: #666;">Aucun article dans cette vente</td></tr>';
+            })()}
           </tbody>
         </table>
 

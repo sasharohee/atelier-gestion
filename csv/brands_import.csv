@@ -1,0 +1,38 @@
+name,description,categoryIds
+Apple,Fabricant américain de produits électroniques,Smartphone;Ordinateur portable;Ordinateur;Tablette
+Samsung,Conglomérat sud-coréen spécialisé dans l'électronique,Smartphone;Tablette
+Huawei,Entreprise chinoise de télécommunications,Smartphone;Tablette
+Xiaomi,Entreprise chinoise de technologie,Smartphone;Tablette
+OnePlus,Fabricant chinois de smartphones haut de gamme,Smartphone
+Google,Entreprise américaine spécialisée dans les services Internet,Smartphone;Tablette;Ordinateur portable
+Sony,Conglomérat japonais spécialisé dans l'électronique,Smartphone
+LG,Entreprise sud-coréenne d'électronique grand public,Smartphone
+Motorola,Fabricant américain de télécommunications,Smartphone
+Nokia,Entreprise finlandaise de télécommunications,Smartphone
+Honor,Marque de smartphones Huawei,Smartphone
+Realme,Marque de smartphones chinoise,Smartphone
+Oppo,Fabricant chinois d'électronique,Smartphone
+Vivo,Fabricant chinois de smartphones,Smartphone
+Asus,Fabricant taïwanais d'ordinateurs,Ordinateur portable;Ordinateur
+Lenovo,Entreprise chinoise multinationale de technologie,Ordinateur portable;Ordinateur
+Microsoft,Entreprise américaine multinationale de technologie,Ordinateur portable;Tablette
+Amazon,Entreprise américaine de commerce électronique,Tablette
+Dell,Entreprise américaine de technologie informatique,Ordinateur portable;Ordinateur
+HP,Entreprise américaine multinationale de technologie informatique,Ordinateur portable;Ordinateur
+Acer,Fabricant taïwanais d'ordinateurs,Ordinateur portable;Ordinateur
+MSI,Fabricant taïwanais d'ordinateurs,Ordinateur portable;Ordinateur
+Razer,Entreprise américaine de matériel informatique gaming,Ordinateur portable
+Alienware,Marque d'ordinateurs gaming Dell,Ordinateur portable;Ordinateur
+Gigabyte,Fabricant taïwanais de cartes mères,Ordinateur portable;Ordinateur
+Framework,Fabricant américain d'ordinateurs portables modulaires,Ordinateur portable
+HTC,Fabricant taïwanais de smartphones,Smartphone
+BlackBerry,Entreprise canadienne de technologies mobiles,Smartphone
+TCL,Entreprise chinoise multinationale de technologie,Smartphone
+Nothing,Marque de smartphones britannique,Smartphone
+Fairphone,Marque de smartphones néerlandaise éthique,Smartphone
+Caterpillar,Entreprise américaine de matériel lourd,Smartphone
+Crosscall,Marque française de smartphones robustes,Smartphone
+Wiko,Marque française de smartphones,Smartphone
+Archos,Marque française d'électronique grand public,Smartphone;Tablette
+Bull,Entreprise française d'informatique,Ordinateur portable;Ordinateur
+Thomson,Marque française d'électronique grand public,Smartphone;Tablette

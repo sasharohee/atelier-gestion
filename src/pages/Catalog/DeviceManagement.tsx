@@ -7,6 +7,122 @@ import { brandService, BrandWithCategories, CreateBrandData, UpdateBrandData } f
 import { deviceModelService } from '../../services/deviceModelService';
 import { deviceModelServiceService } from '../../services/deviceModelServiceService';
 import { DeviceModelServiceDetailed, CreateDeviceModelServiceData, UpdateDeviceModelServiceData } from '../../types/deviceModelService';
+
+// Contenu des fichiers CSV templates
+const brandsCsvContent = `name,description,categoryIds
+Apple,Fabricant américain de produits électroniques,Smartphone;Ordinateur portable;Ordinateur;Tablette
+Samsung,Conglomérat sud-coréen spécialisé dans l'électronique,Smartphone;Tablette
+Huawei,Entreprise chinoise de télécommunications,Smartphone;Tablette
+Xiaomi,Entreprise chinoise de technologie,Smartphone;Tablette
+OnePlus,Fabricant chinois de smartphones haut de gamme,Smartphone
+Google,Entreprise américaine spécialisée dans les services Internet,Smartphone;Tablette;Ordinateur portable
+Sony,Conglomérat japonais spécialisé dans l'électronique,Smartphone
+LG,Entreprise sud-coréenne d'électronique grand public,Smartphone
+Motorola,Fabricant américain de télécommunications,Smartphone
+Nokia,Entreprise finlandaise de télécommunications,Smartphone
+Honor,Marque de smartphones Huawei,Smartphone
+Realme,Marque de smartphones chinoise,Smartphone
+Oppo,Fabricant chinois d'électronique,Smartphone
+Vivo,Fabricant chinois de smartphones,Smartphone
+Asus,Fabricant taïwanais d'ordinateurs,Ordinateur portable;Ordinateur
+Lenovo,Entreprise chinoise multinationale de technologie,Ordinateur portable;Ordinateur
+Microsoft,Entreprise américaine multinationale de technologie,Ordinateur portable;Tablette
+Amazon,Entreprise américaine de commerce électronique,Tablette
+Dell,Entreprise américaine de technologie informatique,Ordinateur portable;Ordinateur
+HP,Entreprise américaine multinationale de technologie informatique,Ordinateur portable;Ordinateur
+Acer,Fabricant taïwanais d'ordinateurs,Ordinateur portable;Ordinateur
+MSI,Fabricant taïwanais d'ordinateurs,Ordinateur portable;Ordinateur
+Razer,Entreprise américaine de matériel informatique gaming,Ordinateur portable
+Alienware,Marque d'ordinateurs gaming Dell,Ordinateur portable;Ordinateur
+Gigabyte,Fabricant taïwanais de cartes mères,Ordinateur portable;Ordinateur
+Framework,Fabricant américain d'ordinateurs portables modulaires,Ordinateur portable
+HTC,Fabricant taïwanais de smartphones,Smartphone
+BlackBerry,Entreprise canadienne de technologies mobiles,Smartphone
+TCL,Entreprise chinoise multinationale de technologie,Smartphone
+Nothing,Marque de smartphones britannique,Smartphone
+Fairphone,Marque de smartphones néerlandaise éthique,Smartphone
+Caterpillar,Entreprise américaine de matériel lourd,Smartphone
+Crosscall,Marque française de smartphones robustes,Smartphone
+Wiko,Marque française de smartphones,Smartphone
+Archos,Marque française d'électronique grand public,Smartphone;Tablette
+Bull,Entreprise française d'informatique,Ordinateur portable;Ordinateur
+Thomson,Marque française d'électronique grand public,Smartphone;Tablette`;
+
+const categoriesCsvContent = `name,description,icon
+Smartphone,Téléphones mobiles intelligents,phone
+Tablette,Appareils tactiles portables,tablet
+Ordinateur portable,Ordinateurs portables,laptop
+Ordinateur,Ordinateurs de bureau,computer
+Autre,Autres appareils électroniques,device-hub`;
+
+const modelsCsvContent = `name,description,brandName,categoryName
+iPhone 15 Pro Max,Smartphone haut de gamme Apple 2023,Apple,Smartphone
+iPhone 15 Pro,Smartphone professionnel Apple 2023,Apple,Smartphone
+iPhone 15,Smartphone standard Apple 2023,Apple,Smartphone
+iPhone 14 Pro Max,Smartphone haut de gamme Apple 2022,Apple,Smartphone
+iPhone 14 Pro,Smartphone professionnel Apple 2022,Apple,Smartphone
+iPhone 14,Smartphone standard Apple 2022,Apple,Smartphone
+iPhone 13 Pro Max,Smartphone haut de gamme Apple 2021,Apple,Smartphone
+iPhone 13,Smartphone standard Apple 2021,Apple,Smartphone
+iPhone 12 Pro,Smartphone professionnel Apple 2020,Apple,Smartphone
+iPhone 12,Smartphone standard Apple 2020,Apple,Smartphone
+iPhone 11,Smartphone Apple 2019,Apple,Smartphone
+iPhone SE 2022,Smartphone compact Apple 2022,Apple,Smartphone
+Galaxy S24 Ultra,Smartphone haut de gamme Samsung 2024,Samsung,Smartphone
+Galaxy S24 Plus,Smartphone grand format Samsung 2024,Samsung,Smartphone
+Galaxy S24,Smartphone standard Samsung 2024,Samsung,Smartphone
+Galaxy S23 Ultra,Smartphone haut de gamme Samsung 2023,Samsung,Smartphone
+Galaxy S23,Smartphone standard Samsung 2023,Samsung,Smartphone
+Galaxy S22 Ultra,Smartphone haut de gamme Samsung 2022,Samsung,Smartphone
+Galaxy Z Fold 5,Smartphone pliable Samsung 2023,Samsung,Smartphone
+Galaxy Z Flip 5,Smartphone pliable compact Samsung 2023,Samsung,Smartphone
+Galaxy A54,Smartphone milieu de gamme Samsung,Samsung,Smartphone
+Galaxy A34,Smartphone entrée de gamme Samsung,Samsung,Smartphone
+P60 Pro,Smartphone haut de gamme Huawei,Huawei,Smartphone
+Mate 60 Pro,Smartphone professionnel Huawei,Huawei,Smartphone
+Xiaomi 14 Pro,Smartphone haut de gamme Xiaomi,Xiaomi,Smartphone
+Xiaomi 14,Smartphone standard Xiaomi,Xiaomi,Smartphone
+Redmi Note 13 Pro,Smartphone milieu de gamme Xiaomi,Xiaomi,Smartphone
+OnePlus 12 Pro,Smartphone haut de gamme OnePlus,OnePlus,Smartphone
+OnePlus 11,Smartphone standard OnePlus,OnePlus,Smartphone
+Pixel 8 Pro,Smartphone Google haut de gamme,Google,Smartphone
+Pixel 8,Smartphone Google standard,Google,Smartphone
+Pixel 7a,Smartphone Google abordable,Google,Smartphone
+Xperia 1 V,Smartphone professionnel Sony,Sony,Smartphone
+Xperia 5 V,Smartphone compact Sony,Sony,Smartphone
+MacBook Pro 16,Ordinateur portable professionnel 16 pouces,Apple,Ordinateur portable
+MacBook Pro 14,Ordinateur portable professionnel 14 pouces,Apple,Ordinateur portable
+MacBook Air M2,Ordinateur portable ultraportable M2,Apple,Ordinateur portable
+MacBook Air M1,Ordinateur portable ultraportable M1,Apple,Ordinateur portable
+Dell XPS 15,Ordinateur portable premium 15 pouces,Dell,Ordinateur portable
+Dell XPS 13,Ordinateur portable ultraportable 13 pouces,Dell,Ordinateur portable
+ThinkPad X1 Carbon,Ordinateur portable professionnel Lenovo,Lenovo,Ordinateur portable
+ThinkPad T14,Ordinateur portable professionnel 14 pouces,Lenovo,Ordinateur portable
+HP Spectre x360,Ordinateur portable convertible premium,HP,Ordinateur portable
+HP EliteBook 840,Ordinateur portable professionnel 14 pouces,HP,Ordinateur portable
+Surface Laptop 5,Ordinateur portable Microsoft 2022,Microsoft,Ordinateur portable
+Surface Laptop Studio,Ordinateur portable créatif Microsoft,Microsoft,Ordinateur portable
+Asus ZenBook 14,Ordinateur portable ultraportable 14 pouces,Asus,Ordinateur portable
+Acer Swift 3,Ordinateur portable abordable 14 pouces,Acer,Ordinateur portable
+iMac 24,Ordinateur tout-en-un Apple M1,Apple,Ordinateur
+Mac Studio,Station de travail compacte Apple,Apple,Ordinateur
+Mac Mini M2,Ordinateur de bureau compact M2,Apple,Ordinateur
+OptiPlex 7090,Ordinateur de bureau professionnel Dell,Dell,Ordinateur
+EliteDesk 800,Ordinateur de bureau professionnel HP,HP,Ordinateur
+ThinkCentre M90,Ordinateur de bureau professionnel Lenovo,Lenovo,Ordinateur
+iPad Pro 12.9,Tablette professionnelle 12.9 pouces,Apple,Tablette
+iPad Pro 11,Tablette professionnelle 11 pouces,Apple,Tablette
+iPad Air,Tablette ultraportable Apple,Apple,Tablette
+iPad Mini,Tablette compacte Apple,Apple,Tablette
+iPad 10,Tablette standard Apple 10ème génération,Apple,Tablette
+Galaxy Tab S9 Ultra,Tablette haut de gamme Samsung 14.6 pouces,Samsung,Tablette
+Galaxy Tab S9 Plus,Tablette haut de gamme Samsung 12.4 pouces,Samsung,Tablette
+Galaxy Tab S9,Tablette haut de gamme Samsung 11 pouces,Samsung,Tablette
+Galaxy Tab A9,Tablette entrée de gamme Samsung,Samsung,Tablette
+Surface Pro 9,Tablette hybride Microsoft 2022,Microsoft,Tablette
+Surface Go 3,Tablette compacte Microsoft,Microsoft,Tablette
+MatePad Pro,Tablette professionnelle Huawei,Huawei,Tablette
+Xiaomi Pad 6,Tablette Xiaomi 11 pouces,Xiaomi,Tablette`;
 import {
   Box,
   Typography,
@@ -627,36 +743,40 @@ const DeviceManagement: React.FC = () => {
 
   // Fonctions pour l'importation CSV
   const handleDownloadTemplate = (type: 'brands' | 'models' | 'categories') => {
-    let headers: string[] = [];
+    let csvContent = '';
     let fileName = '';
     
-    // Définir les en-têtes selon le type
+    // Utiliser le contenu complet des fichiers CSV selon le type
     if (type === 'categories') {
-      headers = ['name', 'description', 'icon'];
+      csvContent = categoriesCsvContent;
       fileName = 'categories_import.csv';
     } else if (type === 'brands') {
-      headers = ['name', 'description', 'categoryIds'];
+      csvContent = brandsCsvContent;
       fileName = 'brands_import.csv';
     } else {
-      headers = ['name', 'description', 'brandName', 'categoryName'];
+      csvContent = modelsCsvContent;
       fileName = 'models_import.csv';
     }
     
-    // Générer le contenu CSV avec les en-têtes uniquement
-    const csvContent = headers.join(',') + '\n';
-    
-    // Encoder le contenu pour un data URL (plus fiable sur Vercel)
-    const encodedContent = encodeURIComponent(csvContent);
-    const dataUrl = `data:text/csv;charset=utf-8,${encodedContent}`;
+    // Créer un Blob avec le contenu CSV complet
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     
     // Créer et déclencher le téléchargement
     const link = document.createElement('a');
-    link.href = dataUrl;
+    link.href = url;
     link.download = fileName;
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    
+    // Nettoyer après un court délai
+    setTimeout(() => {
+      if (document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+      URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
