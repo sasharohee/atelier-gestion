@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -34,6 +34,7 @@ import {
   Tooltip,
   Badge,
   Snackbar,
+  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -93,6 +94,9 @@ const Sales: React.FC = () => {
     addSale,
     updateSale,
     addClient,
+    loadProducts,
+    loadServices,
+    loadParts,
   } = useAppStore();
   
   const { workshopSettings } = useWorkshopSettings();
@@ -118,6 +122,64 @@ const Sales: React.FC = () => {
   // État pour la notification de succès
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // Charger les produits, services et pièces au montage du composant
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        console.log('🔄 Chargement des produits, services et pièces...');
+        await Promise.all([
+          loadProducts(),
+          loadServices(),
+          loadParts(),
+        ]);
+        console.log('✅ Chargement terminé');
+      } catch (error) {
+        console.error('❌ Erreur lors du chargement des données:', error);
+      }
+    };
+    
+    loadData();
+  }, [loadProducts, loadServices, loadParts]);
+
+  // Recharger les données quand le dialogue s'ouvre
+  useEffect(() => {
+    if (newSaleDialogOpen) {
+      const reloadData = async () => {
+        try {
+          console.log('🔄 Rechargement des données pour la nouvelle vente...');
+          await Promise.all([
+            loadProducts(),
+            loadServices(),
+            loadParts(),
+          ]);
+          console.log('✅ Rechargement terminé');
+        } catch (error) {
+          console.error('❌ Erreur lors du rechargement des données:', error);
+        }
+      };
+      
+      reloadData();
+    }
+  }, [newSaleDialogOpen, loadProducts, loadServices, loadParts]);
+
+  // Log des produits disponibles pour débogage
+  useEffect(() => {
+    if (newSaleDialogOpen && selectedItemType === 'product') {
+      console.log('📊 État des produits:', {
+        total: products.length,
+        active: products.filter(p => p.isActive).length,
+        withCategory: products.filter(p => p.isActive && p.category).length,
+        categories: Array.from(new Set(products.filter(p => p.isActive && p.category).map(p => p.category))),
+        sample: products.filter(p => p.isActive).slice(0, 3).map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          isActive: p.isActive
+        }))
+      });
+    }
+  }, [newSaleDialogOpen, selectedItemType, products]);
 
   // Fonction helper pour obtenir la source d'un item
   const getItemSource = (item: SaleItem) => {
@@ -194,50 +256,87 @@ const Sales: React.FC = () => {
     
     switch (selectedItemType) {
       case 'product':
-        items = products
-          .filter(product => product.isActive && product.id) // Vérifier que l'ID existe
-          .map(product => ({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            type: 'product',
-            category: product.category
-          }));
+        const allProducts = products || [];
+        const activeProducts = allProducts.filter(product => {
+          const isValid = product.isActive && product.id && product.name;
+          if (!isValid) {
+            console.log('🔍 Produit filtré:', {
+              id: product.id,
+              name: product.name,
+              isActive: product.isActive,
+              hasId: !!product.id,
+              hasName: !!product.name
+            });
+          }
+          return isValid;
+        });
+        
+        items = activeProducts.map(product => ({
+          id: product.id,
+          name: product.name,
+          price: product.price || 0,
+          type: 'product',
+          category: product.category || ''
+        }));
+        
+        console.log('📦 Produits filtrés:', {
+          total: allProducts.length,
+          active: activeProducts.length,
+          items: items.length,
+          categories: Array.from(new Set(items.map(i => i.category)))
+        });
         break;
       case 'service':
-        items = services
-          .filter(service => service.isActive && service.id) // Vérifier que l'ID existe
+        const allServices = services || [];
+        items = allServices
+          .filter(service => service.isActive && service.id && service.name)
           .map(service => ({
             id: service.id,
             name: service.name,
-            price: service.price,
+            price: service.price || 0,
             type: 'service',
-            category: service.category
+            category: service.category || ''
           }));
         break;
       case 'part':
-        items = parts
-          .filter(part => part.isActive && part.stockQuantity > 0 && part.id) // Vérifier que l'ID existe
+        const allParts = parts || [];
+        items = allParts
+          .filter(part => part.isActive && part.stockQuantity > 0 && part.id && part.name)
           .map(part => ({
             id: part.id,
             name: part.name,
-            price: part.price,
+            price: part.price || 0,
             type: 'part',
-            category: part.brand
+            category: part.brand || ''
           }));
         break;
     }
     
     // Filtrage par catégorie
     if (selectedCategory !== 'all') {
-      items = items.filter(item => item.category === selectedCategory);
+      const beforeCategoryFilter = items.length;
+      items = items.filter(item => {
+        if (!item.category) return false;
+        return item.category.trim() === selectedCategory.trim();
+      });
+      console.log('🏷️ Filtrage par catégorie:', {
+        category: selectedCategory,
+        before: beforeCategoryFilter,
+        after: items.length
+      });
     }
     
     // Filtrage par recherche
     if (searchQuery) {
+      const beforeSearchFilter = items.length;
       items = items.filter(item => 
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
+      console.log('🔍 Filtrage par recherche:', {
+        query: searchQuery,
+        before: beforeSearchFilter,
+        after: items.length
+      });
     }
     
     return items;
@@ -249,18 +348,48 @@ const Sales: React.FC = () => {
     
     switch (selectedItemType) {
       case 'product':
-        categories = Array.from(new Set(products.filter(p => p.isActive).map(p => p.category)));
+        categories = Array.from(new Set(
+          products
+            .filter(p => p.isActive && p.category && p.category.trim() !== '')
+            .map(p => p.category!)
+        ));
         break;
       case 'service':
-        categories = Array.from(new Set(services.filter(s => s.isActive).map(s => s.category)));
+        categories = Array.from(new Set(
+          services
+            .filter(s => s.isActive && s.category && s.category.trim() !== '')
+            .map(s => s.category!)
+        ));
         break;
       case 'part':
-        categories = Array.from(new Set(parts.filter(p => p.isActive && p.stockQuantity > 0).map(p => p.brand)));
+        categories = Array.from(new Set(
+          parts
+            .filter(p => p.isActive && p.stockQuantity > 0 && p.brand && p.brand.trim() !== '')
+            .map(p => p.brand!)
+        ));
         break;
     }
     
     return ['all', ...categories];
   }, [selectedItemType, products, services, parts]);
+
+  // Obtenir le nombre d'articles par catégorie
+  const getCategoryCount = (category: string) => {
+    if (category === 'all') {
+      return filteredItems.length;
+    }
+    
+    switch (selectedItemType) {
+      case 'product':
+        return products.filter(p => p.isActive && p.category === category).length;
+      case 'service':
+        return services.filter(s => s.isActive && s.category === category).length;
+      case 'part':
+        return parts.filter(p => p.isActive && p.stockQuantity > 0 && p.brand === category).length;
+      default:
+        return 0;
+    }
+  };
 
   // Fonction pour obtenir des informations détaillées sur un article
   const getItemDetails = (item: { id: string; name: string; price: number; type: string; category?: string }) => {
@@ -1439,11 +1568,33 @@ const Sales: React.FC = () => {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   label="Catégorie"
                 >
-                  {availableCategories.map((category) => (
-                    <MenuItem key={category} value={category}>
-                      {category === 'all' ? '📂 Toutes les catégories' : `🏷️ ${category}`}
-                    </MenuItem>
-                  ))}
+                  {availableCategories.map((category) => {
+                    const count = getCategoryCount(category);
+                    return (
+                      <MenuItem key={category} value={category}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                          <span>
+                            {category === 'all' ? '📂 Toutes les catégories' : `🏷️ ${category}`}
+                          </span>
+                          <Chip
+                            label={count}
+                            size="small"
+                            sx={{
+                              ml: 'auto',
+                              bgcolor: count > 0 ? 'primary.main' : 'grey.300',
+                              color: count > 0 ? 'white' : 'grey.600',
+                              fontWeight: 600,
+                              fontSize: '0.75rem',
+                              height: 20,
+                              '& .MuiChip-label': {
+                                px: 1,
+                              },
+                            }}
+                          />
+                        </Box>
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
               </FormControl>
 
