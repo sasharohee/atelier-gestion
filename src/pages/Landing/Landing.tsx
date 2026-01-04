@@ -1808,7 +1808,7 @@ const Landing: React.FC = () => {
             }}
           >
             <Typography variant="body2" sx={{ opacity: 0.7 }}>
-              © 2025 Atelier Gestion. Tous droits réservés.
+              © {new Date().getFullYear()} Atelier Gestion. Tous droits réservés.
             </Typography>
             <Box sx={{ display: 'flex', gap: 3 }}>
               <Link

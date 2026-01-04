@@ -110,3 +110,4 @@ Si vous rencontrez une erreur lors de l'exécution :
 
 Si le problème persiste, contactez le support ou consultez la documentation Supabase.
 
+
