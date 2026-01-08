@@ -102,10 +102,10 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
 
   // Charger les paramètres système si nécessaire
   useEffect(() => {
-    if (systemSettings.length === 0) {
+    if (systemSettings.length === 0 || open) {
       loadSystemSettings();
     }
-  }, [systemSettings.length, loadSystemSettings]);
+  }, [systemSettings.length, loadSystemSettings, open]);
 
   // Déterminer si on a une vente ou une réparation
   const isRepair = !!repair;
@@ -141,8 +141,19 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
     siret: getSettingValue('workshop_siret', ''),
     vatNumber: getSettingValue('workshop_vat_number', ''),
     vatRate: getSettingValue('vat_rate', '20'),
-    currency: getSettingValue('currency', 'EUR')
+    currency: getSettingValue('currency', 'EUR'),
+    invoiceQuoteConditions: getSettingValue('invoice_quote_conditions', ''),
+    vatExempt: getSettingValue('vat_exempt', 'false') === 'true'
   };
+
+  // Debug pour vérifier les paramètres
+  useEffect(() => {
+    console.log('🔍 Paramètres Facture & Devis:', {
+      invoiceQuoteConditions: workshopSettingsData.invoiceQuoteConditions,
+      vatExempt: workshopSettingsData.vatExempt,
+      systemSettingsLength: systemSettings.length
+    });
+  }, [workshopSettingsData.invoiceQuoteConditions, workshopSettingsData.vatExempt, systemSettings.length]);
 
   const getStatusLabel = (status: string) => {
     const labels: { [key: string]: string } = {
@@ -398,12 +409,19 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                   <div class="totals-section">
                     <div class="total-row">
                       <span>Sous-total HT :</span>
-                      <span>${formatFromEUR(repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100), currency)}</span>
+                      <span>${workshopSettingsData.vatExempt ? formatFromEUR(repair.totalPrice, currency) : formatFromEUR(repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100), currency)}</span>
                     </div>
-                    <div class="total-row">
-                      <span>TVA (${workshopSettingsData.vatRate}%) :</span>
-                      <span>${formatFromEUR(repair.totalPrice - (repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100)), currency)}</span>
-                    </div>
+                    ${workshopSettingsData.vatExempt ? `
+                      <div class="total-row">
+                        <span>Exonéré de TVA</span>
+                        <span>-</span>
+                      </div>
+                    ` : `
+                      <div class="total-row">
+                        <span>TVA (${workshopSettingsData.vatRate}%) :</span>
+                        <span>${formatFromEUR(repair.totalPrice - (repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100)), currency)}</span>
+                      </div>
+                    `}
                     ${repair.discountPercentage && repair.discountPercentage > 0 ? `
                       <div class="total-row" style="color: #10b981;">
                         <span>Réduction fidélité (${repair.discountPercentage}%) :</span>
@@ -462,26 +480,45 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                       <span>Sous-total HT :</span>
                       <span>${formatFromEUR((data as Sale).subtotal, currency)}</span>
                     </div>
-                    <div class="total-row">
-                      <span>TVA (${workshopSettingsData.vatRate}%) :</span>
-                      <span>${formatFromEUR((data as Sale).tax, currency)}</span>
-                    </div>
-                    <div class="total-row">
-                      <span>TOTAL TTC :</span>
-                      <span>${formatFromEUR((data as Sale).total, currency)}</span>
-                    </div>
+                    ${workshopSettingsData.vatExempt ? `
+                      <div class="total-row">
+                        <span>Exonéré de TVA</span>
+                        <span>-</span>
+                      </div>
+                    ` : `
+                      <div class="total-row">
+                        <span>TVA (${workshopSettingsData.vatRate}%) :</span>
+                        <span>${formatFromEUR((data as Sale).tax, currency)}</span>
+                      </div>
+                    `}
+                    ${(() => {
+                      const sale = data as Sale;
+                      const finalTotal = workshopSettingsData.vatExempt 
+                        ? sale.subtotal - (sale.discountAmount || 0)
+                        : sale.total;
+                      return `
+                        <div class="total-row">
+                          <span>TOTAL TTC :</span>
+                          <span>${formatFromEUR(finalTotal, currency)}</span>
+                        </div>
+                      `;
+                    })()}
                   </div>
                 `;
                 })()}
 
                 <div class="conditions">
                   <h3>CONDITIONS DE PAIEMENT</h3>
-                  <ul>
-                    ${!isRepair ? `<li>Paiement immédiat par ${getPaymentMethodLabel((data as Sale).paymentMethod).toLowerCase()}</li>` : ''}
-                    <li>Facture valable 30 jours à compter de la date d'émission</li>
-                    <li>Aucun escompte en cas de paiement anticipé</li>
-                    <li>Pour toute question, contactez-nous au ${workshopSettingsData.phone} ou par email à ${workshopSettingsData.email}</li>
-                  </ul>
+                  ${workshopSettingsData.invoiceQuoteConditions ? `
+                    <div style="white-space: pre-line;">${workshopSettingsData.invoiceQuoteConditions}</div>
+                  ` : `
+                    <ul>
+                      ${!isRepair ? `<li>Paiement immédiat par ${getPaymentMethodLabel((data as Sale).paymentMethod).toLowerCase()}</li>` : ''}
+                      <li>Facture valable 30 jours à compter de la date d'émission</li>
+                      <li>Aucun escompte en cas de paiement anticipé</li>
+                      <li>Pour toute question, contactez-nous au ${workshopSettingsData.phone} ou par email à ${workshopSettingsData.email}</li>
+                    </ul>
+                  `}
                 </div>
 
                 <div class="footer">
@@ -981,19 +1018,35 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                         {formatFromEUR((data as Repair).totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100), currency)}
                       </Typography>
                     </Box>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      mb: 1 
-                    }}>
-                      <Typography sx={{ fontSize: '16px' }}>
-                        TVA ({workshopSettingsData.vatRate}%) :
-                      </Typography>
-                      <Typography sx={{ fontSize: '16px' }}>
-                        {formatFromEUR((data as Repair).totalPrice - ((data as Repair).totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100)), currency)}
-                      </Typography>
-                    </Box>
+                    {workshopSettingsData.vatExempt ? (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        mb: 1 
+                      }}>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          Exonéré de TVA
+                        </Typography>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          -
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        mb: 1 
+                      }}>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          TVA ({workshopSettingsData.vatRate}%) :
+                        </Typography>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          {formatFromEUR((data as Repair).totalPrice - ((data as Repair).totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100)), currency)}
+                        </Typography>
+                      </Box>
+                    )}
                     {(() => {
                       const repair = data as Repair;
                       return repair.discountPercentage && repair.discountPercentage > 0 ? (
@@ -1236,32 +1289,50 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                         {formatFromEUR((data as Sale).subtotal, currency)}
                       </Typography>
                     </Box>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      mb: 1 
-                    }}>
-                      <Typography sx={{ fontSize: '16px' }}>
-                        TVA ({workshopSettingsData.vatRate}%) :
-                      </Typography>
-                      <Typography sx={{ fontSize: '16px' }}>
-                        {formatFromEUR((data as Sale).tax || 0, currency)}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      mb: 1 
-                    }}>
-                      <Typography sx={{ fontSize: '16px' }}>
-                        Sous-total TTC :
-                      </Typography>
-                      <Typography sx={{ fontSize: '16px' }}>
-                        {formatFromEUR((data as Sale).subtotal + ((data as Sale).tax || 0), currency)}
-                      </Typography>
-                    </Box>
+                    {workshopSettingsData.vatExempt ? (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        mb: 1 
+                      }}>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          Exonéré de TVA
+                        </Typography>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          -
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        mb: 1 
+                      }}>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          TVA ({workshopSettingsData.vatRate}%) :
+                        </Typography>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          {formatFromEUR((data as Sale).tax || 0, currency)}
+                        </Typography>
+                      </Box>
+                    )}
+                    {!workshopSettingsData.vatExempt && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        mb: 1 
+                      }}>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          Sous-total TTC :
+                        </Typography>
+                        <Typography sx={{ fontSize: '16px' }}>
+                          {formatFromEUR((data as Sale).subtotal + ((data as Sale).tax || 0), currency)}
+                        </Typography>
+                      </Box>
+                    )}
                     {(() => {
                       const sale = data as Sale;
                       return sale.discountPercentage && sale.discountPercentage > 0 ? (
@@ -1298,7 +1369,9 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                         fontSize: '16px',
                         color: '#1976d2'
                       }}>
-                        {formatFromEUR((data as Sale).total, currency)}
+                        {workshopSettingsData.vatExempt 
+                          ? formatFromEUR((data as Sale).subtotal - ((data as Sale).discountAmount || 0), currency)
+                          : formatFromEUR((data as Sale).total, currency)}
                       </Typography>
                     </Box>
                   </Box>
@@ -1321,12 +1394,38 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
               }}>
                 CONDITIONS DE PAIEMENT
               </Typography>
-              <Box component="ul" sx={{ 
-                listStyle: 'none', 
-                p: 0, 
-                m: 0 
-              }}>
-                {!isRepair && (
+              {workshopSettingsData.invoiceQuoteConditions ? (
+                <Typography sx={{ 
+                  color: '#666', 
+                  fontSize: '13px', 
+                  whiteSpace: 'pre-line',
+                  lineHeight: 1.6
+                }}>
+                  {workshopSettingsData.invoiceQuoteConditions}
+                </Typography>
+              ) : (
+                <Box component="ul" sx={{ 
+                  listStyle: 'none', 
+                  p: 0, 
+                  m: 0 
+                }}>
+                  {!isRepair && (
+                    <Box component="li" sx={{ 
+                      color: '#666', 
+                      fontSize: '13px', 
+                      mb: 0.75, 
+                      pl: 2, 
+                      position: 'relative',
+                      '&:before': {
+                        content: '"•"',
+                        position: 'absolute',
+                        left: 0,
+                        color: '#666'
+                      }
+                    }}>
+                      Paiement immédiat par {getPaymentMethodLabel((data as Sale).paymentMethod).toLowerCase()}
+                    </Box>
+                  )}
                   <Box component="li" sx={{ 
                     color: '#666', 
                     fontSize: '13px', 
@@ -1340,55 +1439,40 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                       color: '#666'
                     }
                   }}>
-                    Paiement immédiat par {getPaymentMethodLabel((data as Sale).paymentMethod).toLowerCase()}
+                    Facture valable 30 jours à compter de la date d'émission
                   </Box>
-                )}
-                <Box component="li" sx={{ 
-                  color: '#666', 
-                  fontSize: '13px', 
-                  mb: 0.75, 
-                  pl: 2, 
-                  position: 'relative',
-                  '&:before': {
-                    content: '"•"',
-                    position: 'absolute',
-                    left: 0,
-                    color: '#666'
-                  }
-                }}>
-                  Facture valable 30 jours à compter de la date d'émission
+                  <Box component="li" sx={{ 
+                    color: '#666', 
+                    fontSize: '13px', 
+                    mb: 0.75, 
+                    pl: 2, 
+                    position: 'relative',
+                    '&:before': {
+                      content: '"•"',
+                      position: 'absolute',
+                      left: 0,
+                      color: '#666'
+                    }
+                  }}>
+                    Aucun escompte en cas de paiement anticipé
+                  </Box>
+                  <Box component="li" sx={{ 
+                    color: '#666', 
+                    fontSize: '13px', 
+                    mb: 0.75, 
+                    pl: 2, 
+                    position: 'relative',
+                    '&:before': {
+                      content: '"•"',
+                      position: 'absolute',
+                      left: 0,
+                      color: '#666'
+                    }
+                  }}>
+                    Pour toute question, contactez-nous au {workshopSettingsData.phone} ou par email à {workshopSettingsData.email}
+                  </Box>
                 </Box>
-                <Box component="li" sx={{ 
-                  color: '#666', 
-                  fontSize: '13px', 
-                  mb: 0.75, 
-                  pl: 2, 
-                  position: 'relative',
-                  '&:before': {
-                    content: '"•"',
-                    position: 'absolute',
-                    left: 0,
-                    color: '#666'
-                  }
-                }}>
-                  Aucun escompte en cas de paiement anticipé
-                </Box>
-                <Box component="li" sx={{ 
-                  color: '#666', 
-                  fontSize: '13px', 
-                  mb: 0.75, 
-                  pl: 2, 
-                  position: 'relative',
-                  '&:before': {
-                    content: '"•"',
-                    position: 'absolute',
-                    left: 0,
-                    color: '#666'
-                  }
-                }}>
-                  Pour toute question, contactez-nous au {workshopSettingsData.phone} ou par email à {workshopSettingsData.email}
-                </Box>
-              </Box>
+              )}
             </Box>
 
             {/* Pied de page */}

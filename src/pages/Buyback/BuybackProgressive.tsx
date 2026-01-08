@@ -40,6 +40,7 @@ import {
   Cancel as CancelIcon,
   AttachMoney as AttachMoneyIcon,
   Schedule as ScheduleIcon,
+  FlashOn as FlashOnIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -47,6 +48,7 @@ import { Buyback, BuybackStatus } from '../../types';
 import { buybackService } from '../../services/supabaseService';
 import { toast } from 'react-hot-toast';
 import BuybackForm from './BuybackForm';
+import BuybackExpressForm from './BuybackExpressForm';
 import BuybackTicket from '../../components/BuybackTicket';
 import BuybackProductsTvaMarge from './BuybackProductsTvaMarge';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
@@ -63,6 +65,7 @@ const BuybackProgressive: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<BuybackStatus | 'all'>('all');
   const [showForm, setShowForm] = useState(false);
+  const [isExpressMode, setIsExpressMode] = useState(false);
   const [selectedBuyback, setSelectedBuyback] = useState<Buyback | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showTicket, setShowTicket] = useState(false);
@@ -143,6 +146,7 @@ const BuybackProgressive: React.FC = () => {
 
   const handleEdit = (buyback: Buyback) => {
     setSelectedBuyback(buyback);
+    setIsExpressMode(false);
     setShowForm(true);
   };
 
@@ -306,10 +310,23 @@ const BuybackProgressive: React.FC = () => {
           <Grid item xs={12} sm={12} md={5}>
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
               <Button
+                variant="outlined"
+                startIcon={<FlashOnIcon />}
+                onClick={() => {
+                  setSelectedBuyback(null);
+                  setIsExpressMode(true);
+                  setShowForm(true);
+                }}
+                sx={{ borderColor: '#f59e0b', color: '#f59e0b', '&:hover': { borderColor: '#d97706', backgroundColor: '#fef3c7' } }}
+              >
+                Rachat expresse
+              </Button>
+              <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => {
                   setSelectedBuyback(null);
+                  setIsExpressMode(false);
                   setShowForm(true);
                 }}
                 sx={{ backgroundColor: '#10b981', '&:hover': { backgroundColor: '#059669' } }}
@@ -432,15 +449,35 @@ const BuybackProgressive: React.FC = () => {
       {showForm && (
         <Dialog open={showForm} onClose={() => setShowForm(false)} maxWidth="lg" fullWidth>
           <DialogContent sx={{ p: 0 }}>
-            <BuybackForm
-              buyback={selectedBuyback || undefined}
-              onSave={(buyback) => {
-                setShowForm(false);
-                loadBuybacks();
-                toast.success(selectedBuyback ? 'Rachat modifié avec succès' : 'Rachat créé avec succès');
-              }}
-              onCancel={() => setShowForm(false)}
-            />
+            {isExpressMode ? (
+              <BuybackExpressForm
+                buyback={selectedBuyback || undefined}
+                onSave={(buyback) => {
+                  setShowForm(false);
+                  setIsExpressMode(false);
+                  loadBuybacks();
+                  toast.success(selectedBuyback ? 'Rachat modifié avec succès' : 'Rachat expresse créé avec succès');
+                }}
+                onCancel={() => {
+                  setShowForm(false);
+                  setIsExpressMode(false);
+                }}
+              />
+            ) : (
+              <BuybackForm
+                buyback={selectedBuyback || undefined}
+                onSave={(buyback) => {
+                  setShowForm(false);
+                  setIsExpressMode(false);
+                  loadBuybacks();
+                  toast.success(selectedBuyback ? 'Rachat modifié avec succès' : 'Rachat créé avec succès');
+                }}
+                onCancel={() => {
+                  setShowForm(false);
+                  setIsExpressMode(false);
+                }}
+              />
+            )}
           </DialogContent>
         </Dialog>
       )}

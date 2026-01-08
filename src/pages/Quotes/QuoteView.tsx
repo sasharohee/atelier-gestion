@@ -59,8 +59,24 @@ const QuoteView: React.FC<QuoteViewProps> = ({
   client,
   onStatusChange,
 }) => {
-  const { addRepair, repairStatuses } = useAppStore();
+  const { addRepair, repairStatuses, systemSettings, loadSystemSettings } = useAppStore();
   const { workshopSettings, isLoading: settingsLoading } = useWorkshopSettings();
+  
+  // Charger les paramètres système si nécessaire
+  React.useEffect(() => {
+    if (systemSettings.length === 0 || open) {
+      loadSystemSettings();
+    }
+  }, [systemSettings.length, loadSystemSettings, open]);
+  
+  // Récupérer les paramètres Facture & Devis
+  const getSettingValue = (key: string, defaultValue: string = '') => {
+    const setting = systemSettings.find(s => s.key === key);
+    return setting ? setting.value : defaultValue;
+  };
+  
+  const invoiceQuoteConditions = getSettingValue('invoice_quote_conditions', '');
+  const vatExempt = getSettingValue('vat_exempt', 'false') === 'true';
   
   // Normaliser les items du devis (au cas où ils viennent de JSONB non parsé)
   const normalizeQuoteItems = (items: any): any[] => {
@@ -556,8 +572,13 @@ const QuoteView: React.FC<QuoteViewProps> = ({
       doc.text(formatFromEUR(quote.subtotal || 0, workshopSettings.currency), pageWidth - margin, yPosition, { align: 'right' });
       yPosition += 6;
       // TVA
-      doc.text(`TVA (${workshopSettings?.vatRate || 20}%):`, totalsX, yPosition, { align: 'right' });
-      doc.text(formatFromEUR(quote.tax || 0, workshopSettings.currency), pageWidth - margin, yPosition, { align: 'right' });
+      if (vatExempt) {
+        doc.text('Exonéré de TVA', totalsX, yPosition, { align: 'right' });
+        doc.text('-', pageWidth - margin, yPosition, { align: 'right' });
+      } else {
+        doc.text(`TVA (${workshopSettings?.vatRate || 20}%):`, totalsX, yPosition, { align: 'right' });
+        doc.text(formatFromEUR(quote.tax || 0, workshopSettings.currency), pageWidth - margin, yPosition, { align: 'right' });
+      }
       yPosition += 10;
       // TOTAL TTC - ligne orange au-dessus, puis texte en dessous (comme dans le HTML)
       // Dessiner la ligne orange AVANT le texte avec un espacement suffisant (2px comme border-top)
@@ -607,10 +628,11 @@ const QuoteView: React.FC<QuoteViewProps> = ({
       }
 
       // Conditions - style identique au HTML (notes-section)
-      if (quote.terms) {
+      const conditionsText = invoiceQuoteConditions || quote.terms;
+      if (conditionsText) {
         yPosition += 5;
         const termsStartY = yPosition;
-        const termsLines = doc.splitTextToSize(quote.terms, pageWidth - 2 * margin - 30);
+        const termsLines = doc.splitTextToSize(conditionsText, pageWidth - 2 * margin - 30);
         const termsHeight = termsLines.length * 5 + 10;
         
         // Fond gris clair comme dans le HTML (#f9f9f9)
@@ -883,14 +905,25 @@ const QuoteView: React.FC<QuoteViewProps> = ({
                   {formatFromEUR(quote.subtotal, workshopSettings.currency)}
                 </Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                <Typography variant="body2">
-                  TVA ({settingsLoading ? '...' : workshopSettings.vatRate}%) :
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {formatFromEUR(quote.tax, workshopSettings.currency)}
-                </Typography>
-              </Box>
+              {vatExempt ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                  <Typography variant="body2">
+                    Exonéré de TVA
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    -
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                  <Typography variant="body2">
+                    TVA ({settingsLoading ? '...' : workshopSettings.vatRate}%) :
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    {formatFromEUR(quote.tax, workshopSettings.currency)}
+                  </Typography>
+                </Box>
+              )}
               <Divider sx={{ my: 1 }} />
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -904,7 +937,7 @@ const QuoteView: React.FC<QuoteViewProps> = ({
           </Box>
 
           {/* Notes et conditions */}
-          {(quote.notes || quote.terms) && (
+          {(quote.notes || invoiceQuoteConditions || quote.terms) && (
             <Grid container spacing={2} sx={{ mb: 3 }}>
               {quote.notes && (
                 <Grid item xs={12} md={6}>
@@ -918,14 +951,14 @@ const QuoteView: React.FC<QuoteViewProps> = ({
                   </Box>
                 </Grid>
               )}
-              {quote.terms && (
+              {(invoiceQuoteConditions || quote.terms) && (
                 <Grid item xs={12} md={6}>
                   <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
                     <Typography variant="h6" gutterBottom>
                       Conditions et termes
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {quote.terms}
+                    <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
+                      {invoiceQuoteConditions || quote.terms}
                     </Typography>
                   </Box>
                 </Grid>

@@ -40,6 +40,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Client, Product, Service, Part, Device } from '../../types';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
+import { formatFromEUR } from '../../utils/currencyUtils';
 import RepairForm, { RepairFormData } from './RepairForm';
 
 interface QuoteItemForm {
@@ -361,7 +362,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                                 {item.name}
                               </Typography>
                               <Typography variant="body2" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                                {item.price.toLocaleString('fr-FR')} €
+                                {formatFromEUR(item.price, workshopSettings?.currency || 'EUR')}
                               </Typography>
                             </Box>
                             
@@ -421,7 +422,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                             {item.name}
                           </Typography>
                           <Typography variant="body2" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                            {item.totalPrice.toLocaleString('fr-FR')} €
+                            {formatFromEUR(item.totalPrice, workshopSettings?.currency || 'EUR')}
                           </Typography>
                         </Box>
                         
@@ -438,7 +439,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                               sx={{ width: '80px' }}
                             />
                             <Typography variant="caption" color="text.secondary">
-                              {item.unitPrice.toLocaleString('fr-FR')} € l'unité
+                              {formatFromEUR(item.unitPrice, workshopSettings?.currency || 'EUR')} l'unité
                             </Typography>
                           </Box>
                           
@@ -480,7 +481,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                     <Typography variant="body2">Sous-total :</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {totals.subtotal.toLocaleString('fr-FR')} €
+                      {formatFromEUR(totals.subtotal, workshopSettings?.currency || 'EUR')}
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
@@ -488,7 +489,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                       TVA ({settingsLoading ? '...' : workshopSettings.vatRate}%) :
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {totals.tax.toLocaleString('fr-FR')} €
+                      {formatFromEUR(totals.tax, workshopSettings?.currency || 'EUR')}
                     </Typography>
                   </Box>
                   <Divider sx={{ my: 1 }} />
@@ -497,7 +498,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                       Total :
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                      {totals.total.toLocaleString('fr-FR')} €
+                      {formatFromEUR(totals.total, workshopSettings?.currency || 'EUR')}
                     </Typography>
                   </Box>
                 </Box>

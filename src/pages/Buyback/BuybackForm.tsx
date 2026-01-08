@@ -817,10 +817,10 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
         return (
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Alert severity="success" sx={{ mb: 3 }}>
+              <Alert severity="warning" sx={{ mb: 3 }}>
                 <Typography variant="body2">
-                  <strong>Nouveau système d'estimation :</strong> Le prix est maintenant calculé automatiquement 
-                  selon le modèle exact, l'état, les accessoires et tous les critères d'évaluation.
+                  <strong>Version bêta :</strong> La partie évaluation est actuellement en bêta. 
+                  Les prix calculés automatiquement ne sont pas corrects et doivent être ajustés manuellement.
                 </Typography>
               </Alert>
             </Grid>

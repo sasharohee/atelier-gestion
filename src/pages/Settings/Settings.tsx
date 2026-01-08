@@ -25,6 +25,10 @@ interface SettingsData {
     vatRate: string;
     currency: string;
   };
+  invoiceQuote: {
+    conditions: string;
+    vatExempt: boolean;
+  };
 }
 
 const Settings: React.FC = () => {
@@ -59,6 +63,10 @@ const Settings: React.FC = () => {
       vatNumber: '',
       vatRate: '20',
       currency: 'EUR'
+    },
+    invoiceQuote: {
+      conditions: '',
+      vatExempt: false
     }
   });
 
@@ -137,6 +145,12 @@ const Settings: React.FC = () => {
           case 'user_phone':
             newSettings.profile.phone = setting.value;
             break;
+          case 'invoice_quote_conditions':
+            newSettings.invoiceQuote.conditions = setting.value;
+            break;
+          case 'vat_exempt':
+            newSettings.invoiceQuote.vatExempt = setting.value === 'true';
+            break;
         }
       });
       
@@ -184,7 +198,11 @@ const Settings: React.FC = () => {
         { key: 'user_first_name', value: settings.profile.firstName },
         { key: 'user_last_name', value: settings.profile.lastName },
         { key: 'user_email', value: settings.profile.email },
-        { key: 'user_phone', value: settings.profile.phone }
+        { key: 'user_phone', value: settings.profile.phone },
+        
+        // Paramètres Facture & Devis
+        { key: 'invoice_quote_conditions', value: settings.invoiceQuote.conditions },
+        { key: 'vat_exempt', value: settings.invoiceQuote.vatExempt ? 'true' : 'false' }
       ];
 
       // Sauvegarder dans la base de données
@@ -329,9 +347,9 @@ const Settings: React.FC = () => {
 
   const tabs = [
     { label: 'Profil', content: 'profile' },
-
     { label: 'Sécurité', content: 'security' },
-    { label: 'Atelier', content: 'atelier' }
+    { label: 'Atelier', content: 'atelier' },
+    { label: 'Facture & Devis', content: 'invoiceQuote' }
   ];
 
   return (
@@ -1341,6 +1359,187 @@ const Settings: React.FC = () => {
                     <option value="USD">USD ($)</option>
                     <option value="CHF">CHF (CHF)</option>
                   </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 3 && (
+            <div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '28px',
+                padding: '20px',
+                backgroundColor: 'rgba(139, 69, 19, 0.05)',
+                borderRadius: theme.shape.borderRadius,
+                border: `1px solid ${theme.palette.divider}`
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: '#8B4513',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: '16px',
+                  fontSize: '20px'
+                }}>
+                  📄
+                </div>
+                <div>
+                  <h2 style={{ 
+                    margin: '0 0 4px 0', 
+                    fontSize: theme.typography.h5.fontSize, 
+                    fontWeight: theme.typography.h5.fontWeight, 
+                    color: theme.palette.text.primary 
+                  }}>
+                    Facture & Devis
+                  </h2>
+                  <p style={{
+                    margin: '0',
+                    color: theme.palette.text.secondary,
+                    fontSize: theme.typography.body2.fontSize
+                  }}>
+                    Configurez les conditions et politiques de vos factures et devis
+                  </p>
+                </div>
+              </div>
+              
+              {/* Message informatif */}
+              <div style={{
+                padding: '16px 20px',
+                backgroundColor: 'rgba(139, 69, 19, 0.1)',
+                border: '1px solid rgba(139, 69, 19, 0.3)',
+                borderRadius: theme.shape.borderRadius,
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  fontSize: '20px',
+                  color: '#8B4513'
+                }}>
+                  ℹ️
+                </div>
+                <div>
+                  <p style={{
+                    margin: '0',
+                    color: '#654321',
+                    fontSize: theme.typography.body2.fontSize,
+                    fontWeight: '500',
+                    lineHeight: '1.4'
+                  }}>
+                    <strong>Personnalisez vos documents :</strong> Définissez les conditions générales qui apparaîtront sur vos factures et devis. Si vous êtes exonéré de TVA, cochez la case correspondante.
+                  </p>
+                </div>
+              </div>
+              
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px', 
+                  fontWeight: theme.typography.button.fontWeight,
+                  color: theme.palette.text.primary,
+                  fontSize: theme.typography.body2.fontSize
+                }}>
+                  Conditions / Politiques des factures et devis
+                </label>
+                <textarea
+                  value={settings.invoiceQuote.conditions}
+                  placeholder="Ex: Facture valable 30 jours à compter de la date d'émission. Aucun escompte en cas de paiement anticipé. Pour toute question, contactez-nous."
+                  onChange={(e) => setSettings(prev => ({
+                    ...prev,
+                    invoiceQuote: { ...prev.invoiceQuote, conditions: e.target.value }
+                  }))}
+                  rows={8}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `2px solid ${theme.palette.divider}`,
+                    borderRadius: theme.shape.borderRadius,
+                    fontSize: theme.typography.body1.fontSize,
+                    boxSizing: 'border-box',
+                    backgroundColor: theme.palette.background.paper,
+                    color: theme.palette.text.primary,
+                    transition: 'all 0.2s ease-in-out',
+                    fontFamily: theme.typography.fontFamily,
+                    resize: 'vertical',
+                    minHeight: '120px'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = theme.palette.primary.main;
+                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = theme.palette.divider;
+                    e.target.style.boxShadow = 'none';
+                  }}
+                />
+                <p style={{
+                  margin: '8px 0 0 0',
+                  color: theme.palette.text.secondary,
+                  fontSize: '12px',
+                  fontStyle: 'italic'
+                }}>
+                  Ces conditions seront affichées sur toutes vos factures et devis. Laissez vide pour utiliser les conditions par défaut.
+                </p>
+              </div>
+              
+              <div style={{ 
+                padding: '20px', 
+                backgroundColor: theme.palette.background.default, 
+                borderRadius: theme.shape.borderRadius,
+                marginBottom: '24px',
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: theme.shadows[1]
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px'
+                }}>
+                  <input
+                    type="checkbox"
+                    id="vatExempt"
+                    checked={settings.invoiceQuote.vatExempt}
+                    onChange={(e) => setSettings(prev => ({
+                      ...prev,
+                      invoiceQuote: { ...prev.invoiceQuote, vatExempt: e.target.checked }
+                    }))}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      cursor: 'pointer',
+                      marginTop: '2px',
+                      flexShrink: 0
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <label 
+                      htmlFor="vatExempt"
+                      style={{ 
+                        display: 'block',
+                        fontWeight: theme.typography.button.fontWeight,
+                        color: theme.palette.text.primary,
+                        fontSize: theme.typography.body1.fontSize,
+                        cursor: 'pointer',
+                        marginBottom: '8px'
+                      }}
+                    >
+                      Exonéré de TVA
+                    </label>
+                    <p style={{
+                      margin: '0',
+                      color: theme.palette.text.secondary,
+                      fontSize: theme.typography.body2.fontSize,
+                      lineHeight: '1.5'
+                    }}>
+                      Si cette case est cochée, "Exonéré de TVA" sera affiché sur vos factures et devis au lieu du calcul de la TVA. Le total TTC sera égal au total HT.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

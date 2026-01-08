@@ -26,7 +26,6 @@ import {
   ShoppingBag as AccessoriesIcon,
   Security as WarrantyIcon,
   Lock as LockIcon,
-  Info as InfoIcon,
 } from '@mui/icons-material';
 import { BuybackPricing } from '../types';
 import { formatFromEUR } from '../utils/currencyUtils';
@@ -316,17 +315,6 @@ const BuybackPriceBreakdown: React.FC<BuybackPriceBreakdownProps> = ({
               )}
             </CardContent>
           </Card>
-        </Grid>
-
-        {/* Note explicative */}
-        <Grid item xs={12}>
-          <Alert severity="info" icon={<InfoIcon />}>
-            <Typography variant="body2">
-              <strong>Note:</strong> Cette estimation est basée sur les prix de référence du marché 
-              et les critères d'évaluation configurés. Le prix final peut être ajusté selon 
-              les conditions spécifiques de l'appareil.
-            </Typography>
-          </Alert>
         </Grid>
       </Grid>
     );

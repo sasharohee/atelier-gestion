@@ -98,9 +98,20 @@ const Quotes: React.FC = () => {
     loadQuotes,
     getClientById,
     getDeviceById,
+    systemSettings,
+    loadSystemSettings,
   } = useAppStore();
   
   const { workshopSettings } = useWorkshopSettings();
+  
+  // Récupérer les paramètres Facture & Devis
+  const getSettingValue = (key: string, defaultValue: string = '') => {
+    const setting = systemSettings.find(s => s.key === key);
+    return setting ? setting.value : defaultValue;
+  };
+  
+  const invoiceQuoteConditions = getSettingValue('invoice_quote_conditions', '');
+  const vatExempt = getSettingValue('vat_exempt', 'false') === 'true';
   
   // Valeur par défaut pour éviter les erreurs
   const currency = workshopSettings?.currency || 'EUR';
@@ -118,6 +129,11 @@ const Quotes: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [terms, setTerms] = useState('');
 
+  // Charger les paramètres système si nécessaire
+  useEffect(() => {
+    loadSystemSettings();
+  }, [loadSystemSettings]);
+
   // Charger les devis au démarrage
   useEffect(() => {
     loadQuotes();
@@ -126,12 +142,11 @@ const Quotes: React.FC = () => {
   // Calcul des totaux
   const totals = useMemo(() => {
     const subtotal = quoteItems.reduce((sum, item) => sum + item.totalPrice, 0);
-    const vatRate = parseFloat(workshopSettings.vatRate) / 100; // Convertir le pourcentage en décimal
-    const tax = subtotal * vatRate;
+    const tax = vatExempt ? 0 : subtotal * (parseFloat(workshopSettings.vatRate) / 100); // Convertir le pourcentage en décimal
     const total = subtotal + tax;
     
     return { subtotal, tax, total };
-  }, [quoteItems, workshopSettings.vatRate]);
+  }, [quoteItems, workshopSettings.vatRate, vatExempt]);
 
   // Filtrage des articles selon le type et la recherche
   const filteredItems = useMemo(() => {
@@ -958,10 +973,17 @@ const Quotes: React.FC = () => {
             <span>Sous-total HT:</span>
             <span>${formatFromEUR(quote.subtotal || 0, currency)}</span>
           </div>
-          <div class="total-line">
-            <span>TVA (${workshopSettings.vatRate || 20}%):</span>
-            <span>${formatFromEUR(quote.tax || 0, currency)}</span>
-          </div>
+          ${vatExempt ? `
+            <div class="total-line">
+              <span>Exonéré de TVA</span>
+              <span>-</span>
+            </div>
+          ` : `
+            <div class="total-line">
+              <span>TVA (${workshopSettings.vatRate || 20}%):</span>
+              <span>${formatFromEUR(quote.tax || 0, currency)}</span>
+            </div>
+          `}
           <div class="total-line final">
             <span>TOTAL TTC:</span>
             <span>${formatFromEUR(quote.total || 0, currency)}</span>
@@ -975,7 +997,12 @@ const Quotes: React.FC = () => {
           </div>
         ` : ''}
 
-        ${quote.terms ? `
+        ${invoiceQuoteConditions ? `
+          <div class="notes-section">
+            <h4>Conditions :</h4>
+            <p style="white-space: pre-line;">${invoiceQuoteConditions}</p>
+          </div>
+        ` : quote.terms ? `
           <div class="notes-section">
             <h4>Conditions :</h4>
             <p>${quote.terms}</p>
