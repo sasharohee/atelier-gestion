@@ -143,7 +143,8 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
     vatRate: getSettingValue('vat_rate', '20'),
     currency: getSettingValue('currency', 'EUR'),
     invoiceQuoteConditions: getSettingValue('invoice_quote_conditions', ''),
-    vatExempt: getSettingValue('vat_exempt', 'false') === 'true'
+    vatExempt: getSettingValue('vat_exempt', 'false') === 'true',
+    vatNotApplicableArticle293B: getSettingValue('vat_not_applicable_article_293b', 'false') === 'true'
   };
 
   // Debug pour vérifier les paramètres
@@ -237,73 +238,230 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
             <head>
               <title>Facture ${data.id.slice(0, 8)}</title>
               <style>
+                @page { size: A4; margin: 10mm; }
                 * { margin: 0; padding: 0; box-sizing: border-box; }
                 body { 
                   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-                  margin: 0; padding: 24px; background: white; color: #333; line-height: 1.6;
+                  font-size: 11px;
+                  margin: 0; 
+                  padding: 12px; 
+                  background: white; 
+                  color: #333; 
+                  line-height: 1.4;
+                  max-height: 100vh;
                 }
-                .invoice-container { max-width: 800px; margin: 0 auto; background: white; }
-                .header { text-align: center; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-                .header h1 { font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: #333; }
-                .header .subtitle { font-size: 14px; color: #666; margin-bottom: 16px; }
-                .header .contact-info { font-size: 12px; color: #666; line-height: 1.8; }
-                .invoice-details { display: flex; justify-content: space-between; margin-bottom: 40px; }
-                .client-section, .invoice-section { flex: 1; }
-                .section-title { font-weight: 600; margin-bottom: 12px; color: #333; font-size: 14px; }
-                .client-info, .invoice-info { font-size: 14px; color: #666; line-height: 1.6; }
-                .client-name { font-weight: 600; color: #333; margin-bottom: 8px; }
-                .invoice-number { font-weight: 600; color: #1976d2; font-size: 16px; margin-bottom: 8px; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                th { background-color: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; color: #333; border-bottom: 1px solid #eee; }
-                td { padding: 12px; border-bottom: 1px solid #f1f1f1; }
-                .totals-section { margin-bottom: 30px; }
-                .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
-                .total-row:last-child { font-weight: 600; font-size: 16px; color: #1976d2; border-top: 1px solid #eee; padding-top: 8px; }
-                .conditions { background-color: #f8f9fa; padding: 20px; border-radius: 4px; margin-bottom: 30px; }
-                .conditions h3 { margin-bottom: 12px; font-size: 16px; color: #333; }
+                .invoice-container { max-width: 100%; margin: 0 auto; background: white; }
+                
+                /* Header compact */
+                .header { 
+                  display: flex; 
+                  justify-content: space-between; 
+                  align-items: flex-start;
+                  margin-bottom: 12px; 
+                  padding-bottom: 10px; 
+                  border-bottom: 2px solid #1976d2; 
+                }
+                .header-left h1 { font-size: 18px; font-weight: 700; color: #1976d2; margin-bottom: 2px; }
+                .header-left .subtitle { font-size: 10px; color: #666; }
+                .header-left .contact-info { font-size: 9px; color: #888; margin-top: 4px; }
+                .header-right { text-align: right; }
+                .header-right .invoice-title { font-size: 20px; font-weight: 700; color: #333; }
+                .header-right .invoice-number { font-size: 12px; color: #1976d2; font-weight: 600; }
+                .header-right .invoice-date { font-size: 10px; color: #666; margin-top: 2px; }
+                
+                /* Info sections side by side */
+                .info-row { 
+                  display: flex; 
+                  gap: 20px; 
+                  margin-bottom: 12px; 
+                }
+                .info-box { 
+                  flex: 1; 
+                  background: #f8f9fa; 
+                  padding: 8px 10px; 
+                  border-radius: 4px;
+                  border-left: 3px solid #1976d2;
+                }
+                .info-box.client { border-left-color: #10b981; }
+                .info-box h4 { 
+                  font-size: 9px; 
+                  text-transform: uppercase; 
+                  color: #888; 
+                  margin-bottom: 4px;
+                  letter-spacing: 0.5px;
+                }
+                .info-box .name { font-weight: 600; color: #333; font-size: 12px; margin-bottom: 2px; }
+                .info-box .detail { font-size: 10px; color: #666; line-height: 1.3; }
+                
+                /* Tables compact */
+                table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10px; }
+                th { 
+                  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%); 
+                  color: white;
+                  padding: 6px 8px; 
+                  text-align: left; 
+                  font-weight: 600; 
+                  font-size: 9px;
+                  text-transform: uppercase;
+                }
+                td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+                tr:nth-child(even) { background: #fafafa; }
+                
+                /* Totals compact */
+                .totals-section { 
+                  display: flex;
+                  justify-content: flex-end;
+                  margin-bottom: 10px;
+                }
+                .totals-box {
+                  width: 220px;
+                  background: #f8f9fa;
+                  border-radius: 4px;
+                  padding: 8px;
+                  border: 1px solid #e0e0e0;
+                }
+                .total-row { 
+                  display: flex; 
+                  justify-content: space-between; 
+                  padding: 3px 0;
+                  font-size: 10px; 
+                }
+                .total-row.final { 
+                  font-weight: 700; 
+                  font-size: 12px; 
+                  color: #1976d2; 
+                  border-top: 1px solid #ddd; 
+                  margin-top: 4px;
+                  padding-top: 6px;
+                }
+                
+                /* Device & repair info compact */
+                .compact-info { 
+                  display: flex; 
+                  gap: 10px; 
+                  margin-bottom: 10px; 
+                }
+                .compact-box {
+                  flex: 1;
+                  background: #f8f9fa;
+                  padding: 8px;
+                  border-radius: 4px;
+                  font-size: 10px;
+                }
+                .compact-box h5 { 
+                  font-size: 9px; 
+                  text-transform: uppercase; 
+                  color: #1976d2; 
+                  margin-bottom: 4px;
+                  font-weight: 600;
+                }
+                .compact-box p { margin: 2px 0; color: #555; }
+                .compact-box strong { color: #333; }
+                
+                /* VAT notice */
+                .vat-notice {
+                  background: #fff9e6;
+                  border: 1px solid #ffd700;
+                  border-radius: 4px;
+                  padding: 6px;
+                  text-align: center;
+                  margin: 8px 0;
+                }
+                .vat-notice p {
+                  color: #856404;
+                  font-size: 10px;
+                  font-style: italic;
+                  margin: 0;
+                }
+                
+                /* Conditions compact */
+                .conditions { 
+                  background: #f8f9fa; 
+                  padding: 8px 10px; 
+                  border-radius: 4px; 
+                  margin-bottom: 10px;
+                  font-size: 9px;
+                }
+                .conditions h3 { 
+                  font-size: 9px; 
+                  text-transform: uppercase;
+                  color: #888; 
+                  margin-bottom: 4px;
+                  letter-spacing: 0.5px;
+                }
                 .conditions ul { list-style: none; padding: 0; }
-                .conditions li { margin-bottom: 6px; font-size: 14px; color: #666; }
-                .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
-                .footer h3 { margin-bottom: 8px; font-size: 18px; color: #333; }
-                .footer p { font-size: 12px; color: #666; margin-bottom: 4px; }
-                .thank-you { font-weight: 600; color: #1976d2; margin-top: 12px; }
+                .conditions li { margin-bottom: 2px; color: #666; }
+                .conditions li:before { content: "•"; color: #1976d2; margin-right: 6px; }
+                
+                /* Footer compact */
+                .footer { 
+                  text-align: center; 
+                  padding-top: 8px; 
+                  border-top: 1px solid #eee;
+                  font-size: 9px;
+                  color: #888;
+                }
+                .footer .company { font-weight: 600; color: #333; font-size: 11px; margin-bottom: 2px; }
+                .footer .thank-you { 
+                  color: #1976d2; 
+                  font-weight: 600; 
+                  margin-top: 4px;
+                  font-size: 10px;
+                }
+                
+                /* Status badges */
+                .badge { 
+                  display: inline-block;
+                  padding: 2px 6px;
+                  border-radius: 10px;
+                  font-size: 8px;
+                  font-weight: 600;
+                }
+                .badge-paid { background: #d4edda; color: #155724; }
+                .badge-pending { background: #fff3cd; color: #856404; }
+                
+                @media print {
+                  body { padding: 0; }
+                  .invoice-container { page-break-inside: avoid; }
+                }
               </style>
             </head>
             <body>
               <div class="invoice-container">
+                <!-- Header compact avec logo à gauche et numéro facture à droite -->
                 <div class="header">
-                  <h1>${workshopSettingsData.name}</h1>
-                  <div class="subtitle">${workshopSettingsData.address}</div>
-                  <div class="contact-info">
-                    Tél: ${workshopSettingsData.phone} • Email: ${workshopSettingsData.email}
-                    ${workshopSettingsData.siret ? `<br>SIRET: ${workshopSettingsData.siret}` : ''}
-                    ${workshopSettingsData.vatNumber ? ` • TVA: ${workshopSettingsData.vatNumber}` : ''}
+                  <div class="header-left">
+                    <h1>${workshopSettingsData.name}</h1>
+                    <div class="subtitle">${workshopSettingsData.address}</div>
+                    <div class="contact-info">
+                      ${workshopSettingsData.phone} • ${workshopSettingsData.email}
+                      ${workshopSettingsData.siret ? ` • SIRET: ${workshopSettingsData.siret}` : ''}
+                      ${workshopSettingsData.vatNumber ? ` • TVA: ${workshopSettingsData.vatNumber}` : ''}
+                    </div>
+                  </div>
+                  <div class="header-right">
+                    <div class="invoice-title">FACTURE</div>
+                    <div class="invoice-number">#${data.id.slice(0, 8)}</div>
+                    <div class="invoice-date">${format(new Date(data.createdAt), 'dd MMMM yyyy', { locale: fr })}</div>
                   </div>
                 </div>
 
-                <div class="invoice-details">
-                  <div class="client-section">
-                    <div class="section-title">FACTURÉ À</div>
-                    <div class="client-info">
-                      ${client ? `
-                        <div class="client-name">${client.firstName} ${client.lastName}</div>
-                        <div>${client.email}</div>
-                        <div>${client.phone}</div>
-                        ${client.address ? `<div>${client.address}</div>` : ''}
-                      ` : '<div>Client anonyme</div>'}
-                    </div>
+                <!-- Info client et facture côte à côte -->
+                <div class="info-row">
+                  <div class="info-box client">
+                    <h4>Facturé à</h4>
+                    ${client ? `
+                      <div class="name">${client.firstName} ${client.lastName}</div>
+                      <div class="detail">${client.email}<br>${client.phone}${client.address ? `<br>${client.address}` : ''}</div>
+                    ` : '<div class="name">Client anonyme</div>'}
                   </div>
-                  
-                  <div class="invoice-section">
-                    <div class="section-title">DÉTAILS DE LA FACTURE</div>
-                    <div class="invoice-info">
-                      <div class="invoice-number">#${data.id.slice(0, 8)}</div>
-                      <div><strong>Date :</strong> ${format(new Date(data.createdAt), 'dd/MM/yyyy', { locale: fr })}</div>
-                      <div><strong>Statut :</strong> ${getStatusLabel(isRepair ? (data as Repair).status : (data as Sale).status)}</div>
-                      ${isRepair ? `<div><strong>Paiement :</strong> ${(data as Repair).isPaid ? 'Payé' : 'Non payé'}</div>` : ''}
-                      ${!fromKanban && isRepair && (data as Repair).isPaid && (data as Repair).finalPaymentMethod ? `<div><strong>Mode de paiement :</strong> ${getPaymentMethodLabel((data as Repair).finalPaymentMethod!)}</div>` : ''}
-                      ${!fromKanban && isRepair && !(data as Repair).isPaid && (data as Repair).paymentMethod ? `<div><strong>Mode de paiement :</strong> ${getPaymentMethodLabel((data as Repair).paymentMethod!)}</div>` : ''}
-                      ${!isRepair ? `<div><strong>Paiement :</strong> ${getPaymentMethodLabel((data as Sale).paymentMethod)}</div>` : ''}
+                  <div class="info-box">
+                    <h4>Détails</h4>
+                    <div class="detail">
+                      <strong>Statut :</strong> ${getStatusLabel(isRepair ? (data as Repair).status : (data as Sale).status)}<br>
+                      ${isRepair ? `<strong>Paiement :</strong> <span class="badge ${(data as Repair).isPaid ? 'badge-paid' : 'badge-pending'}">${(data as Repair).isPaid ? 'Payé' : 'Non payé'}</span>` : ''}
+                      ${!isRepair ? `<strong>Paiement :</strong> ${getPaymentMethodLabel((data as Sale).paymentMethod)}` : ''}
+                      ${isRepair && (data as Repair).isPaid && (data as Repair).finalPaymentMethod ? `<br><strong>Mode :</strong> ${getPaymentMethodLabel((data as Repair).finalPaymentMethod!)}` : ''}
                     </div>
                   </div>
                 </div>
@@ -313,142 +471,97 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                   const device = getDeviceInfo();
                   const mappedServices = getMappedServices();
                   const mappedParts = getMappedParts();
+                  const hasDeposit = repair.deposit !== null && repair.deposit !== undefined && Number(repair.deposit) > 0;
+                  const remainingAmount = hasDeposit ? repair.totalPrice - repair.deposit! : repair.totalPrice;
                   
                   return `
-                  ${device ? `
-                    <div class="repair-details" style="margin-bottom: 30px;">
-                      <h3 style="margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px;">Informations appareil</h3>
-                      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; border: 1px solid #e0e0e0;">
-                        <p><strong>Marque :</strong> ${device.brand}</p>
-                        <p><strong>Modèle :</strong> ${device.model}</p>
-                        <p><strong>Type :</strong> ${device.type}</p>
+                  <!-- Appareil et paiements côte à côte -->
+                  <div class="compact-info">
+                    ${device ? `
+                      <div class="compact-box">
+                        <h5>Appareil</h5>
+                        <p><strong>${device.brand}</strong> ${device.model}</p>
+                        <p>Type: ${device.type}</p>
                       </div>
-                    </div>
-                  ` : ''}
-                  
-                  <div class="repair-details" style="margin-bottom: 30px;">
-                    <h3 style="margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px;">Détails de la réparation</h3>
-                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 4px; border: 1px solid #e0e0e0;">
-                      <p><strong>Prix de la réparation (TTC) :</strong> ${formatFromEUR(repair.totalPrice, currency)}</p>
-                      ${repair.discountPercentage && repair.discountPercentage > 0 ? `<p style="color: #10b981;"><strong>Réduction fidélité (${repair.discountPercentage}%) :</strong> -${formatFromEUR(repair.discountAmount || 0, currency)}</p>` : ''}
-                      ${(() => {
-                        const hasDeposit = repair.deposit !== null && repair.deposit !== undefined && Number(repair.deposit) > 0;
-                        const remainingAmount = hasDeposit ? repair.totalPrice - repair.deposit! : repair.totalPrice;
-                        return `
-                        <h4 style="margin-top: 15px; margin-bottom: 10px; font-size: 14px; font-weight: 600;">Historique des paiements</h4>
-                        ${hasDeposit ? `<p><strong>Acompte (${getPaymentMethodLabel(repair.depositPaymentMethod || repair.paymentMethod || 'cash')}) :</strong> ${formatFromEUR(repair.deposit!, currency)} ${depositValidated ? '<span style="color: #10b981; font-weight: bold;">✓ PAYÉ</span>' : '<span style="color: #f59e0b; font-weight: bold;">⏳ EN ATTENTE</span>'}</p>` : ''}
-                        ${repair.isPaid && repair.finalPaymentMethod ? `<p><strong>${hasDeposit ? 'Solde' : 'Paiement'} (${getPaymentMethodLabel(repair.finalPaymentMethod!)}) :</strong> ${formatFromEUR(remainingAmount, currency)} <span style="color: #10b981; font-weight: bold;">✓ PAYÉ</span></p>` : ''}
-                        ${!repair.isPaid ? `<p style="color: #0066cc; font-weight: bold;"><strong>Reste à payer :</strong> ${formatFromEUR(remainingAmount, currency)}</p>` : ''}
-                      `;
-                      })()}
-                      ${repair.notes ? `<p style="margin-top: 10px;"><strong>Notes :</strong> ${repair.notes}</p>` : ''}
+                    ` : ''}
+                    <div class="compact-box">
+                      <h5>Paiements</h5>
+                      ${hasDeposit ? `<p>Acompte: <strong>${formatFromEUR(repair.deposit!, currency)}</strong> ${depositValidated ? '✓' : '⏳'}</p>` : ''}
+                      ${repair.isPaid && repair.finalPaymentMethod ? `<p>${hasDeposit ? 'Solde' : 'Payé'}: <strong>${formatFromEUR(remainingAmount, currency)}</strong> ✓</p>` : ''}
+                      ${!repair.isPaid ? `<p style="color: #1976d2;"><strong>Reste: ${formatFromEUR(remainingAmount, currency)}</strong></p>` : ''}
                     </div>
                   </div>
                   
-                  ${mappedServices.length > 0 ? `
-                    <div style="margin-bottom: 30px;">
-                      <h3 style="margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px;">Services effectués</h3>
-                      <table>
-                        <thead>
+                  ${mappedServices.length > 0 || mappedParts.length > 0 ? `
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Désignation</th>
+                          <th style="text-align: right; width: 70px;">P.U.</th>
+                          <th style="text-align: center; width: 40px;">Qté</th>
+                          <th style="text-align: right; width: 80px;">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${mappedServices.map(service => `
                           <tr>
-                            <th>Service</th>
-                            <th style="text-align: right;">Prix unitaire</th>
-                            <th style="text-align: center;">Quantité</th>
-                            <th style="text-align: right;">Total</th>
+                            <td><strong>${service.name}</strong>${service.description ? ` <span style="color: #888;">- ${service.description}</span>` : ''}</td>
+                            <td style="text-align: right;">${formatFromEUR(service.unitPrice, currency)}</td>
+                            <td style="text-align: center;">${service.quantity}</td>
+                            <td style="text-align: right;"><strong>${formatFromEUR(service.totalPrice, currency)}</strong></td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          ${mappedServices.map(service => `
-                            <tr>
-                              <td>
-                                <strong>${service.name}</strong>
-                                ${service.description ? `<br><span style="font-size: 12px; color: #666;">${service.description}</span>` : ''}
-                              </td>
-                              <td style="text-align: right;">${formatFromEUR(service.unitPrice, currency)}</td>
-                              <td style="text-align: center;">${service.quantity}</td>
-                              <td style="text-align: right;"><strong>${formatFromEUR(service.totalPrice, currency)}</strong></td>
-                            </tr>
-                          `).join('')}
-                        </tbody>
-                      </table>
-                    </div>
-                  ` : ''}
-                  
-                  ${mappedParts.length > 0 ? `
-                    <div style="margin-bottom: 30px;">
-                      <h3 style="margin-bottom: 15px; font-size: 16px; font-weight: 600; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px;">Pièces utilisées</h3>
-                      <table>
-                        <thead>
+                        `).join('')}
+                        ${mappedParts.map(part => `
                           <tr>
-                            <th>Pièce</th>
-                            <th style="text-align: right;">Prix unitaire</th>
-                            <th style="text-align: center;">Quantité</th>
-                            <th style="text-align: center;">Statut</th>
-                            <th style="text-align: right;">Total</th>
+                            <td><strong>${part.name}</strong>${part.partNumber ? ` <span style="color: #888;">(${part.partNumber})</span>` : ''} ${part.isUsed ? '<span style="color: #10b981;">✓</span>' : ''}</td>
+                            <td style="text-align: right;">${formatFromEUR(part.unitPrice, currency)}</td>
+                            <td style="text-align: center;">${part.quantity}</td>
+                            <td style="text-align: right;"><strong>${formatFromEUR(part.totalPrice, currency)}</strong></td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          ${mappedParts.map(part => `
-                            <tr>
-                              <td>
-                                <strong>${part.name}</strong>
-                                ${part.partNumber ? `<br><span style="font-size: 12px; color: #666;">Réf: ${part.partNumber}</span>` : ''}
-                                ${part.description ? `<br><span style="font-size: 12px; color: #666;">${part.description}</span>` : ''}
-                              </td>
-                              <td style="text-align: right;">${formatFromEUR(part.unitPrice, currency)}</td>
-                              <td style="text-align: center;">${part.quantity}</td>
-                              <td style="text-align: center;">${part.isUsed ? '<span style="color: #10b981; font-weight: 600;">Utilisée</span>' : '<span style="color: #666;">Non utilisée</span>'}</td>
-                              <td style="text-align: right;"><strong>${formatFromEUR(part.totalPrice, currency)}</strong></td>
-                            </tr>
-                          `).join('')}
-                        </tbody>
-                      </table>
-                    </div>
+                        `).join('')}
+                      </tbody>
+                    </table>
                   ` : ''}
                   
                   <div class="totals-section">
-                    <div class="total-row">
-                      <span>Sous-total HT :</span>
-                      <span>${workshopSettingsData.vatExempt ? formatFromEUR(repair.totalPrice, currency) : formatFromEUR(repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100), currency)}</span>
-                    </div>
-                    ${workshopSettingsData.vatExempt ? `
+                    <div class="totals-box">
                       <div class="total-row">
-                        <span>Exonéré de TVA</span>
-                        <span>-</span>
+                        <span>Sous-total HT</span>
+                        <span>${workshopSettingsData.vatExempt ? formatFromEUR(repair.totalPrice, currency) : formatFromEUR(repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100), currency)}</span>
                       </div>
-                    ` : `
-                      <div class="total-row">
-                        <span>TVA (${workshopSettingsData.vatRate}%) :</span>
-                        <span>${formatFromEUR(repair.totalPrice - (repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100)), currency)}</span>
+                      ${workshopSettingsData.vatExempt ? `
+                        <div class="total-row"><span>TVA</span><span>Exonéré</span></div>
+                      ` : `
+                        <div class="total-row">
+                          <span>TVA (${workshopSettingsData.vatRate}%)</span>
+                          <span>${formatFromEUR(repair.totalPrice - (repair.totalPrice / (1 + parseFloat(workshopSettingsData.vatRate) / 100)), currency)}</span>
+                        </div>
+                      `}
+                      ${repair.discountPercentage && repair.discountPercentage > 0 ? `
+                        <div class="total-row" style="color: #10b981;">
+                          <span>Réduction (${repair.discountPercentage}%)</span>
+                          <span>-${formatFromEUR(repair.discountAmount || 0, currency)}</span>
+                        </div>
+                      ` : ''}
+                      <div class="total-row final">
+                        <span>TOTAL TTC</span>
+                        <span>${formatFromEUR(repair.totalPrice, currency)}</span>
                       </div>
-                    `}
-                    ${repair.discountPercentage && repair.discountPercentage > 0 ? `
-                      <div class="total-row" style="color: #10b981;">
-                        <span>Réduction fidélité (${repair.discountPercentage}%) :</span>
-                        <span>-${formatFromEUR(repair.discountAmount || 0, currency)}</span>
-                      </div>
-                    ` : ''}
-                    <div class="total-row">
-                      <span>TOTAL TTC :</span>
-                      <span>${formatFromEUR(repair.totalPrice, currency)}</span>
                     </div>
                   </div>
+                  ${workshopSettingsData.vatNotApplicableArticle293B ? `
+                    <div class="vat-notice">
+                      <p>TVA non applicable, article 293 B du CGI</p>
+                    </div>
+                  ` : ''}
                 `;
                 })() : (() => {
                   const sale = data as Sale;
                   let items = sale.items;
                   
-                  // Parser les items si c'est une chaîne JSON
                   if (typeof items === 'string') {
-                    try {
-                      items = JSON.parse(items);
-                    } catch (error) {
-                      console.error('Error parsing items in handlePrint:', error);
-                      items = [];
-                    }
+                    try { items = JSON.parse(items); } catch (error) { items = []; }
                   }
-                  
-                  // Convertir en tableau si nécessaire
                   const itemsArray = Array.isArray(items) ? items : (items && typeof items === 'object' ? Object.values(items) : []);
                   
                   return `
@@ -456,77 +569,70 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                     <thead>
                       <tr>
                         <th>Article</th>
-                        <th>Type</th>
-                        <th style="text-align: right;">Prix unitaire</th>
-                        <th style="text-align: center;">Quantité</th>
-                        <th style="text-align: right;">Total</th>
+                        <th style="width: 60px;">Type</th>
+                        <th style="text-align: right; width: 70px;">P.U.</th>
+                        <th style="text-align: center; width: 40px;">Qté</th>
+                        <th style="text-align: right; width: 80px;">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       ${itemsArray.length > 0 ? itemsArray.map(item => `
                         <tr>
-                          <td><span class="item-name">${item.name || 'Article'}</span></td>
-                          <td><span class="item-type">${item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'}</span></td>
-                          <td style="text-align: right;"><span class="price">${formatFromEUR(item.unitPrice || 0, currency)}</span></td>
+                          <td><strong>${item.name || 'Article'}</strong></td>
+                          <td>${item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'}</td>
+                          <td style="text-align: right;">${formatFromEUR(item.unitPrice || 0, currency)}</td>
                           <td style="text-align: center;">${item.quantity || 1}</td>
-                          <td style="text-align: right;"><span class="price">${formatFromEUR(item.totalPrice || 0, currency)}</span></td>
+                          <td style="text-align: right;"><strong>${formatFromEUR(item.totalPrice || 0, currency)}</strong></td>
                         </tr>
-                      `).join('') : '<tr><td colspan="5" style="text-align: center; color: #666; font-style: italic;">Aucun article disponible</td></tr>'}
+                      `).join('') : '<tr><td colspan="5" style="text-align: center; color: #888;">Aucun article</td></tr>'}
                     </tbody>
                   </table>
 
                   <div class="totals-section">
-                    <div class="total-row">
-                      <span>Sous-total HT :</span>
-                      <span>${formatFromEUR((data as Sale).subtotal, currency)}</span>
-                    </div>
-                    ${workshopSettingsData.vatExempt ? `
+                    <div class="totals-box">
                       <div class="total-row">
-                        <span>Exonéré de TVA</span>
-                        <span>-</span>
+                        <span>Sous-total HT</span>
+                        <span>${formatFromEUR((data as Sale).subtotal, currency)}</span>
                       </div>
-                    ` : `
-                      <div class="total-row">
-                        <span>TVA (${workshopSettingsData.vatRate}%) :</span>
-                        <span>${formatFromEUR((data as Sale).tax, currency)}</span>
-                      </div>
-                    `}
-                    ${(() => {
-                      const sale = data as Sale;
-                      const finalTotal = workshopSettingsData.vatExempt 
-                        ? sale.subtotal - (sale.discountAmount || 0)
-                        : sale.total;
-                      return `
+                      ${workshopSettingsData.vatExempt ? `
+                        <div class="total-row"><span>TVA</span><span>Exonéré</span></div>
+                      ` : `
                         <div class="total-row">
-                          <span>TOTAL TTC :</span>
-                          <span>${formatFromEUR(finalTotal, currency)}</span>
+                          <span>TVA (${workshopSettingsData.vatRate}%)</span>
+                          <span>${formatFromEUR((data as Sale).tax, currency)}</span>
                         </div>
-                      `;
-                    })()}
+                      `}
+                      <div class="total-row final">
+                        <span>TOTAL TTC</span>
+                        <span>${formatFromEUR(workshopSettingsData.vatExempt ? sale.subtotal - (sale.discountAmount || 0) : sale.total, currency)}</span>
+                      </div>
+                    </div>
                   </div>
-                `;
+                  ${workshopSettingsData.vatNotApplicableArticle293B ? `
+                    <div class="vat-notice">
+                      <p>TVA non applicable, article 293 B du CGI</p>
+                    </div>
+                  ` : ''}
+                    `;
                 })()}
 
                 <div class="conditions">
-                  <h3>CONDITIONS DE PAIEMENT</h3>
+                  <h3>Conditions</h3>
                   ${workshopSettingsData.invoiceQuoteConditions ? `
-                    <div style="white-space: pre-line;">${workshopSettingsData.invoiceQuoteConditions}</div>
+                    <div style="white-space: pre-line; color: #666;">${workshopSettingsData.invoiceQuoteConditions}</div>
                   ` : `
                     <ul>
-                      ${!isRepair ? `<li>Paiement immédiat par ${getPaymentMethodLabel((data as Sale).paymentMethod).toLowerCase()}</li>` : ''}
-                      <li>Facture valable 30 jours à compter de la date d'émission</li>
+                      ${!isRepair ? `<li>Paiement par ${getPaymentMethodLabel((data as Sale).paymentMethod).toLowerCase()}</li>` : ''}
+                      <li>Facture valable 30 jours</li>
                       <li>Aucun escompte en cas de paiement anticipé</li>
-                      <li>Pour toute question, contactez-nous au ${workshopSettingsData.phone} ou par email à ${workshopSettingsData.email}</li>
                     </ul>
                   `}
                 </div>
 
                 <div class="footer">
-                  <h3>${workshopSettingsData.name}</h3>
-                  <p>Tél: ${workshopSettingsData.phone} • Email: ${workshopSettingsData.email}</p>
-                  <p>Tél: ${workshopSettingsData.phone} • Email: ${workshopSettingsData.email}</p>
-                  ${workshopSettingsData.siret ? `<p>SIRET: ${workshopSettingsData.siret}</p>` : ''}
-                  ${workshopSettingsData.vatNumber ? `<p>TVA: ${workshopSettingsData.vatNumber}</p>` : ''}
+                  <div class="company">${workshopSettingsData.name}</div>
+                  ${workshopSettingsData.phone} • ${workshopSettingsData.email}
+                  ${workshopSettingsData.siret ? ` • SIRET: ${workshopSettingsData.siret}` : ''}
                   <div class="thank-you">Merci de votre confiance !</div>
                 </div>
               </div>
@@ -1377,6 +1483,27 @@ const Invoice: React.FC<InvoiceProps> = ({ sale, repair, client, open, onClose, 
                   </Box>
                 </Box>
               </>
+            )}
+
+            {/* Message TVA non applicable article 293 B du CGI - pour toutes les factures */}
+            {workshopSettingsData.vatNotApplicableArticle293B && (
+              <Box sx={{ 
+                mb: 3, 
+                p: 2, 
+                backgroundColor: '#fff9e6', 
+                border: '1px solid #ffd700',
+                borderRadius: 1,
+                textAlign: 'center'
+              }}>
+                <Typography sx={{ 
+                  color: '#856404', 
+                  fontSize: '14px', 
+                  fontWeight: 500,
+                  fontStyle: 'italic'
+                }}>
+                  TVA non applicable, article 293 B du CGI
+                </Typography>
+              </Box>
             )}
 
             {/* Conditions de paiement */}

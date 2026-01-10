@@ -28,6 +28,7 @@ interface SettingsData {
   invoiceQuote: {
     conditions: string;
     vatExempt: boolean;
+    vatNotApplicableArticle293B: boolean;
   };
 }
 
@@ -66,7 +67,8 @@ const Settings: React.FC = () => {
     },
     invoiceQuote: {
       conditions: '',
-      vatExempt: false
+      vatExempt: false,
+      vatNotApplicableArticle293B: false
     }
   });
 
@@ -151,6 +153,9 @@ const Settings: React.FC = () => {
           case 'vat_exempt':
             newSettings.invoiceQuote.vatExempt = setting.value === 'true';
             break;
+          case 'vat_not_applicable_article_293b':
+            newSettings.invoiceQuote.vatNotApplicableArticle293B = setting.value === 'true';
+            break;
         }
       });
       
@@ -202,7 +207,8 @@ const Settings: React.FC = () => {
         
         // Paramètres Facture & Devis
         { key: 'invoice_quote_conditions', value: settings.invoiceQuote.conditions },
-        { key: 'vat_exempt', value: settings.invoiceQuote.vatExempt ? 'true' : 'false' }
+        { key: 'vat_exempt', value: settings.invoiceQuote.vatExempt ? 'true' : 'false' },
+        { key: 'vat_not_applicable_article_293b', value: settings.invoiceQuote.vatNotApplicableArticle293B ? 'true' : 'false' }
       ];
 
       // Sauvegarder dans la base de données
@@ -1538,6 +1544,61 @@ const Settings: React.FC = () => {
                       lineHeight: '1.5'
                     }}>
                       Si cette case est cochée, "Exonéré de TVA" sera affiché sur vos factures et devis au lieu du calcul de la TVA. Le total TTC sera égal au total HT.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ 
+                padding: '20px', 
+                backgroundColor: theme.palette.background.default, 
+                borderRadius: theme.shape.borderRadius,
+                marginBottom: '24px',
+                border: `1px solid ${theme.palette.divider}`,
+                boxShadow: theme.shadows[1]
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px'
+                }}>
+                  <input
+                    type="checkbox"
+                    id="vatNotApplicableArticle293B"
+                    checked={settings.invoiceQuote.vatNotApplicableArticle293B}
+                    onChange={(e) => setSettings(prev => ({
+                      ...prev,
+                      invoiceQuote: { ...prev.invoiceQuote, vatNotApplicableArticle293B: e.target.checked }
+                    }))}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      cursor: 'pointer',
+                      marginTop: '2px',
+                      flexShrink: 0
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <label 
+                      htmlFor="vatNotApplicableArticle293B"
+                      style={{ 
+                        display: 'block',
+                        fontWeight: theme.typography.button.fontWeight,
+                        color: theme.palette.text.primary,
+                        fontSize: theme.typography.body1.fontSize,
+                        cursor: 'pointer',
+                        marginBottom: '8px'
+                      }}
+                    >
+                      TVA non applicable, article 293 B du CGI
+                    </label>
+                    <p style={{
+                      margin: '0',
+                      color: theme.palette.text.secondary,
+                      fontSize: theme.typography.body2.fontSize,
+                      lineHeight: '1.5'
+                    }}>
+                      Si cette case est cochée, "TVA non applicable, article 293 B du CGI" sera affiché sur vos factures.
                     </p>
                   </div>
                 </div>
