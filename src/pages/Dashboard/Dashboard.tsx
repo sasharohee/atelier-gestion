@@ -596,16 +596,16 @@ const Dashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Bannière Joyeuses Fêtes de Noël */}
+      {/* Bannière Motivation & Productivité */}
       <Card 
         sx={{ 
           mb: 4, 
-          background: 'linear-gradient(135deg, #1a472a 0%, #2d5a3a 50%, #1a472a 100%)',
+          background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
           color: 'white',
           position: 'relative',
           overflow: 'hidden',
-          border: '2px solid #c9a227',
-          boxShadow: '0 8px 32px rgba(26, 71, 42, 0.4), 0 0 20px rgba(201, 162, 39, 0.3)',
+          border: '2px solid #00d4ff',
+          boxShadow: '0 8px 32px rgba(0, 212, 255, 0.2), 0 0 20px rgba(0, 212, 255, 0.1)',
           '&::before': {
             content: '""',
             position: 'absolute',
@@ -614,9 +614,9 @@ const Dashboard: React.FC = () => {
             right: 0,
             bottom: 0,
             background: `
-              radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 20%),
-              radial-gradient(circle at 90% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 20%),
-              radial-gradient(circle at 50% 50%, rgba(201, 162, 39, 0.1) 0%, transparent 30%)
+              radial-gradient(circle at 10% 20%, rgba(0, 212, 255, 0.1) 0%, transparent 25%),
+              radial-gradient(circle at 90% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 25%),
+              radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 30%)
             `,
             pointerEvents: 'none',
           },
@@ -644,16 +644,16 @@ const Dashboard: React.FC = () => {
                 justifyContent: 'center'
               }}
             >
-              <span style={{ fontSize: '2rem' }}>🎄</span>
+              <span style={{ fontSize: '2rem' }}>🚀</span>
               <span style={{ 
-                background: 'linear-gradient(180deg, #fff 0%, #ffd700 100%)',
+                background: 'linear-gradient(180deg, #fff 0%, #00d4ff 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
               }}>
-                Joyeuses Fêtes de Noël !
+                Prêt à conquérir la journée !
               </span>
-              <span style={{ fontSize: '2rem' }}>🎅</span>
+              <span style={{ fontSize: '2rem' }}>💪</span>
             </Typography>
             <Typography 
               variant="body1" 
@@ -667,9 +667,9 @@ const Dashboard: React.FC = () => {
                 justifyContent: 'center'
               }}
             >
-              <span>✨</span>
-              Nous vous souhaitons d'excellentes fêtes de fin d'année !
-              <span>🎁</span>
+              <span>⚡</span>
+              Chaque réparation est une opportunité de briller !
+              <span>🔧</span>
             </Typography>
           </Box>
         </CardContent>
