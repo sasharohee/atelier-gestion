@@ -702,12 +702,17 @@ const SubscriptionBlocked: React.FC = () => {
                       {(!stripePriceIdMonthly || !stripePriceIdYearly) && (
                         <Alert severity="warning" sx={{ mb: 3 }}>
                           <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                            Liens d'abonnement non configurés
+                            {!stripePriceIdYearly && stripePriceIdMonthly
+                              ? 'Abonnement annuel non configuré'
+                              : !stripePriceIdMonthly && stripePriceIdYearly
+                                ? 'Abonnement mensuel non configuré'
+                                : 'Liens d\'abonnement non configurés'}
                           </Typography>
                           <Typography variant="body2">
-                            En production (Vercel), ajoutez les variables d'environnement dans le projet Vercel :{' '}
-                            <strong>VITE_STRIPE_PRICE_ID_MONTHLY</strong> et <strong>VITE_STRIPE_PRICE_ID_YEARLY</strong> (IDs des prix Stripe).
-                            Puis redéployez l'application pour que les boutons fonctionnent.
+                            En production (Vercel), ajoutez dans le projet Vercel (Settings → Environment Variables) :
+                            {!stripePriceIdMonthly && <><br />• <strong>VITE_STRIPE_PRICE_ID_MONTHLY</strong></>}
+                            {!stripePriceIdYearly && <><br />• <strong>VITE_STRIPE_PRICE_ID_YEARLY</strong></>}
+                            {' '}(IDs des prix Stripe). Puis redéployez l'application.
                           </Typography>
                         </Alert>
                       )}
@@ -828,7 +833,12 @@ const SubscriptionBlocked: React.FC = () => {
                           sx={{ fontWeight: 'bold', mb: 3 }} 
                         />
                         
-                        {/* Bouton paiement annuel */}
+                        {/* Bouton paiement annuel - désactivé si VITE_STRIPE_PRICE_ID_YEARLY absent sur Vercel */}
+                        {!stripePriceIdYearly && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                            Variable VITE_STRIPE_PRICE_ID_YEARLY requise (Vercel → Settings → Environment Variables).
+                          </Typography>
+                        )}
                         <Button
                           variant="contained"
                           size="large"
