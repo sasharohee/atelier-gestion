@@ -256,6 +256,7 @@ function App() {
                           } />
                           <Route path="/settings" element={<Settings />} />
                           <Route path="/subscription" element={<Subscription />} />
+                          <Route path="/subscription-blocked" element={<SubscriptionBlocked />} />
                         </Routes>
                       </Suspense>
                       

@@ -698,6 +698,19 @@ const SubscriptionBlocked: React.FC = () => {
                     </Box>
 
                     <CardContent sx={{ p: 4 }}>
+                      {/* Alerte si Stripe n'est pas configuré (ex. variables manquantes sur Vercel) */}
+                      {(!stripePriceIdMonthly || !stripePriceIdYearly) && (
+                        <Alert severity="warning" sx={{ mb: 3 }}>
+                          <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                            Liens d'abonnement non configurés
+                          </Typography>
+                          <Typography variant="body2">
+                            En production (Vercel), ajoutez les variables d'environnement dans le projet Vercel :{' '}
+                            <strong>VITE_STRIPE_PRICE_ID_MONTHLY</strong> et <strong>VITE_STRIPE_PRICE_ID_YEARLY</strong> (IDs des prix Stripe).
+                            Puis redéployez l'application pour que les boutons fonctionnent.
+                          </Typography>
+                        </Alert>
+                      )}
                       {/* Prix principal */}
                       <Box sx={{ textAlign: 'center', mb: 4 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
