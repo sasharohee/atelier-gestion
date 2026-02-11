@@ -13,210 +13,156 @@ import {
   ListItemText,
   useTheme,
   useMediaQuery,
-  Fade,
-  Slide
 } from '@mui/material';
 import {
   Build as BuildIcon,
   Menu as MenuIcon,
   Close as CloseIcon,
-  ArrowForward as ArrowForwardIcon
+  ArrowForward as ArrowForwardIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
-interface NavbarProps {
-  transparent?: boolean;
-}
+const GOLD = '#f59e0b';
+const GOLD_DARK = '#d97706';
+const NAVY = '#0f172a';
+const NAVY_DARK = '#0b1120';
 
-const LandingNavbar: React.FC<NavbarProps> = ({ transparent = true }) => {
+const LandingNavbar: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Handle scroll effect
   useEffect(() => {
-    const handleScroll = () => {
-      const isScrolled = window.scrollY > 50;
-      setScrolled(isScrolled);
-    };
-
+    const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
-  const handleAccessApp = () => {
-    navigate('/app/dashboard');
-  };
-
-  const handleRepairTracking = () => {
-    navigate('/repair-tracking');
-  };
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+  const handleAccessApp = () => navigate('/auth');
+  const handleRepairTracking = () => navigate('/repair-tracking');
 
   const menuItems = [
     { label: 'Fonctionnalités', href: '#features' },
     { label: 'Avantages', href: '#benefits' },
-    { label: 'Tarifs', href: '#pricing' }
+    { label: 'Tarifs', href: '#pricing' },
   ];
 
   const scrollToSection = (href: string) => {
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    const el = document.querySelector(href);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
     setMobileOpen(false);
   };
 
-  const navbarStyle = {
-    background: transparent && !scrolled 
-      ? 'rgba(255, 255, 255, 0.9)' 
-      : 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(20px)',
-    borderBottom: transparent && !scrolled 
-      ? '1px solid rgba(255, 255, 255, 0.3)' 
-      : '1px solid rgba(0, 0, 0, 0.1)',
-    transition: 'all 0.3s ease',
-    boxShadow: scrolled ? '0 4px 20px rgba(0, 0, 0, 0.15)' : '0 4px 15px rgba(0, 0, 0, 0.1)',
-    borderRadius: '50px',
-    margin: '0 20px',
-    marginTop: '10px',
-    '&:hover': {
-      background: transparent && !scrolled 
-        ? 'rgba(255, 255, 255, 1)' 
-        : 'rgba(255, 255, 255, 1)',
-      boxShadow: scrolled 
-        ? '0 8px 30px rgba(0, 0, 0, 0.2)' 
-        : '0 6px 20px rgba(0, 0, 0, 0.15)',
-      transform: 'translateY(2px)'
-    }
-  };
-
-  const logoStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    textDecoration: 'none',
-    color: '#1976D2',
-    textShadow: 'none',
-    transition: 'all 0.3s ease',
-    padding: '12px 18px',
-    borderRadius: '50px',
-    '&:hover': {
-      color: '#1565C0',
-      background: 'rgba(25, 118, 210, 0.1)',
-      transform: 'scale(1.05)',
-      boxShadow: '0 6px 20px rgba(0, 0, 0, 0.15)'
-    }
-  };
-
-  const menuItemStyle = {
-    color: transparent && !scrolled ? '#1976D2' : '#1976D2',
-    fontWeight: 600,
-    fontSize: '1rem',
-    textShadow: 'none',
-    transition: 'all 0.3s ease',
-    padding: '12px 20px',
-    borderRadius: '50px',
-    margin: '0 4px',
-    '&:hover': {
-      color: '#1565C0',
-      background: transparent && !scrolled 
-        ? 'rgba(25, 118, 210, 0.1)' 
-        : 'rgba(25, 118, 210, 0.15)',
-      transform: 'translateY(-3px)',
-      boxShadow: '0 6px 20px rgba(0, 0, 0, 0.2)'
-    }
-  };
-
   const drawer = (
-    <Box sx={{ width: 280, pt: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, mb: 2 }}>
-        <Box sx={logoStyle}>
+    <Box
+      sx={{
+        width: 280,
+        pt: 2,
+        height: '100%',
+        background: NAVY_DARK,
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Box
             sx={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: 'rgba(245, 158, 11, 0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              background: 'rgba(25, 118, 210, 0.1)',
-              border: '2px solid #1976D2',
               mr: 1.5,
-              transition: 'all 0.3s ease'
             }}
           >
-            <BuildIcon 
-              sx={{ 
-                fontSize: 20, 
-                color: '#1976D2'
-              }} 
-            />
+            <BuildIcon sx={{ fontSize: 16, color: GOLD }} />
           </Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: '#1976D2' }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontFamily: '"Outfit", sans-serif',
+              fontWeight: 700,
+              color: '#fff',
+              fontSize: '1rem',
+            }}
+          >
             Atelier Gestion
           </Typography>
         </Box>
-        <IconButton onClick={handleDrawerToggle}>
+        <IconButton onClick={handleDrawerToggle} sx={{ color: '#94a3b8' }}>
           <CloseIcon />
         </IconButton>
       </Box>
       <List>
         {menuItems.map((item) => (
-          <ListItem 
-            key={item.label} 
-            button 
+          <ListItem
+            key={item.label}
+            component="li"
             onClick={() => scrollToSection(item.href)}
-            sx={{ py: 2 }}
+            sx={{
+              py: 2,
+              cursor: 'pointer',
+              '&:hover': { background: 'rgba(148, 163, 184, 0.08)' },
+            }}
           >
-            <ListItemText 
-              primary={item.label} 
-              sx={{ 
+            <ListItemText
+              primary={item.label}
+              sx={{
                 '& .MuiListItemText-primary': {
                   fontWeight: 500,
-                  fontSize: '1.1rem'
-                }
+                  fontSize: '1rem',
+                  color: '#94a3b8',
+                  fontFamily: '"Inter", sans-serif',
+                },
               }}
             />
           </ListItem>
         ))}
-        <ListItem sx={{ pt: 2 }}>
+        <ListItem sx={{ pt: 3, flexDirection: 'column', gap: 1.5 }}>
           <Button
-            variant="contained"
+            variant="outlined"
             fullWidth
             onClick={handleRepairTracking}
+            startIcon={<SearchIcon />}
             sx={{
               py: 1.5,
               fontWeight: 600,
-              borderRadius: 2,
-              mb: 1,
-              bgcolor: '#FF6B6B',
-              color: 'white',
-              boxShadow: '0 4px 15px rgba(255, 107, 107, 0.3)',
+              borderRadius: '10px',
+              color: '#94a3b8',
+              borderColor: 'rgba(148, 163, 184, 0.2)',
+              fontFamily: '"Inter", sans-serif',
+              textTransform: 'none',
               '&:hover': {
-                bgcolor: '#FF5252',
-                boxShadow: '0 6px 20px rgba(255, 107, 107, 0.4)'
-              }
+                borderColor: '#94a3b8',
+                color: '#fff',
+                background: 'rgba(148, 163, 184, 0.08)',
+              },
             }}
           >
-            Suivre ma Réparation
+            Suivre Réparation
           </Button>
-        </ListItem>
-        <ListItem>
           <Button
             variant="contained"
             fullWidth
             onClick={handleAccessApp}
+            endIcon={<ArrowForwardIcon />}
             sx={{
               py: 1.5,
-              fontWeight: 600,
-              borderRadius: 2
+              fontWeight: 700,
+              borderRadius: '10px',
+              background: `linear-gradient(135deg, ${GOLD}, ${GOLD_DARK})`,
+              color: NAVY,
+              fontFamily: '"Inter", sans-serif',
+              textTransform: 'none',
+              '&:hover': {
+                background: `linear-gradient(135deg, #fbbf24, ${GOLD})`,
+              },
             }}
-            endIcon={<ArrowForwardIcon />}
           >
             Accéder à l'App
           </Button>
@@ -227,141 +173,154 @@ const LandingNavbar: React.FC<NavbarProps> = ({ transparent = true }) => {
 
   return (
     <>
-              <AppBar 
-          position="fixed" 
-          elevation={0}
-          sx={{
-            ...navbarStyle,
-            left: '20px',
-            right: '20px',
-            width: 'auto',
-            top: '10px',
-            zIndex: 1200
-          }}
-        >
+      <AppBar
+        position="fixed"
+        elevation={0}
+        sx={{
+          background: scrolled ? `rgba(15, 23, 42, 0.95)` : `rgba(15, 23, 42, 0.7)`,
+          backdropFilter: 'blur(20px)',
+          borderBottom: `1px solid rgba(148, 163, 184, ${scrolled ? '0.1' : '0.05'})`,
+          borderRadius: '50px',
+          margin: '0 20px',
+          marginTop: '10px',
+          left: '20px',
+          right: '20px',
+          width: 'auto',
+          top: '10px',
+          zIndex: 1200,
+          transition: 'all 0.3s ease',
+          boxShadow: scrolled ? '0 4px 30px rgba(0, 0, 0, 0.3)' : 'none',
+        }}
+      >
         <Container maxWidth="lg" sx={{ px: 0 }}>
           <Toolbar sx={{ px: { xs: 2, md: 3 } }}>
             {/* Logo */}
-            <Fade in timeout={800}>
-                          <Box sx={{ flexGrow: 1 }}>
-              <Box sx={logoStyle}>
+            <Box sx={{ flexGrow: 1 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  py: 1,
+                }}
+                onClick={() => scrollToSection('#home')}
+              >
                 <Box
                   sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: '50%',
+                    background: 'rgba(245, 158, 11, 0.15)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 40,
-                    height: 40,
-                    borderRadius: '50%',
-                    background: transparent && !scrolled 
-                      ? 'rgba(74, 144, 226, 0.2)' 
-                      : 'rgba(25, 118, 210, 0.1)',
-                    border: `2px solid ${transparent && !scrolled ? '#4A90E2' : '#1976D2'}`,
-                    mr: 2,
-                    transition: 'all 0.3s ease'
+                    mr: 1.5,
                   }}
                 >
-                  <BuildIcon 
-                    sx={{ 
-                      fontSize: 24, 
-                      color: transparent && !scrolled ? '#4A90E2' : '#1976D2'
-                    }} 
-                  />
+                  <BuildIcon sx={{ fontSize: 20, color: GOLD }} />
                 </Box>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontFamily: '"Outfit", sans-serif',
                     fontWeight: 700,
-                    fontSize: { xs: '1.1rem', md: '1.25rem' }
+                    color: '#ffffff',
+                    fontSize: { xs: '1rem', md: '1.15rem' },
                   }}
                 >
                   Atelier Gestion
                 </Typography>
               </Box>
             </Box>
-            </Fade>
 
             {/* Desktop Menu */}
             {!isMobile && (
-              <Fade in timeout={1000}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {menuItems.map((item) => (
-                    <Button
-                      key={item.label}
-                      onClick={() => scrollToSection(item.href)}
-                      sx={menuItemStyle}
-                    >
-                      {item.label}
-                    </Button>
-                  ))}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {menuItems.map((item) => (
                   <Button
-                    variant="contained"
-                    onClick={handleRepairTracking}
+                    key={item.label}
+                    onClick={() => scrollToSection(item.href)}
                     sx={{
-                      bgcolor: transparent && !scrolled ? 'rgba(255, 255, 255, 0.9)' : '#FF6B6B',
-                      color: transparent && !scrolled ? '#1976D2' : 'white',
-                      px: 3,
-                      py: 1.5,
-                      fontWeight: 600,
-                      borderRadius: '50px',
+                      color: '#94a3b8',
+                      fontWeight: 500,
                       fontSize: '0.9rem',
-                      border: transparent && !scrolled ? '2px solid rgba(255, 255, 255, 0.3)' : 'none',
-                      transition: 'all 0.3s ease',
-                      boxShadow: transparent && !scrolled 
-                        ? '0 4px 15px rgba(0, 0, 0, 0.15)' 
-                        : '0 4px 15px rgba(255, 107, 107, 0.3)',
-                      '&:hover': {
-                        bgcolor: transparent && !scrolled ? 'rgba(255, 255, 255, 1)' : '#FF5252',
-                        transform: 'translateY(-2px)',
-                        boxShadow: transparent && !scrolled 
-                          ? '0 6px 20px rgba(0, 0, 0, 0.2)' 
-                          : '0 6px 20px rgba(255, 107, 107, 0.4)'
-                      }
-                    }}
-                  >
-                    Suivre Réparation
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={handleAccessApp}
-                    sx={{
-                      bgcolor: transparent && !scrolled ? 'white' : theme.palette.primary.main,
-                      color: transparent && !scrolled ? theme.palette.primary.main : 'white',
-                      px: 4,
-                      py: 1.5,
-                      fontWeight: 700,
-                      borderRadius: '50px',
-                      fontSize: '0.95rem',
-                      boxShadow: transparent && !scrolled 
-                        ? '0 4px 15px rgba(0, 0, 0, 0.2)' 
-                        : '0 4px 15px rgba(0, 0, 0, 0.15)',
+                      fontFamily: '"Inter", sans-serif',
+                      textTransform: 'none',
+                      px: 2,
+                      py: 1,
+                      borderRadius: '10px',
                       transition: 'all 0.3s ease',
                       '&:hover': {
-                        bgcolor: transparent && !scrolled ? 'rgba(255, 255, 255, 0.95)' : theme.palette.primary.dark,
-                        transform: 'translateY(-2px)',
-                        boxShadow: transparent && !scrolled 
-                          ? '0 6px 20px rgba(0, 0, 0, 0.3)' 
-                          : '0 6px 20px rgba(0, 0, 0, 0.25)'
-                      }
+                        color: '#ffffff',
+                        background: 'rgba(148, 163, 184, 0.08)',
+                      },
                     }}
-                    endIcon={<ArrowForwardIcon />}
                   >
-                    Accéder à l'App
+                    {item.label}
                   </Button>
-                </Box>
-              </Fade>
+                ))}
+                <Button
+                  variant="outlined"
+                  onClick={handleRepairTracking}
+                  startIcon={<SearchIcon sx={{ fontSize: 18 }} />}
+                  sx={{
+                    ml: 2,
+                    color: '#94a3b8',
+                    borderColor: 'rgba(148, 163, 184, 0.2)',
+                    px: 2.5,
+                    py: 1,
+                    fontWeight: 600,
+                    borderRadius: '10px',
+                    fontSize: '0.85rem',
+                    fontFamily: '"Inter", sans-serif',
+                    textTransform: 'none',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      borderColor: '#94a3b8',
+                      color: '#ffffff',
+                      background: 'rgba(148, 163, 184, 0.08)',
+                    },
+                  }}
+                >
+                  Suivre Réparation
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleAccessApp}
+                  endIcon={<ArrowForwardIcon sx={{ fontSize: 18 }} />}
+                  sx={{
+                    ml: 1,
+                    background: `linear-gradient(135deg, ${GOLD}, ${GOLD_DARK})`,
+                    color: NAVY,
+                    px: 3,
+                    py: 1,
+                    fontWeight: 700,
+                    borderRadius: '10px',
+                    fontSize: '0.85rem',
+                    fontFamily: '"Inter", sans-serif',
+                    textTransform: 'none',
+                    boxShadow: `0 4px 20px rgba(245, 158, 11, 0.25)`,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      background: `linear-gradient(135deg, #fbbf24, ${GOLD})`,
+                      transform: 'translateY(-1px)',
+                      boxShadow: `0 6px 24px rgba(245, 158, 11, 0.35)`,
+                    },
+                  }}
+                >
+                  Accéder à l'App
+                </Button>
+              </Box>
             )}
 
             {/* Mobile Menu Button */}
             {isMobile && (
               <IconButton
-                color="inherit"
                 aria-label="open drawer"
                 edge="end"
                 onClick={handleDrawerToggle}
-                sx={{ 
-                  color: transparent && !scrolled ? 'white' : theme.palette.text.primary 
-                }}
+                sx={{ color: '#94a3b8' }}
               >
                 <MenuIcon />
               </IconButton>
@@ -376,22 +335,19 @@ const LandingNavbar: React.FC<NavbarProps> = ({ transparent = true }) => {
         anchor="right"
         open={mobileOpen}
         onClose={handleDrawerToggle}
-        ModalProps={{
-          keepMounted: true // Better open performance on mobile.
-        }}
+        ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { 
-            boxSizing: 'border-box', 
+          '& .MuiDrawer-paper': {
+            boxSizing: 'border-box',
             width: 280,
-            bgcolor: 'background.paper'
+            bgcolor: NAVY_DARK,
+            borderLeft: '1px solid rgba(148, 163, 184, 0.1)',
           },
         }}
       >
         {drawer}
       </Drawer>
-
-
     </>
   );
 };
