@@ -3864,9 +3864,9 @@ export const subscriptionService = {
         .update({
           is_active: true,
           subscription_type: 'trial',
-          trial_ends_at: trialEndsAt.toISOString(),
+          subscription_end_date: trialEndsAt.toISOString(),
           activated_at: new Date().toISOString(),
-          activated_by: activatedBy,
+          activated_by: null,
           notes: notes || `Essai ${trialDays} jours activé`,
           updated_at: new Date().toISOString()
         })
@@ -3902,7 +3902,7 @@ export const subscriptionService = {
         })
         .eq('is_active', true)
         .eq('subscription_type', 'trial')
-        .lt('trial_ends_at', now)
+        .lt('subscription_end_date', now)
         .select();
 
       if (error) {

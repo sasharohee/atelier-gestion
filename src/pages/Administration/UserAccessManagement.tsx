@@ -437,7 +437,11 @@ const UserAccessManagement: React.FC = () => {
 
       const result = await subscriptionService.getAllSubscriptionStatuses();
       if (result.success && 'data' in result) {
-        setSubscriptions(result.data || []);
+        const mapped = (result.data || []).map((s: any) => ({
+          ...s,
+          trial_ends_at: s.trial_ends_at || s.subscription_end_date,
+        }));
+        setSubscriptions(mapped);
         setLastRefresh(new Date());
       } else if ('error' in result) {
         setError(result.error);

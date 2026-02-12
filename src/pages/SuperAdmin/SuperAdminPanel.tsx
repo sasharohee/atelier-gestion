@@ -587,7 +587,7 @@ const SuperAdminPanel: React.FC = () => {
           })
           .eq('is_active', true)
           .eq('subscription_type', 'trial')
-          .lt('trial_ends_at', now);
+          .lt('subscription_end_date', now);
       } catch (e) {
         console.warn('Sweep essais:', e);
       }
@@ -608,7 +608,11 @@ const SuperAdminPanel: React.FC = () => {
       if (fetchError) {
         setError('Erreur lors du chargement: ' + fetchError.message);
       } else {
-        setSubscriptions(data || []);
+        const mapped = (data || []).map((s: any) => ({
+          ...s,
+          trial_ends_at: s.trial_ends_at || s.subscription_end_date,
+        }));
+        setSubscriptions(mapped);
         setLastRefresh(new Date());
       }
     } catch {
@@ -664,8 +668,7 @@ const SuperAdminPanel: React.FC = () => {
           is_active: true,
           subscription_type: 'free',
           activated_at: new Date().toISOString(),
-          activated_by: 'super-admin',
-          status: 'ACTIF',
+          activated_by: null,
           notes: notes || 'Active manuellement (Super Admin)',
           updated_at: new Date().toISOString(),
         };
@@ -699,9 +702,9 @@ const SuperAdminPanel: React.FC = () => {
           .update({
             is_active: true,
             subscription_type: 'trial',
-            trial_ends_at: trialEndsAt.toISOString(),
+            subscription_end_date: trialEndsAt.toISOString(),
             activated_at: new Date().toISOString(),
-            activated_by: 'super-admin',
+            activated_by: null,
             notes: notes || `Essai ${trialDays} jours active (Super Admin)`,
             updated_at: new Date().toISOString(),
           })

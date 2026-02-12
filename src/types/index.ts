@@ -566,6 +566,8 @@ export interface SubscriptionStatus {
   stripe_price_id_yearly?: string;
   stripe_current_period_end?: string;
   trial_ends_at?: string;
+  subscription_end_date?: string;
+  subscription_start_date?: string;
 }
 
 export interface SubscriptionPlan {
