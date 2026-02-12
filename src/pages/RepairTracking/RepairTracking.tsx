@@ -70,129 +70,135 @@ interface RepairData {
   } | null;
 }
 
-// Styles CSS personnalisés - Thème clair
+// --- Dark Premium Theme Constants ---
+const NAVY = '#0f172a';
+const NAVY_DARK = '#0b1120';
+const NAVY_CARD = 'rgba(30, 41, 59, 0.5)';
+const GOLD = '#f59e0b';
+const GOLD_DARK = '#d97706';
+const GOLD_SUBTLE = 'rgba(245, 158, 11, 0.15)';
+const GOLD_GLOW = 'rgba(245, 158, 11, 0.3)';
+const GLASS_BORDER = 'rgba(148, 163, 184, 0.1)';
+const TEXT_WHITE = '#ffffff';
+const TEXT_LIGHT = '#e2e8f0';
+const TEXT_MUTED = '#94a3b8';
+const TEXT_DIM = '#64748b';
+
 const styles = {
   pageContainer: {
     minHeight: '100vh',
     background: `
-      radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 100%, rgba(236, 72, 153, 0.06) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 70%),
-      linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)
+      radial-gradient(ellipse at 20% 0%, rgba(245, 158, 11, 0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
+      linear-gradient(180deg, ${NAVY} 0%, ${NAVY_DARK} 100%)
     `,
     py: 4,
     px: 2,
   },
   glassCard: {
-    background: 'rgba(255, 255, 255, 0.85)',
-    backdropFilter: 'blur(20px)',
-    borderRadius: 4,
-    border: '1px solid rgba(255, 255, 255, 0.9)',
-    boxShadow: '0 4px 30px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
+    background: NAVY_CARD,
+    backdropFilter: 'blur(12px)',
+    borderRadius: '16px',
+    border: `1px solid ${GLASS_BORDER}`,
+    boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
     overflow: 'hidden',
     position: 'relative' as const,
-    '&::before': {
-      content: '""',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      height: '1px',
-      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)',
-    },
   },
   inputField: {
     '& .MuiOutlinedInput-root': {
-      backgroundColor: '#fff',
-      borderRadius: 3,
+      backgroundColor: 'rgba(15, 23, 42, 0.5)',
+      borderRadius: '12px',
+      color: TEXT_WHITE,
+      fontFamily: '"Inter", sans-serif',
       transition: 'all 0.3s ease',
       '& fieldset': {
-        borderColor: '#e2e8f0',
+        borderColor: GLASS_BORDER,
         transition: 'all 0.3s ease',
       },
       '&:hover fieldset': {
-        borderColor: '#a5b4fc',
+        borderColor: TEXT_DIM,
       },
       '&.Mui-focused fieldset': {
-        borderColor: '#6366f1',
-        boxShadow: '0 0 0 3px rgba(99, 102, 241, 0.1)',
+        borderColor: GOLD,
+        boxShadow: `0 0 0 3px ${GOLD_SUBTLE}`,
       },
     },
     '& .MuiInputLabel-root': {
-      color: '#64748b',
+      color: TEXT_DIM,
+      fontFamily: '"Inter", sans-serif',
     },
     '& .MuiInputLabel-root.Mui-focused': {
-      color: '#6366f1',
+      color: GOLD,
     },
     '& input': {
-      color: '#1e293b',
+      color: TEXT_WHITE,
     },
     '& .MuiInputAdornment-root svg': {
-      color: '#6366f1',
+      color: GOLD,
     },
   },
   searchButton: {
-    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-    borderRadius: 3,
+    background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DARK} 100%)`,
+    borderRadius: '12px',
     px: 4,
     py: 1.5,
-    fontWeight: 600,
+    fontWeight: 700,
+    fontFamily: '"Inter", sans-serif',
     textTransform: 'none' as const,
-    letterSpacing: 0.5,
-    color: '#fff',
-    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
+    color: NAVY,
+    boxShadow: `0 4px 20px ${GOLD_GLOW}`,
     transition: 'all 0.3s ease',
     '&:hover': {
       transform: 'translateY(-2px)',
-      boxShadow: '0 6px 20px rgba(99, 102, 241, 0.45)',
-      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+      boxShadow: `0 6px 24px ${GOLD_GLOW}`,
+      background: `linear-gradient(135deg, #fbbf24 0%, ${GOLD} 100%)`,
     },
     '&:disabled': {
-      background: '#e2e8f0',
-      color: '#94a3b8',
+      background: 'rgba(30, 41, 59, 0.6)',
+      color: TEXT_DIM,
       boxShadow: 'none',
     },
   },
   resetButton: {
-    borderColor: '#e2e8f0',
-    color: '#64748b',
-    borderRadius: 3,
+    borderColor: GLASS_BORDER,
+    color: TEXT_MUTED,
+    borderRadius: '12px',
     px: 3,
     py: 1.5,
+    fontFamily: '"Inter", sans-serif',
     textTransform: 'none' as const,
     transition: 'all 0.3s ease',
     '&:hover': {
-      borderColor: '#f43f5e',
-      backgroundColor: 'rgba(244, 63, 94, 0.05)',
-      color: '#f43f5e',
+      borderColor: '#ef4444',
+      backgroundColor: 'rgba(239, 68, 68, 0.08)',
+      color: '#ef4444',
     },
   },
   homeButton: {
-    borderColor: '#e2e8f0',
-    color: '#64748b',
-    borderRadius: 3,
+    borderColor: GLASS_BORDER,
+    color: TEXT_MUTED,
+    borderRadius: '12px',
     px: 2.5,
     py: 1,
+    fontFamily: '"Inter", sans-serif',
     textTransform: 'none' as const,
-    background: 'rgba(255, 255, 255, 0.8)',
     transition: 'all 0.3s ease',
     '&:hover': {
-      borderColor: '#6366f1',
-      backgroundColor: 'rgba(99, 102, 241, 0.05)',
-      color: '#6366f1',
+      borderColor: GOLD,
+      backgroundColor: GOLD_SUBTLE,
+      color: GOLD,
     },
   },
   infoCard: {
-    background: '#fff',
-    borderRadius: 3,
+    background: 'rgba(15, 23, 42, 0.4)',
+    borderRadius: '12px',
     p: 2.5,
-    border: '1px solid #f1f5f9',
+    border: `1px solid ${GLASS_BORDER}`,
     height: '100%',
     transition: 'all 0.3s ease',
     '&:hover': {
-      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
-      border: '1px solid #e0e7ff',
-      transform: 'translateY(-2px)',
+      border: `1px solid rgba(245, 158, 11, 0.2)`,
+      boxShadow: `0 4px 20px rgba(245, 158, 11, 0.08)`,
     },
   },
   infoRow: {
@@ -200,7 +206,7 @@ const styles = {
     alignItems: 'center',
     gap: 1.5,
     py: 1.25,
-    borderBottom: '1px solid #f1f5f9',
+    borderBottom: `1px solid ${GLASS_BORDER}`,
     '&:last-child': {
       borderBottom: 'none',
     },
@@ -208,7 +214,7 @@ const styles = {
   infoIcon: {
     width: 36,
     height: 36,
-    borderRadius: 2.5,
+    borderRadius: '10px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -233,67 +239,65 @@ const styles = {
   },
 };
 
-// Configuration des statuts avec icônes et couleurs
 const statusConfig = {
-  new: { 
-    icon: NewIcon, 
-    color: '#3b82f6', 
-    bgColor: 'rgba(59, 130, 246, 0.1)',
+  new: {
+    icon: NewIcon,
+    color: '#3b82f6',
+    bgColor: 'rgba(59, 130, 246, 0.15)',
     label: 'Nouvelle',
-    order: 0
+    order: 0,
   },
-  in_progress: { 
-    icon: SettingsIcon, 
-    color: '#6366f1', 
-    bgColor: 'rgba(99, 102, 241, 0.1)',
+  in_progress: {
+    icon: SettingsIcon,
+    color: GOLD,
+    bgColor: GOLD_SUBTLE,
     label: 'En cours',
-    order: 1
+    order: 1,
   },
-  waiting_parts: { 
-    icon: InventoryIcon, 
-    color: '#f59e0b', 
-    bgColor: 'rgba(245, 158, 11, 0.1)',
+  waiting_parts: {
+    icon: InventoryIcon,
+    color: '#f59e0b',
+    bgColor: 'rgba(245, 158, 11, 0.15)',
     label: 'En attente de pièces',
-    order: 2
+    order: 2,
   },
-  waiting_delivery: { 
-    icon: ShippingIcon, 
-    color: '#8b5cf6', 
-    bgColor: 'rgba(139, 92, 246, 0.1)',
+  waiting_delivery: {
+    icon: ShippingIcon,
+    color: '#8b5cf6',
+    bgColor: 'rgba(139, 92, 246, 0.15)',
     label: 'Prêt à livrer',
-    order: 3
+    order: 3,
   },
-  completed: { 
-    icon: CheckCircleIcon, 
-    color: '#10b981', 
-    bgColor: 'rgba(16, 185, 129, 0.1)',
+  completed: {
+    icon: CheckCircleIcon,
+    color: '#22c55e',
+    bgColor: 'rgba(34, 197, 94, 0.15)',
     label: 'Terminée',
-    order: 4
+    order: 4,
   },
-  delivered: { 
-    icon: CheckCircleIcon, 
-    color: '#059669', 
-    bgColor: 'rgba(5, 150, 105, 0.1)',
+  delivered: {
+    icon: CheckCircleIcon,
+    color: '#059669',
+    bgColor: 'rgba(5, 150, 105, 0.15)',
     label: 'Livrée',
-    order: 5
+    order: 5,
   },
-  cancelled: { 
-    icon: CancelIcon, 
-    color: '#ef4444', 
-    bgColor: 'rgba(239, 68, 68, 0.1)',
+  cancelled: {
+    icon: CancelIcon,
+    color: '#ef4444',
+    bgColor: 'rgba(239, 68, 68, 0.15)',
     label: 'Annulée',
-    order: -1
+    order: -1,
   },
-  returned: { 
-    icon: UndoIcon, 
-    color: '#64748b', 
-    bgColor: 'rgba(100, 116, 139, 0.1)',
+  returned: {
+    icon: UndoIcon,
+    color: TEXT_DIM,
+    bgColor: 'rgba(100, 116, 139, 0.15)',
     label: 'Retournée',
-    order: -1
+    order: -1,
   },
 };
 
-// Timeline simplifiée pour l'affichage
 const timelineSteps = ['new', 'in_progress', 'waiting_parts', 'waiting_delivery', 'completed'];
 
 const RepairTracking: React.FC = () => {
@@ -349,7 +353,6 @@ const RepairTracking: React.FC = () => {
     setAutoSearchDone(false);
   };
 
-  // Lire les paramètres URL au chargement et lancer la recherche automatique
   useEffect(() => {
     const urlEmail = searchParams.get('email');
     const urlRepairNumber = searchParams.get('repairNumber');
@@ -358,7 +361,6 @@ const RepairTracking: React.FC = () => {
       setEmail(urlEmail);
       setRepairNumber(urlRepairNumber);
       setAutoSearchDone(true);
-      // Lancer directement la recherche avec les paramètres URL
       handleSearch(urlEmail, urlRepairNumber);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -375,43 +377,43 @@ const RepairTracking: React.FC = () => {
         <Fade in timeout={600}>
           <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
             <Box>
-              <Typography 
-                variant="h3" 
-                component="h1" 
-                sx={{ 
-                  fontFamily: '"Outfit", "Poppins", sans-serif',
+              <Typography
+                variant="h3"
+                component="h1"
+                sx={{
+                  fontFamily: '"Outfit", sans-serif',
                   fontWeight: 700,
-                  color: '#1e293b',
+                  color: TEXT_WHITE,
                   letterSpacing: '-0.5px',
                   mb: 0.5,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1.5
+                  gap: 1.5,
                 }}
               >
                 <Box
                   sx={{
                     width: 52,
                     height: 52,
-                    borderRadius: 3,
-                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    borderRadius: '14px',
+                    background: `linear-gradient(135deg, ${GOLD}, ${GOLD_DARK})`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
-                    color: '#fff',
+                    boxShadow: `0 4px 20px ${GOLD_GLOW}`,
+                    color: NAVY,
                   }}
                 >
                   <SearchIcon sx={{ fontSize: 28 }} />
                 </Box>
                 Suivi de Réparation
               </Typography>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  color: '#64748b',
+              <Typography
+                variant="body1"
+                sx={{
+                  color: TEXT_DIM,
                   fontFamily: '"Inter", sans-serif',
-                  pl: 8.5
+                  pl: 8.5,
                 }}
               >
                 Suivez l'avancement de votre réparation en temps réel
@@ -432,34 +434,34 @@ const RepairTracking: React.FC = () => {
         <Grow in timeout={800}>
           <Card sx={styles.glassCard}>
             <CardContent sx={{ p: 4 }}>
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  color: '#1e293b',
+              <Typography
+                variant="h5"
+                sx={{
+                  color: TEXT_WHITE,
                   fontFamily: '"Outfit", sans-serif',
                   fontWeight: 600,
                   mb: 3,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 1.5
+                  gap: 1.5,
                 }}
               >
                 <Box
                   sx={{
                     width: 40,
                     height: 40,
-                    borderRadius: 2.5,
-                    background: 'rgba(99, 102, 241, 0.1)',
+                    borderRadius: '10px',
+                    background: GOLD_SUBTLE,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <BuildIcon sx={{ color: '#6366f1', fontSize: 22 }} />
+                  <BuildIcon sx={{ color: GOLD, fontSize: 22 }} />
                 </Box>
                 Rechercher votre réparation
               </Typography>
-              
+
               <Grid container spacing={3}>
                 <Grid item xs={12} md={6}>
                   <TextField
@@ -506,8 +508,8 @@ const RepairTracking: React.FC = () => {
               <Box sx={{ mt: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Button
                   variant="contained"
-                  startIcon={loading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : <SearchIcon />}
-                  onClick={handleSearch}
+                  startIcon={loading ? <CircularProgress size={20} sx={{ color: NAVY }} /> : <SearchIcon />}
+                  onClick={() => handleSearch()}
                   disabled={loading || !email || !repairNumber}
                   sx={styles.searchButton}
                 >
@@ -526,17 +528,15 @@ const RepairTracking: React.FC = () => {
 
               {error && (
                 <Fade in>
-                  <Alert 
-                    severity="error" 
-                    sx={{ 
+                  <Alert
+                    severity="error"
+                    sx={{
                       mt: 3,
-                      backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                      color: '#dc2626',
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      color: '#fca5a5',
                       border: '1px solid rgba(239, 68, 68, 0.2)',
-                      borderRadius: 2.5,
-                      '& .MuiAlert-icon': {
-                        color: '#ef4444'
-                      }
+                      borderRadius: '12px',
+                      '& .MuiAlert-icon': { color: '#ef4444' },
                     }}
                   >
                     {error}
@@ -554,26 +554,21 @@ const RepairTracking: React.FC = () => {
               {/* Status Card */}
               <Card sx={{ ...styles.glassCard, mb: 3 }}>
                 <CardContent sx={{ p: 4 }}>
-                  {/* Repair Number & Status Badge */}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
                     <Box>
-                      <Typography 
-                        variant="overline" 
-                        sx={{ 
-                          color: '#94a3b8', 
-                          letterSpacing: 2,
-                          fontSize: '0.75rem'
-                        }}
+                      <Typography
+                        variant="overline"
+                        sx={{ color: TEXT_DIM, letterSpacing: 2, fontSize: '0.75rem' }}
                       >
                         Numéro de réparation
                       </Typography>
-                      <Typography 
-                        variant="h4" 
-                        sx={{ 
-                          color: '#1e293b',
+                      <Typography
+                        variant="h4"
+                        sx={{
+                          color: TEXT_WHITE,
                           fontFamily: '"JetBrains Mono", monospace',
                           fontWeight: 600,
-                          letterSpacing: 1
+                          letterSpacing: 1,
                         }}
                       >
                         {repair.repairNumber}
@@ -587,14 +582,13 @@ const RepairTracking: React.FC = () => {
                           backgroundColor: config?.bgColor,
                           color: config?.color,
                           fontWeight: 600,
+                          fontFamily: '"Inter", sans-serif',
                           fontSize: '0.95rem',
                           px: 2,
                           py: 3,
-                          borderRadius: 3,
-                          border: `1px solid ${config?.color}25`,
-                          '& .MuiChip-icon': {
-                            fontSize: 22,
-                          },
+                          borderRadius: '12px',
+                          border: `1px solid ${config?.color}30`,
+                          '& .MuiChip-icon': { fontSize: 22 },
                         }}
                       />
                     </Zoom>
@@ -602,22 +596,25 @@ const RepairTracking: React.FC = () => {
 
                   {/* Status Timeline */}
                   {currentStatusOrder >= 0 && (
-                    <Box sx={{ 
-                      background: '#f8fafc', 
-                      borderRadius: 3, 
-                      p: 3,
-                      mb: 2,
-                      border: '1px solid #f1f5f9'
-                    }}>
-                      <Typography 
-                        variant="subtitle2" 
-                        sx={{ 
-                          color: '#94a3b8', 
+                    <Box
+                      sx={{
+                        background: 'rgba(15, 23, 42, 0.4)',
+                        borderRadius: '14px',
+                        p: 3,
+                        mb: 2,
+                        border: `1px solid ${GLASS_BORDER}`,
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          color: TEXT_DIM,
                           mb: 3,
                           textAlign: 'center',
                           textTransform: 'uppercase',
                           letterSpacing: 2,
-                          fontSize: '0.7rem'
+                          fontSize: '0.7rem',
+                          fontFamily: '"Inter", sans-serif',
                         }}
                       >
                         Progression de la réparation
@@ -628,7 +625,7 @@ const RepairTracking: React.FC = () => {
                           const StepIcon = stepConfig.icon;
                           const isActive = currentStatusOrder >= stepConfig.order;
                           const isCurrent = repair.status === step;
-                          
+
                           return (
                             <React.Fragment key={step}>
                               <Box sx={styles.timelineStep}>
@@ -637,38 +634,33 @@ const RepairTracking: React.FC = () => {
                                     width: isCurrent ? 56 : 48,
                                     height: isCurrent ? 56 : 48,
                                     borderRadius: '50%',
-                                    backgroundColor: isActive ? stepConfig.bgColor : '#f1f5f9',
-                                    border: `2px solid ${isActive ? stepConfig.color : '#e2e8f0'}`,
+                                    backgroundColor: isActive ? stepConfig.bgColor : 'rgba(30, 41, 59, 0.6)',
+                                    border: `2px solid ${isActive ? stepConfig.color : 'rgba(148, 163, 184, 0.15)'}`,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     transition: 'all 0.3s ease',
                                     boxShadow: isCurrent ? `0 0 0 4px ${stepConfig.color}20, 0 4px 12px ${stepConfig.color}30` : 'none',
-                                    animation: isCurrent ? 'pulse 2s infinite' : 'none',
-                                    '@keyframes pulse': {
-                                      '0%': { boxShadow: `0 0 0 0 ${stepConfig.color}30` },
-                                      '70%': { boxShadow: `0 0 0 8px ${stepConfig.color}00` },
-                                      '100%': { boxShadow: `0 0 0 0 ${stepConfig.color}00` },
-                                    },
                                   }}
                                 >
-                                  <StepIcon 
-                                    sx={{ 
-                                      color: isActive ? stepConfig.color : '#cbd5e1',
+                                  <StepIcon
+                                    sx={{
+                                      color: isActive ? stepConfig.color : TEXT_DIM,
                                       fontSize: isCurrent ? 28 : 24,
                                       transition: 'all 0.3s ease',
-                                    }} 
+                                    }}
                                   />
                                 </Box>
                                 <Typography
                                   variant="caption"
                                   sx={{
-                                    color: isActive ? stepConfig.color : '#94a3b8',
+                                    color: isActive ? stepConfig.color : TEXT_DIM,
                                     textAlign: 'center',
                                     fontWeight: isCurrent ? 600 : 400,
                                     fontSize: '0.7rem',
                                     maxWidth: 70,
                                     lineHeight: 1.2,
+                                    fontFamily: '"Inter", sans-serif',
                                   }}
                                 >
                                   {stepConfig.label}
@@ -679,7 +671,7 @@ const RepairTracking: React.FC = () => {
                                   sx={{
                                     flex: 1,
                                     height: 4,
-                                    backgroundColor: '#e2e8f0',
+                                    backgroundColor: 'rgba(30, 41, 59, 0.6)',
                                     borderRadius: 2,
                                     position: 'relative',
                                     minWidth: 20,
@@ -717,53 +709,53 @@ const RepairTracking: React.FC = () => {
                 <Grid item xs={12} md={6}>
                   <Card sx={styles.glassCard}>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          color: '#1e293b',
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          color: TEXT_WHITE,
                           fontFamily: '"Outfit", sans-serif',
                           fontWeight: 600,
                           mb: 2.5,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 1.5
+                          gap: 1.5,
                         }}
                       >
-                        <Box sx={{ ...styles.infoIcon, background: 'rgba(99, 102, 241, 0.1)' }}>
-                          <DescriptionIcon sx={{ color: '#6366f1', fontSize: 20 }} />
+                        <Box sx={{ ...styles.infoIcon, background: GOLD_SUBTLE }}>
+                          <DescriptionIcon sx={{ color: GOLD, fontSize: 20 }} />
                         </Box>
                         Informations générales
                       </Typography>
                       <Box sx={styles.infoCard}>
                         <Box sx={styles.infoRow}>
-                          <Box sx={{ ...styles.infoIcon, background: 'rgba(16, 185, 129, 0.1)' }}>
-                            <EuroIcon sx={{ color: '#10b981', fontSize: 20 }} />
+                          <Box sx={{ ...styles.infoIcon, background: 'rgba(34, 197, 94, 0.15)' }}>
+                            <EuroIcon sx={{ color: '#22c55e', fontSize: 20 }} />
                           </Box>
                           <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>Prix estimé</Typography>
-                            <Typography sx={{ color: '#10b981', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: '1.1rem' }}>
+                            <Typography variant="caption" sx={{ color: TEXT_DIM }}>Prix estimé</Typography>
+                            <Typography sx={{ color: '#22c55e', fontWeight: 600, fontFamily: '"JetBrains Mono", monospace', fontSize: '1.1rem' }}>
                               {repair.totalPrice.toFixed(2)} €
                             </Typography>
                           </Box>
                         </Box>
                         <Box sx={styles.infoRow}>
-                          <Box sx={{ ...styles.infoIcon, background: 'rgba(99, 102, 241, 0.1)' }}>
-                            <DescriptionIcon sx={{ color: '#6366f1', fontSize: 20 }} />
+                          <Box sx={{ ...styles.infoIcon, background: GOLD_SUBTLE }}>
+                            <DescriptionIcon sx={{ color: GOLD, fontSize: 20 }} />
                           </Box>
                           <Box sx={{ flex: 1 }}>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>Description</Typography>
-                            <Typography sx={{ color: '#334155', fontSize: '0.9rem' }}>
+                            <Typography variant="caption" sx={{ color: TEXT_DIM }}>Description</Typography>
+                            <Typography sx={{ color: TEXT_LIGHT, fontSize: '0.9rem' }}>
                               {repair.description || 'Non spécifiée'}
                             </Typography>
                           </Box>
                         </Box>
                         <Box sx={styles.infoRow}>
-                          <Box sx={{ ...styles.infoIcon, background: 'rgba(245, 158, 11, 0.1)' }}>
+                          <Box sx={{ ...styles.infoIcon, background: 'rgba(245, 158, 11, 0.15)' }}>
                             <IssueIcon sx={{ color: '#f59e0b', fontSize: 20 }} />
                           </Box>
                           <Box sx={{ flex: 1 }}>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>Problème signalé</Typography>
-                            <Typography sx={{ color: '#334155', fontSize: '0.9rem' }}>
+                            <Typography variant="caption" sx={{ color: TEXT_DIM }}>Problème signalé</Typography>
+                            <Typography sx={{ color: TEXT_LIGHT, fontSize: '0.9rem' }}>
                               {repair.issue || 'Non spécifié'}
                             </Typography>
                           </Box>
@@ -777,19 +769,19 @@ const RepairTracking: React.FC = () => {
                 <Grid item xs={12} md={6}>
                   <Card sx={styles.glassCard}>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          color: '#1e293b',
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          color: TEXT_WHITE,
                           fontFamily: '"Outfit", sans-serif',
                           fontWeight: 600,
                           mb: 2.5,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 1.5
+                          gap: 1.5,
                         }}
                       >
-                        <Box sx={{ ...styles.infoIcon, background: 'rgba(59, 130, 246, 0.1)' }}>
+                        <Box sx={{ ...styles.infoIcon, background: 'rgba(59, 130, 246, 0.15)' }}>
                           <SmartphoneIcon sx={{ color: '#3b82f6', fontSize: 20 }} />
                         </Box>
                         Appareil
@@ -798,37 +790,38 @@ const RepairTracking: React.FC = () => {
                         {repair.device ? (
                           <>
                             <Box sx={styles.infoRow}>
-                              <Typography variant="caption" sx={{ color: '#94a3b8', width: 80 }}>Marque</Typography>
-                              <Typography sx={{ color: '#1e293b', fontWeight: 500 }}>
+                              <Typography variant="caption" sx={{ color: TEXT_DIM, width: 80 }}>Marque</Typography>
+                              <Typography sx={{ color: TEXT_WHITE, fontWeight: 500 }}>
                                 {repair.device.brand}
                               </Typography>
                             </Box>
                             <Box sx={styles.infoRow}>
-                              <Typography variant="caption" sx={{ color: '#94a3b8', width: 80 }}>Modèle</Typography>
-                              <Typography sx={{ color: '#1e293b', fontWeight: 500 }}>
+                              <Typography variant="caption" sx={{ color: TEXT_DIM, width: 80 }}>Modèle</Typography>
+                              <Typography sx={{ color: TEXT_WHITE, fontWeight: 500 }}>
                                 {repair.device.model}
                               </Typography>
                             </Box>
                             <Box sx={styles.infoRow}>
-                              <Typography variant="caption" sx={{ color: '#94a3b8', width: 80 }}>Type</Typography>
+                              <Typography variant="caption" sx={{ color: TEXT_DIM, width: 80 }}>Type</Typography>
                               <Chip
                                 label={repair.device.type}
                                 size="small"
                                 sx={{
-                                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
                                   color: '#3b82f6',
                                   fontWeight: 500,
                                   fontSize: '0.75rem',
+                                  border: '1px solid rgba(59, 130, 246, 0.25)',
                                 }}
                               />
                             </Box>
                             {repair.device.serialNumber && (
                               <Box sx={styles.infoRow}>
-                                <Typography variant="caption" sx={{ color: '#94a3b8', width: 80 }}>N° Série</Typography>
-                                <Typography sx={{ 
-                                  color: '#64748b', 
+                                <Typography variant="caption" sx={{ color: TEXT_DIM, width: 80 }}>N° Série</Typography>
+                                <Typography sx={{
+                                  color: TEXT_MUTED,
                                   fontFamily: '"JetBrains Mono", monospace',
-                                  fontSize: '0.85rem'
+                                  fontSize: '0.85rem',
                                 }}>
                                   {repair.device.serialNumber}
                                 </Typography>
@@ -837,8 +830,8 @@ const RepairTracking: React.FC = () => {
                           </>
                         ) : (
                           <Box sx={{ py: 3, textAlign: 'center' }}>
-                            <SmartphoneIcon sx={{ color: '#cbd5e1', fontSize: 44, mb: 1 }} />
-                            <Typography sx={{ color: '#94a3b8' }}>
+                            <SmartphoneIcon sx={{ color: TEXT_DIM, fontSize: 44, mb: 1 }} />
+                            <Typography sx={{ color: TEXT_DIM }}>
                               Aucune information d'appareil disponible
                             </Typography>
                           </Box>
@@ -852,53 +845,53 @@ const RepairTracking: React.FC = () => {
                 <Grid item xs={12} md={6}>
                   <Card sx={styles.glassCard}>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          color: '#1e293b',
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          color: TEXT_WHITE,
                           fontFamily: '"Outfit", sans-serif',
                           fontWeight: 600,
                           mb: 2.5,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 1.5
+                          gap: 1.5,
                         }}
                       >
-                        <Box sx={{ ...styles.infoIcon, background: 'rgba(139, 92, 246, 0.1)' }}>
+                        <Box sx={{ ...styles.infoIcon, background: 'rgba(139, 92, 246, 0.15)' }}>
                           <PersonIcon sx={{ color: '#8b5cf6', fontSize: 20 }} />
                         </Box>
                         Vos informations
                       </Typography>
                       <Box sx={styles.infoCard}>
                         <Box sx={styles.infoRow}>
-                          <Box sx={{ ...styles.infoIcon, background: 'rgba(139, 92, 246, 0.1)' }}>
+                          <Box sx={{ ...styles.infoIcon, background: 'rgba(139, 92, 246, 0.15)' }}>
                             <PersonIcon sx={{ color: '#8b5cf6', fontSize: 20 }} />
                           </Box>
                           <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>Nom complet</Typography>
-                            <Typography sx={{ color: '#1e293b', fontWeight: 500 }}>
+                            <Typography variant="caption" sx={{ color: TEXT_DIM }}>Nom complet</Typography>
+                            <Typography sx={{ color: TEXT_WHITE, fontWeight: 500 }}>
                               {repair.client.firstName} {repair.client.lastName}
                             </Typography>
                           </Box>
                         </Box>
                         <Box sx={styles.infoRow}>
-                          <Box sx={{ ...styles.infoIcon, background: 'rgba(99, 102, 241, 0.1)' }}>
-                            <EmailIcon sx={{ color: '#6366f1', fontSize: 20 }} />
+                          <Box sx={{ ...styles.infoIcon, background: GOLD_SUBTLE }}>
+                            <EmailIcon sx={{ color: GOLD, fontSize: 20 }} />
                           </Box>
                           <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>Email</Typography>
-                            <Typography sx={{ color: '#334155', fontSize: '0.9rem' }}>
+                            <Typography variant="caption" sx={{ color: TEXT_DIM }}>Email</Typography>
+                            <Typography sx={{ color: TEXT_LIGHT, fontSize: '0.9rem' }}>
                               {repair.client.email}
                             </Typography>
                           </Box>
                         </Box>
                         <Box sx={styles.infoRow}>
-                          <Box sx={{ ...styles.infoIcon, background: 'rgba(59, 130, 246, 0.1)' }}>
+                          <Box sx={{ ...styles.infoIcon, background: 'rgba(59, 130, 246, 0.15)' }}>
                             <PhoneIcon sx={{ color: '#3b82f6', fontSize: 20 }} />
                           </Box>
                           <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>Téléphone</Typography>
-                            <Typography sx={{ color: '#334155' }}>
+                            <Typography variant="caption" sx={{ color: TEXT_DIM }}>Téléphone</Typography>
+                            <Typography sx={{ color: TEXT_LIGHT }}>
                               {repair.client.phone || 'Non renseigné'}
                             </Typography>
                           </Box>
@@ -912,41 +905,41 @@ const RepairTracking: React.FC = () => {
                 <Grid item xs={12} md={6}>
                   <Card sx={styles.glassCard}>
                     <CardContent sx={{ p: 3 }}>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          color: '#1e293b',
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          color: TEXT_WHITE,
                           fontFamily: '"Outfit", sans-serif',
                           fontWeight: 600,
                           mb: 2.5,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 1.5
+                          gap: 1.5,
                         }}
                       >
-                        <Box sx={{ ...styles.infoIcon, background: 'rgba(16, 185, 129, 0.1)' }}>
-                          <CalendarIcon sx={{ color: '#10b981', fontSize: 20 }} />
+                        <Box sx={{ ...styles.infoIcon, background: 'rgba(34, 197, 94, 0.15)' }}>
+                          <CalendarIcon sx={{ color: '#22c55e', fontSize: 20 }} />
                         </Box>
                         Dates & Technicien
                       </Typography>
                       <Box sx={styles.infoCard}>
                         <Box sx={styles.infoRow}>
-                          <Box sx={{ ...styles.infoIcon, background: 'rgba(99, 102, 241, 0.1)' }}>
-                            <CalendarIcon sx={{ color: '#6366f1', fontSize: 20 }} />
+                          <Box sx={{ ...styles.infoIcon, background: GOLD_SUBTLE }}>
+                            <CalendarIcon sx={{ color: GOLD, fontSize: 20 }} />
                           </Box>
                           <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>Date de dépôt</Typography>
-                            <Typography sx={{ color: '#1e293b', fontWeight: 500 }}>
+                            <Typography variant="caption" sx={{ color: TEXT_DIM }}>Date de dépôt</Typography>
+                            <Typography sx={{ color: TEXT_WHITE, fontWeight: 500 }}>
                               {format(new Date(repair.createdAt), 'dd MMMM yyyy', { locale: fr })}
                             </Typography>
                           </Box>
                         </Box>
                         <Box sx={styles.infoRow}>
-                          <Box sx={{ ...styles.infoIcon, background: 'rgba(245, 158, 11, 0.1)' }}>
+                          <Box sx={{ ...styles.infoIcon, background: 'rgba(245, 158, 11, 0.15)' }}>
                             <ScheduleIcon sx={{ color: '#f59e0b', fontSize: 20 }} />
                           </Box>
                           <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>Date limite estimée</Typography>
+                            <Typography variant="caption" sx={{ color: TEXT_DIM }}>Date limite estimée</Typography>
                             <Typography sx={{ color: '#f59e0b', fontWeight: 600 }}>
                               {format(new Date(repair.dueDate), 'dd MMMM yyyy', { locale: fr })}
                             </Typography>
@@ -954,12 +947,12 @@ const RepairTracking: React.FC = () => {
                         </Box>
                         {repair.technician && (
                           <Box sx={styles.infoRow}>
-                            <Box sx={{ ...styles.infoIcon, background: 'rgba(16, 185, 129, 0.1)' }}>
-                              <TechnicianIcon sx={{ color: '#10b981', fontSize: 20 }} />
+                            <Box sx={{ ...styles.infoIcon, background: 'rgba(34, 197, 94, 0.15)' }}>
+                              <TechnicianIcon sx={{ color: '#22c55e', fontSize: 20 }} />
                             </Box>
                             <Box>
-                              <Typography variant="caption" sx={{ color: '#94a3b8' }}>Technicien assigné</Typography>
-                              <Typography sx={{ color: '#10b981', fontWeight: 500 }}>
+                              <Typography variant="caption" sx={{ color: TEXT_DIM }}>Technicien assigné</Typography>
+                              <Typography sx={{ color: '#22c55e', fontWeight: 500 }}>
                                 {repair.technician.firstName} {repair.technician.lastName}
                               </Typography>
                             </Box>
@@ -972,65 +965,60 @@ const RepairTracking: React.FC = () => {
               </Grid>
 
               {/* Footer message */}
-              <Box 
-                sx={{ 
-                  mt: 4, 
-                  p: 3, 
-                  borderRadius: 3,
-                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
-                  border: '1px solid rgba(99, 102, 241, 0.15)',
-                  textAlign: 'center'
+              <Box
+                sx={{
+                  mt: 4,
+                  p: 3,
+                  borderRadius: '14px',
+                  background: GOLD_SUBTLE,
+                  border: `1px solid rgba(245, 158, 11, 0.2)`,
+                  textAlign: 'center',
                 }}
               >
-                <Typography sx={{ color: '#6366f1', fontSize: '0.95rem', fontWeight: 500 }}>
-                  💡 Vous recevrez un email à chaque mise à jour du statut de votre réparation.
+                <Typography sx={{ color: GOLD, fontSize: '0.95rem', fontWeight: 500, fontFamily: '"Inter", sans-serif' }}>
+                  Vous recevrez un email à chaque mise à jour du statut de votre réparation.
                 </Typography>
               </Box>
             </Box>
           </Fade>
         )}
 
-        {/* Empty state when no search */}
+        {/* Empty state */}
         {!repair && !loading && !error && (
           <Fade in timeout={1000}>
-            <Box 
-              sx={{ 
-                mt: 6, 
-                textAlign: 'center',
-                py: 6,
-              }}
-            >
+            <Box sx={{ mt: 6, textAlign: 'center', py: 6 }}>
               <Box
                 sx={{
                   width: 100,
                   height: 100,
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                  background: GOLD_SUBTLE,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   mx: 'auto',
                   mb: 3,
-                  border: '1px solid rgba(99, 102, 241, 0.15)',
+                  border: `1px solid rgba(245, 158, 11, 0.2)`,
                 }}
               >
-                <SearchIcon sx={{ fontSize: 50, color: '#6366f1' }} />
+                <SearchIcon sx={{ fontSize: 50, color: GOLD }} />
               </Box>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  color: '#475569',
+              <Typography
+                variant="h6"
+                sx={{
+                  color: TEXT_MUTED,
                   fontFamily: '"Outfit", sans-serif',
-                  mb: 1
+                  mb: 1,
                 }}
               >
                 Entrez vos informations ci-dessus
               </Typography>
-              <Typography 
-                sx={{ 
-                  color: '#94a3b8',
+              <Typography
+                sx={{
+                  color: TEXT_DIM,
                   maxWidth: 400,
-                  mx: 'auto'
+                  mx: 'auto',
+                  fontFamily: '"Inter", sans-serif',
                 }}
               >
                 Utilisez l'email et le numéro de réparation reçus lors du dépôt de votre appareil
