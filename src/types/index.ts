@@ -553,7 +553,7 @@ export interface SubscriptionStatus {
   last_name: string;
   email: string;
   is_active: boolean;
-  subscription_type: 'free' | 'premium' | 'enterprise' | 'premium_monthly' | 'premium_yearly';
+  subscription_type: 'free' | 'premium' | 'enterprise' | 'premium_monthly' | 'premium_yearly' | 'trial';
   created_at: string;
   updated_at: string;
   activated_at?: string;
@@ -565,6 +565,7 @@ export interface SubscriptionStatus {
   stripe_price_id_monthly?: string;
   stripe_price_id_yearly?: string;
   stripe_current_period_end?: string;
+  trial_ends_at?: string;
 }
 
 export interface SubscriptionPlan {

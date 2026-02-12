@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
+import { isAdminEmail } from '../config/adminEmails';
 
 // Cache global pour la vérification d'accès ultra-rapide
 const accessCache = new Map<string, { 
@@ -114,39 +115,59 @@ export const useUltraFastAccess = () => {
       let isActive = false;
       
       if (user && !authError) {
-        // Vérification d'accès rapide (is_active + stripe_current_period_end pour vérifier l'expiration)
+        // Vérification d'accès rapide (is_active + stripe_current_period_end + trial_ends_at)
         const { data, error } = await supabase
           .from('subscription_status')
-          .select('is_active, stripe_current_period_end')
+          .select('is_active, stripe_current_period_end, trial_ends_at, subscription_type')
           .eq('user_id', user.id)
           .single();
-        
+
         if (error) {
           // Logique rapide pour les admins
-          const userEmail = user.email?.toLowerCase();
-          const isAdmin = userEmail === 'srohee32@gmail.com' || userEmail === 'repphonereparation@gmail.com';
           const userRole = user.user_metadata?.role || 'technician';
-          isActive = isAdmin || userRole === 'admin';
+          isActive = isAdminEmail(user.email) || userRole === 'admin';
         } else {
           // Faire confiance au statut is_active mis à jour par le webhook Stripe
-          // Ne pas désactiver automatiquement côté client pour éviter les blocages intempestifs
           let subscriptionActive = data?.is_active || false;
-          
-          // Vérifier l'expiration seulement pour logging, mais ne pas bloquer automatiquement
-          // Le webhook Stripe gère correctement la mise à jour de is_active
+
+          // Vérifier l'expiration des essais (trials) - auto-lock si expiré
+          if (subscriptionActive && data?.subscription_type === 'trial' && data?.trial_ends_at) {
+            const trialEnd = new Date(data.trial_ends_at);
+            const now = new Date();
+
+            if (trialEnd < now) {
+              console.log(`⏰ Essai expiré pour ${user.email} - blocage automatique`);
+              subscriptionActive = false;
+
+              // Fire-and-forget : mettre à jour la BDD
+              supabase
+                .from('subscription_status')
+                .update({
+                  is_active: false,
+                  notes: 'Essai expiré - désactivé automatiquement',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id)
+                .then(({ error: updateError }) => {
+                  if (updateError) {
+                    console.error('❌ Erreur auto-désactivation essai:', updateError);
+                  } else {
+                    console.log('✅ Essai expiré désactivé en BDD');
+                  }
+                });
+            }
+          }
+
+          // Vérifier l'expiration Stripe seulement pour logging
           if (subscriptionActive && data?.stripe_current_period_end) {
             const periodEnd = new Date(data.stripe_current_period_end);
             const now = new Date();
-            
-            // Si la période est expirée, on fait confiance au webhook Stripe qui devrait avoir mis à jour is_active
-            // On ne désactive pas automatiquement pour éviter les blocages intempestifs
+
             if (periodEnd < now) {
               console.log(`⚠️ Période d'abonnement expirée pour ${user.email}, mais is_active=${subscriptionActive} - Faire confiance au webhook Stripe`);
-              // Ne pas mettre à jour la base de données automatiquement
-              // Le webhook Stripe gère cela correctement
             }
           }
-          
+
           // Utiliser directement is_active de la base de données
           isActive = subscriptionActive;
         }

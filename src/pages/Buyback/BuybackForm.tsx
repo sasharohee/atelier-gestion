@@ -27,6 +27,7 @@ import {
   RadioGroup,
   Radio,
   Autocomplete,
+  CircularProgress,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -182,10 +183,10 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
     '& .MuiOutlinedInput-root': {
       borderRadius: 2,
       '&:hover .MuiOutlinedInput-notchedOutline': {
-        borderColor: '#4caf50',
+        borderColor: '#10b981',
       },
       '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-        borderColor: '#4caf50',
+        borderColor: '#10b981',
         borderWidth: 2,
       },
     },
@@ -196,10 +197,10 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
     '& .MuiOutlinedInput-root': {
       borderRadius: 2,
       '&:hover .MuiOutlinedInput-notchedOutline': {
-        borderColor: '#4caf50',
+        borderColor: '#10b981',
       },
       '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-        borderColor: '#4caf50',
+        borderColor: '#10b981',
         borderWidth: 2,
       },
     },
@@ -816,15 +817,6 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
       case 4:
         return (
           <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Alert severity="warning" sx={{ mb: 3 }}>
-                <Typography variant="body2">
-                  <strong>Version bêta :</strong> La partie évaluation est actuellement en bêta. 
-                  Les prix calculés automatiquement ne sont pas corrects et doivent être ajustés manuellement.
-                </Typography>
-              </Alert>
-            </Grid>
-            
             {/* Affichage du détail du calcul si disponible */}
             {priceBreakdown && (
               <Grid item xs={12}>
@@ -1030,11 +1022,11 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: index <= activeStep ? '#4caf50' : '#ccc',
+                  backgroundColor: index <= activeStep ? '#10b981' : '#ccc',
                   color: index <= activeStep ? 'white' : '#666',
                   fontWeight: 'bold',
                   fontSize: '14px',
-                  boxShadow: index <= activeStep ? '0 4px 12px rgba(76,175,80,0.4)' : 'none',
+                  boxShadow: index <= activeStep ? '0 4px 12px rgba(16,185,129,0.4)' : 'none',
                   transition: 'all 0.3s ease'
                 }}
               >
@@ -1056,7 +1048,7 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
                   sx={{
                     width: 60,
                     height: 2,
-                    backgroundColor: index < activeStep ? '#4caf50' : '#ccc',
+                    backgroundColor: index < activeStep ? '#10b981' : '#ccc',
                     mx: 2,
                     display: { xs: 'none', sm: 'block' }
                   }}
@@ -1093,7 +1085,7 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
             <Box sx={{ 
               width: 4, 
               height: 24, 
-              backgroundColor: '#4caf50', 
+              backgroundColor: '#10b981',
               borderRadius: 2 
             }} />
             {steps[activeStep]}
@@ -1170,11 +1162,11 @@ const BuybackForm: React.FC<BuybackFormProps> = ({ buyback, onSave, onCancel }) 
               borderRadius: 2,
               px: 4,
               py: 1.5,
-              background: 'linear-gradient(45deg, #4caf50 30%, #45a049 90%)',
-              boxShadow: '0 4px 12px rgba(76,175,80,0.4)',
+              background: 'linear-gradient(45deg, #10b981 30%, #059669 90%)',
+              boxShadow: '0 4px 12px rgba(16,185,129,0.4)',
               '&:hover': {
-                background: 'linear-gradient(45deg, #45a049 30%, #4caf50 90%)',
-                boxShadow: '0 6px 16px rgba(76,175,80,0.5)'
+                background: 'linear-gradient(45deg, #059669 30%, #10b981 90%)',
+                boxShadow: '0 6px 16px rgba(16,185,129,0.5)'
               },
               '&:disabled': {
                 background: 'rgba(255,255,255,0.3)',

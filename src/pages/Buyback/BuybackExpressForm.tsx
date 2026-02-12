@@ -318,15 +318,6 @@ const BuybackExpressForm: React.FC<BuybackExpressFormProps> = ({ buyback, onSave
       case 1:
         return (
           <Grid container spacing={3} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <Alert severity="warning" sx={{ mb: 3 }}>
-                <Typography variant="body2">
-                  <strong>Version bêta :</strong> La partie évaluation est actuellement en bêta. 
-                  Les prix calculés automatiquement ne sont pas corrects et doivent être ajustés manuellement.
-                </Typography>
-              </Alert>
-            </Grid>
-            
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -392,7 +383,7 @@ const BuybackExpressForm: React.FC<BuybackExpressFormProps> = ({ buyback, onSave
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)',
+      background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
       p: 3 
     }}>
       {/* Header avec titre */}
@@ -402,7 +393,7 @@ const BuybackExpressForm: React.FC<BuybackExpressFormProps> = ({ buyback, onSave
         color: '#333'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 2 }}>
-          <FlashOnIcon sx={{ color: '#f59e0b', fontSize: 32 }} />
+          <FlashOnIcon sx={{ color: '#10b981', fontSize: 32 }} />
           <Typography variant="h4" sx={{ 
             fontWeight: 'bold',
             textShadow: '0 2px 4px rgba(0,0,0,0.1)'
@@ -437,7 +428,7 @@ const BuybackExpressForm: React.FC<BuybackExpressFormProps> = ({ buyback, onSave
           borderRadius: 3,
           background: 'rgba(255,255,255,0.95)',
           backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(245, 158, 11, 0.2)'
+          border: '1px solid rgba(16, 185, 129, 0.2)'
         }}
       >
         <Box sx={{ mb: 3 }}>
@@ -452,7 +443,7 @@ const BuybackExpressForm: React.FC<BuybackExpressFormProps> = ({ buyback, onSave
             <Box sx={{ 
               width: 4, 
               height: 24, 
-              backgroundColor: '#f59e0b', 
+              backgroundColor: '#10b981',
               borderRadius: 2 
             }} />
             {steps[activeStep]}
@@ -531,11 +522,11 @@ const BuybackExpressForm: React.FC<BuybackExpressFormProps> = ({ buyback, onSave
               borderRadius: 2,
               px: 4,
               py: 1.5,
-              background: 'linear-gradient(45deg, #f59e0b 30%, #d97706 90%)',
-              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)',
+              background: 'linear-gradient(45deg, #10b981 30%, #059669 90%)',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
               '&:hover': {
-                background: 'linear-gradient(45deg, #d97706 30%, #f59e0b 90%)',
-                boxShadow: '0 6px 16px rgba(245, 158, 11, 0.5)'
+                background: 'linear-gradient(45deg, #059669 30%, #10b981 90%)',
+                boxShadow: '0 6px 16px rgba(16, 185, 129, 0.5)'
               },
               '&:disabled': {
                 background: 'rgba(255,255,255,0.3)',

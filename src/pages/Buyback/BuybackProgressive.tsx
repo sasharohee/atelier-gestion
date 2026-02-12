@@ -206,14 +206,19 @@ const BuybackProgressive: React.FC = () => {
           {/* Statistiques */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{
+            background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+            border: '1px solid #bbf7d0',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(16,185,129,0.15)' }
+          }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.85rem' }}>
                     Total rachats
                   </Typography>
-                  <Typography variant="h4">
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#374151' }}>
                     {stats.total}
                   </Typography>
                 </Box>
@@ -222,16 +227,21 @@ const BuybackProgressive: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{
+            background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+            border: '1px solid #fde68a',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(245,158,11,0.15)' }
+          }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.85rem' }}>
                     En attente
                   </Typography>
-                  <Typography variant="h4">
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#374151' }}>
                     {stats.pending}
                   </Typography>
                 </Box>
@@ -240,16 +250,21 @@ const BuybackProgressive: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{
+            background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+            border: '1px solid #bfdbfe',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(59,130,246,0.15)' }
+          }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.85rem' }}>
                     Acceptés
                   </Typography>
-                  <Typography variant="h4">
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#374151' }}>
                     {stats.accepted}
                   </Typography>
                 </Box>
@@ -258,16 +273,21 @@ const BuybackProgressive: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        
+
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{
+            background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+            border: '1px solid #a7f3d0',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(16,185,129,0.15)' }
+          }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Box>
-                  <Typography color="textSecondary" gutterBottom>
+                  <Typography color="textSecondary" gutterBottom sx={{ fontSize: '0.85rem' }}>
                     Valeur totale
                   </Typography>
-                  <Typography variant="h4">
+                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#374151' }}>
                     {formatFromEUR(stats.totalValue, currency)}
                   </Typography>
                 </Box>
@@ -317,7 +337,7 @@ const BuybackProgressive: React.FC = () => {
                   setIsExpressMode(true);
                   setShowForm(true);
                 }}
-                sx={{ borderColor: '#f59e0b', color: '#f59e0b', '&:hover': { borderColor: '#d97706', backgroundColor: '#fef3c7' } }}
+                sx={{ borderColor: '#374151', color: '#374151', '&:hover': { borderColor: '#1f2937', backgroundColor: '#f3f4f6' } }}
               >
                 Rachat expresse
               </Button>
@@ -339,17 +359,17 @@ const BuybackProgressive: React.FC = () => {
       </Paper>
 
       {/* Table des rachats */}
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
         <Table>
           <TableHead>
-            <TableRow>
-              <TableCell>Client</TableCell>
-              <TableCell>Appareil</TableCell>
-              <TableCell>IMEI</TableCell>
-              <TableCell>Prix final</TableCell>
-              <TableCell>Statut</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell>Actions</TableCell>
+            <TableRow sx={{ backgroundColor: '#f9fafb' }}>
+              <TableCell sx={{ fontWeight: 600, color: '#374151' }}>Client</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#374151' }}>Appareil</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#374151' }}>IMEI</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#374151' }}>Prix final</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#374151' }}>Statut</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#374151' }}>Date</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: '#374151' }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -369,8 +389,23 @@ const BuybackProgressive: React.FC = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredBuybacks.map((buyback) => (
-                <TableRow key={buyback.id} hover>
+              filteredBuybacks.map((buyback) => {
+                const statusBorderColor: Record<string, string> = {
+                  'pending': '#f59e0b',
+                  'accepted': '#3b82f6',
+                  'rejected': '#ef4444',
+                  'paid': '#10b981',
+                };
+                return (
+                <TableRow
+                  key={buyback.id}
+                  hover
+                  sx={{
+                    borderLeft: `4px solid ${statusBorderColor[buyback.status] || '#e5e7eb'}`,
+                    '&:hover': { backgroundColor: '#f9fafb' },
+                    transition: 'background-color 0.15s',
+                  }}
+                >
                   <TableCell>
                     <Box>
                       <Typography variant="body2" fontWeight="medium">
@@ -439,7 +474,8 @@ const BuybackProgressive: React.FC = () => {
                     </Box>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

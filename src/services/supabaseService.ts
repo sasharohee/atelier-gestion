@@ -3850,6 +3850,73 @@ export const subscriptionService = {
       console.error('❌ Erreur dans updateSubscriptionType:', err);
       return handleSupabaseError(err as any);
     }
+  },
+
+  async activateTrial(userId: string, trialDays: 7 | 30, activatedBy: string, notes?: string) {
+    try {
+      const trialEndsAt = new Date();
+      trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
+
+      console.log(`🎯 Activation essai ${trialDays}j pour ${userId}, fin: ${trialEndsAt.toISOString()}`);
+
+      const { data, error } = await supabase
+        .from('subscription_status')
+        .update({
+          is_active: true,
+          subscription_type: 'trial',
+          trial_ends_at: trialEndsAt.toISOString(),
+          activated_at: new Date().toISOString(),
+          activated_by: activatedBy,
+          notes: notes || `Essai ${trialDays} jours activé`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Erreur activation essai:', error);
+        return handleSupabaseError(error);
+      }
+
+      console.log('✅ Essai activé avec succès');
+      return handleSupabaseSuccess(data);
+    } catch (err) {
+      console.error('❌ Erreur dans activateTrial:', err);
+      return handleSupabaseError(err as any);
+    }
+  },
+
+  async deactivateExpiredTrials() {
+    try {
+      console.log('🧹 Nettoyage des essais expirés...');
+
+      const now = new Date().toISOString();
+
+      const { data, error } = await supabase
+        .from('subscription_status')
+        .update({
+          is_active: false,
+          notes: 'Essai expiré - désactivé automatiquement',
+          updated_at: now
+        })
+        .eq('is_active', true)
+        .eq('subscription_type', 'trial')
+        .lt('trial_ends_at', now)
+        .select();
+
+      if (error) {
+        console.error('❌ Erreur nettoyage essais:', error);
+        return handleSupabaseError(error);
+      }
+
+      const count = data?.length || 0;
+      console.log(`✅ ${count} essai(s) expiré(s) désactivé(s)`);
+      return handleSupabaseSuccess({ deactivated_count: count, data });
+    } catch (err) {
+      console.error('❌ Erreur dans deactivateExpiredTrials:', err);
+      return handleSupabaseError(err as any);
+    }
   }
 };
 
