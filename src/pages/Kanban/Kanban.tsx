@@ -1977,331 +1977,284 @@ const Kanban: React.FC = () => {
     const client = getClientById(repair.clientId);
     const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
     const technician = repair.assignedTechnicianId ? getUserById(repair.assignedTechnicianId) : null;
-    
+
     // Trouver le statut actuel de la réparation
     const currentStatus = repairStatuses.find(s => s.id === repair.status);
-    const isNewStatus = currentStatus ? 
-      (currentStatus.name.toLowerCase().includes('nouvelle') || 
+    const isNewStatus = currentStatus ?
+      (currentStatus.name.toLowerCase().includes('nouvelle') ||
        currentStatus.name.toLowerCase().includes('new') ||
-       currentStatus.order === 0 || 
+       currentStatus.order === 0 ||
        currentStatus.order === 1) : false;
-    
+
     // Ne pas afficher le retard pour les réparations terminées ou restituées
-    const isOverdue = (repair.status === 'completed' || repair.status === 'returned') 
-      ? false 
+    const isOverdue = (repair.status === 'completed' || repair.status === 'returned')
+      ? false
       : new Date(repair.dueDate) < new Date();
+
+    const statusColor = getStatusColor(repair.status);
 
     return (
       <Card
         sx={{
-          mb: 2,
-          cursor: 'pointer',
+          mb: 1.5,
+          cursor: 'grab',
+          borderRadius: 2.5,
+          border: '1px solid',
+          borderColor: isOverdue ? '#fca5a5' : 'rgba(0,0,0,0.05)',
+          borderLeft: `4px solid ${isOverdue ? '#ef4444' : repair.isUrgent ? '#f59e0b' : statusColor}`,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          background: isOverdue ? 'linear-gradient(135deg, #fff5f5 0%, #ffffff 100%)' : '#ffffff',
           '&:hover': {
-            boxShadow: 4,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+            borderColor: isOverdue ? '#f87171' : 'rgba(0,0,0,0.1)',
+            transform: 'translateY(-1px)',
           },
-          border: isOverdue ? '2px solid #f44336' : 'none',
+          '&:active': { cursor: 'grabbing' },
         }}
       >
-        <CardContent sx={{ p: 2 }}>
+        <CardContent sx={{ p: '14px !important', '&:last-child': { pb: '14px !important' } }}>
+          {/* Client + repair number */}
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-            <Avatar
-              sx={{
-                backgroundColor: getDeviceTypeColor(device?.type || 'other'),
-                width: 32,
-                height: 32,
-              }}
-            >
-              {getDeviceTypeIcon(device?.type || 'other')}
-            </Avatar>
-            <Box sx={{ display: 'flex', gap: 0.5 }}>
-              <Tooltip title="Modifier">
-                <IconButton 
-                  size="small" 
-                  onClick={(e) => { e.stopPropagation(); handleEditRepair(repair); }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              
-              {/* Bouton étiquette pour statut "nouvelle" */}
-              {isNewStatus && (
-                <Tooltip title="Générer étiquette">
-                  <IconButton 
-                    size="small" 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      const repairClient = getClientById(repair.clientId);
-                      if (!repairClient || !repairClient.email) {
-                        alert('Erreur : Impossible de trouver les informations du client pour cette réparation.');
-                        return;
-                      }
-                      setSelectedRepairForLabel(repair);
-                      setLabelDialogOpen(true);
-                    }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    sx={{ 
-                      color: '#8b5cf6',
-                      backgroundColor: '#f3e8ff',
-                      '&:hover': {
-                        backgroundColor: '#e9d5ff',
-                      }
-                    }}
-                  >
-                    <LabelIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-              
-              {/* Reçu thermique pour statut "nouvelle" avec acompte */}
-              {repair.deposit && repair.deposit > 0 && isNewStatus && (
-                <>
-                  <Tooltip title="Reçu thermique (acompte)">
-                    <IconButton 
-                      size="small" 
-                      onClick={(e) => { e.stopPropagation(); handleOpenThermalReceipt(repair); }}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      sx={{ 
-                        color: '#3b82f6',
-                        backgroundColor: '#eff6ff',
-                        '&:hover': {
-                          backgroundColor: '#dbeafe',
-                        }
-                      }}
-                    >
-                      <ReceiptIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  
-                  {/* Afficher le bouton de validation ou de dévalidation selon l'état */}
-                  {depositValidated[repair.id] ? (
-                    <Tooltip title="Dévalider le paiement de l'acompte">
-                      <IconButton 
-                        size="small" 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          handleUnvalidateDeposit(repair);
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        sx={{ 
-                          color: '#ef4444',
-                          backgroundColor: '#fef2f2',
-                          '&:hover': {
-                            backgroundColor: '#fee2e2',
-                          }
-                        }}
-                      >
-                        <CancelIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip title="Valider le paiement de l'acompte">
-                      <IconButton 
-                        size="small" 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          handleValidateDeposit(repair);
-                        }}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}
-                        sx={{ 
-                          color: '#10b981',
-                          backgroundColor: '#f0fdf4',
-                          '&:hover': {
-                            backgroundColor: '#dcfce7',
-                          }
-                        }}
-                      >
-                        <CheckCircleIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </>
-              )}
-              
-              {repair.status === 'completed' && (
-                <Tooltip title="Reçu thermique">
-                  <IconButton 
-                    size="small" 
-                    onClick={(e) => { e.stopPropagation(); handleOpenThermalReceipt(repair); }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    sx={{ color: 'primary.main' }}
-                  >
-                    <ReceiptIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              {(repair.status === 'completed' || repair.status === 'returned') && (
-                <>
-                  <Tooltip title="Voir facture">
-                    <IconButton 
-                      size="small" 
-                      onClick={(e) => { e.stopPropagation(); openInvoice(repair); }}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                    >
-                      <ReceiptIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Imprimer facture">
-                    <IconButton 
-                      size="small" 
-                      onClick={(e) => { e.stopPropagation(); openInvoice(repair); }}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                    >
-                      <PrintIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={repair.isPaid ? "Annuler la validation du paiement" : "Valider le paiement"}>
-                    <IconButton 
-                      size="small" 
-                      onClick={(e) => handleTogglePayment(repair, e)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      sx={{ 
-                        color: repair.isPaid ? 'success.main' : 'warning.main',
-                        '&:hover': {
-                          backgroundColor: repair.isPaid ? 'success.light' : 'warning.light',
-                          color: 'white'
-                        }
-                      }}
-                    >
-                      {repair.isPaid ? <CheckCircleIcon fontSize="small" /> : <CheckCircleOutlineIcon fontSize="small" />}
-                    </IconButton>
-                  </Tooltip>
-                </>
-              )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
+              <Avatar
+                sx={{
+                  width: 28, height: 28, fontSize: '0.65rem', fontWeight: 700,
+                  background: `linear-gradient(135deg, ${statusColor}30, ${statusColor}15)`,
+                  color: statusColor,
+                }}
+              >
+                {client?.firstName?.charAt(0) || '?'}{client?.lastName?.charAt(0) || ''}
+              </Avatar>
+              <Typography variant="subtitle2" sx={{
+                fontWeight: 600, fontSize: '0.82rem', lineHeight: 1.3,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {client?.firstName} {client?.lastName}
+              </Typography>
             </Box>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-            <Typography variant="subtitle2">
-              {client?.firstName} {client?.lastName}
-            </Typography>
             {repair.repairNumber && (
-              <Typography variant="caption" color="primary" sx={{ fontWeight: 'bold' }}>
+              <Typography variant="caption" sx={{
+                fontWeight: 700, color: statusColor,
+                backgroundColor: `${statusColor}12`,
+                px: 1, py: 0.25, borderRadius: 1,
+                fontSize: '0.68rem', letterSpacing: '0.02em', whiteSpace: 'nowrap',
+              }}>
                 {repair.repairNumber}
               </Typography>
             )}
           </Box>
 
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          {/* Device info */}
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.78rem', mb: 0.5, fontWeight: 500 }}>
             {device?.brand} {device?.model} {!device && 'Appareil'}
           </Typography>
-          
-          {/* Affichage de la catégorie de l'appareil */}
-          {device?.type && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <Chip
-                label={getDeviceTypeLabel(device.type)}
-                size="small"
-                color="primary"
-                variant="outlined"
-                icon={<CategoryIcon />}
-              />
-            </Box>
-          )}
 
-          <Typography variant="body2" sx={{ mb: 1 }}>
+          {/* Description */}
+          <Typography variant="body2" sx={{
+            mb: 1, fontSize: '0.78rem', color: '#4b5563',
+            overflow: 'hidden', textOverflow: 'ellipsis',
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          }}>
             {repair.description}
           </Typography>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <Chip
-              label={repair.isUrgent ? 'Urgent' : 'Normal'}
-              size="small"
-              color={repair.isUrgent ? 'error' : 'default'}
-            />
+          {/* Tags */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mb: 1 }}>
+            {device?.type && (
+              <Chip label={getDeviceTypeLabel(device.type)} size="small"
+                sx={{ height: 22, fontSize: '0.68rem', fontWeight: 600, backgroundColor: '#f1f5f9', color: '#475569', '& .MuiChip-label': { px: 1 } }}
+              />
+            )}
+            {repair.isUrgent && (
+              <Chip label="Urgent" size="small"
+                sx={{ height: 22, fontSize: '0.68rem', fontWeight: 700, backgroundColor: '#fef2f2', color: '#dc2626', '& .MuiChip-label': { px: 1 } }}
+              />
+            )}
             {isOverdue && (
-              <Chip
-                icon={<WarningIcon />}
-                label="En retard"
-                size="small"
-                color="error"
+              <Chip icon={<WarningIcon sx={{ fontSize: '0.8rem !important' }} />} label="En retard" size="small"
+                sx={{ height: 22, fontSize: '0.68rem', fontWeight: 600, backgroundColor: '#fef2f2', color: '#dc2626', '& .MuiChip-icon': { ml: 0.5 }, '& .MuiChip-label': { px: 0.5 } }}
               />
             )}
             {(repair.status === 'completed' || repair.status === 'returned') && (
               <Chip
-                icon={repair.isPaid ? <CheckCircleIcon /> : <ErrorOutlineIcon />}
-                label={repair.isPaid ? 'Payé' : 'Non payé'}
-                size="small"
-                color={repair.isPaid ? 'success' : 'error'}
-                variant={repair.isPaid ? 'filled' : 'outlined'}
+                icon={repair.isPaid ? <CheckCircleIcon sx={{ fontSize: '0.8rem !important' }} /> : <ErrorOutlineIcon sx={{ fontSize: '0.8rem !important' }} />}
+                label={repair.isPaid ? 'Payé' : 'Non payé'} size="small"
+                sx={{
+                  height: 22, fontSize: '0.68rem', fontWeight: 600,
+                  backgroundColor: repair.isPaid ? '#f0fdf4' : '#fef2f2',
+                  color: repair.isPaid ? '#15803d' : '#dc2626',
+                  '& .MuiChip-icon': { ml: 0.5, color: 'inherit' }, '& .MuiChip-label': { px: 0.5 },
+                }}
               />
             )}
           </Box>
 
+          {/* Price + date */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+              <Typography variant="body1" sx={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem' }}>
+                {formatFromEUR(repair.totalPrice, currency)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#9ca3af', fontSize: '0.68rem' }}>TTC</Typography>
+              {repair.discountPercentage > 0 && repair.discountAmount > 0 && (
+                <Typography variant="caption" sx={{ textDecoration: 'line-through', color: '#d1d5db', fontSize: '0.7rem', ml: 0.5 }}>
+                  {formatFromEUR(repair.totalPrice + (repair.discountAmount || 0), currency)}
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <ScheduleIcon sx={{ fontSize: '0.8rem', color: '#9ca3af' }} />
+              <Typography variant="caption" sx={{ color: '#9ca3af', fontSize: '0.72rem' }}>
+                {safeFormatDate(repair.dueDate, 'dd MMM')}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Technician */}
           {technician && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-              <Avatar sx={{ width: 20, height: 20, fontSize: '0.75rem' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+              <Avatar sx={{ width: 18, height: 18, fontSize: '0.6rem', bgcolor: '#e2e8f0', color: '#475569' }}>
                 {technician.firstName.charAt(0)}
               </Avatar>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" sx={{ color: '#6b7280', fontSize: '0.72rem' }}>
                 {`${technician.firstName} ${technician.lastName}`}
               </Typography>
             </Box>
           )}
 
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="h6" color="primary">
-                {formatFromEUR(repair.totalPrice, currency)} TTC
-              </Typography>
-              {repair.discountPercentage > 0 && repair.discountAmount > 0 && (
-                <Typography variant="caption" sx={{ textDecoration: 'line-through', color: '#9ca3af', ml: 0.5 }}>
-                  {formatFromEUR(repair.totalPrice + (repair.discountAmount || 0), currency)}
-                </Typography>
-              )}
-            </Box>
-            <Typography variant="caption" color="text.secondary">
-              {safeFormatDate(repair.dueDate, 'dd/MM')}
-            </Typography>
-          </Box>
-
-          {/* Affichage de l'acompte si présent */}
+          {/* Deposit info */}
           {repair.deposit && repair.deposit > 0 && (
             <Box sx={{
-              mt: 0.5,
-              p: 1,
-              backgroundColor: depositValidated[repair.id] ? '#f0fdf4' : '#eff6ff',
-              borderRadius: 1,
-              border: depositValidated[repair.id] ? '1px solid #10b981' : '1px solid #3b82f6',
+              p: 1, mb: 1, borderRadius: 1.5,
+              backgroundColor: depositValidated[repair.id] ? '#f0fdf4' : '#f0f9ff',
+              border: `1px solid ${depositValidated[repair.id] ? '#bbf7d0' : '#bae6fd'}`,
             }}>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: depositValidated[repair.id] ? '#10b981' : '#3b82f6',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                }}
-              >
-                💰 Acompte versé : {formatFromEUR(repair.deposit, currency)}
-                {depositValidated[repair.id] && (
-                  <span style={{ marginLeft: '4px', fontSize: '12px' }}>✓ PAYÉ</span>
-                )}
+              <Typography variant="caption" sx={{
+                color: depositValidated[repair.id] ? '#15803d' : '#0369a1',
+                fontWeight: 600, fontSize: '0.72rem',
+                display: 'flex', alignItems: 'center', gap: 0.5,
+              }}>
+                Acompte : {formatFromEUR(repair.deposit, currency)}
+                {depositValidated[repair.id] && <CheckCircleIcon sx={{ fontSize: '0.8rem', color: '#15803d' }} />}
               </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: '#6b7280',
-                  display: 'block',
-                  mt: 0.25,
-                }}
-              >
+              <Typography variant="caption" sx={{ color: '#6b7280', display: 'block', fontSize: '0.68rem' }}>
                 Reste : {formatFromEUR(repair.totalPrice - repair.deposit, currency)}
               </Typography>
             </Box>
           )}
 
+          {/* Action buttons */}
+          <Box sx={{
+            display: 'flex', alignItems: 'center', gap: 0.5,
+            pt: 1, borderTop: '1px solid #f1f5f9', justifyContent: 'flex-end',
+          }}>
+            <Tooltip title="Modifier" arrow>
+              <IconButton size="small"
+                onClick={(e) => { e.stopPropagation(); handleEditRepair(repair); }}
+                onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}
+                sx={{ width: 28, height: 28, color: '#6b7280', '&:hover': { backgroundColor: '#f1f5f9', color: '#374151' } }}
+              >
+                <EditIcon sx={{ fontSize: '0.9rem' }} />
+              </IconButton>
+            </Tooltip>
+
+            {isNewStatus && (
+              <Tooltip title="Étiquette" arrow>
+                <IconButton size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const repairClient = getClientById(repair.clientId);
+                    if (!repairClient || !repairClient.email) {
+                      alert('Erreur : Impossible de trouver les informations du client pour cette réparation.');
+                      return;
+                    }
+                    setSelectedRepairForLabel(repair);
+                    setLabelDialogOpen(true);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}
+                  sx={{ width: 28, height: 28, color: '#8b5cf6', backgroundColor: '#f5f3ff', '&:hover': { backgroundColor: '#ede9fe' } }}
+                >
+                  <LabelIcon sx={{ fontSize: '0.9rem' }} />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {repair.deposit && repair.deposit > 0 && isNewStatus && (
+              <>
+                <Tooltip title="Reçu thermique" arrow>
+                  <IconButton size="small"
+                    onClick={(e) => { e.stopPropagation(); handleOpenThermalReceipt(repair); }}
+                    onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}
+                    sx={{ width: 28, height: 28, color: '#3b82f6', backgroundColor: '#eff6ff', '&:hover': { backgroundColor: '#dbeafe' } }}
+                  >
+                    <ReceiptIcon sx={{ fontSize: '0.9rem' }} />
+                  </IconButton>
+                </Tooltip>
+                {depositValidated[repair.id] ? (
+                  <Tooltip title="Dévalider l'acompte" arrow>
+                    <IconButton size="small"
+                      onClick={(e) => { e.stopPropagation(); handleUnvalidateDeposit(repair); }}
+                      onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}
+                      sx={{ width: 28, height: 28, color: '#ef4444', backgroundColor: '#fef2f2', '&:hover': { backgroundColor: '#fee2e2' } }}
+                    >
+                      <CancelIcon sx={{ fontSize: '0.9rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Valider l'acompte" arrow>
+                    <IconButton size="small"
+                      onClick={(e) => { e.stopPropagation(); handleValidateDeposit(repair); }}
+                      onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}
+                      sx={{ width: 28, height: 28, color: '#10b981', backgroundColor: '#f0fdf4', '&:hover': { backgroundColor: '#dcfce7' } }}
+                    >
+                      <CheckCircleIcon sx={{ fontSize: '0.9rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </>
+            )}
+
+            {repair.status === 'completed' && (
+              <Tooltip title="Reçu thermique" arrow>
+                <IconButton size="small"
+                  onClick={(e) => { e.stopPropagation(); handleOpenThermalReceipt(repair); }}
+                  onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}
+                  sx={{ width: 28, height: 28, color: '#3b82f6', backgroundColor: '#eff6ff', '&:hover': { backgroundColor: '#dbeafe' } }}
+                >
+                  <ReceiptIcon sx={{ fontSize: '0.9rem' }} />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {(repair.status === 'completed' || repair.status === 'returned') && (
+              <>
+                <Tooltip title="Facture" arrow>
+                  <IconButton size="small"
+                    onClick={(e) => { e.stopPropagation(); openInvoice(repair); }}
+                    onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}
+                    sx={{ width: 28, height: 28, color: '#6b7280', '&:hover': { backgroundColor: '#f1f5f9', color: '#374151' } }}
+                  >
+                    <PrintIcon sx={{ fontSize: '0.9rem' }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={repair.isPaid ? "Annuler paiement" : "Valider paiement"} arrow>
+                  <IconButton size="small"
+                    onClick={(e) => handleTogglePayment(repair, e)}
+                    onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}
+                    sx={{
+                      width: 28, height: 28,
+                      color: repair.isPaid ? '#10b981' : '#f59e0b',
+                      backgroundColor: repair.isPaid ? '#f0fdf4' : '#fffbeb',
+                      '&:hover': { backgroundColor: repair.isPaid ? '#dcfce7' : '#fef3c7' },
+                    }}
+                  >
+                    {repair.isPaid ? <CheckCircleIcon sx={{ fontSize: '0.9rem' }} /> : <CheckCircleOutlineIcon sx={{ fontSize: '0.9rem' }} />}
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
+          </Box>
         </CardContent>
       </Card>
     );
@@ -2310,127 +2263,232 @@ const Kanban: React.FC = () => {
   const KanbanColumn: React.FC<{ status: RepairStatus }> = ({ status }) => {
     // Filtrer les réparations pour exclure celles avec le statut "returned" (archivées)
     const statusRepairs = repairs.filter(repair => repair.status === status.id && repair.status !== 'returned');
-    
+
     // Ne pas compter les retards pour les colonnes "Terminé" et "Restitué"
-    const isOverdue = statusRepairs.filter(repair => {
+    const overdueCount = statusRepairs.filter(repair => {
       try {
-        // Ne pas afficher le retard pour les réparations terminées ou restituées
-        if (repair.status === 'completed' || repair.status === 'returned') {
-          return false;
-        }
-        
+        if (repair.status === 'completed' || repair.status === 'returned') return false;
         if (!repair.dueDate) return false;
         const dueDate = new Date(repair.dueDate);
         if (isNaN(dueDate.getTime())) return false;
         return dueDate < new Date();
       } catch (error) {
-        console.error('Erreur de date dans la réparation:', error);
         return false;
       }
     }).length;
 
     return (
-      <Box sx={{ minWidth: 300, maxWidth: 300 }}>
-        <Card sx={{ height: '100%' }}>
-          <CardContent sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+      <Box sx={{ minWidth: 320, maxWidth: 320, flexShrink: 0 }}>
+        <Box sx={{
+          height: '100%',
+          backgroundColor: '#f8fafc',
+          borderRadius: 3,
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          transition: 'box-shadow 0.2s ease',
+          '&:hover': { boxShadow: '0 4px 20px rgba(0,0,0,0.06)' },
+        }}>
+          {/* Column header */}
+          <Box sx={{
+            p: 2, pb: 1.5,
+            background: `linear-gradient(135deg, ${status.color}0A, ${status.color}05)`,
+            borderBottom: '1px solid #e2e8f0',
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  backgroundColor: status.color,
+                  boxShadow: `0 0 8px ${status.color}60`,
+                }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem' }}>
                   {status.name}
                 </Typography>
-                {isOverdue > 0 && (
-                  <Badge badgeContent={isOverdue} color="error" />
-                )}
               </Box>
-              <Chip
-                label={statusRepairs.length}
-                size="small"
-                sx={{
-                  backgroundColor: status.color,
-                  color: 'white',
-                }}
-              />
-            </Box>
-
-            <Droppable droppableId={status.id}>
-              {(provided) => (
-                <Box
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  sx={{ flexGrow: 1, minHeight: 200 }}
-                >
-                  {statusRepairs.map((repair, index) => (
-                    <Draggable key={repair.id} draggableId={repair.id} index={index}>
-                      {(provided) => (
-                        <Box
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          <RepairCard repair={repair} />
-                        </Box>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {overdueCount > 0 && (
+                  <Chip label={overdueCount} size="small"
+                    sx={{
+                      height: 22, minWidth: 22,
+                      backgroundColor: '#fef2f2', color: '#dc2626',
+                      fontWeight: 700, fontSize: '0.72rem',
+                      '& .MuiChip-label': { px: 0.75 },
+                    }}
+                  />
+                )}
+                <Box sx={{
+                  backgroundColor: `${status.color}18`, color: status.color,
+                  fontWeight: 700, fontSize: '0.78rem',
+                  borderRadius: 1.5, px: 1, py: 0.25,
+                  minWidth: 24, textAlign: 'center',
+                }}>
+                  {statusRepairs.length}
                 </Box>
-              )}
-            </Droppable>
+              </Box>
+            </Box>
+          </Box>
 
+          {/* Droppable area */}
+          <Droppable droppableId={status.id}>
+            {(provided, snapshot) => (
+              <Box
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                sx={{
+                  flexGrow: 1, minHeight: 200, p: 1.5,
+                  overflowY: 'auto',
+                  transition: 'background-color 0.2s ease',
+                  backgroundColor: snapshot.isDraggingOver ? `${status.color}08` : 'transparent',
+                  '&::-webkit-scrollbar': { width: 4 },
+                  '&::-webkit-scrollbar-track': { background: 'transparent' },
+                  '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: 2 },
+                  '&::-webkit-scrollbar-thumb:hover': { background: '#94a3b8' },
+                }}
+              >
+                {statusRepairs.map((repair, index) => (
+                  <Draggable key={repair.id} draggableId={repair.id} index={index}>
+                    {(provided, snapshot) => (
+                      <Box
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        sx={{
+                          opacity: snapshot.isDragging ? 0.85 : 1,
+                          transform: snapshot.isDragging ? 'rotate(1.5deg)' : 'none',
+                        }}
+                      >
+                        <RepairCard repair={repair} />
+                      </Box>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </Box>
+            )}
+          </Droppable>
+
+          {/* Add button */}
+          <Box sx={{ p: 1.5, pt: 0 }}>
             <Button
               startIcon={<AddIcon />}
-              variant="outlined"
               size="small"
               fullWidth
-              sx={{ mt: 2 }}
               onClick={() => setNewRepairDialogOpen(true)}
+              sx={{
+                color: '#64748b', borderRadius: 2,
+                border: '1.5px dashed #cbd5e1',
+                backgroundColor: 'transparent',
+                fontSize: '0.8rem', fontWeight: 600, py: 0.75,
+                '&:hover': {
+                  backgroundColor: '#f1f5f9',
+                  borderColor: '#94a3b8',
+                  color: '#475569',
+                },
+              }}
             >
               Nouvelle réparation
             </Button>
-          </CardContent>
-        </Card>
+          </Box>
+        </Box>
       </Box>
     );
   };
 
   return (
-    <Box>
-      {/* En-tête */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h4" sx={{ fontWeight: 600 }}>
-            Suivi des Réparations
-          </Typography>
+    <Box sx={{ minHeight: '100vh' }}>
+      {/* En-tête premium */}
+      <Box sx={{
+        mb: 3,
+        background: 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)',
+        borderRadius: 3,
+        p: { xs: 3, md: 4 },
+        color: 'white',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Decorative elements */}
+        <Box sx={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
+        <Box sx={{ position: 'absolute', bottom: -60, left: -20, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.02)' }} />
+        <Box sx={{ position: 'absolute', top: '50%', right: '20%', width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.015)' }} />
+
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1, flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, letterSpacing: '-0.02em', mb: 0.5, color: 'white' }}>
+              Suivi des Réparations
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 400 }}>
+              Glissez-déposez les cartes entre colonnes pour mettre à jour les statuts
+            </Typography>
+          </Box>
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={<ArchiveIcon />}
             onClick={() => navigate('/app/archive')}
+            sx={{
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              color: 'white',
+              boxShadow: 'none',
+              '&:hover': {
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                boxShadow: 'none',
+              },
+            }}
           >
-            Voir les archives
-            <Badge 
-              badgeContent={repairs.filter(r => r.status === 'returned').length} 
-              color="primary" 
-              sx={{ ml: 1 }}
+            Archives
+            <Badge
+              badgeContent={repairs.filter(r => r.status === 'returned').length}
+              color="warning"
+              sx={{ ml: 1.5 }}
             />
           </Button>
         </Box>
-        <Typography variant="body1" color="text.secondary">
-          Suivi des réparations par statut - Réparations restituées automatiquement archivées
-        </Typography>
+
+        {/* Stats bar */}
+        <Box sx={{ display: 'flex', gap: 2, mt: 3, position: 'relative', zIndex: 1, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Total actives', value: repairs.filter(r => r.status !== 'returned').length, color: '#60a5fa' },
+            { label: 'Urgentes', value: repairs.filter(r => r.isUrgent && r.status !== 'returned' && r.status !== 'completed').length, color: '#f87171' },
+            { label: 'En retard', value: repairs.filter(r => r.status !== 'returned' && r.status !== 'completed' && r.dueDate && new Date(r.dueDate) < new Date()).length, color: '#fbbf24' },
+            { label: 'Terminées', value: repairs.filter(r => r.status === 'completed').length, color: '#34d399' },
+          ].map((stat) => (
+            <Box key={stat.label} sx={{
+              display: 'flex', alignItems: 'center', gap: 1.5,
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              borderRadius: 2, px: 2, py: 1,
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: stat.color, boxShadow: `0 0 6px ${stat.color}80` }} />
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem' }}>
+                {stat.label}
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem', color: 'white' }}>
+                {stat.value}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
       </Box>
 
-      {/* Tableau de suivi des réparations */}
-      <DragDropContext 
+      {/* Kanban Board */}
+      <DragDropContext
         onDragEnd={handleDragEnd}
         onDragStart={() => {
-          // Empêcher les interactions pendant le drag
           document.body.style.userSelect = 'none';
         }}
-        onDragUpdate={() => {
-          // Gérer les mises à jour pendant le drag
-        }}
+        onDragUpdate={() => {}}
       >
-        <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
+        <Box sx={{
+          display: 'flex', gap: 2,
+          overflowX: 'auto', pb: 2,
+          '&::-webkit-scrollbar': { height: 6 },
+          '&::-webkit-scrollbar-track': { background: '#f1f5f9', borderRadius: 3 },
+          '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: 3 },
+          '&::-webkit-scrollbar-thumb:hover': { background: '#94a3b8' },
+        }}>
           {repairStatuses
             .sort((a, b) => a.order - b.order)
             .map((status) => (
