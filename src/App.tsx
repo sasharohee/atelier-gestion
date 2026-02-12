@@ -25,7 +25,7 @@ import Layout from './components/Layout/Layout';
 // import { OnboardingNotification } from './components/OnboardingNotification'; // MASQUÉ
 import AuthGuard from './components/AuthGuard';
 import AdminGuard from './components/AdminGuard';
-import AdminPasswordGuard from './components/AdminPasswordGuard';
+
 import AccountingPasswordGuard from './components/AccountingPasswordGuard';
 import GuestGuard from './components/GuestGuard';
 import { AuthProvider } from './contexts/AuthContext';
@@ -56,7 +56,7 @@ const SubscriptionBlocked = lazy(() => import('./pages/Auth/SubscriptionBlocked'
 // Pages légères - import direct
 import Sales from './pages/Sales/Sales';
 import UserAccessManagement from './pages/Administration/UserAccessManagement';
-import AdminAccess from './pages/AdminAccess/AdminAccess';
+
 import PrivacyPolicy from './pages/Legal/PrivacyPolicy';
 import TermsOfService from './pages/Legal/TermsOfService';
 import CGV from './pages/Legal/CGV';
@@ -66,6 +66,7 @@ import FAQ from './pages/Support/FAQ';
 import RepairTracking from './pages/RepairTracking/RepairTracking';
 import RepairHistory from './pages/RepairTracking/RepairHistory';
 import QuoteRequestPageFixed from './pages/QuoteRequest/QuoteRequestPageFixed';
+import SuperAdminPanel from './pages/SuperAdmin/SuperAdminPanel';
 
 // Services
 import { demoDataService } from './services/demoDataService';
@@ -212,11 +213,7 @@ function App() {
                     <Auth />
                   </GuestGuard>
                 } />
-                <Route path="/admin" element={
-                  <AdminPasswordGuard>
-                    <AdminAccess />
-                  </AdminPasswordGuard>
-                } />
+
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms-of-service" element={<TermsOfService />} />
                 <Route path="/cgv" element={<CGV />} />
@@ -226,6 +223,7 @@ function App() {
                 <Route path="/repair-tracking" element={<RepairTracking />} />
                 <Route path="/repair-history" element={<RepairHistory />} />
                 <Route path="/quote/:customUrl" element={<QuoteRequestPageFixed />} />
+                <Route path="/super-admin" element={<SuperAdminPanel />} />
                 <Route path="/app/*" element={
                   <AuthGuard>
                     <Layout>
