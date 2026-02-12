@@ -696,7 +696,7 @@ const InterventionForm: React.FC<InterventionFormProps> = ({ repair, open, onClo
 };
 
 // Fonction pour générer le PDF
-const generateInterventionPDF = (data: InterventionData, repair: Repair, workshopSettings?: any) => {
+const generateInterventionPDF = (data: InterventionData, repair: Repair, workshopSettings?: any, signatureImage?: string) => {
   try {
     // Créer un nouveau document PDF
     const doc = new jsPDF();
@@ -880,7 +880,20 @@ const generateInterventionPDF = (data: InterventionData, repair: Repair, worksho
     
     // Case signature client (droite)
     drawBox(margin + signatureWidth + 20, yPosition, signatureWidth, caseHeight, 'SIGNATURE CLIENT');
-    
+
+    // Intégrer la signature numérique si disponible
+    if (signatureImage) {
+      try {
+        const sigX = margin + signatureWidth + 22;
+        const sigY = yPosition + 2;
+        const sigMaxW = signatureWidth - 4;
+        const sigMaxH = caseHeight - 4;
+        doc.addImage(signatureImage, 'PNG', sigX, sigY, sigMaxW, sigMaxH);
+      } catch (e) {
+        console.warn('Impossible d\'intégrer la signature dans le PDF:', e);
+      }
+    }
+
     yPosition += caseHeight + 8;
     
     // Informations sous les signatures
@@ -903,8 +916,22 @@ const generateInterventionPDF = (data: InterventionData, repair: Repair, worksho
     
     doc.text('Date:', margin + signatureWidth + 20, yPosition + 8);
     doc.line(margin + signatureWidth + 20, yPosition + 10, pageWidth - margin - 5, yPosition + 10);
-    
+
     yPosition += 15;
+
+    // Mention de signature numérique
+    if (signatureImage) {
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 100, 100);
+      doc.text(
+        `Signé numériquement le ${format(new Date(), 'dd/MM/yyyy à HH:mm', { locale: fr })}`,
+        margin + signatureWidth + 20,
+        yPosition
+      );
+      doc.setTextColor(0, 0, 0);
+      yPosition += 8;
+    }
 
     // ===== INFORMATIONS COMPLÉMENTAIRES =====
     doc.setFontSize(10);

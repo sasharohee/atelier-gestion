@@ -65,6 +65,7 @@ import Support from './pages/Support/Support';
 import FAQ from './pages/Support/FAQ';
 import RepairTracking from './pages/RepairTracking/RepairTracking';
 import RepairHistory from './pages/RepairTracking/RepairHistory';
+import SignaturePage from './pages/Signature/SignaturePage';
 import QuoteRequestPageFixed from './pages/QuoteRequest/QuoteRequestPageFixed';
 import SuperAdminPanel from './pages/SuperAdmin/SuperAdminPanel';
 
@@ -223,6 +224,7 @@ function App() {
                 <Route path="/repair-tracking" element={<RepairTracking />} />
                 <Route path="/repair-history" element={<RepairHistory />} />
                 <Route path="/quote/:customUrl" element={<QuoteRequestPageFixed />} />
+                <Route path="/sign/:token" element={<SignaturePage />} />
                 <Route path="/super-admin" element={<SuperAdminPanel />} />
                 <Route path="/app/*" element={
                   <AuthGuard>

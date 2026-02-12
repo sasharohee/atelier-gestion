@@ -35,6 +35,11 @@ export interface InterventionForm {
   special_instructions: string;
   terms_accepted: boolean;
   liability_accepted: boolean;
+  signature_token?: string;
+  signature_status?: 'pending' | 'sent' | 'signed' | 'expired';
+  signature_image?: string;
+  signature_signed_at?: string;
+  token_expires_at?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -42,10 +47,13 @@ export interface InterventionForm {
 export const interventionService = {
   async create(intervention: Omit<InterventionForm, 'id' | 'created_at' | 'updated_at'>) {
     try {
+      // Exclure les champs signature (ajoutés séparément via generateSignatureToken)
+      const { signature_token, signature_status, signature_image, signature_signed_at, token_expires_at, ...baseFields } = intervention as any;
+
       const { data, error } = await supabase
         .from('intervention_forms')
         .insert([{
-          ...intervention,
+          ...baseFields,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }])
@@ -61,14 +69,31 @@ export const interventionService = {
   },
 
   async getByRepairId(repairId: string) {
+    // Méthode 1 : Requête directe (fonctionne si RLS autorise SELECT)
     try {
       const { data, error } = await supabase
         .from('intervention_forms')
         .select('*')
         .eq('repair_id', repairId)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) {
+        return { success: true, data };
+      }
+    } catch (_) {
+      // Direct query failed, try RPC
+    }
+
+    // Méthode 2 : RPC (bypass RLS)
+    try {
+      const { data, error } = await supabase.rpc('get_intervention_by_repair_id', {
+        p_repair_id: repairId,
+      });
 
       if (error) throw error;
+      if (!data) return { success: false, error: 'Aucune intervention trouvée' };
       return { success: true, data };
     } catch (error) {
       console.error('Erreur lors de la récupération du bon d\'intervention:', error);
@@ -124,5 +149,136 @@ export const interventionService = {
       console.error('Erreur lors de la récupération des bons d\'intervention:', error);
       return { success: false, error };
     }
-  }
+  },
+
+  async getById(id: string) {
+    try {
+      const { data, error } = await supabase
+        .from('intervention_forms')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      console.error('Erreur lors de la récupération du bon d\'intervention:', error);
+      return { success: false, error };
+    }
+  },
+
+  async generateSignatureToken(id: string) {
+    try {
+      const token = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+
+      const { data, error } = await supabase
+        .from('intervention_forms')
+        .update({
+          signature_token: token,
+          signature_status: 'sent',
+          token_expires_at: expiresAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { success: true, data, token };
+    } catch (error) {
+      console.error('Erreur lors de la génération du token de signature:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Crée l'intervention ET génère le token de signature en une seule opération via RPC.
+   * Utilise SECURITY DEFINER pour contourner la RLS.
+   */
+  async createWithToken(interventionData: Record<string, any>): Promise<{ success: boolean; data?: { id: string; token: string; expires_at: string }; error?: any }> {
+    try {
+      const { data, error } = await supabase.rpc('create_intervention_with_token', {
+        p_data: interventionData,
+      });
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      console.error('Erreur lors de la création intervention + token:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Met à jour une intervention (requête directe avec fallback RPC).
+   */
+  async updateViaRpc(id: string, updates: Record<string, any>) {
+    // Méthode 1 : Requête directe (fonctionne si RLS autorise UPDATE)
+    try {
+      const { data, error } = await supabase
+        .from('intervention_forms')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (!error && data) {
+        return { success: true, data };
+      }
+    } catch (_) {
+      // Direct update failed, try RPC
+    }
+
+    // Méthode 2 : RPC (bypass RLS)
+    try {
+      const { data, error } = await supabase.rpc('update_intervention', {
+        p_intervention_id: id,
+        p_updates: updates,
+      });
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour intervention via RPC:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Récupère le statut de signature (requête directe avec fallback RPC).
+   */
+  async getSignatureStatus(id: string) {
+    // Méthode 1 : Requête directe
+    try {
+      const { data, error } = await supabase
+        .from('intervention_forms')
+        .select('id, signature_status, signature_image, signature_signed_at')
+        .eq('id', id)
+        .single();
+
+      if (!error && data) {
+        return { success: true, data };
+      }
+    } catch (_) {
+      // Direct query failed, try RPC
+    }
+
+    // Méthode 2 : RPC
+    try {
+      const { data, error } = await supabase.rpc('get_signature_status', {
+        p_intervention_id: id,
+      });
+
+      if (error) throw error;
+      if (!data) return { success: false, error: 'Intervention introuvable' };
+      return { success: true, data };
+    } catch (error) {
+      // Silently fail for polling - don't spam console
+      return { success: false, error };
+    }
+  },
 };

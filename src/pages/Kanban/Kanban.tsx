@@ -79,6 +79,8 @@ import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR, getCurrencySymbol } from '../../utils/currencyUtils';
 import ThermalReceiptDialog from '../../components/ThermalReceiptDialog';
 import RepairLabelDialog from '../../components/RepairLabel/RepairLabelDialog';
+import RepairSidePanel from '../../components/SAV/RepairSidePanel';
+import EditRepairSidePanel from '../../components/SAV/EditRepairSidePanel';
 
 const Kanban: React.FC = () => {
   const navigate = useNavigate();
@@ -176,6 +178,12 @@ const Kanban: React.FC = () => {
     securityInfo: '',
     backupBeforeAccess: false,
   });
+  const [editExistingIntervention, setEditExistingIntervention] = useState<{
+    id: string;
+    signatureToken: string | null;
+    signatureStatus: string;
+    signatureImage: string | null;
+  } | null>(null);
   const [newRepairDialogOpen, setNewRepairDialogOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [selectedRepairForInvoice, setSelectedRepairForInvoice] = useState<Repair | null>(null);
@@ -662,25 +670,25 @@ const Kanban: React.FC = () => {
   const handleEditRepair = async (repair: Repair) => {
     // Recharger la réparation complète depuis la base de données pour avoir les services à jour
     const repairResult = await repairService.getById(repair.id);
-    
+
     if (!repairResult.success || !('data' in repairResult) || !repairResult.data) {
       console.error('❌ Erreur lors du rechargement de la réparation:', repairResult);
       alert('Erreur lors du chargement de la réparation');
       return;
     }
-    
+
     const repairWithServices = repairResult.data;
-    
+
     setSelectedRepair(repairWithServices);
-    
+
     // S'assurer que les données sont chargées avant d'initialiser le formulaire
     if (deviceModels.length === 0) {
       await loadDeviceModels();
     }
-    
+
     // Toujours recharger les services pour s'assurer qu'ils sont à jour
     await loadDeviceModelServices();
-    
+
     // Recharger aussi les services locaux
     try {
       const { deviceModelServiceService } = await import('../../services/deviceModelServiceService');
@@ -691,12 +699,100 @@ const Kanban: React.FC = () => {
     } catch (error) {
       console.error('❌ Erreur lors du rechargement des services:', error);
     }
-    
+
+    // Charger les données d'intervention existantes depuis la base
+    try {
+      const { interventionService } = await import('../../services/interventionService');
+      // Chercher par repair.id d'abord, puis par deviceId (rétro-compatibilité)
+      let intResult = await interventionService.getByRepairId(repairWithServices.id);
+      if (!intResult.success || !intResult.data) {
+        intResult = await interventionService.getByRepairId(repairWithServices.deviceId);
+      }
+      if (intResult.success && intResult.data) {
+        const intData = intResult.data;
+        setEditInterventionData({
+          technicianName: intData.technician_name || '',
+          deviceCondition: intData.device_condition || '',
+          visibleDamages: intData.visible_damages || '',
+          missingParts: intData.missing_parts || '',
+          passwordProvided: intData.password_provided || false,
+          dataBackup: intData.data_backup || false,
+          accessConfirmed: false,
+          clientAuthorizesRepair: intData.client_authorizes_repair || false,
+          clientAuthorizesDataAccess: intData.client_authorizes_data_access || false,
+          clientAuthorizesReplacement: intData.client_authorizes_replacement || false,
+          initialDiagnosis: intData.initial_diagnosis || '',
+          proposedSolution: intData.proposed_solution || '',
+          estimatedDuration: intData.estimated_duration || '',
+          dataLossRisk: intData.data_loss_risk || false,
+          dataLossRiskDetails: intData.data_loss_risk_details || '',
+          cosmeticChanges: intData.cosmetic_changes || false,
+          cosmeticChangesDetails: intData.cosmetic_changes_details || '',
+          warrantyVoid: intData.warranty_void || false,
+          warrantyVoidDetails: intData.warranty_void_details || '',
+          additionalNotes: intData.additional_notes || '',
+          specialInstructions: intData.special_instructions || '',
+          termsAccepted: intData.terms_accepted || false,
+          liabilityAccepted: intData.liability_accepted || false,
+          authType: '',
+          accessCode: '',
+          patternPoints: [],
+          patternDescription: '',
+          securityInfo: '',
+          backupBeforeAccess: false,
+        });
+        // Stocker les infos de signature pour le panneau d'édition
+        setEditExistingIntervention({
+          id: intData.id,
+          signatureToken: intData.signature_token || null,
+          signatureStatus: intData.signature_status || 'pending',
+          signatureImage: intData.signature_image || null,
+        });
+      } else {
+        // Pas d'intervention existante — reset
+        setEditInterventionData({
+          technicianName: '',
+          deviceCondition: '',
+          visibleDamages: '',
+          missingParts: '',
+          passwordProvided: false,
+          dataBackup: false,
+          accessConfirmed: false,
+          clientAuthorizesRepair: false,
+          clientAuthorizesDataAccess: false,
+          clientAuthorizesReplacement: false,
+          initialDiagnosis: '',
+          proposedSolution: '',
+          estimatedDuration: '',
+          dataLossRisk: false,
+          dataLossRiskDetails: '',
+          cosmeticChanges: false,
+          cosmeticChangesDetails: '',
+          warrantyVoid: false,
+          warrantyVoidDetails: '',
+          additionalNotes: '',
+          specialInstructions: '',
+          termsAccepted: false,
+          liabilityAccepted: false,
+          authType: '',
+          accessCode: '',
+          patternPoints: [],
+          patternDescription: '',
+          securityInfo: '',
+          backupBeforeAccess: false,
+        });
+        setEditExistingIntervention(null);
+      }
+    } catch (error) {
+      console.warn('⚠️ Impossible de charger le bon d\'intervention:', error);
+      setEditExistingIntervention(null);
+    }
+
     // Attendre un tick pour que les données soient mises à jour
     setTimeout(() => {
       initializeEditForm(repairWithServices);
     }, 100);
-    
+
     setEditDialogOpen(true);
   };
 
@@ -709,13 +805,13 @@ const Kanban: React.FC = () => {
     if (selectedRepair) {
       try {
         
-        // Calculer le prix final avec réduction
-        const totalBeforeDiscount = editRepair.totalPrice;
-        const discountAmount = (totalBeforeDiscount * editRepair.discountPercentage) / 100;
-        const finalPrice = totalBeforeDiscount - discountAmount;
-        
+        // editRepair.totalPrice = prix de base affiché dans le formulaire (avant réduction)
+        const basePrice = editRepair.totalPrice;
+        const discountAmount = (basePrice * editRepair.discountPercentage) / 100;
+        const finalPrice = basePrice - discountAmount;
+
         // Préparer les services pour la réparation
-        const selectedServicesData = getServicesForEditModel().filter(service => 
+        const selectedServicesData = getServicesForEditModel().filter(service =>
           editRepair.selectedServices.includes(service.id)
         );
         const repairServices = selectedServicesData.map(service => ({
@@ -724,24 +820,24 @@ const Kanban: React.FC = () => {
           quantity: 1,
           price: service.effective_price || service.effectivePrice || 0,
         }));
-        
-        // Préparer les mises à jour de base
+
+        // totalPrice en base = prix FINAL (après réduction)
         const updates: any = {
           clientId: editRepair.clientId,
-          deviceId: selectedRepair.deviceId, // Garder l'ID de l'appareil existant
+          deviceId: selectedRepair.deviceId,
           description: editRepair.description,
           status: editRepair.status,
           assignedTechnicianId: editRepair.assignedTechnicianId || undefined,
-          totalPrice: finalPrice,
+          totalPrice: finalPrice, // Prix FINAL après réduction
           issue: editRepair.issue,
           dueDate: new Date(editRepair.dueDate),
           isUrgent: editRepair.isUrgent,
           discountPercentage: editRepair.discountPercentage,
           discountAmount: discountAmount,
-          deposit: editRepair.deposit || 0, // Acompte payé par le client
-          depositPaymentMethod: editRepair.depositPaymentMethod || undefined, // Mode de paiement de l'acompte (convertir chaîne vide en undefined)
-          finalPaymentMethod: editRepair.finalPaymentMethod && editRepair.finalPaymentMethod.trim() !== '' ? editRepair.finalPaymentMethod : undefined, // Mode de paiement du solde final (convertir chaîne vide en undefined)
-          paymentMethod: editRepair.paymentMethod || 'cash', // Mode de paiement (pour compatibilité)
+          deposit: editRepair.deposit || 0,
+          depositPaymentMethod: editRepair.depositPaymentMethod || undefined,
+          finalPaymentMethod: editRepair.finalPaymentMethod && editRepair.finalPaymentMethod.trim() !== '' ? editRepair.finalPaymentMethod : undefined,
+          paymentMethod: editRepair.paymentMethod || 'cash',
           services: repairServices,
         };
         
@@ -975,7 +1071,7 @@ const Kanban: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repairs.length]); // Ne se déclenche que lorsque le nombre de réparations change
 
-  const handleCreateRepair = async () => {
+  const handleCreateRepair = async (existingInterventionId?: string | null) => {
     try {
       if (!newRepair.clientId || !newRepair.deviceId || !newRepair.description) {
         alert('Veuillez remplir tous les champs obligatoires');
@@ -1010,8 +1106,7 @@ const Kanban: React.FC = () => {
       
       const createdDeviceId = deviceResult.data.id;
       
-      // Ajouter l'appareil au store local pour qu'il soit immédiatement disponible
-      const createdDevice: Device = {
+      const createdDeviceForStore: Device = {
         id: deviceResult.data.id,
         brand: deviceResult.data.brand,
         model: deviceResult.data.model,
@@ -1021,9 +1116,9 @@ const Kanban: React.FC = () => {
         createdAt: new Date(deviceResult.data.created_at),
         updatedAt: new Date(deviceResult.data.updated_at),
       };
-      
-      // Ajouter l'appareil au store local
-      await addDevice(createdDevice);
+
+      // Ajouter l'appareil au store local SANS re-insérer en base (déjà créé par deviceService.create)
+      useAppStore.setState((state) => ({ devices: [...state.devices, createdDeviceForStore] }));
 
       // Calculer le prix des services sélectionnés
       const selectedServicesData = getServicesForSelectedModel().filter(service => 
@@ -1032,11 +1127,10 @@ const Kanban: React.FC = () => {
       const servicesTotalPrice = selectedServicesData.reduce((sum, service) => 
         sum + (service.effective_price || service.effectivePrice || 0), 0);
       
-      // Calculer le prix final (prix estimé + réduction)
-      // newRepair.totalPrice contient déjà le prix des services (mis à jour par useEffect)
-      const totalBeforeDiscount = newRepair.totalPrice;
-      const discountAmount = (totalBeforeDiscount * newRepair.discountPercentage) / 100;
-      const finalPrice = totalBeforeDiscount - discountAmount;
+      // Calculer la réduction — totalPrice en base = prix FINAL (après réduction)
+      const basePrice = newRepair.totalPrice;
+      const discountAmount = (basePrice * newRepair.discountPercentage) / 100;
+      const finalPrice = basePrice - discountAmount;
 
       // Préparer les services pour la réparation
       const repairServices = selectedServicesData.map(service => ({
@@ -1046,39 +1140,101 @@ const Kanban: React.FC = () => {
         price: service.effective_price || service.effectivePrice || 0,
       }));
 
-      // Préparer les données pour Supabase (sans id, createdAt, updatedAt)
+      // Préparer les données pour Supabase
       const repairData: Omit<Repair, 'id' | 'createdAt' | 'updatedAt'> = {
         clientId: newRepair.clientId,
-        deviceId: createdDeviceId, // Utiliser l'ID de l'appareil créé
+        deviceId: createdDeviceId,
         description: newRepair.description,
         issue: newRepair.issue,
         status: newRepair.status,
         assignedTechnicianId: newRepair.assignedTechnicianId || undefined,
         estimatedDuration: 0,
         isUrgent: newRepair.isUrgent,
-        totalPrice: finalPrice, // Prix final après services et réduction
+        totalPrice: finalPrice, // Prix FINAL après réduction
         discountPercentage: newRepair.discountPercentage,
         discountAmount: discountAmount,
-        deposit: newRepair.deposit || 0, // Acompte payé par le client
-        paymentMethod: newRepair.paymentMethod || 'cash', // Mode de paiement
+        deposit: newRepair.deposit || 0,
+        paymentMethod: newRepair.paymentMethod || 'cash',
         dueDate: new Date(newRepair.dueDate),
-        services: repairServices, // Services sélectionnés
+        services: repairServices,
         parts: [],
         isPaid: false,
       };
 
       
-      const createdRepair = await addRepair(repairData as Repair, 'kanban'); // Marquer comme créé depuis Kanban
-      
-      // Recharger les réparations et les appareils pour mettre à jour l'affichage
+      // Créer la réparation via le store ET récupérer l'ID via repairService
+      const { repairService: repairSvc } = await import('../../services/supabaseService');
+      const repairResult = await repairSvc.create(repairData as Repair, 'kanban');
+      if (!repairResult.success || !('data' in repairResult) || !repairResult.data) {
+        throw new Error('Erreur lors de la création de la réparation');
+      }
+      const createdRepairId = repairResult.data.id;
+
+      // Recharger les réparations dans le store
       await loadRepairs();
+
+      // Lier le bon d'intervention à la réparation
+      if (existingInterventionId) {
+        // L'intervention a déjà été créée via le QR code — mettre à jour avec le repair_id
+        try {
+          const { interventionService } = await import('../../services/interventionService');
+          await interventionService.updateViaRpc(existingInterventionId, { repair_id: createdRepairId });
+        } catch (intError) {
+          console.warn('⚠️ Lien intervention ↔ réparation non sauvegardé:', intError);
+        }
+      } else if (interventionData.technicianName || interventionData.deviceCondition || interventionData.visibleDamages) {
+        // Pas de QR — créer l'intervention via RPC (bypass RLS)
+        try {
+          const client = getClientById(newRepair.clientId);
+          const selectedModelInt = deviceModels.find(m => m.id === newRepair.deviceId);
+          const { interventionService } = await import('../../services/interventionService');
+
+          await interventionService.createWithToken({
+            repair_id: createdRepairId,
+            intervention_date: new Date().toISOString().split('T')[0],
+            technician_name: interventionData.technicianName || 'Non assigné',
+            client_name: client ? `${client.firstName} ${client.lastName}` : '',
+            client_phone: client?.phone || '',
+            client_email: client?.email || '',
+            device_brand: selectedModelInt?.brandName || '',
+            device_model: selectedModelInt?.model || selectedModelInt?.name || '',
+            device_serial_number: '',
+            device_type: selectedModelInt?.categoryName || '',
+            device_condition: interventionData.deviceCondition,
+            visible_damages: interventionData.visibleDamages,
+            missing_parts: interventionData.missingParts,
+            password_provided: interventionData.passwordProvided,
+            data_backup: interventionData.dataBackup,
+            reported_issue: newRepair.description,
+            initial_diagnosis: interventionData.initialDiagnosis,
+            proposed_solution: interventionData.proposedSolution,
+            estimated_cost: newRepair.totalPrice,
+            estimated_duration: interventionData.estimatedDuration,
+            data_loss_risk: interventionData.dataLossRisk,
+            data_loss_risk_details: interventionData.dataLossRiskDetails,
+            cosmetic_changes: interventionData.cosmeticChanges,
+            cosmetic_changes_details: interventionData.cosmeticChangesDetails,
+            warranty_void: interventionData.warrantyVoid,
+            warranty_void_details: interventionData.warrantyVoidDetails,
+            client_authorizes_repair: interventionData.clientAuthorizesRepair,
+            client_authorizes_data_access: interventionData.clientAuthorizesDataAccess,
+            client_authorizes_replacement: interventionData.clientAuthorizesReplacement,
+            additional_notes: interventionData.additionalNotes,
+            special_instructions: interventionData.specialInstructions,
+            terms_accepted: interventionData.termsAccepted,
+            liability_accepted: interventionData.liabilityAccepted,
+          });
+        } catch (intError) {
+          console.warn('⚠️ Bon d\'intervention non sauvegardé:', intError);
+        }
+      }
+
+      // Recharger les appareils pour mettre à jour l'affichage
       await loadDevices();
-      
-      // Vérifier que la réparation a bien été ajoutée au store
-      
+
       // Réinitialiser le formulaire
       resetNewRepairForm();
-      
+
       setNewRepairDialogOpen(false);
       alert('✅ Réparation créée avec succès !');
     } catch (error) {
@@ -1239,6 +1395,14 @@ const Kanban: React.FC = () => {
     }
     
     
+    // Pré-remplir marque et catégorie à partir du modèle trouvé
+    if (deviceModel) {
+      const brandName = deviceModel.brandName || (deviceModel as any).brand || '';
+      const categoryName = deviceModel.categoryName || (deviceModel as any).type || '';
+      setSelectedBrand(brandName);
+      setSelectedCategory(categoryName);
+    }
+
     setEditRepair({
       clientId: repair.clientId,
       deviceId: deviceModel?.id || '', // Utiliser l'ID du modèle, pas de l'appareil
@@ -1246,18 +1410,21 @@ const Kanban: React.FC = () => {
       issue: repair.issue || '',
       status: repair.status,
       isUrgent: repair.isUrgent,
-      totalPrice: repair.totalPrice,
+      // repair.totalPrice en base = prix FINAL (après réduction)
+      // On recalcule le prix de base pour le formulaire d'édition
+      totalPrice: (repair.discountPercentage && repair.discountPercentage > 0)
+        ? repair.totalPrice / (1 - repair.discountPercentage / 100)
+        : repair.totalPrice,
       discountPercentage: repair.discountPercentage || 0,
-      deposit: repair.deposit || 0, // Acompte payé par le client
-      depositPaymentMethod: repair.depositPaymentMethod || 'cash', // Mode de paiement de l'acompte
-      finalPaymentMethod: repair.finalPaymentMethod || '', // Mode de paiement du solde final
-      paymentMethod: repair.paymentMethod || 'cash', // Mode de paiement (pour compatibilité)
-      isPaid: repair.isPaid || false, // Statut de paiement
+      deposit: repair.deposit || 0,
+      depositPaymentMethod: repair.depositPaymentMethod || 'cash',
+      finalPaymentMethod: repair.finalPaymentMethod || '',
+      paymentMethod: repair.paymentMethod || 'cash',
+      isPaid: repair.isPaid || false,
       dueDate: repair.dueDate ? new Date(repair.dueDate).toISOString().split('T')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       assignedTechnicianId: repair.assignedTechnicianId || '',
       selectedServices: finalSelectedServices,
     });
-    
   };
 
 
@@ -2087,6 +2254,11 @@ const Kanban: React.FC = () => {
               <Typography variant="h6" color="primary">
                 {formatFromEUR(repair.totalPrice, currency)} TTC
               </Typography>
+              {repair.discountPercentage > 0 && repair.discountAmount > 0 && (
+                <Typography variant="caption" sx={{ textDecoration: 'line-through', color: '#9ca3af', ml: 0.5 }}>
+                  {formatFromEUR(repair.totalPrice + (repair.discountAmount || 0), currency)}
+                </Typography>
+              )}
             </Box>
             <Typography variant="caption" color="text.secondary">
               {safeFormatDate(repair.dueDate, 'dd/MM')}
@@ -2095,16 +2267,16 @@ const Kanban: React.FC = () => {
 
           {/* Affichage de l'acompte si présent */}
           {repair.deposit && repair.deposit > 0 && (
-            <Box sx={{ 
+            <Box sx={{
               mt: 0.5,
               p: 1,
               backgroundColor: depositValidated[repair.id] ? '#f0fdf4' : '#eff6ff',
               borderRadius: 1,
               border: depositValidated[repair.id] ? '1px solid #10b981' : '1px solid #3b82f6',
             }}>
-              <Typography 
-                variant="caption" 
-                sx={{ 
+              <Typography
+                variant="caption"
+                sx={{
                   color: depositValidated[repair.id] ? '#10b981' : '#3b82f6',
                   fontWeight: 600,
                   display: 'flex',
@@ -2117,9 +2289,9 @@ const Kanban: React.FC = () => {
                   <span style={{ marginLeft: '4px', fontSize: '12px' }}>✓ PAYÉ</span>
                 )}
               </Typography>
-              <Typography 
-                variant="caption" 
-                sx={{ 
+              <Typography
+                variant="caption"
+                sx={{
                   color: '#6b7280',
                   display: 'block',
                   mt: 0.25,
@@ -2267,698 +2439,86 @@ const Kanban: React.FC = () => {
         </Box>
       </DragDropContext>
 
-      {/* Dialog d'édition */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>Modifier la réparation</DialogTitle>
-        <DialogContent>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Modifiez les informations de la réparation. Vous pouvez changer le client, l'appareil, les services et tous les autres paramètres.
-          </Alert>
-          
-          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
-            <Tab label="Réparation" />
-            <Tab label="Bon d'intervention" />
-          </Tabs>
+      {/* Panneau latéral d'édition */}
+      <EditRepairSidePanel
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false);
+          setSelectedRepair(null);
+        }}
+        clients={clients}
+        users={users}
+        repairStatuses={repairStatuses}
+        deviceModels={deviceModels}
+        dbCategories={dbCategories}
+        dbBrands={dbBrands}
+        editRepair={editRepair}
+        onEditRepairChange={handleEditRepairChange}
+        interventionData={editInterventionData}
+        onInterventionDataChange={setEditInterventionData}
+        selectedRepair={selectedRepair}
+        selectedBrand={selectedBrand}
+        selectedCategory={selectedCategory}
+        onSelectedBrandChange={setSelectedBrand}
+        onSelectedCategoryChange={setSelectedCategory}
+        getFilteredModels={getFilteredModels}
+        getServicesForEditModel={getServicesForEditModel}
+        getUniqueBrands={getUniqueBrands}
+        getUniqueCategories={getUniqueCategories}
+        onSaveRepair={handleSaveRepair}
+        onGenerateIntervention={handleGenerateInterventionFromEditTab}
+        onOpenClientForm={() => setClientFormOpen(true)}
+        onOpenBrandDialog={openBrandDialog}
+        onOpenCategoryDialog={openCategoryDialog}
+        onOpenModelDialog={openModelDialog}
+        currency={currency}
+        getClientById={getClientById}
+        existingIntervention={editExistingIntervention}
+      />
 
-          {activeTab === 0 && (
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                  <Autocomplete
-                    fullWidth
-                    options={clients}
-                    getOptionLabel={(client) => `${client.firstName} ${client.lastName}${client.email ? ` - ${client.email}` : ''}${client.phone ? ` - ${client.phone}` : ''}`}
-                    value={clients.find(client => client.id === editRepair.clientId) || null}
-                    onChange={(event, newValue) => {
-                      handleEditRepairChange('clientId', newValue?.id || '');
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Client *"
-                        placeholder="Rechercher par nom, email ou téléphone..."
-                        required
-                      />
-                    )}
-                    renderOption={(props, client) => (
-                      <Box component="li" {...props}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                            {client.firstName} {client.lastName}
-                          </Typography>
-                          {client.email && (
-                            <Typography variant="body2" color="text.secondary">
-                              📧 {client.email}
-                            </Typography>
-                          )}
-                          {client.phone && (
-                            <Typography variant="body2" color="text.secondary">
-                              📱 {client.phone}
-                            </Typography>
-                          )}
-                        </Box>
-                      </Box>
-                    )}
-                    filterOptions={(options, { inputValue }) => {
-                      const filterValue = inputValue.toLowerCase();
-                      return options.filter(client => 
-                        client.firstName.toLowerCase().includes(filterValue) ||
-                        client.lastName.toLowerCase().includes(filterValue) ||
-                        (client.email && client.email.toLowerCase().includes(filterValue)) ||
-                        (client.phone && client.phone.includes(filterValue))
-                      );
-                    }}
-                    noOptionsText="Aucun client trouvé"
-                    clearOnEscape
-                    selectOnFocus
-                    handleHomeEndKeys
-                  />
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => setClientFormOpen(true)}
-                    sx={{ 
-                      minWidth: '40px',
-                      width: '40px',
-                      height: '56px', // Même hauteur que l'Autocomplete
-                      borderRadius: '4px',
-                      backgroundColor: 'primary.main',
-                      '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      }
-                    }}
-                    title="Créer un nouveau client"
-                  >
-                    <AddIcon fontSize="small" />
-                  </Button>
-                </Box>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                  <FormControl fullWidth>
-                    <InputLabel>Modèle *</InputLabel>
-                    <Select
-                      label="Modèle *"
-                      value={editRepair.deviceId || ''}
-                      onChange={(e) => {
-                        handleEditRepairChange('deviceId', e.target.value);
-                        // Réinitialiser les services sélectionnés quand on change de modèle
-                        setEditRepair(prev => ({ ...prev, selectedServices: [] }));
-                      }}
-                      disabled={getFilteredModels().length === 0}
-                    >
-                      {getFilteredModels().map((model) => {
-                        const brandName = model.brandName || (model as any).brand || 'N/A';
-                        const modelName = model.model || 'N/A';
-                        const categoryName = model.categoryName || (model as any).type || 'N/A';
-                        
-                        return (
-                          <MenuItem key={model.id} value={model.id}>
-                            {brandName} {modelName} ({categoryName})
-                          </MenuItem>
-                        );
-                      })}
-                    </Select>
-                  </FormControl>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    onClick={openModelDialog}
-                    sx={{ 
-                      minWidth: '40px',
-                      width: '40px',
-                      height: '56px', // Même hauteur que le Select
-                      borderRadius: '4px',
-                      backgroundColor: 'primary.main',
-                      '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      }
-                    }}
-                    title="Créer un nouveau modèle"
-                  >
-                    <AddIcon fontSize="small" />
-                  </Button>
-                </Box>
-              </Grid>
-
-              <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Services associés au modèle</InputLabel>
-                  <Select
-                    multiple
-                    label="Services associés au modèle"
-                    value={editRepair.selectedServices}
-                    onChange={(e) => handleEditRepairChange('selectedServices', e.target.value)}
-                    disabled={!editRepair.deviceId || getServicesForEditModel().length === 0}
-                    renderValue={(selected) => (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {selected.map((serviceId) => {
-                          const service = getServicesForEditModel().find(s => s.id === serviceId);
-                          return service ? (
-                            <Chip 
-                              key={serviceId} 
-                              label={`${service.service_name || service.serviceName || 'Service'} - ${formatFromEUR(service.effective_price || service.effectivePrice || 0, currency)}`} 
-                              size="small" 
-                            />
-                          ) : null;
-                        })}
-                      </Box>
-                    )}
-                  >
-                    {getServicesForEditModel().map((service) => (
-                      <MenuItem key={service.id} value={service.id}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {service.service_name || service.serviceName || 'Service'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {service.service_description || service.serviceDescription || ''}
-                          </Typography>
-                          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
-                            <Typography variant="caption" color="primary">
-                              {formatFromEUR(service.effective_price || service.effectivePrice || 0, currency)}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {!editRepair.deviceId && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      Sélectionnez d'abord un modèle d'appareil
-                    </Typography>
-                  )}
-                  {editRepair.deviceId && getServicesForEditModel().length === 0 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      Aucun service associé à ce modèle
-                    </Typography>
-                  )}
-                  {editRepair.selectedServices.length > 0 && (
-                    <Box sx={{ mt: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        Services sélectionnés: {editRepair.selectedServices.length}
-                      </Typography>
-                      <Typography variant="caption" color="primary" sx={{ ml: 1, fontWeight: 'bold' }}>
-                        Total: {formatFromEUR(getServicesForEditModel()
-                          .filter(s => editRepair.selectedServices.includes(s.id))
-                          .reduce((sum, s) => sum + (s.effective_price || s.effectivePrice || 0), 0), currency)}
-                      </Typography>
-                    </Box>
-                  )}
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Description du problème *"
-                  multiline
-                  rows={3}
-                  value={editRepair.description}
-                  onChange={(e) => handleEditRepairChange('description', e.target.value)}
-                  placeholder="Décrivez le problème rencontré..."
-                />
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Diagnostic initial"
-                  multiline
-                  rows={2}
-                  value={editRepair.issue}
-                  onChange={(e) => handleEditRepairChange('issue', e.target.value)}
-                  placeholder="Diagnostic préliminaire (optionnel)..."
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label={`Prix estimé (${currencySymbol})`}
-                  type="number"
-                  value={editRepair.totalPrice}
-                  onChange={(e) => handleEditRepairChange('totalPrice', parseFloat(e.target.value) || 0)}
-                />
-                {editRepair.selectedServices.length > 0 && (
-                  <Typography variant="caption" color="primary" sx={{ mt: 1, display: 'block' }}>
-                    Prix mis à jour automatiquement avec les services sélectionnés
-                  </Typography>
-                )}
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Réduction (%)"
-                  type="number"
-                  value={editRepair.discountPercentage}
-                  onChange={(e) => handleEditRepairChange('discountPercentage', Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-                  inputProps={{ 
-                    min: 0,
-                    max: 100,
-                    step: 0.1
-                  }}
-                />
-                {editRepair.discountPercentage > 0 && (
-                  <Typography variant="caption" color="success.main" sx={{ mt: 1, display: 'block' }}>
-                    Prix final: {formatFromEUR(((editRepair.totalPrice * (100 - editRepair.discountPercentage)) / 100), currency)}
-                  </Typography>
-                )}
-              </Grid>
-              
-              {/* Section Acompte */}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label={`Acompte payé (${currencySymbol})`}
-                  type="number"
-                  value={editRepair.deposit}
-                  onChange={(e) => handleEditRepairChange('deposit', parseFloat(e.target.value) || 0)}
-                  inputProps={{ 
-                    min: 0,
-                    step: 0.01
-                  }}
-                  helperText="Montant de l'acompte versé"
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Mode paiement acompte</InputLabel>
-                  <Select
-                    label="Mode paiement acompte"
-                    value={editRepair.depositPaymentMethod || 'cash'}
-                    onChange={(e) => handleEditRepairChange('depositPaymentMethod', e.target.value)}
-                    disabled={!editRepair.deposit || editRepair.deposit === 0}
-                  >
-                    <MenuItem value="cash">Espèces</MenuItem>
-                    <MenuItem value="card">Carte bancaire</MenuItem>
-                    <MenuItem value="check">Chèque</MenuItem>
-                    <MenuItem value="transfer">Virement</MenuItem>
-                    <MenuItem value="payment_link">Lien de paiement</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Afficher le reste à payer */}
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label={`Reste à payer (${currencySymbol})`}
-                  type="number"
-                  value={Math.max(0, (editRepair.totalPrice * (100 - (editRepair.discountPercentage || 0)) / 100) - (editRepair.deposit || 0)).toFixed(2)}
-                  InputProps={{ readOnly: true }}
-                  helperText="Calculé automatiquement"
-                  sx={{
-                    '& .MuiInputBase-input': { 
-                      fontWeight: 'bold', 
-                      color: 'primary.main' 
-                    }
-                  }}
-                />
-              </Grid>
-
-              {/* Section Paiement Final */}
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Mode paiement final</InputLabel>
-                  <Select
-                    label="Mode paiement final"
-                    value={editRepair.finalPaymentMethod || ''}
-                    onChange={(e) => handleEditRepairChange('finalPaymentMethod', e.target.value)}
-                    disabled={!editRepair.isPaid}
-                  >
-                    <MenuItem value="">Non payé</MenuItem>
-                    <MenuItem value="cash">Espèces</MenuItem>
-                    <MenuItem value="card">Carte bancaire</MenuItem>
-                    <MenuItem value="check">Chèque</MenuItem>
-                    <MenuItem value="transfer">Virement</MenuItem>
-                    <MenuItem value="payment_link">Lien de paiement</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  label="Date d'échéance"
-                  type="date"
-                  value={editRepair.dueDate}
-                  onChange={(e) => handleEditRepairChange('dueDate', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Statut initial</InputLabel>
-                  <Select
-                    label="Statut initial"
-                    value={editRepair.status || ''}
-                    onChange={(e) => handleEditRepairChange('status', e.target.value)}
-                  >
-                    {repairStatuses.map((status) => (
-                      <MenuItem key={status.id} value={status.id}>
-                        {status.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <FormControl fullWidth>
-                  <InputLabel>Technicien assigné</InputLabel>
-                  <Select
-                    label="Technicien assigné"
-                    value={editRepair.assignedTechnicianId || ''}
-                    onChange={(e) => handleEditRepairChange('assignedTechnicianId', e.target.value)}
-                  >
-                    <MenuItem value="">Aucun technicien</MenuItem>
-                    {getRepairEligibleUsers(users).map((user) => (
-                      <MenuItem key={user.id} value={user.id}>
-                        {getRepairUserDisplayName(user)}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              
-              <Grid item xs={12} md={4}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={editRepair.isUrgent}
-                      onChange={(e) => handleEditRepairChange('isUrgent', e.target.checked)}
-                    />
-                  }
-                  label="Réparation urgente"
-                />
-              </Grid>
-            </Grid>
-          )}
-
-          {/* Autres onglets - même contenu que le formulaire de création */}
-
-
-          {activeTab === 1 && (
-            <Grid container spacing={3} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  Configurez le bon d'intervention pour documenter l'état initial de l'appareil et les conditions de réparation.
-                </Alert>
-              </Grid>
-              
-              {/* Informations de base */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Nom du technicien"
-                  value={editInterventionData.technicianName}
-                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, technicianName: e.target.value }))}
-                  required
-                />
-              </Grid>
-              
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Durée estimée"
-                  value={editInterventionData.estimatedDuration}
-                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, estimatedDuration: e.target.value }))}
-                  placeholder="ex: 2-3 jours"
-                />
-              </Grid>
-
-              {/* État de l'appareil */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="État de l'appareil"
-                  value={editInterventionData.deviceCondition}
-                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, deviceCondition: e.target.value }))}
-                  placeholder="Décrivez l'état général, dommages visibles, pièces manquantes..."
-                />
-              </Grid>
-
-              {/* Section Sécurité */}
-              <Grid item xs={12}>
-                <Typography variant="h6" sx={{ mb: 2, color: '#1976d2', borderBottom: '2px solid #1976d2', pb: 1 }}>
-                  🔐 Sécurité et Accès
-                </Typography>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth>
-                  <InputLabel>Type d'authentification</InputLabel>
-                  <Select
-                    value={editInterventionData.authType || ''}
-                    onChange={(e) => setEditInterventionData(prev => ({ ...prev, authType: e.target.value }))}
-                    label="Type d'authentification"
-                  >
-                    <MenuItem value="password">Mot de passe</MenuItem>
-                    <MenuItem value="pattern">Schéma de déverrouillage</MenuItem>
-                    <MenuItem value="pin">Code PIN</MenuItem>
-                    <MenuItem value="fingerprint">Empreinte digitale</MenuItem>
-                    <MenuItem value="face">Reconnaissance faciale</MenuItem>
-                    <MenuItem value="none">Aucun</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Code d'accès"
-                  value={editInterventionData.accessCode || ''}
-                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, accessCode: e.target.value }))}
-                  placeholder="Mot de passe, PIN, ou description"
-                  type="password"
-                />
-              </Grid>
-
-              {/* Schéma interactif */}
-              {editInterventionData.authType === 'pattern' && (
-                <Grid item xs={12}>
-                  <Box sx={{ 
-                    p: 2, 
-                    border: '2px dashed #1976d2', 
-                    borderRadius: 2, 
-                    backgroundColor: '#f8f9fa',
-                    textAlign: 'center'
-                  }}>
-                    <Typography variant="h6" sx={{ mb: 2, color: '#1976d2' }}>
-                      📱 Schéma de déverrouillage
-                    </Typography>
-                    
-                    <Box sx={{ 
-                      width: 150, 
-                      height: 150, 
-                      mx: 'auto',
-                      border: '2px solid #ccc',
-                      borderRadius: 2,
-                      backgroundColor: '#fff',
-                      mb: 2
-                    }}>
-                      <Box sx={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(3, 1fr)', 
-                        gap: 1,
-                        p: 2,
-                        height: '100%'
-                      }}>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((point) => (
-                          <Box
-                            key={point}
-                            sx={{
-                              width: 15,
-                              height: 15,
-                              borderRadius: '50%',
-                              backgroundColor: editInterventionData.patternPoints?.includes(point) ? '#1976d2' : '#e0e0e0',
-                              border: '2px solid #ccc',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '10px',
-                              fontWeight: 'bold',
-                              color: editInterventionData.patternPoints?.includes(point) ? 'white' : '#666',
-                              '&:hover': {
-                                backgroundColor: editInterventionData.patternPoints?.includes(point) ? '#1565c0' : '#f0f0f0',
-                              }
-                            }}
-                            onClick={() => {
-                              const currentPoints = editInterventionData.patternPoints || [];
-                              const newPoints = currentPoints.includes(point) 
-                                ? currentPoints.filter(p => p !== point)
-                                : [...currentPoints, point];
-                              setEditInterventionData(prev => ({ 
-                                ...prev, 
-                                patternPoints: newPoints,
-                                accessCode: `Schéma: ${newPoints.join('-')}`
-                              }));
-                            }}
-                          >
-                            {point}
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-                    
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => setEditInterventionData(prev => ({ 
-                        ...prev, 
-                        patternPoints: [],
-                        accessCode: '',
-                        patternDescription: ''
-                      }))}
-                    >
-                      Effacer le schéma
-                    </Button>
-                  </Box>
-                </Grid>
-              )}
-
-              {/* Confirmations */}
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={editInterventionData.dataBackup}
-                        onChange={(e) => setEditInterventionData(prev => ({ ...prev, dataBackup: e.target.checked }))}
-                      />
-                    }
-                    label="Sauvegarde des données effectuée"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={editInterventionData.accessConfirmed}
-                        onChange={(e) => setEditInterventionData(prev => ({ ...prev, accessConfirmed: e.target.checked }))}
-                      />
-                    }
-                    label="Accès testé et confirmé"
-                  />
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={editInterventionData.clientAuthorizesRepair}
-                        onChange={(e) => setEditInterventionData(prev => ({ ...prev, clientAuthorizesRepair: e.target.checked }))}
-                      />
-                    }
-                    label="Client autorise la réparation"
-                  />
-                </Box>
-              </Grid>
-
-              {/* Diagnostic */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="Diagnostic et solution proposée"
-                  value={editInterventionData.initialDiagnosis}
-                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, initialDiagnosis: e.target.value }))}
-                  placeholder="Décrivez le problème et la solution..."
-                />
-              </Grid>
-
-              {/* Notes */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Notes additionnelles"
-                  value={editInterventionData.additionalNotes}
-                  onChange={(e) => setEditInterventionData(prev => ({ ...prev, additionalNotes: e.target.value }))}
-                  placeholder="Informations importantes, risques, etc."
-                />
-              </Grid>
-
-              {/* Conditions */}
-              <Grid item xs={12}>
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Important :</strong> Le client accepte les conditions de réparation et les risques potentiels.
-                  </Typography>
-                </Alert>
-              </Grid>
-
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={editInterventionData.termsAccepted}
-                      onChange={(e) => setEditInterventionData(prev => ({ ...prev, termsAccepted: e.target.checked }))}
-                      required
-                    />
-                  }
-                  label="J'accepte les conditions de réparation"
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={editInterventionData.liabilityAccepted}
-                      onChange={(e) => setEditInterventionData(prev => ({ ...prev, liabilityAccepted: e.target.checked }))}
-                      required
-                    />
-                  }
-                  label="Je comprends et accepte les clauses de responsabilité"
-                />
-              </Grid>
-
-              {/* Bouton de génération */}
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                  <Button
-                    variant="contained"
-                    startIcon={<PrintIcon />}
-                    onClick={handleGenerateInterventionFromEditTab}
-                    disabled={!editInterventionData.technicianName || !editInterventionData.termsAccepted || !editInterventionData.liabilityAccepted}
-                    sx={{ 
-                      backgroundColor: '#1976d2',
-                      '&:hover': {
-                        backgroundColor: '#1565c0',
-                      },
-                      px: 4,
-                      py: 1.5
-                    }}
-                  >
-                    Générer le Bon d'Intervention
-                  </Button>
-                </Box>
-              </Grid>
-            </Grid>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Annuler</Button>
-          <Button onClick={handleSaveRepair} variant="contained">
-            Sauvegarder
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialog nouvelle réparation amélioré */}
-      <Dialog 
-        open={newRepairDialogOpen} 
+      {/* Panneau latéral nouvelle réparation */}
+      <RepairSidePanel
+        open={newRepairDialogOpen}
         onClose={() => {
           setNewRepairDialogOpen(false);
           resetNewRepairForm();
-        }} 
-        maxWidth="lg" 
+        }}
+        clients={clients}
+        users={users}
+        repairStatuses={repairStatuses}
+        deviceModels={deviceModels}
+        dbCategories={dbCategories}
+        dbBrands={dbBrands}
+        newRepair={newRepair}
+        onNewRepairChange={handleNewRepairChange}
+        interventionData={interventionData}
+        onInterventionDataChange={setInterventionData}
+        selectedBrand={selectedBrand}
+        selectedCategory={selectedCategory}
+        onSelectedBrandChange={setSelectedBrand}
+        onSelectedCategoryChange={setSelectedCategory}
+        getFilteredModels={getFilteredModels}
+        getServicesForSelectedModel={getServicesForSelectedModel}
+        getUniqueBrands={getUniqueBrands}
+        getUniqueCategories={getUniqueCategories}
+        onCreateRepair={handleCreateRepair}
+        onGenerateIntervention={handleGenerateInterventionFromTab}
+        onOpenClientForm={() => setClientFormOpen(true)}
+        onOpenBrandDialog={openBrandDialog}
+        onOpenCategoryDialog={openCategoryDialog}
+        onOpenModelDialog={openModelDialog}
+        currency={currency}
+        getClientById={getClientById}
+      />
+
+      {/* === Ancien Dialog nouvelle réparation (remplacé par RepairSidePanel) === */}
+      {false && <Dialog
+        open={newRepairDialogOpen}
+        onClose={() => {
+          setNewRepairDialogOpen(false);
+          resetNewRepairForm();
+        }}
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle>
@@ -3708,13 +3268,13 @@ const Kanban: React.FC = () => {
           </Button>
           <Button 
             variant="contained" 
-            onClick={handleCreateRepair}
+            onClick={() => handleCreateRepair()}
             disabled={!newRepair.clientId || !newRepair.deviceId || !newRepair.description}
           >
             Créer la réparation
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog>}
 
       {/* Dialog de facture */}
       {selectedRepairForInvoice && (
