@@ -6,9 +6,9 @@ import { deviceCategoryService } from '../../services/deviceCategoryService';
 import { brandService, BrandWithCategories, CreateBrandData, UpdateBrandData } from '../../services/brandService';
 import { deviceModelService } from '../../services/deviceModelService';
 import { deviceModelServiceService } from '../../services/deviceModelServiceService';
-import { DeviceModelServiceDetailed, CreateDeviceModelServiceData, UpdateDeviceModelServiceData } from '../../types/deviceModelService';
+import { DeviceModelServiceDetailed, CreateDeviceModelServiceData } from '../../types/deviceModelService';
 
-// Contenu des fichiers CSV templates
+// CSV templates
 const brandsCsvContent = `name,description,categoryIds
 Apple,Fabricant américain de produits électroniques,Smartphone;Ordinateur portable;Ordinateur;Tablette
 Samsung,Conglomérat sud-coréen spécialisé dans l'électronique,Smartphone;Tablette
@@ -123,1176 +123,465 @@ Surface Pro 9,Tablette hybride Microsoft 2022,Microsoft,Tablette
 Surface Go 3,Tablette compacte Microsoft,Microsoft,Tablette
 MatePad Pro,Tablette professionnelle Huawei,Huawei,Tablette
 Xiaomi Pad 6,Tablette Xiaomi 11 pouces,Xiaomi,Tablette`;
+
 import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Grid,
-  Button,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Chip,
-  Avatar,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Alert,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tooltip,
-  Badge,
-  Tabs,
-  Tab,
-  Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Switch,
-  FormControlLabel,
-  CircularProgress,
-  Checkbox,
-  Toolbar,
+  Box, Typography, Card, CardContent, Grid, Button, TextField, Dialog, DialogTitle,
+  DialogContent, DialogActions, IconButton, Chip, Avatar, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Alert, FormControl, InputLabel, Select, MenuItem,
+  Tooltip, Divider, Switch, FormControlLabel, CircularProgress, Checkbox, alpha, InputAdornment,
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Search as SearchIcon,
-  FilterList as FilterIcon,
-  Sort as SortIcon,
-  Phone as PhoneIcon,
-  Tablet as TabletIcon,
-  Laptop as LaptopIcon,
-  Computer as ComputerIcon,
+  Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon,
+  Category as CategoryIcon, Grading as BrandingIcon, ModelTraining as ModelIcon,
+  Build as BuildIcon, CloudUpload as UploadIcon, CloudDownload as DownloadIcon,
   DeviceHub as DeviceHubIcon,
-  ExpandMore as ExpandMoreIcon,
-  Warning as WarningIcon,
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
-  Category as CategoryIcon,
-  Grading as BrandingIcon,
-  ModelTraining as ModelIcon,
-  Inventory as InventoryIcon,
-  Settings as SettingsIcon,
-  Build as BuildIcon,
-  CloudUpload as UploadIcon,
-  CloudDownload as DownloadIcon,
 } from '@mui/icons-material';
 import CategoryIconDisplay from '../../components/CategoryIconDisplay';
 import CategoryIconGrid from '../../components/CategoryIconGrid';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
 
-interface NewBrandForm {
-  name: string;
-  description: string;
-  categoryIds: string[];
-  isActive: boolean;
+/* ─── Design tokens ─── */
+const CARD_BASE = {
+  borderRadius: '16px', border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+  transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+  '&:hover': { boxShadow: '0 8px 32px rgba(0,0,0,0.10)', transform: 'translateY(-2px)' },
+} as const;
+
+const TABLE_HEAD_SX = {
+  '& th': {
+    borderBottom: '2px solid', borderColor: 'divider', fontWeight: 600,
+    fontSize: '0.75rem', color: 'text.secondary', textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+} as const;
+
+const BTN_DARK = {
+  borderRadius: '10px', textTransform: 'none', fontWeight: 600,
+  bgcolor: '#111827', '&:hover': { bgcolor: '#1f2937' },
+  boxShadow: '0 2px 8px rgba(17,24,39,0.25)',
+} as const;
+
+const INPUT_SX = { '& .MuiOutlinedInput-root': { borderRadius: '10px' } } as const;
+
+/* ─── KPI Mini ─── */
+function KpiMini({ icon, iconColor, label, value }: {
+  icon: React.ReactNode; iconColor: string; label: string; value: string | number;
+}) {
+  return (
+    <Card sx={CARD_BASE}>
+      <CardContent sx={{ p: '16px !important' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '12px', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            background: `linear-gradient(135deg, ${iconColor}, ${alpha(iconColor, 0.7)})`,
+            color: '#fff', flexShrink: 0, boxShadow: `0 4px 14px ${alpha(iconColor, 0.3)}`,
+          }}>{icon}</Box>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, fontSize: '1.1rem' }}>{value}</Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}>{label}</Typography>
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
 }
 
-interface NewCategoryForm {
-  name: string;
-  description: string;
-  icon: string;
-  isActive: boolean;
-}
+/* ─── Tab options ─── */
+const TAB_OPTIONS = [
+  { value: 0, label: 'Marques' },
+  { value: 1, label: 'Catégories' },
+  { value: 2, label: 'Modèles' },
+  { value: 3, label: 'Services par modèle' },
+];
 
-interface NewModelForm {
-  name: string;
-  description: string;
-  brandId: string;
-  categoryId: string;
-  isActive: boolean;
-}
+/* ─── Types ─── */
+interface NewBrandForm { name: string; description: string; categoryIds: string[]; isActive: boolean; }
+interface NewCategoryForm { name: string; description: string; icon: string; isActive: boolean; }
+interface NewModelForm { name: string; description: string; brandId: string; categoryId: string; isActive: boolean; }
 
 const DeviceManagement: React.FC = () => {
   const { workshopSettings } = useWorkshopSettings();
-  
-  // Valeur par défaut pour éviter les erreurs
   const currency = workshopSettings?.currency || 'EUR';
-  
-  // États pour les données
+
   const [allCategories, setAllCategories] = useState<DeviceCategory[]>([]);
   const [allBrands, setAllBrands] = useState<BrandWithCategories[]>([]);
   const [allModels, setAllModels] = useState<DeviceModel[]>([]);
   const [allDeviceModelServices, setAllDeviceModelServices] = useState<DeviceModelServiceDetailed[]>([]);
-  
-  // États pour les filtres et recherche
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategoryForBrands, setSelectedCategoryForBrands] = useState<string>('');
   const [selectedCategoryForModels, setSelectedCategoryForModels] = useState<string>('');
   const [selectedBrandForModels, setSelectedBrandForModels] = useState<string>('');
-  
-  // États pour les services par modèle
   const [selectedCategoryForServices, setSelectedCategoryForServices] = useState<string>('');
   const [selectedBrandForServices, setSelectedBrandForServices] = useState<string>('');
-  
-  // États pour les dialogues
+
   const [activeTab, setActiveTab] = useState(0);
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteItem, setDeleteItem] = useState<{ type: 'brand' | 'category' | 'model' | 'service'; item: any } | null>(null);
-  
-  // États pour les dialogues des services par modèle
   const [serviceAssociationDialogOpen, setServiceAssociationDialogOpen] = useState(false);
   const [selectedModelForService, setSelectedModelForService] = useState<DeviceModel | null>(null);
-  
-  // États pour les formulaires
+
   const [selectedBrand, setSelectedBrand] = useState<BrandWithCategories | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<DeviceCategory | null>(null);
   const [selectedModel, setSelectedModel] = useState<DeviceModel | null>(null);
-  const [newBrand, setNewBrand] = useState<NewBrandForm>({
-    name: '',
-    description: '',
-    categoryIds: [],
-    isActive: true,
-  });
-  const [newCategory, setNewCategory] = useState<NewCategoryForm>({
-    name: '',
-    description: '',
-    icon: 'category',
-    isActive: true,
-  });
-  const [newModel, setNewModel] = useState<NewModelForm>({
-    name: '',
-    description: '',
-    brandId: '',
-    categoryId: '',
-    isActive: true,
-  });
-  
-  // États pour les formulaires des services par modèle
-  const [newServiceAssociation, setNewServiceAssociation] = useState<CreateDeviceModelServiceData>({
-    deviceModelId: '',
-    serviceId: '',
-    customPrice: undefined,
-    customDuration: undefined,
-  });
-  
-  // États pour le chargement
+  const [newBrand, setNewBrand] = useState<NewBrandForm>({ name: '', description: '', categoryIds: [], isActive: true });
+  const [newCategory, setNewCategory] = useState<NewCategoryForm>({ name: '', description: '', icon: 'category', isActive: true });
+  const [newModel, setNewModel] = useState<NewModelForm>({ name: '', description: '', brandId: '', categoryId: '', isActive: true });
+  const [newServiceAssociation, setNewServiceAssociation] = useState<CreateDeviceModelServiceData>({ deviceModelId: '', serviceId: '', customPrice: undefined, customDuration: undefined });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importType, setImportType] = useState<'brands' | 'models' | 'categories'>('brands');
-  
-  // États pour la suppression en lot
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteType, setBulkDeleteType] = useState<'brands' | 'models' | 'categories'>('brands');
 
-  // Charger les données au montage du composant
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    
+    setLoading(true); setError(null);
     try {
-      // Charger les catégories
       const categoriesResult = await deviceCategoryService.getAll();
-      if (categoriesResult.success && categoriesResult.data) {
-        setAllCategories(categoriesResult.data);
-      } else {
-        console.warn('⚠️ Aucune catégorie trouvée ou erreur:', categoriesResult.error);
-        setAllCategories([]);
-      }
-      
-      // Charger les marques
+      setAllCategories(categoriesResult.success && categoriesResult.data ? categoriesResult.data : []);
       const brands = await brandService.getAll();
       setAllBrands(brands);
-      
-      // Charger les modèles
       const modelsResult = await deviceModelService.getAll();
-      if (modelsResult.success && modelsResult.data) {
-        setAllModels(modelsResult.data);
-      } else {
-        console.warn('⚠️ Aucun modèle trouvé ou erreur:', modelsResult.error);
-        setAllModels([]);
-      }
-      
-      // Charger les services par modèle
+      setAllModels(modelsResult.success && modelsResult.data ? modelsResult.data : []);
       const servicesResult = await deviceModelServiceService.getAll();
-      if (servicesResult.success && servicesResult.data) {
-        setAllDeviceModelServices(servicesResult.data);
-      } else {
-        console.warn('⚠️ Aucun service par modèle trouvé ou erreur:', servicesResult.error);
-        setAllDeviceModelServices([]);
-      }
-    } catch (err) {
-      console.error('❌ Erreur lors du chargement des données:', err);
+      setAllDeviceModelServices(servicesResult.success && servicesResult.data ? servicesResult.data : []);
+    } catch {
       setError('Erreur lors du chargement des données');
-      // S'assurer que les états sont des tableaux vides en cas d'erreur
-      setAllCategories([]);
-      setAllBrands([]);
-    } finally {
-      setLoading(false);
-    }
+      setAllCategories([]); setAllBrands([]);
+    } finally { setLoading(false); }
   };
 
-  // Fonctions pour les catégories
+  // ─── Category CRUD ───
   const handleCreateCategory = async () => {
     try {
       setLoading(true);
-      
-      const result = await deviceCategoryService.create({
-        name: newCategory.name,
-        description: newCategory.description,
-        icon: newCategory.icon,
-      });
-      
-      if (result.success) {
-        // Mettre à jour la liste des catégories
-        await loadData();
-        
-        // Fermer le dialogue et réinitialiser le formulaire
-        setCategoryDialogOpen(false);
-        resetCategoryForm();
-        
-      } else {
-        console.error('❌ Erreur lors de la création de la catégorie:', result.error);
-        setError(result.error || 'Erreur lors de la création de la catégorie');
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la création de la catégorie:', error);
-      setError('Erreur lors de la création de la catégorie');
-    } finally {
-      setLoading(false);
-    }
+      const result = await deviceCategoryService.create({ name: newCategory.name, description: newCategory.description, icon: newCategory.icon });
+      if (result.success) { await loadData(); setCategoryDialogOpen(false); resetCategoryForm(); }
+      else setError(result.error || 'Erreur lors de la création');
+    } catch { setError('Erreur lors de la création de la catégorie'); } finally { setLoading(false); }
   };
-
   const handleUpdateCategory = async () => {
     if (!selectedCategory) return;
-    
     try {
       setLoading(true);
-      
-      const result = await deviceCategoryService.update(selectedCategory.id, {
-        name: newCategory.name,
-        description: newCategory.description,
-        icon: newCategory.icon,
-      });
-      
-      if (result.success) {
-        // Mettre à jour la liste des catégories
-        await loadData();
-        
-        // Fermer le dialogue et réinitialiser le formulaire
-        setCategoryDialogOpen(false);
-        resetCategoryForm();
-        
-      } else {
-        console.error('❌ Erreur lors de la mise à jour de la catégorie:', result.error);
-        setError(result.error || 'Erreur lors de la mise à jour de la catégorie');
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la mise à jour de la catégorie:', error);
-      setError('Erreur lors de la mise à jour de la catégorie');
-    } finally {
-      setLoading(false);
-    }
+      const result = await deviceCategoryService.update(selectedCategory.id, { name: newCategory.name, description: newCategory.description, icon: newCategory.icon });
+      if (result.success) { await loadData(); setCategoryDialogOpen(false); resetCategoryForm(); }
+      else setError(result.error || 'Erreur lors de la mise à jour');
+    } catch { setError('Erreur lors de la mise à jour'); } finally { setLoading(false); }
   };
-
   const handleDeleteCategory = async (category: DeviceCategory) => {
     try {
       setLoading(true);
-      
       const result = await deviceCategoryService.delete(category.id);
-      
-      if (result.success) {
-        // Mettre à jour la liste des catégories
-        await loadData();
-        
-      } else {
-        console.error('❌ Erreur lors de la suppression de la catégorie:', result.error);
-        setError(result.error || 'Erreur lors de la suppression de la catégorie');
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la suppression de la catégorie:', error);
-      setError('Erreur lors de la suppression de la catégorie');
-    } finally {
-      setLoading(false);
-    }
+      if (result.success) await loadData(); else setError(result.error || 'Erreur lors de la suppression');
+    } catch { setError('Erreur lors de la suppression'); } finally { setLoading(false); }
   };
-
   const openCategoryEditDialog = (category: DeviceCategory) => {
     setSelectedCategory(category);
-    setNewCategory({
-      name: category.name,
-      description: category.description,
-      icon: category.icon,
-      isActive: category.isActive,
-    });
+    setNewCategory({ name: category.name, description: category.description, icon: category.icon, isActive: category.isActive });
     setCategoryDialogOpen(true);
   };
+  const resetCategoryForm = () => { setSelectedCategory(null); setNewCategory({ name: '', description: '', icon: 'category', isActive: true }); };
 
-  const resetCategoryForm = () => {
-    setSelectedCategory(null);
-    setNewCategory({
-      name: '',
-      description: '',
-      icon: 'category',
-      isActive: true,
-    });
-  };
-
-  // Fonctions pour les modèles
+  // ─── Model CRUD ───
   const handleCreateModel = async () => {
     try {
       setLoading(true);
-      
-      const result = await deviceModelService.create({
-        name: newModel.name,
-        description: newModel.description,
-        brandId: newModel.brandId,
-        categoryId: newModel.categoryId,
-      });
-      
-      if (result.success) {
-        // Mettre à jour la liste des modèles
-        await loadData();
-        
-        // Fermer le dialogue et réinitialiser le formulaire
-        setModelDialogOpen(false);
-        resetModelForm();
-        
-      } else {
-        console.error('❌ Erreur lors de la création du modèle:', result.error);
-        setError(result.error || 'Erreur lors de la création du modèle');
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la création du modèle:', error);
-      setError('Erreur lors de la création du modèle');
-    } finally {
-      setLoading(false);
-    }
+      const result = await deviceModelService.create({ name: newModel.name, description: newModel.description, brandId: newModel.brandId, categoryId: newModel.categoryId });
+      if (result.success) { await loadData(); setModelDialogOpen(false); resetModelForm(); }
+      else setError(result.error || 'Erreur lors de la création');
+    } catch { setError('Erreur lors de la création du modèle'); } finally { setLoading(false); }
   };
-
   const handleUpdateModel = async () => {
     if (!selectedModel) return;
-    
     try {
       setLoading(true);
-      
-      const result = await deviceModelService.update(selectedModel.id, {
-        name: newModel.name,
-        description: newModel.description,
-        brandId: newModel.brandId,
-        categoryId: newModel.categoryId,
-      });
-      
-      if (result.success) {
-        // Mettre à jour la liste des modèles
-        await loadData();
-        
-        // Fermer le dialogue et réinitialiser le formulaire
-        setModelDialogOpen(false);
-        resetModelForm();
-        
-      } else {
-        console.error('❌ Erreur lors de la mise à jour du modèle:', result.error);
-        setError(result.error || 'Erreur lors de la mise à jour du modèle');
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la mise à jour du modèle:', error);
-      setError('Erreur lors de la mise à jour du modèle');
-    } finally {
-      setLoading(false);
-    }
+      const result = await deviceModelService.update(selectedModel.id, { name: newModel.name, description: newModel.description, brandId: newModel.brandId, categoryId: newModel.categoryId });
+      if (result.success) { await loadData(); setModelDialogOpen(false); resetModelForm(); }
+      else setError(result.error || 'Erreur lors de la mise à jour');
+    } catch { setError('Erreur lors de la mise à jour'); } finally { setLoading(false); }
   };
-
   const handleDeleteModel = async (model: DeviceModel) => {
     try {
       setLoading(true);
-      
       const result = await deviceModelService.delete(model.id);
-      
-      if (result.success) {
-        // Mettre à jour la liste des modèles
-        await loadData();
-        
-      } else {
-        console.error('❌ Erreur lors de la suppression du modèle:', result.error);
-        setError(result.error || 'Erreur lors de la suppression du modèle');
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de la suppression du modèle:', error);
-      setError('Erreur lors de la suppression du modèle');
-    } finally {
-      setLoading(false);
-    }
+      if (result.success) await loadData(); else setError(result.error || 'Erreur lors de la suppression');
+    } catch { setError('Erreur lors de la suppression'); } finally { setLoading(false); }
   };
-
   const openModelEditDialog = (model: DeviceModel) => {
     setSelectedModel(model);
-    setNewModel({
-      name: model.name,
-      description: model.description || '',
-      brandId: model.brandId,
-      categoryId: model.categoryId,
-      isActive: model.isActive,
-    });
+    setNewModel({ name: model.name, description: model.description || '', brandId: model.brandId, categoryId: model.categoryId, isActive: model.isActive });
     setModelDialogOpen(true);
   };
+  const resetModelForm = () => { setSelectedModel(null); setNewModel({ name: '', description: '', brandId: '', categoryId: '', isActive: true }); };
 
-  const resetModelForm = () => {
-    setSelectedModel(null);
-    setNewModel({
-      name: '',
-      description: '',
-      brandId: '',
-      categoryId: '',
-      isActive: true,
-    });
-  };
-
-  // Fonctions pour les marques
+  // ─── Brand CRUD ───
   const handleCreateBrand = async () => {
     try {
       setLoading(true);
-      
-      const brandData: CreateBrandData = {
-        name: newBrand.name,
-        description: newBrand.description,
-        categoryIds: newBrand.categoryIds,
-      };
-      
-      const result = await brandService.create(brandData);
-      
-      // Mettre à jour la liste des marques
-      await loadData();
-      
-      // Fermer le dialogue et réinitialiser le formulaire
-      setBrandDialogOpen(false);
-      resetBrandForm();
-      
-    } catch (error) {
-      console.error('❌ Erreur lors de la création de la marque:', error);
-      setError('Erreur lors de la création de la marque');
-    } finally {
-      setLoading(false);
-    }
+      await brandService.create({ name: newBrand.name, description: newBrand.description, categoryIds: newBrand.categoryIds });
+      await loadData(); setBrandDialogOpen(false); resetBrandForm();
+    } catch { setError('Erreur lors de la création de la marque'); } finally { setLoading(false); }
   };
-
   const handleUpdateBrand = async () => {
     if (!selectedBrand) return;
-    
     try {
       setLoading(true);
-      
-      const updateData: UpdateBrandData = {
-        name: newBrand.name,
-        description: newBrand.description,
-        categoryIds: newBrand.categoryIds,
-      };
-      
-      const result = await brandService.update(selectedBrand.id, updateData);
-      
-      // Mettre à jour la liste des marques
-      await loadData();
-      
-      // Fermer le dialogue et réinitialiser le formulaire
-      setBrandDialogOpen(false);
-      resetBrandForm();
-      setSelectedBrand(null);
-      
-    } catch (error) {
-      console.error('❌ Erreur lors de la mise à jour de la marque:', error);
-      setError('Erreur lors de la mise à jour de la marque');
-    } finally {
-      setLoading(false);
-    }
+      await brandService.update(selectedBrand.id, { name: newBrand.name, description: newBrand.description, categoryIds: newBrand.categoryIds });
+      await loadData(); setBrandDialogOpen(false); resetBrandForm(); setSelectedBrand(null);
+    } catch { setError('Erreur lors de la mise à jour'); } finally { setLoading(false); }
   };
-
   const handleDeleteBrand = async (brand: BrandWithCategories) => {
-    try {
-      setLoading(true);
-      
-      await brandService.delete(brand.id);
-      
-      // Mettre à jour la liste des marques
-      await loadData();
-      
-    } catch (error) {
-      console.error('❌ Erreur lors de la suppression de la marque:', error);
-      setError('Erreur lors de la suppression de la marque');
-    } finally {
-      setLoading(false);
-    }
+    try { setLoading(true); await brandService.delete(brand.id); await loadData(); }
+    catch { setError('Erreur lors de la suppression'); } finally { setLoading(false); }
   };
-
-  const resetBrandForm = () => {
-    setNewBrand({
-      name: '',
-      description: '',
-      categoryIds: [],
-      isActive: true,
-    });
-    setSelectedBrand(null);
-  };
-
+  const resetBrandForm = () => { setNewBrand({ name: '', description: '', categoryIds: [], isActive: true }); setSelectedBrand(null); };
   const openBrandEditDialog = (brand: BrandWithCategories) => {
     setSelectedBrand(brand);
-    setNewBrand({
-      name: brand.name,
-      description: brand.description,
-      categoryIds: brand.categories.map(cat => cat.id),
-      isActive: brand.isActive,
-    });
+    setNewBrand({ name: brand.name, description: brand.description, categoryIds: brand.categories.map(c => c.id), isActive: brand.isActive });
     setBrandDialogOpen(true);
   };
 
-  const openDeleteDialog = (item: any, type: 'brand' | 'category' | 'model') => {
-    setDeleteItem({ type, item });
-    setDeleteDialogOpen(true);
-  };
-
+  // ─── Delete confirm ───
+  const openDeleteDialog = (item: any, type: 'brand' | 'category' | 'model') => { setDeleteItem({ type, item }); setDeleteDialogOpen(true); };
   const confirmDelete = async () => {
     if (!deleteItem) return;
-    
-    if (deleteItem.type === 'brand') {
-      await handleDeleteBrand(deleteItem.item);
-    } else if (deleteItem.type === 'category') {
-      await handleDeleteCategory(deleteItem.item);
-    } else if (deleteItem.type === 'model') {
-      await handleDeleteModel(deleteItem.item);
-    }
-    
-    setDeleteDialogOpen(false);
-    setDeleteItem(null);
+    if (deleteItem.type === 'brand') await handleDeleteBrand(deleteItem.item);
+    else if (deleteItem.type === 'category') await handleDeleteCategory(deleteItem.item);
+    else if (deleteItem.type === 'model') await handleDeleteModel(deleteItem.item);
+    setDeleteDialogOpen(false); setDeleteItem(null);
   };
 
-  // Fonctions pour les services par modèle
+  // ─── Service associations ───
   const handleCreateServiceAssociation = async () => {
     try {
       setLoading(true);
-      
       const result = await deviceModelServiceService.create(newServiceAssociation);
-      if (result.success) {
-        // Recharger les données
-        await loadData();
-        setServiceAssociationDialogOpen(false);
-        resetServiceAssociationForm();
-      } else {
-        throw new Error(result.error || 'Erreur lors de la création');
-      }
-    } catch (error: any) {
-      console.error('❌ Erreur lors de la création de l\'association:', error);
-      setError(error.message || 'Erreur lors de la création de l\'association');
-    } finally {
-      setLoading(false);
-    }
+      if (result.success) { await loadData(); setServiceAssociationDialogOpen(false); resetServiceAssociationForm(); }
+      else throw new Error(result.error || 'Erreur');
+    } catch (e: any) { setError(e.message || 'Erreur'); } finally { setLoading(false); }
   };
-
-  const handleDeleteServiceAssociation = async (association: DeviceModelServiceDetailed) => {
-    try {
-      setLoading(true);
-      
-      await deviceModelServiceService.delete(association.id);
-      
-      // Mettre à jour la liste
-      await loadData();
-      
-    } catch (error) {
-      console.error('❌ Erreur lors de la suppression de l\'association:', error);
-      setError('Erreur lors de la suppression de l\'association');
-    } finally {
-      setLoading(false);
-    }
+  const handleDeleteServiceAssociation = async (a: DeviceModelServiceDetailed) => {
+    try { setLoading(true); await deviceModelServiceService.delete(a.id); await loadData(); }
+    catch { setError("Erreur lors de la suppression"); } finally { setLoading(false); }
   };
-
-  const resetServiceAssociationForm = () => {
-    setNewServiceAssociation({
-      deviceModelId: '',
-      serviceId: '',
-      customPrice: undefined,
-      customDuration: undefined,
-    });
-    setSelectedModelForService(null);
-  };
-
+  const resetServiceAssociationForm = () => { setNewServiceAssociation({ deviceModelId: '', serviceId: '', customPrice: undefined, customDuration: undefined }); setSelectedModelForService(null); };
   const openServiceAssociationDialog = (model: DeviceModel) => {
     setSelectedModelForService(model);
-    setNewServiceAssociation({
-      deviceModelId: model.id,
-      serviceId: '',
-      customPrice: undefined,
-      customDuration: undefined,
-    });
+    setNewServiceAssociation({ deviceModelId: model.id, serviceId: '', customPrice: undefined, customDuration: undefined });
     setServiceAssociationDialogOpen(true);
   };
 
-  // Fonctions pour l'importation CSV
+  // ─── CSV import/export ───
   const handleDownloadTemplate = (type: 'brands' | 'models' | 'categories') => {
-    let csvContent = '';
-    let fileName = '';
-    
-    // Utiliser le contenu complet des fichiers CSV selon le type
-    if (type === 'categories') {
-      csvContent = categoriesCsvContent;
-      fileName = 'categories_import.csv';
-    } else if (type === 'brands') {
-      csvContent = brandsCsvContent;
-      fileName = 'brands_import.csv';
-    } else {
-      csvContent = modelsCsvContent;
-      fileName = 'models_import.csv';
-    }
-    
-    // Créer un Blob avec le contenu CSV complet
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const map = { categories: { content: categoriesCsvContent, name: 'categories_import.csv' }, brands: { content: brandsCsvContent, name: 'brands_import.csv' }, models: { content: modelsCsvContent, name: 'models_import.csv' } };
+    const { content, name } = map[type];
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
-    
-    // Créer et déclencher le téléchargement
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    
-    // Nettoyer après un court délai
-    setTimeout(() => {
-      if (document.body.contains(link)) {
-        document.body.removeChild(link);
-      }
-      URL.revokeObjectURL(url);
-    }, 100);
+    const link = document.createElement('a'); link.href = url; link.download = name; link.style.display = 'none';
+    document.body.appendChild(link); link.click();
+    setTimeout(() => { if (document.body.contains(link)) document.body.removeChild(link); URL.revokeObjectURL(url); }, 100);
   };
 
   const handleImportCSV = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
+    const file = event.target.files?.[0]; if (!file) return;
+    setLoading(true); setError(null); setSuccess(null);
     try {
       const text = await file.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      // Parser CSV simple qui gère les guillemets
+      const lines = text.split('\n').filter(l => l.trim());
       const parseCSVLine = (line: string): string[] => {
-        const result: string[] = [];
-        let current = '';
-        let inQuotes = false;
-        
+        const result: string[] = []; let current = ''; let inQ = false;
         for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            result.push(current.trim());
-            current = '';
-          } else {
-            current += char;
-          }
+          const c = line[i];
+          if (c === '"') inQ = !inQ; else if (c === ',' && !inQ) { result.push(current.trim()); current = ''; } else current += c;
         }
-        
-        result.push(current.trim());
-        return result;
+        result.push(current.trim()); return result;
       };
-      
       const headers = parseCSVLine(lines[0]);
-      
-      
-      let successCount = 0;
-      let errorCount = 0;
+      let ok = 0, fail = 0;
 
       if (importType === 'categories') {
-        // Importer des catégories
         for (let i = 1; i < lines.length; i++) {
-          const values = parseCSVLine(lines[i]);
-          const category: any = {};
-          
-          headers.forEach((header, index) => {
-            category[header] = values[index] || '';
-          });
-
-          try {
-            // Vérifier que le nom de la catégorie existe
-            if (!category.name || category.name.trim() === '') {
-              errorCount++;
-              continue;
-            }
-
-            const result = await deviceCategoryService.create({
-              name: category.name,
-              description: category.description || `Catégorie ${category.name}`,
-              icon: category.icon || category.name.toLowerCase().replace(/\s+/g, '-'),
-            });
-            
-            if (result.success) {
-              successCount++;
-            } else {
-              console.error(`❌ Erreur lors de la création de la catégorie ${category.name}:`, result.error);
-              errorCount++;
-            }
-          } catch (err) {
-            console.error(`❌ Erreur lors de l'importation de la catégorie ${category.name}:`, err);
-            errorCount++;
-          }
+          const v = parseCSVLine(lines[i]); const cat: any = {}; headers.forEach((h, idx) => { cat[h] = v[idx] || ''; });
+          if (!cat.name?.trim()) { fail++; continue; }
+          try { const r = await deviceCategoryService.create({ name: cat.name, description: cat.description || `Catégorie ${cat.name}`, icon: cat.icon || cat.name.toLowerCase().replace(/\s+/g, '-') }); r.success ? ok++ : fail++; } catch { fail++; }
         }
       } else if (importType === 'brands') {
-        // Importer des marques
         for (let i = 1; i < lines.length; i++) {
-          const values = parseCSVLine(lines[i]);
-          const brand: any = {};
-          
-          headers.forEach((header, index) => {
-            brand[header] = values[index] || '';
-          });
-
-          try {
-            // Vérifier que le nom de la marque existe
-            if (!brand.name || brand.name.trim() === '') {
-              errorCount++;
-              continue;
-            }
-
-            // Trouver l'ID de la catégorie par son nom
-            const categoryIds: string[] = [];
-            if (brand.categoryIds) {
-              const categoryNames = brand.categoryIds.split(';');
-              for (const catName of categoryNames) {
-                const category = allCategories.find(c => c.name.toLowerCase() === catName.toLowerCase());
-                if (category) {
-                  categoryIds.push(category.id);
-                }
-              }
-            }
-
-            try {
-              await brandService.create({
-                name: brand.name,
-                description: brand.description || '',
-                categoryIds: categoryIds,
-              });
-              successCount++;
-            } catch (brandError) {
-              console.error(`❌ Erreur lors de la création de la marque ${brand.name}:`, brandError);
-              errorCount++;
-            }
-          } catch (err) {
-            console.error(`❌ Erreur lors de l'importation de la marque ${brand.name}:`, err);
-            errorCount++;
-          }
+          const v = parseCSVLine(lines[i]); const b: any = {}; headers.forEach((h, idx) => { b[h] = v[idx] || ''; });
+          if (!b.name?.trim()) { fail++; continue; }
+          const catIds: string[] = [];
+          if (b.categoryIds) { for (const cn of b.categoryIds.split(';')) { const c = allCategories.find(x => x.name.toLowerCase() === cn.toLowerCase()); if (c) catIds.push(c.id); } }
+          try { await brandService.create({ name: b.name, description: b.description || '', categoryIds: catIds }); ok++; } catch { fail++; }
         }
       } else {
-        // Importer des modèles
         for (let i = 1; i < lines.length; i++) {
-          const values = parseCSVLine(lines[i]);
-          const model: any = {};
-          
-          headers.forEach((header, index) => {
-            model[header] = values[index] || '';
-          });
-
-          try {
-            // Vérifier que le nom du modèle existe
-            if (!model.name || model.name.trim() === '') {
-              errorCount++;
-              continue;
-            }
-
-            // Trouver l'ID de la marque par son nom
-            let brand = allBrands.find(b => b.name.toLowerCase() === model.brandName.toLowerCase());
-            if (!brand) {
-              console.error(`❌ Marque non trouvée: ${model.brandName}`);
-              errorCount++;
-              continue;
-            }
-
-            // Trouver l'ID de la catégorie par son nom
-            const category = allCategories.find(c => c.name.toLowerCase() === model.categoryName.toLowerCase());
-            if (!category) {
-              console.error(`❌ Catégorie non trouvée: ${model.categoryName}. Veuillez d'abord créer cette catégorie.`);
-              errorCount++;
-              continue;
-            }
-
-            const result = await deviceModelService.create({
-              name: model.name,
-              description: model.description || '',
-              brandId: brand.id,
-              categoryId: category.id,
-            });
-            
-            if (result.success) {
-              successCount++;
-            } else {
-              console.error(`❌ Erreur lors de la création du modèle ${model.name}:`, result.error);
-              errorCount++;
-            }
-          } catch (err) {
-            console.error(`❌ Erreur lors de l'importation du modèle ${model.name}:`, err);
-            errorCount++;
-          }
+          const v = parseCSVLine(lines[i]); const m: any = {}; headers.forEach((h, idx) => { m[h] = v[idx] || ''; });
+          if (!m.name?.trim()) { fail++; continue; }
+          const brand = allBrands.find(b => b.name.toLowerCase() === m.brandName?.toLowerCase()); if (!brand) { fail++; continue; }
+          const cat = allCategories.find(c => c.name.toLowerCase() === m.categoryName?.toLowerCase()); if (!cat) { fail++; continue; }
+          try { const r = await deviceModelService.create({ name: m.name, description: m.description || '', brandId: brand.id, categoryId: cat.id }); r.success ? ok++ : fail++; } catch { fail++; }
         }
       }
-
-      setSuccess(`Importation terminée : ${successCount} éléments importés avec succès${errorCount > 0 ? `, ${errorCount} erreurs` : ''}`);
-      await loadData();
-      setImportDialogOpen(false);
-    } catch (err) {
-      console.error('Erreur lors de l\'importation:', err);
-      setError('Erreur lors de l\'importation du fichier CSV');
-    } finally {
-      setLoading(false);
-    }
+      setSuccess(`Importation terminée : ${ok} importés${fail > 0 ? `, ${fail} erreurs` : ''}`);
+      await loadData(); setImportDialogOpen(false);
+    } catch { setError("Erreur lors de l'importation"); } finally { setLoading(false); }
   };
 
-  // Fonctions pour la suppression en lot
-  const handleSelectAll = (items: any[], type: 'brands' | 'models' | 'categories') => {
-    if (selectedItems.length === items.length) {
-      setSelectedItems([]);
-    } else {
-      setSelectedItems(items.map(item => item.id));
-    }
+  // ─── Bulk delete ───
+  const handleSelectAll = (items: any[]) => { setSelectedItems(selectedItems.length === items.length ? [] : items.map(i => i.id)); };
+  const handleSelectItem = (id: string) => { setSelectedItems(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); };
+  const openBulkDeleteDialog = (type: 'brands' | 'models' | 'categories') => {
+    if (selectedItems.length === 0) { setError('Sélectionnez au moins un élément'); return; }
+    setBulkDeleteType(type); setBulkDeleteDialogOpen(true);
   };
-
-  const handleSelectItem = (itemId: string) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    );
-  };
-
   const handleBulkDelete = async () => {
     if (selectedItems.length === 0) return;
-
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    let successCount = 0;
-    let errorCount = 0;
-
+    setLoading(true); setError(null); setSuccess(null);
+    let ok = 0, fail = 0;
     try {
-      for (const itemId of selectedItems) {
+      for (const id of selectedItems) {
         try {
-          if (bulkDeleteType === 'brands') {
-            await brandService.delete(itemId);
-          } else if (bulkDeleteType === 'models') {
-            const result = await deviceModelService.delete(itemId);
-            if (!result.success) {
-              throw new Error(result.error);
-            }
-          } else if (bulkDeleteType === 'categories') {
-            const result = await deviceCategoryService.delete(itemId);
-            if (!result.success) {
-              throw new Error(result.error);
-            }
-          }
-          successCount++;
-        } catch (err) {
-          console.error(`Erreur lors de la suppression de l'élément ${itemId}:`, err);
-          errorCount++;
-        }
+          if (bulkDeleteType === 'brands') await brandService.delete(id);
+          else if (bulkDeleteType === 'models') { const r = await deviceModelService.delete(id); if (!r.success) throw new Error(); }
+          else { const r = await deviceCategoryService.delete(id); if (!r.success) throw new Error(); }
+          ok++;
+        } catch { fail++; }
       }
-
-      setSuccess(`Suppression terminée : ${successCount} éléments supprimés avec succès${errorCount > 0 ? `, ${errorCount} erreurs` : ''}`);
-      setSelectedItems([]);
-      setBulkDeleteDialogOpen(false);
-      await loadData();
-    } catch (err) {
-      console.error('Erreur lors de la suppression en lot:', err);
-      setError('Erreur lors de la suppression en lot');
-    } finally {
-      setLoading(false);
-    }
+      setSuccess(`Suppression terminée : ${ok} supprimés${fail > 0 ? `, ${fail} erreurs` : ''}`);
+      setSelectedItems([]); setBulkDeleteDialogOpen(false); await loadData();
+    } catch { setError('Erreur lors de la suppression en lot'); } finally { setLoading(false); }
   };
 
-  const openBulkDeleteDialog = (type: 'brands' | 'models' | 'categories') => {
-    if (selectedItems.length === 0) {
-      setError('Veuillez sélectionner au moins un élément à supprimer');
-      return;
-    }
-    setBulkDeleteType(type);
-    setBulkDeleteDialogOpen(true);
-  };
-
-  // Filtrer les marques
-  const filteredBrands = (allBrands || []).filter(brand => {
-    const matchesSearch = (brand.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (brand.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategory = !selectedCategoryForBrands || 
-                           brand.categories.some(cat => cat.id === selectedCategoryForBrands);
-    
-    return matchesSearch && matchesCategory;
+  // ─── Filters ───
+  const filteredBrands = (allBrands || []).filter(b => {
+    const s = (b.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (b.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const c = !selectedCategoryForBrands || b.categories.some(cat => cat.id === selectedCategoryForBrands);
+    return s && c;
+  });
+  const filteredModels = (allModels || []).filter(m => {
+    const s = (m.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const b = !selectedBrandForModels || m.brandId === selectedBrandForModels;
+    const c = !selectedCategoryForModels || m.categoryId === selectedCategoryForModels;
+    return s && b && c;
   });
 
-  // Compter les marques par catégorie
-  const brandCountByCategory = (allCategories || []).map(category => ({
-    category,
-    count: (allBrands || []).filter(brand => 
-      brand.categories.some(cat => cat.id === category.id)
-    ).length
-  }));
-
-  // Obtenir l'icône pour une catégorie
-  const getCategoryIcon = (categoryName: string, iconValue?: string) => {
-    const iconType = iconValue || (categoryName || '').toLowerCase().replace(/\s+/g, '-');
-    return <CategoryIconDisplay iconType={iconType} size={20} />;
-  };
+  const getCategoryIcon = (name: string, icon?: string) => <CategoryIconDisplay iconType={icon || (name || '').toLowerCase().replace(/\s+/g, '-')} size={20} />;
 
   if (loading && (allBrands || []).length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <CircularProgress />
-      </Box>
-    );
+    return <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}><CircularProgress sx={{ color: '#111827' }} /></Box>;
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* En-tête */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Gestion des Appareils
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Gérez vos marques, catégories et modèles d'appareils
-        </Typography>
+    <Box>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>Gestion des appareils</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>Marques, catégories, modèles et services</Typography>
+        </Box>
       </Box>
 
-      {/* Affichage des erreurs */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+      {/* KPI Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={6} md={3}><KpiMini icon={<BrandingIcon sx={{ fontSize: 20 }} />} iconColor="#6366f1" label="Marques" value={(allBrands || []).length} /></Grid>
+        <Grid item xs={6} md={3}><KpiMini icon={<CategoryIcon sx={{ fontSize: 20 }} />} iconColor="#f59e0b" label="Catégories" value={(allCategories || []).length} /></Grid>
+        <Grid item xs={6} md={3}><KpiMini icon={<ModelIcon sx={{ fontSize: 20 }} />} iconColor="#22c55e" label="Modèles" value={(allModels || []).length} /></Grid>
+        <Grid item xs={6} md={3}><KpiMini icon={<BuildIcon sx={{ fontSize: 20 }} />} iconColor="#8b5cf6" label="Services liés" value={allDeviceModelServices.length} /></Grid>
+      </Grid>
 
-      {/* Affichage des succès */}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
+      {error && <Alert severity="error" sx={{ mb: 2, borderRadius: '12px' }} onClose={() => setError(null)}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2, borderRadius: '12px' }} onClose={() => setSuccess(null)}>{success}</Alert>}
 
-      {/* Onglets */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={activeTab} onChange={(e, newValue) => {
-          setActiveTab(newValue);
-          setSelectedItems([]); // Réinitialiser la sélection lors du changement d'onglet
-        }}>
-          <Tab label="Marques" icon={<BrandingIcon />} />
-          <Tab label="Catégories" icon={<CategoryIcon />} />
-          <Tab label="Modèles" icon={<ModelIcon />} />
-          <Tab label="Services par modèle" icon={<BuildIcon />} />
-        </Tabs>
-      </Paper>
+      {/* Tab chips */}
+      <Box sx={{ display: 'flex', gap: 0.75, mb: 3, flexWrap: 'wrap' }}>
+        {TAB_OPTIONS.map(opt => (
+          <Chip key={opt.value} label={opt.label} onClick={() => { setActiveTab(opt.value); setSelectedItems([]); }}
+            sx={{
+              fontWeight: 600, borderRadius: '10px', fontSize: '0.8rem', px: 1, py: 2.2,
+              ...(activeTab === opt.value
+                ? { bgcolor: '#111827', color: '#fff', '&:hover': { bgcolor: '#1f2937' } }
+                : { bgcolor: 'grey.100', color: 'text.secondary', '&:hover': { bgcolor: 'grey.200' } }),
+            }} />
+        ))}
+      </Box>
 
-      {/* Onglet Marques */}
+      {/* ═══ TAB 0 : Brands ═══ */}
       {activeTab === 0 && (
-        <Card>
+        <Card sx={CARD_BASE}>
           <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Marques ({filteredBrands.length})</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<DownloadIcon />}
-                  onClick={() => handleDownloadTemplate('brands')}
-                  size="small"
-                >
-                  Télécharger le modèle CSV
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<UploadIcon />}
-                  onClick={() => {
-                    setImportType('brands');
-                    setImportDialogOpen(true);
-                  }}
-                  size="small"
-                >
-                  Importer CSV
-                </Button>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>Marques ({filteredBrands.length})</Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleDownloadTemplate('brands')}
+                  sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'grey.300', color: 'text.secondary' }}>Modèle CSV</Button>
+                <Button size="small" variant="outlined" startIcon={<UploadIcon />} onClick={() => { setImportType('brands'); setImportDialogOpen(true); }}
+                  sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'grey.300', color: 'text.secondary' }}>Importer</Button>
                 {selectedItems.length > 0 && (
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => openBulkDeleteDialog('brands')}
-                    size="small"
-                  >
-                    Supprimer ({selectedItems.length})
-                  </Button>
+                  <Button size="small" variant="outlined" startIcon={<DeleteIcon />} onClick={() => openBulkDeleteDialog('brands')}
+                    sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: '#ef4444', color: '#ef4444' }}>Supprimer ({selectedItems.length})</Button>
                 )}
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    resetBrandForm();
-                    setBrandDialogOpen(true);
-                  }}
-                >
-                  Ajouter une marque
-                </Button>
+                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => { resetBrandForm(); setBrandDialogOpen(true); }} sx={BTN_DARK}>Ajouter</Button>
               </Box>
             </Box>
 
-            {/* Filtres */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              <TextField
-                placeholder="Rechercher une marque..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                size="small"
-                sx={{ minWidth: 200 }}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                }}
-              />
-              
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Filtrer par catégorie</InputLabel>
-                <Select
-                  value={selectedCategoryForBrands || ''}
-                  onChange={(e) => setSelectedCategoryForBrands(e.target.value)}
-                  label="Filtrer par catégorie"
-                >
-                  <MenuItem value="">Toutes les catégories</MenuItem>
-                  {(allCategories || []).map((category) => (
-                    <MenuItem key={category.id} value={category.id}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-
-            {/* Statistiques par catégorie */}
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Marques par catégorie:
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {brandCountByCategory.map(({ category, count }) => (
-                  <Chip
-                    key={category.id}
-                    label={`${category.name}: ${count}`}
-                    variant={selectedCategoryForBrands === category.id ? 'filled' : 'outlined'}
-                    onClick={() => setSelectedCategoryForBrands(
-                      selectedCategoryForBrands === category.id ? '' : category.id
-                    )}
-                    color={selectedCategoryForBrands === category.id ? 'primary' : 'default'}
-                  />
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField placeholder="Rechercher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} size="small"
+                sx={{ minWidth: 200, ...INPUT_SX }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.disabled', fontSize: 20 }} /></InputAdornment> }} />
+              <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                <Chip label="Toutes" size="small" onClick={() => setSelectedCategoryForBrands('')}
+                  sx={{ fontWeight: 600, borderRadius: '8px', fontSize: '0.75rem', ...(selectedCategoryForBrands === '' ? { bgcolor: '#6366f1', color: '#fff' } : { bgcolor: 'grey.100', color: 'text.secondary' }) }} />
+                {(allCategories || []).map(cat => (
+                  <Chip key={cat.id} label={cat.name} size="small" onClick={() => setSelectedCategoryForBrands(selectedCategoryForBrands === cat.id ? '' : cat.id)}
+                    sx={{ fontWeight: 600, borderRadius: '8px', fontSize: '0.75rem', ...(selectedCategoryForBrands === cat.id ? { bgcolor: '#6366f1', color: '#fff' } : { bgcolor: 'grey.100', color: 'text.secondary' }) }} />
                 ))}
               </Box>
             </Box>
 
-            {/* Tableau des marques */}
-            <TableContainer component={Paper}>
+            <TableContainer>
               <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        indeterminate={selectedItems.length > 0 && selectedItems.length < filteredBrands.length}
-                        checked={filteredBrands.length > 0 && selectedItems.length === filteredBrands.length}
-                        onChange={() => handleSelectAll(filteredBrands, 'brands')}
-                      />
-                    </TableCell>
-                    <TableCell>Nom</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell>Catégories</TableCell>
-                    <TableCell>Statut</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
+                <TableHead><TableRow sx={TABLE_HEAD_SX}>
+                  <TableCell padding="checkbox"><Checkbox indeterminate={selectedItems.length > 0 && selectedItems.length < filteredBrands.length} checked={filteredBrands.length > 0 && selectedItems.length === filteredBrands.length} onChange={() => handleSelectAll(filteredBrands)} /></TableCell>
+                  <TableCell>Nom</TableCell><TableCell>Description</TableCell><TableCell>Catégories</TableCell><TableCell>Statut</TableCell><TableCell align="center">Actions</TableCell>
+                </TableRow></TableHead>
                 <TableBody>
-                  {filteredBrands.map((brand) => (
-                    <TableRow key={brand.id}>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={selectedItems.includes(brand.id)}
-                          onChange={() => handleSelectItem(brand.id)}
-                        />
-                      </TableCell>
+                  {filteredBrands.map(brand => (
+                    <TableRow key={brand.id} sx={{ '&:last-child td': { borderBottom: 0 }, '& td': { py: 1.5 } }}>
+                      <TableCell padding="checkbox"><Checkbox checked={selectedItems.includes(brand.id)} onChange={() => handleSelectItem(brand.id)} /></TableCell>
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                            {brand.name.charAt(0)}
-                          </Avatar>
-                          <Typography variant="body2" fontWeight="medium">
-                            {brand.name}
-                          </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Avatar sx={{ width: 32, height: 32, fontSize: '0.75rem', fontWeight: 700, background: 'linear-gradient(135deg, #6366f1, #818cf8)', color: '#fff' }}>{brand.name.charAt(0)}</Avatar>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{brand.name}</Typography>
                         </Box>
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {brand.description || 'Aucune description'}
-                        </Typography>
-                      </TableCell>
+                      <TableCell><Typography variant="body2" color="text.secondary">{brand.description || '—'}</Typography></TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          {brand.categories.length > 0 ? (
-                            brand.categories.map((category) => (
-                              <Chip
-                                key={category.id}
-                                label={category.name}
-                                size="small"
-                                icon={getCategoryIcon(category.name, category.icon)}
-                              />
-                            ))
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              Aucune catégorie
-                            </Typography>
-                          )}
+                          {brand.categories.length > 0 ? brand.categories.map(cat => (
+                            <Chip key={cat.id} label={cat.name} size="small" sx={{ fontWeight: 600, borderRadius: '8px', fontSize: '0.7rem', bgcolor: alpha('#6366f1', 0.08), color: '#6366f1' }} />
+                          )) : <Typography variant="caption" color="text.disabled">—</Typography>}
                         </Box>
                       </TableCell>
                       <TableCell>
-                        <Chip
-                          label={brand.isActive ? 'Actif' : 'Inactif'}
-                          color={brand.isActive ? 'success' : 'default'}
-                          size="small"
-                        />
+                        <Chip label={brand.isActive ? 'Actif' : 'Inactif'} size="small" sx={{ fontWeight: 600, borderRadius: '8px', fontSize: '0.72rem', bgcolor: alpha(brand.isActive ? '#22c55e' : '#9ca3af', 0.1), color: brand.isActive ? '#22c55e' : '#9ca3af' }} />
                       </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Tooltip title="Modifier">
-                            <IconButton
-                              size="small"
-                              onClick={() => openBrandEditDialog(brand)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Supprimer">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => openDeleteDialog(brand, 'brand')}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                          <Tooltip title="Modifier"><IconButton size="small" onClick={() => openBrandEditDialog(brand)} sx={{ color: '#6366f1', bgcolor: alpha('#6366f1', 0.08), '&:hover': { bgcolor: alpha('#6366f1', 0.15) } }}><EditIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                          <Tooltip title="Supprimer"><IconButton size="small" onClick={() => openDeleteDialog(brand, 'brand')} sx={{ color: '#ef4444', bgcolor: alpha('#ef4444', 0.08), '&:hover': { bgcolor: alpha('#ef4444', 0.15) } }}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1300,134 +589,42 @@ const DeviceManagement: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-
-            {filteredBrands.length === 0 && (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body1" color="text.secondary">
-                  Aucune marque trouvée
-                </Typography>
-              </Box>
-            )}
+            {filteredBrands.length === 0 && <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6 }}><BrandingIcon sx={{ fontSize: 40, color: 'grey.300', mb: 1 }} /><Typography variant="body2" color="text.disabled">Aucune marque trouvée</Typography></Box>}
           </CardContent>
         </Card>
       )}
 
-      {/* Onglet Catégories */}
+      {/* ═══ TAB 1 : Categories ═══ */}
       {activeTab === 1 && (
-        <Card>
+        <Card sx={CARD_BASE}>
           <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Catégories ({(allCategories || []).length})</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<DownloadIcon />}
-                  onClick={() => handleDownloadTemplate('categories')}
-                  size="small"
-                >
-                  Télécharger le modèle CSV
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<UploadIcon />}
-                  onClick={() => {
-                    setImportType('categories');
-                    setImportDialogOpen(true);
-                  }}
-                  size="small"
-                >
-                  Importer CSV
-                </Button>
-                {selectedItems.length > 0 && (
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => openBulkDeleteDialog('categories')}
-                    size="small"
-                  >
-                    Supprimer ({selectedItems.length})
-                  </Button>
-                )}
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    resetCategoryForm();
-                    setCategoryDialogOpen(true);
-                  }}
-                >
-                  Ajouter une catégorie
-                </Button>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>Catégories ({(allCategories || []).length})</Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleDownloadTemplate('categories')} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'grey.300', color: 'text.secondary' }}>Modèle CSV</Button>
+                <Button size="small" variant="outlined" startIcon={<UploadIcon />} onClick={() => { setImportType('categories'); setImportDialogOpen(true); }} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'grey.300', color: 'text.secondary' }}>Importer</Button>
+                {selectedItems.length > 0 && <Button size="small" variant="outlined" startIcon={<DeleteIcon />} onClick={() => openBulkDeleteDialog('categories')} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: '#ef4444', color: '#ef4444' }}>Supprimer ({selectedItems.length})</Button>}
+                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => { resetCategoryForm(); setCategoryDialogOpen(true); }} sx={BTN_DARK}>Ajouter</Button>
               </Box>
             </Box>
-
-            {/* Tableau des catégories */}
-            <TableContainer component={Paper}>
+            <TableContainer>
               <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        indeterminate={selectedItems.length > 0 && selectedItems.length < (allCategories || []).length}
-                        checked={(allCategories || []).length > 0 && selectedItems.length === (allCategories || []).length}
-                        onChange={() => handleSelectAll(allCategories || [], 'categories')}
-                      />
-                    </TableCell>
-                    <TableCell>Nom</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell>Icône</TableCell>
-                    <TableCell>Statut</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
+                <TableHead><TableRow sx={TABLE_HEAD_SX}>
+                  <TableCell padding="checkbox"><Checkbox indeterminate={selectedItems.length > 0 && selectedItems.length < (allCategories || []).length} checked={(allCategories || []).length > 0 && selectedItems.length === (allCategories || []).length} onChange={() => handleSelectAll(allCategories || [])} /></TableCell>
+                  <TableCell>Nom</TableCell><TableCell>Description</TableCell><TableCell>Icône</TableCell><TableCell>Statut</TableCell><TableCell align="center">Actions</TableCell>
+                </TableRow></TableHead>
                 <TableBody>
-                  {(allCategories || []).map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={selectedItems.includes(category.id)}
-                          onChange={() => handleSelectItem(category.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {getCategoryIcon(category.name, category.icon)}
-                          <Typography variant="body2" fontWeight="medium">
-                            {category.name}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {category.description}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        {getCategoryIcon(category.name, category.icon)}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={category.isActive ? 'Actif' : 'Inactif'}
-                          color={category.isActive ? 'success' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => openCategoryEditDialog(category)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => openDeleteDialog(category, 'category')}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
+                  {(allCategories || []).map(cat => (
+                    <TableRow key={cat.id} sx={{ '&:last-child td': { borderBottom: 0 }, '& td': { py: 1.5 } }}>
+                      <TableCell padding="checkbox"><Checkbox checked={selectedItems.includes(cat.id)} onChange={() => handleSelectItem(cat.id)} /></TableCell>
+                      <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{getCategoryIcon(cat.name, cat.icon)}<Typography variant="body2" sx={{ fontWeight: 600 }}>{cat.name}</Typography></Box></TableCell>
+                      <TableCell><Typography variant="body2" color="text.secondary">{cat.description}</Typography></TableCell>
+                      <TableCell>{getCategoryIcon(cat.name, cat.icon)}</TableCell>
+                      <TableCell><Chip label={cat.isActive ? 'Actif' : 'Inactif'} size="small" sx={{ fontWeight: 600, borderRadius: '8px', fontSize: '0.72rem', bgcolor: alpha(cat.isActive ? '#22c55e' : '#9ca3af', 0.1), color: cat.isActive ? '#22c55e' : '#9ca3af' }} /></TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                          <Tooltip title="Modifier"><IconButton size="small" onClick={() => openCategoryEditDialog(cat)} sx={{ color: '#6366f1', bgcolor: alpha('#6366f1', 0.08), '&:hover': { bgcolor: alpha('#6366f1', 0.15) } }}><EditIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                          <Tooltip title="Supprimer"><IconButton size="small" onClick={() => openDeleteDialog(cat, 'category')} sx={{ color: '#ef4444', bgcolor: alpha('#ef4444', 0.08), '&:hover': { bgcolor: alpha('#ef4444', 0.15) } }}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1435,201 +632,63 @@ const DeviceManagement: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-
-            {(allCategories || []).length === 0 && (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body1" color="text.secondary">
-                  Aucune catégorie trouvée
-                </Typography>
-              </Box>
-            )}
+            {(allCategories || []).length === 0 && <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6 }}><CategoryIcon sx={{ fontSize: 40, color: 'grey.300', mb: 1 }} /><Typography variant="body2" color="text.disabled">Aucune catégorie</Typography></Box>}
           </CardContent>
         </Card>
       )}
 
-      {/* Onglet Modèles */}
+      {/* ═══ TAB 2 : Models ═══ */}
       {activeTab === 2 && (
-        <Card>
+        <Card sx={CARD_BASE}>
           <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Modèles ({(allModels || []).length})</Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<DownloadIcon />}
-                  onClick={() => handleDownloadTemplate('models')}
-                  size="small"
-                >
-                  Télécharger le modèle CSV
-                </Button>
-                <Button
-                  variant="outlined"
-                  startIcon={<UploadIcon />}
-                  onClick={() => {
-                    setImportType('models');
-                    setImportDialogOpen(true);
-                  }}
-                  size="small"
-                >
-                  Importer CSV
-                </Button>
-                {selectedItems.length > 0 && (
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                    onClick={() => openBulkDeleteDialog('models')}
-                    size="small"
-                  >
-                    Supprimer ({selectedItems.length})
-                  </Button>
-                )}
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    resetModelForm();
-                    setModelDialogOpen(true);
-                  }}
-                >
-                  Ajouter un modèle
-                </Button>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>Modèles ({filteredModels.length})</Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleDownloadTemplate('models')} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'grey.300', color: 'text.secondary' }}>Modèle CSV</Button>
+                <Button size="small" variant="outlined" startIcon={<UploadIcon />} onClick={() => { setImportType('models'); setImportDialogOpen(true); }} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'grey.300', color: 'text.secondary' }}>Importer</Button>
+                {selectedItems.length > 0 && <Button size="small" variant="outlined" startIcon={<DeleteIcon />} onClick={() => openBulkDeleteDialog('models')} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: '#ef4444', color: '#ef4444' }}>Supprimer ({selectedItems.length})</Button>}
+                <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => { resetModelForm(); setModelDialogOpen(true); }} sx={BTN_DARK}>Ajouter</Button>
               </Box>
             </Box>
 
-            {/* Filtres pour les modèles */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              <TextField
-                placeholder="Rechercher un modèle..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                size="small"
-                sx={{ minWidth: 200 }}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                }}
-              />
-              
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Filtrer par marque</InputLabel>
-                <Select
-                  value={selectedBrandForModels || ''}
-                  onChange={(e) => setSelectedBrandForModels(e.target.value)}
-                  label="Filtrer par marque"
-                >
-                  <MenuItem value="">Toutes les marques</MenuItem>
-                  {(allBrands || []).map((brand) => (
-                    <MenuItem key={brand.id} value={brand.id}>
-                      {brand.name}
-                    </MenuItem>
-                  ))}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField placeholder="Rechercher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} size="small" sx={{ minWidth: 200, ...INPUT_SX }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.disabled', fontSize: 20 }} /></InputAdornment> }} />
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Marque</InputLabel>
+                <Select value={selectedBrandForModels || ''} onChange={e => setSelectedBrandForModels(e.target.value)} label="Marque" sx={{ borderRadius: '10px' }}>
+                  <MenuItem value="">Toutes</MenuItem>
+                  {(allBrands || []).map(b => <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>)}
                 </Select>
               </FormControl>
-
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Filtrer par catégorie</InputLabel>
-                <Select
-                  value={selectedCategoryForModels || ''}
-                  onChange={(e) => setSelectedCategoryForModels(e.target.value)}
-                  label="Filtrer par catégorie"
-                >
-                  <MenuItem value="">Toutes les catégories</MenuItem>
-                  {(allCategories || []).map((category) => (
-                    <MenuItem key={category.id} value={category.id}>
-                      {category.name}
-                    </MenuItem>
-                  ))}
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Catégorie</InputLabel>
+                <Select value={selectedCategoryForModels || ''} onChange={e => setSelectedCategoryForModels(e.target.value)} label="Catégorie" sx={{ borderRadius: '10px' }}>
+                  <MenuItem value="">Toutes</MenuItem>
+                  {(allCategories || []).map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
                 </Select>
               </FormControl>
             </Box>
 
-            {/* Tableau des modèles */}
-            <TableContainer component={Paper}>
+            <TableContainer>
               <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        indeterminate={selectedItems.length > 0 && selectedItems.length < (allModels || []).length}
-                        checked={(allModels || []).length > 0 && selectedItems.length === (allModels || []).length}
-                        onChange={() => handleSelectAll(allModels || [], 'models')}
-                      />
-                    </TableCell>
-                    <TableCell>Nom</TableCell>
-                    <TableCell>Marque</TableCell>
-                    <TableCell>Catégorie</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell>Statut</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
+                <TableHead><TableRow sx={TABLE_HEAD_SX}>
+                  <TableCell padding="checkbox"><Checkbox indeterminate={selectedItems.length > 0 && selectedItems.length < filteredModels.length} checked={filteredModels.length > 0 && selectedItems.length === filteredModels.length} onChange={() => handleSelectAll(filteredModels)} /></TableCell>
+                  <TableCell>Nom</TableCell><TableCell>Marque</TableCell><TableCell>Catégorie</TableCell><TableCell>Statut</TableCell><TableCell align="center">Actions</TableCell>
+                </TableRow></TableHead>
                 <TableBody>
-                  {(allModels || []).map((model) => (
-                    <TableRow key={model.id}>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={selectedItems.includes(model.id)}
-                          onChange={() => handleSelectItem(model.id)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {model.name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {model.brandName}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {getCategoryIcon(model.categoryName)}
-                          <Typography variant="body2" color="text.secondary">
-                            {model.categoryName}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {model.description}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={model.isActive ? 'Actif' : 'Inactif'}
-                          color={model.isActive ? 'success' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Tooltip title="Modifier le modèle">
-                            <IconButton
-                              size="small"
-                              onClick={() => openModelEditDialog(model)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Associer un service">
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              onClick={() => openServiceAssociationDialog(model)}
-                            >
-                              <BuildIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Supprimer le modèle">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => openDeleteDialog(model, 'model')}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
+                  {filteredModels.map(model => (
+                    <TableRow key={model.id} sx={{ '&:last-child td': { borderBottom: 0 }, '& td': { py: 1.5 } }}>
+                      <TableCell padding="checkbox"><Checkbox checked={selectedItems.includes(model.id)} onChange={() => handleSelectItem(model.id)} /></TableCell>
+                      <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>{model.name}</Typography></TableCell>
+                      <TableCell><Typography variant="body2" color="text.secondary">{model.brandName}</Typography></TableCell>
+                      <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{getCategoryIcon(model.categoryName)}<Typography variant="body2" color="text.secondary">{model.categoryName}</Typography></Box></TableCell>
+                      <TableCell><Chip label={model.isActive ? 'Actif' : 'Inactif'} size="small" sx={{ fontWeight: 600, borderRadius: '8px', fontSize: '0.72rem', bgcolor: alpha(model.isActive ? '#22c55e' : '#9ca3af', 0.1), color: model.isActive ? '#22c55e' : '#9ca3af' }} /></TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                          <Tooltip title="Modifier"><IconButton size="small" onClick={() => openModelEditDialog(model)} sx={{ color: '#6366f1', bgcolor: alpha('#6366f1', 0.08), '&:hover': { bgcolor: alpha('#6366f1', 0.15) } }}><EditIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                          <Tooltip title="Associer un service"><IconButton size="small" onClick={() => openServiceAssociationDialog(model)} sx={{ color: '#8b5cf6', bgcolor: alpha('#8b5cf6', 0.08), '&:hover': { bgcolor: alpha('#8b5cf6', 0.15) } }}><BuildIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                          <Tooltip title="Supprimer"><IconButton size="small" onClick={() => openDeleteDialog(model, 'model')} sx={{ color: '#ef4444', bgcolor: alpha('#ef4444', 0.08), '&:hover': { bgcolor: alpha('#ef4444', 0.15) } }}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
                         </Box>
                       </TableCell>
                     </TableRow>
@@ -1637,620 +696,235 @@ const DeviceManagement: React.FC = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-
-            {(allModels || []).length === 0 && (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body1" color="text.secondary">
-                  Aucun modèle trouvé
-                </Typography>
-              </Box>
-            )}
+            {filteredModels.length === 0 && <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6 }}><ModelIcon sx={{ fontSize: 40, color: 'grey.300', mb: 1 }} /><Typography variant="body2" color="text.disabled">Aucun modèle trouvé</Typography></Box>}
           </CardContent>
         </Card>
       )}
 
-      {/* Dialogue pour créer/modifier une marque */}
-      <Dialog open={brandDialogOpen} onClose={() => setBrandDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {selectedBrand ? 'Modifier la marque' : 'Créer une nouvelle marque'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="Nom de la marque"
-              value={newBrand.name}
-              onChange={(e) => setNewBrand({ ...newBrand, name: e.target.value })}
-              fullWidth
-              required
-            />
-            
-            <TextField
-              label="Description"
-              value={newBrand.description}
-              onChange={(e) => setNewBrand({ ...newBrand, description: e.target.value })}
-              fullWidth
-              multiline
-              rows={3}
-            />
-            
-            
-            <FormControl fullWidth>
-              <InputLabel>Catégories</InputLabel>
-              <Select
-                multiple
-                value={newBrand.categoryIds}
-                onChange={(e) => setNewBrand({ ...newBrand, categoryIds: e.target.value as string[] })}
-                label="Catégories"
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {(selected as string[]).map((value) => {
-                      const category = (allCategories || []).find(cat => cat.id === value);
-                      return (
-                        <Chip
-                          key={value}
-                          label={category?.name || value}
-                          size="small"
-                        />
-                      );
-                    })}
-                  </Box>
-                )}
-              >
-                {(allCategories || []).map((category) => (
-                  <MenuItem key={category.id} value={category.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {getCategoryIcon(category.name, category.icon)}
-                      {category.name}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={newBrand.isActive}
-                  onChange={(e) => setNewBrand({ ...newBrand, isActive: e.target.checked })}
-                />
-              }
-              label="Marque active"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBrandDialogOpen(false)}>
-            Annuler
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={selectedBrand ? handleUpdateBrand : handleCreateBrand}
-            disabled={!newBrand.name || loading}
-          >
-            {loading ? <CircularProgress size={20} /> : (selectedBrand ? 'Modifier' : 'Créer')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialogue pour créer/modifier une catégorie */}
-      <Dialog open={categoryDialogOpen} onClose={() => setCategoryDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {selectedCategory ? 'Modifier la catégorie' : 'Créer une nouvelle catégorie'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="Nom de la catégorie"
-              value={newCategory.name}
-              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-              fullWidth
-              required
-            />
-            
-            <TextField
-              label="Description"
-              value={newCategory.description}
-              onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-              fullWidth
-              multiline
-              rows={3}
-            />
-            
-            <Box>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'bold' }}>
-                Sélectionner une icône pour la catégorie
-              </Typography>
-              <Box sx={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
-                <CategoryIconGrid 
-                  selectedIcon={newCategory.icon}
-                  onIconSelect={(iconType) => setNewCategory({ ...newCategory, icon: iconType })}
-                />
-              </Box>
-            </Box>
-            
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={newCategory.isActive}
-                  onChange={(e) => setNewCategory({ ...newCategory, isActive: e.target.checked })}
-                />
-              }
-              label="Catégorie active"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCategoryDialogOpen(false)}>
-            Annuler
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={selectedCategory ? handleUpdateCategory : handleCreateCategory}
-            disabled={!newCategory.name || loading}
-          >
-            {loading ? <CircularProgress size={20} /> : (selectedCategory ? 'Modifier' : 'Créer')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialogue pour créer/modifier un modèle */}
-      <Dialog open={modelDialogOpen} onClose={() => setModelDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {selectedModel ? 'Modifier le modèle' : 'Créer un nouveau modèle'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="Nom du modèle"
-              value={newModel.name}
-              onChange={(e) => setNewModel({ ...newModel, name: e.target.value })}
-              fullWidth
-              required
-              placeholder="Ex: iPhone 14, Galaxy S23, etc."
-            />
-            
-            <TextField
-              label="Description"
-              value={newModel.description}
-              onChange={(e) => setNewModel({ ...newModel, description: e.target.value })}
-              fullWidth
-              multiline
-              rows={3}
-            />
-            
-            <FormControl fullWidth required>
-              <InputLabel>Marque</InputLabel>
-              <Select
-                value={newModel.brandId || ''}
-                onChange={(e) => setNewModel({ ...newModel, brandId: e.target.value })}
-                label="Marque"
-              >
-                {(allBrands || []).map((brand) => (
-                  <MenuItem key={brand.id} value={brand.id}>
-                    {brand.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            
-            <FormControl fullWidth required>
-              <InputLabel>Catégorie</InputLabel>
-              <Select
-                value={newModel.categoryId || ''}
-                onChange={(e) => setNewModel({ ...newModel, categoryId: e.target.value })}
-                label="Catégorie"
-              >
-                {(allCategories || []).map((category) => (
-                  <MenuItem key={category.id} value={category.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      {getCategoryIcon(category.name, category.icon)}
-                      <span>{category.name}</span>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            
-            
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={newModel.isActive}
-                  onChange={(e) => setNewModel({ ...newModel, isActive: e.target.checked })}
-                />
-              }
-              label="Modèle actif"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModelDialogOpen(false)}>
-            Annuler
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={selectedModel ? handleUpdateModel : handleCreateModel}
-            disabled={!newModel.name || !newModel.brandId || !newModel.categoryId || loading}
-          >
-            {loading ? <CircularProgress size={20} /> : (selectedModel ? 'Modifier' : 'Créer')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialogue de confirmation de suppression */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>
-          Confirmer la suppression
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Êtes-vous sûr de vouloir supprimer {deleteItem?.type === 'brand' ? 'cette marque' : deleteItem?.type === 'category' ? 'cette catégorie' : 'ce modèle'} ?
-            Cette action est irréversible.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
-            Annuler
-          </Button>
-          <Button 
-            variant="contained" 
-            color="error"
-            onClick={confirmDelete}
-            disabled={loading}
-          >
-            {loading ? <CircularProgress size={20} /> : 'Supprimer'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Onglet Services par modèle */}
+      {/* ═══ TAB 3 : Services by model ═══ */}
       {activeTab === 3 && (
-        <Card>
+        <Card sx={CARD_BASE}>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Services par modèle ({allDeviceModelServices.length})</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>Services par modèle ({allDeviceModelServices.length})</Typography>
             </Box>
-
-            {/* Filtres */}
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              <TextField
-                placeholder="Rechercher un modèle ou service..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                size="small"
-                sx={{ minWidth: 200 }}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                }}
-              />
-              
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Filtrer par catégorie</InputLabel>
-                <Select
-                  value={selectedCategoryForServices || ''}
-                  onChange={(e) => setSelectedCategoryForServices(e.target.value)}
-                  label="Filtrer par catégorie"
-                >
-                  <MenuItem value="">Toutes les catégories</MenuItem>
-                  {(allCategories || []).map((category) => (
-                    <MenuItem key={category.id} value={category.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {getCategoryIcon(category.name, category.icon)}
-                        <span>{category.name}</span>
-                      </Box>
-                    </MenuItem>
-                  ))}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField placeholder="Rechercher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} size="small" sx={{ minWidth: 200, ...INPUT_SX }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.disabled', fontSize: 20 }} /></InputAdornment> }} />
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Catégorie</InputLabel>
+                <Select value={selectedCategoryForServices || ''} onChange={e => setSelectedCategoryForServices(e.target.value)} label="Catégorie" sx={{ borderRadius: '10px' }}>
+                  <MenuItem value="">Toutes</MenuItem>
+                  {(allCategories || []).map(c => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}
                 </Select>
               </FormControl>
-              
-              <FormControl size="small" sx={{ minWidth: 200 }}>
-                <InputLabel>Filtrer par marque</InputLabel>
-                <Select
-                  value={selectedBrandForServices || ''}
-                  onChange={(e) => setSelectedBrandForServices(e.target.value)}
-                  label="Filtrer par marque"
-                >
-                  <MenuItem value="">Toutes les marques</MenuItem>
-                  {(allBrands || []).map((brand) => (
-                    <MenuItem key={brand.id} value={brand.id}>
-                      {brand.name}
-                    </MenuItem>
-                  ))}
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <InputLabel>Marque</InputLabel>
+                <Select value={selectedBrandForServices || ''} onChange={e => setSelectedBrandForServices(e.target.value)} label="Marque" sx={{ borderRadius: '10px' }}>
+                  <MenuItem value="">Toutes</MenuItem>
+                  {(allBrands || []).map(b => <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>)}
                 </Select>
               </FormControl>
             </Box>
-
-            {/* Tableau des associations */}
-            <TableContainer component={Paper} variant="outlined">
+            <TableContainer>
               <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Modèle</TableCell>
-                    <TableCell>Marque</TableCell>
-                    <TableCell>Catégorie</TableCell>
-                    <TableCell>Service</TableCell>
-                    <TableCell>Prix</TableCell>
-                    <TableCell>Durée</TableCell>
-                    <TableCell>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
+                <TableHead><TableRow sx={TABLE_HEAD_SX}>
+                  <TableCell>Modèle</TableCell><TableCell>Marque</TableCell><TableCell>Catégorie</TableCell><TableCell>Service</TableCell><TableCell align="right">Prix</TableCell><TableCell>Durée</TableCell><TableCell align="center">Actions</TableCell>
+                </TableRow></TableHead>
                 <TableBody>
                   {allDeviceModelServices
-                    .filter(association => {
-                      const matchesSearch = 
-                        (association.model_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        (association.service_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-                      
-                      const matchesCategory = !selectedCategoryForServices || 
-                        association.category_id === selectedCategoryForServices;
-                      
-                      const matchesBrand = !selectedBrandForServices || 
-                        association.brand_id === selectedBrandForServices;
-                      
-                      return matchesSearch && matchesCategory && matchesBrand;
+                    .filter(a => {
+                      const s = (a.model_name || '').toLowerCase().includes(searchTerm.toLowerCase()) || (a.service_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+                      const c = !selectedCategoryForServices || a.category_id === selectedCategoryForServices;
+                      const b = !selectedBrandForServices || a.brand_id === selectedBrandForServices;
+                      return s && c && b;
                     })
-                    .map((association) => (
-                      <TableRow key={association.id}>
-                        <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {association.model_name || 'N/A'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {association.brand_name || 'N/A'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {getCategoryIcon(association.category_name || '', association.category_icon)}
-                            <Typography variant="body2">
-                              {association.category_name || 'N/A'}
-                            </Typography>
+                    .map(a => (
+                      <TableRow key={a.id} sx={{ '&:last-child td': { borderBottom: 0 }, '& td': { py: 1.5 } }}>
+                        <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>{a.model_name || 'N/A'}</Typography></TableCell>
+                        <TableCell><Typography variant="body2" color="text.secondary">{a.brand_name || 'N/A'}</Typography></TableCell>
+                        <TableCell><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{getCategoryIcon(a.category_name || '', a.category_icon)}<Typography variant="body2" color="text.secondary">{a.category_name || 'N/A'}</Typography></Box></TableCell>
+                        <TableCell><Typography variant="body2" sx={{ fontWeight: 600 }}>{a.service_name || 'N/A'}</Typography></TableCell>
+                        <TableCell align="right">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>{formatFromEUR(a.effective_price || 0, currency)}</Typography>
+                            {a.customPrice && <Chip label="Perso." size="small" sx={{ fontWeight: 600, borderRadius: '6px', fontSize: '0.65rem', bgcolor: alpha('#8b5cf6', 0.1), color: '#8b5cf6' }} />}
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {association.service_name || 'N/A'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2">
-                              {formatFromEUR(association.effective_price || 0, currency)}
-                            </Typography>
-                            {association.customPrice && (
-                              <Chip 
-                                label="Personnalisé" 
-                                size="small" 
-                                color="primary" 
-                                variant="outlined"
-                              />
-                            )}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography variant="body2">{a.effective_duration || 0}h</Typography>
+                            {a.customDuration && <Chip label="Perso." size="small" sx={{ fontWeight: 600, borderRadius: '6px', fontSize: '0.65rem', bgcolor: alpha('#8b5cf6', 0.1), color: '#8b5cf6' }} />}
                           </Box>
                         </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2">
-                              {association.effective_duration || 0}h
-                            </Typography>
-                            {association.customDuration && (
-                              <Chip 
-                                label="Personnalisé" 
-                                size="small" 
-                                color="primary" 
-                                variant="outlined"
-                              />
-                            )}
-                          </Box>
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Tooltip title="Supprimer l'association">
-                              <IconButton 
-                                size="small" 
-                                color="error"
-                                onClick={() => handleDeleteServiceAssociation(association)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
+                        <TableCell align="center">
+                          <Tooltip title="Supprimer"><IconButton size="small" onClick={() => handleDeleteServiceAssociation(a)} sx={{ color: '#ef4444', bgcolor: alpha('#ef4444', 0.08), '&:hover': { bgcolor: alpha('#ef4444', 0.15) } }}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
             </TableContainer>
-
-            {allDeviceModelServices.length === 0 && (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Aucune association service-modèle trouvée
-                </Typography>
-              </Box>
-            )}
+            {allDeviceModelServices.length === 0 && <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6 }}><BuildIcon sx={{ fontSize: 40, color: 'grey.300', mb: 1 }} /><Typography variant="body2" color="text.disabled">Aucune association</Typography></Box>}
           </CardContent>
         </Card>
       )}
 
-      {/* Dialogue pour associer un service à un modèle */}
-      <Dialog open={serviceAssociationDialogOpen} onClose={() => setServiceAssociationDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Associer un service au modèle {selectedModelForService?.name}
-        </DialogTitle>
+      {/* ═══ DIALOGS ═══ */}
+
+      {/* Brand dialog */}
+      <Dialog open={brandDialogOpen} onClose={() => setBrandDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>{selectedBrand ? 'Modifier la marque' : 'Nouvelle marque'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField label="Nom *" value={newBrand.name} onChange={e => setNewBrand({ ...newBrand, name: e.target.value })} fullWidth sx={INPUT_SX} />
+            <TextField label="Description" value={newBrand.description} onChange={e => setNewBrand({ ...newBrand, description: e.target.value })} fullWidth multiline rows={3} sx={INPUT_SX} />
+            <FormControl fullWidth>
+              <InputLabel>Catégories</InputLabel>
+              <Select multiple value={newBrand.categoryIds} onChange={e => setNewBrand({ ...newBrand, categoryIds: e.target.value as string[] })} label="Catégories" sx={{ borderRadius: '10px' }}
+                renderValue={selected => <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{(selected as string[]).map(v => { const c = (allCategories || []).find(x => x.id === v); return <Chip key={v} label={c?.name || v} size="small" sx={{ fontWeight: 600, borderRadius: '8px', bgcolor: alpha('#6366f1', 0.08), color: '#6366f1' }} />; })}</Box>}>
+                {(allCategories || []).map(c => <MenuItem key={c.id} value={c.id}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{getCategoryIcon(c.name, c.icon)}{c.name}</Box></MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControlLabel control={<Switch checked={newBrand.isActive} onChange={e => setNewBrand({ ...newBrand, isActive: e.target.checked })} />} label="Marque active" />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setBrandDialogOpen(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>Annuler</Button>
+          <Button variant="contained" onClick={selectedBrand ? handleUpdateBrand : handleCreateBrand} disabled={!newBrand.name || loading} sx={BTN_DARK}>
+            {loading ? <CircularProgress size={20} /> : selectedBrand ? 'Modifier' : 'Créer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Category dialog */}
+      <Dialog open={categoryDialogOpen} onClose={() => setCategoryDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>{selectedCategory ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField label="Nom *" value={newCategory.name} onChange={e => setNewCategory({ ...newCategory, name: e.target.value })} fullWidth sx={INPUT_SX} />
+            <TextField label="Description" value={newCategory.description} onChange={e => setNewCategory({ ...newCategory, description: e.target.value })} fullWidth multiline rows={3} sx={INPUT_SX} />
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Icône</Typography>
+              <Box sx={{ maxHeight: 400, overflowY: 'auto', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', p: 2 }}>
+                <CategoryIconGrid selectedIcon={newCategory.icon} onIconSelect={icon => setNewCategory({ ...newCategory, icon })} />
+              </Box>
+            </Box>
+            <FormControlLabel control={<Switch checked={newCategory.isActive} onChange={e => setNewCategory({ ...newCategory, isActive: e.target.checked })} />} label="Catégorie active" />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setCategoryDialogOpen(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>Annuler</Button>
+          <Button variant="contained" onClick={selectedCategory ? handleUpdateCategory : handleCreateCategory} disabled={!newCategory.name || loading} sx={BTN_DARK}>
+            {loading ? <CircularProgress size={20} /> : selectedCategory ? 'Modifier' : 'Créer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Model dialog */}
+      <Dialog open={modelDialogOpen} onClose={() => setModelDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>{selectedModel ? 'Modifier le modèle' : 'Nouveau modèle'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField label="Nom *" value={newModel.name} onChange={e => setNewModel({ ...newModel, name: e.target.value })} fullWidth placeholder="Ex: iPhone 14, Galaxy S23..." sx={INPUT_SX} />
+            <TextField label="Description" value={newModel.description} onChange={e => setNewModel({ ...newModel, description: e.target.value })} fullWidth multiline rows={3} sx={INPUT_SX} />
+            <FormControl fullWidth required>
+              <InputLabel>Marque</InputLabel>
+              <Select value={newModel.brandId || ''} onChange={e => setNewModel({ ...newModel, brandId: e.target.value })} label="Marque" sx={{ borderRadius: '10px' }}>
+                {(allBrands || []).map(b => <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth required>
+              <InputLabel>Catégorie</InputLabel>
+              <Select value={newModel.categoryId || ''} onChange={e => setNewModel({ ...newModel, categoryId: e.target.value })} label="Catégorie" sx={{ borderRadius: '10px' }}>
+                {(allCategories || []).map(c => <MenuItem key={c.id} value={c.id}><Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{getCategoryIcon(c.name, c.icon)}<span>{c.name}</span></Box></MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControlLabel control={<Switch checked={newModel.isActive} onChange={e => setNewModel({ ...newModel, isActive: e.target.checked })} />} label="Modèle actif" />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setModelDialogOpen(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>Annuler</Button>
+          <Button variant="contained" onClick={selectedModel ? handleUpdateModel : handleCreateModel} disabled={!newModel.name || !newModel.brandId || !newModel.categoryId || loading} sx={BTN_DARK}>
+            {loading ? <CircularProgress size={20} /> : selectedModel ? 'Modifier' : 'Créer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Confirmer la suppression</DialogTitle>
+        <DialogContent><Typography>Supprimer {deleteItem?.type === 'brand' ? 'cette marque' : deleteItem?.type === 'category' ? 'cette catégorie' : 'ce modèle'} ? Cette action est irréversible.</Typography></DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteDialogOpen(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>Annuler</Button>
+          <Button variant="contained" onClick={confirmDelete} disabled={loading} sx={{ ...BTN_DARK, bgcolor: '#ef4444', '&:hover': { bgcolor: '#dc2626' }, boxShadow: '0 2px 8px rgba(239,68,68,0.25)' }}>
+            {loading ? <CircularProgress size={20} /> : 'Supprimer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Service association dialog */}
+      <Dialog open={serviceAssociationDialogOpen} onClose={() => setServiceAssociationDialogOpen(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Associer un service à {selectedModelForService?.name}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <FormControl fullWidth required>
               <InputLabel>Service</InputLabel>
-              <Select
-                value={newServiceAssociation.serviceId || ''}
-                onChange={(e) => setNewServiceAssociation({ ...newServiceAssociation, serviceId: e.target.value })}
-                label="Service"
-              >
-                {(useAppStore.getState().services || []).map((service) => (
-                  <MenuItem key={service.id} value={service.id}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                      <span>{service.name}</span>
-                      <Typography variant="caption" color="text.secondary">
-                        {formatFromEUR(service.price, currency)} - {service.duration}h
-                      </Typography>
-                    </Box>
-                  </MenuItem>
+              <Select value={newServiceAssociation.serviceId || ''} onChange={e => setNewServiceAssociation({ ...newServiceAssociation, serviceId: e.target.value })} label="Service" sx={{ borderRadius: '10px' }}>
+                {(useAppStore.getState().services || []).map(s => (
+                  <MenuItem key={s.id} value={s.id}><Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}><span>{s.name}</span><Typography variant="caption" color="text.secondary">{formatFromEUR(s.price, currency)} - {s.duration}h</Typography></Box></MenuItem>
                 ))}
               </Select>
             </FormControl>
-            
-            <TextField
-              label="Prix personnalisé (optionnel)"
-              type="number"
-              value={newServiceAssociation.customPrice || ''}
-              onChange={(e) => setNewServiceAssociation({ 
-                ...newServiceAssociation, 
-                customPrice: e.target.value ? parseFloat(e.target.value) : undefined 
-              })}
-              fullWidth
-              placeholder="Laissez vide pour utiliser le prix par défaut"
-              inputProps={{ min: 0, step: 0.01 }}
-            />
-            
-            <TextField
-              label="Durée personnalisée en heures (optionnel)"
-              type="number"
-              value={newServiceAssociation.customDuration || ''}
-              onChange={(e) => setNewServiceAssociation({ 
-                ...newServiceAssociation, 
-                customDuration: e.target.value ? parseInt(e.target.value) : undefined 
-              })}
-              fullWidth
-              placeholder="Laissez vide pour utiliser la durée par défaut"
-              inputProps={{ min: 1, step: 1 }}
-            />
+            <TextField label="Prix personnalisé (optionnel)" type="number" value={newServiceAssociation.customPrice || ''} onChange={e => setNewServiceAssociation({ ...newServiceAssociation, customPrice: e.target.value ? parseFloat(e.target.value) : undefined })} fullWidth placeholder="Laisser vide pour le prix par défaut" inputProps={{ min: 0, step: 0.01 }} sx={INPUT_SX} />
+            <TextField label="Durée personnalisée en heures (optionnel)" type="number" value={newServiceAssociation.customDuration || ''} onChange={e => setNewServiceAssociation({ ...newServiceAssociation, customDuration: e.target.value ? parseInt(e.target.value) : undefined })} fullWidth placeholder="Laisser vide pour la durée par défaut" inputProps={{ min: 1, step: 1 }} sx={INPUT_SX} />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setServiceAssociationDialogOpen(false)}>
-            Annuler
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={handleCreateServiceAssociation}
-            disabled={!newServiceAssociation.serviceId || loading}
-          >
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setServiceAssociationDialogOpen(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>Annuler</Button>
+          <Button variant="contained" onClick={handleCreateServiceAssociation} disabled={!newServiceAssociation.serviceId || loading} sx={BTN_DARK}>
             {loading ? <CircularProgress size={20} /> : 'Associer'}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialogue d'importation CSV */}
-      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Importer des {importType === 'brands' ? 'marques' : importType === 'models' ? 'modèles' : 'catégories'} depuis un fichier CSV
-        </DialogTitle>
+      {/* Import CSV dialog */}
+      <Dialog open={importDialogOpen} onClose={() => setImportDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Importer des {importType === 'brands' ? 'marques' : importType === 'models' ? 'modèles' : 'catégories'}</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-            <Alert severity="info">
-              <Typography variant="body2" gutterBottom>
-                <strong>Format attendu :</strong>
-              </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <Alert severity="info" sx={{ borderRadius: '12px' }}>
+              <Typography variant="body2" gutterBottom><strong>Format attendu :</strong></Typography>
               {importType === 'categories' ? (
-                <Typography variant="body2" component="div">
-                  • name : Nom de la catégorie<br />
-                  • description : Description de la catégorie<br />
-                  • icon : Nom de l'icône (optionnel)
-                </Typography>
+                <Typography variant="body2">name, description, icon (optionnel)</Typography>
               ) : importType === 'brands' ? (
-                <Typography variant="body2" component="div">
-                  • name : Nom de la marque<br />
-                  • description : Description de la marque<br />
-                  • categoryIds : Noms des catégories (séparés par des points-virgules)<br />
-                  <br />
-                  <strong>⚠️ Important :</strong> Les catégories doivent exister avant l'importation. 
-                  Créez d'abord les catégories nécessaires dans l'onglet "Catégories".
-                </Typography>
+                <Typography variant="body2">name, description, categoryIds (séparés par ;). Les catégories doivent exister.</Typography>
               ) : (
-                <Typography variant="body2" component="div">
-                  • name : Nom du modèle<br />
-                  • description : Description du modèle<br />
-                  • brandName : Nom de la marque (doit exister)<br />
-                  • categoryName : Nom de la catégorie (doit exister)<br />
-                  <br />
-                  <strong>⚠️ Important :</strong> Les marques et catégories doivent exister avant l'importation. 
-                  Créez d'abord les marques et catégories nécessaires.
-                </Typography>
+                <Typography variant="body2">name, description, brandName, categoryName. Les marques et catégories doivent exister.</Typography>
               )}
             </Alert>
-
-            <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
-              onClick={() => handleDownloadTemplate(importType)}
-              fullWidth
-            >
-              Télécharger le modèle CSV
-            </Button>
-
-            <Divider>
-              <Typography variant="body2" color="text.secondary">
-                Sélectionner un fichier
-              </Typography>
-            </Divider>
-
-            <input
-              accept=".csv"
-              style={{ display: 'none' }}
-              id="csv-upload-input"
-              type="file"
-              onChange={handleImportCSV}
-            />
+            <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => handleDownloadTemplate(importType)} fullWidth sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'grey.300', color: 'text.secondary' }}>Télécharger le modèle CSV</Button>
+            <Divider><Typography variant="caption" color="text.secondary">Sélectionner un fichier</Typography></Divider>
+            <input accept=".csv" style={{ display: 'none' }} id="csv-upload-input" type="file" onChange={handleImportCSV} />
             <label htmlFor="csv-upload-input">
-              <Button
-                variant="contained"
-                component="span"
-                startIcon={<UploadIcon />}
-                fullWidth
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <CircularProgress size={20} sx={{ mr: 1 }} />
-                    Importation en cours...
-                  </>
-                ) : (
-                  'Sélectionner et importer un fichier CSV'
-                )}
+              <Button variant="contained" component="span" startIcon={loading ? <CircularProgress size={18} /> : <UploadIcon />} fullWidth disabled={loading} sx={BTN_DARK}>
+                {loading ? 'Importation...' : 'Sélectionner et importer'}
               </Button>
             </label>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImportDialogOpen(false)} disabled={loading}>
-            Fermer
-          </Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setImportDialogOpen(false)} disabled={loading} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>Fermer</Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialogue de confirmation pour la suppression en lot */}
-      <Dialog open={bulkDeleteDialogOpen} onClose={() => setBulkDeleteDialogOpen(false)}>
-        <DialogTitle>
-          Confirmer la suppression en lot
-        </DialogTitle>
-        <DialogContent>
-          <Typography>
-            Êtes-vous sûr de vouloir supprimer {selectedItems.length} {bulkDeleteType === 'brands' ? 'marque(s)' : bulkDeleteType === 'models' ? 'modèle(s)' : 'catégorie(s)'} ?
-            Cette action est irréversible.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBulkDeleteDialogOpen(false)}>
-            Annuler
-          </Button>
-          <Button 
-            variant="contained" 
-            color="error"
-            onClick={handleBulkDelete}
-            disabled={loading}
-          >
+      {/* Bulk delete dialog */}
+      <Dialog open={bulkDeleteDialogOpen} onClose={() => setBulkDeleteDialogOpen(false)} PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Suppression en lot</DialogTitle>
+        <DialogContent><Typography>Supprimer {selectedItems.length} {bulkDeleteType === 'brands' ? 'marque(s)' : bulkDeleteType === 'models' ? 'modèle(s)' : 'catégorie(s)'} ? Cette action est irréversible.</Typography></DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setBulkDeleteDialogOpen(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>Annuler</Button>
+          <Button variant="contained" onClick={handleBulkDelete} disabled={loading} sx={{ ...BTN_DARK, bgcolor: '#ef4444', '&:hover': { bgcolor: '#dc2626' }, boxShadow: '0 2px 8px rgba(239,68,68,0.25)' }}>
             {loading ? <CircularProgress size={20} /> : 'Supprimer'}
           </Button>
         </DialogActions>

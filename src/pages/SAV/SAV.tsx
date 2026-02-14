@@ -9,7 +9,6 @@ import {
   Select,
   MenuItem,
   Chip,
-  Paper,
   Grid,
   Card,
   CardContent,
@@ -17,26 +16,25 @@ import {
   ToggleButton,
   IconButton,
   Tooltip,
-  Alert,
   Button,
+  alpha,
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  FilterList as FilterIcon,
   ViewKanban as KanbanIcon,
   ViewList as ListIcon,
   Refresh as RefreshIcon,
   Timer as TimerIcon,
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
-  Schedule as ScheduleIcon,
   Build as BuildIcon,
   Add as AddIcon,
+  ErrorOutline as OverdueIcon,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAppStore } from '../../store';
 import { savService } from '../../services/savService';
-import { Repair, RepairStatus, Client, Device, User, Part, Service } from '../../types';
+import { Repair } from '../../types';
 import RepairCard from '../../components/SAV/RepairCard';
 import RepairDetailsDialog from '../../components/SAV/RepairDetailsDialog';
 import QuickActions from '../../components/SAV/QuickActions';
@@ -47,39 +45,71 @@ import toast from 'react-hot-toast';
 import ThermalReceiptDialog from '../../components/ThermalReceiptDialog';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 
-// Fonction helper pour mapper les noms de statuts
+/* ─── design tokens ─── */
+const CARD_BASE = {
+  borderRadius: '16px', border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+  transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+  '&:hover': { boxShadow: '0 8px 32px rgba(0,0,0,0.10)', transform: 'translateY(-2px)' },
+} as const;
+const CARD_STATIC = {
+  borderRadius: '16px', border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+} as const;
+const BTN_DARK = {
+  borderRadius: '10px', textTransform: 'none', fontWeight: 600,
+  bgcolor: '#111827', '&:hover': { bgcolor: '#1f2937' },
+  boxShadow: '0 2px 8px rgba(17,24,39,0.25)',
+} as const;
+const INPUT_SX = { '& .MuiOutlinedInput-root': { borderRadius: '10px' } } as const;
+
+/* ─── KpiMini ─── */
+function KpiMini({ icon, iconColor, label, value }: { icon: React.ReactNode; iconColor: string; label: string; value: string | number }) {
+  return (
+    <Card sx={CARD_BASE}>
+      <CardContent sx={{ p: '16px !important' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ width: 40, height: 40, borderRadius: '12px', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            background: `linear-gradient(135deg, ${iconColor}, ${alpha(iconColor, 0.7)})`,
+            color: '#fff', flexShrink: 0, boxShadow: `0 4px 14px ${alpha(iconColor, 0.3)}` }}>
+            {icon}
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, fontSize: '1.1rem' }}>{value}</Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}>{label}</Typography>
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── helpers ─── */
 const getDisplayStatusName = (statusName: string): string => {
   const name = statusName.toLowerCase();
-  if (name.includes('new') || name.includes('nouvelle')) {
-    return 'Prise en charge';
-  }
+  if (name.includes('new') || name.includes('nouvelle')) return 'Prise en charge';
   return statusName;
 };
 
+const URGENCY_CHIPS: { key: string; label: string }[] = [
+  { key: 'all', label: 'Toutes' },
+  { key: 'urgent', label: 'Urgentes' },
+  { key: 'normal', label: 'Normales' },
+];
+
+/* ═══════════════════════ main component ═══════════════════════ */
 const SAV: React.FC = () => {
   const {
-    repairs,
-    repairStatuses,
-    clients,
-    devices,
-    users,
-    parts,
-    services,
-    getClientById,
-    getDeviceById,
-    getUserById,
-    updateRepair,
-    updateRepairPaymentStatus,
-    loadRepairs,
-    systemSettings,
+    repairs, repairStatuses, clients, devices, users, parts, services,
+    getClientById, getDeviceById, getUserById,
+    updateRepair, updateRepairPaymentStatus, loadRepairs, systemSettings,
   } = useAppStore();
-
   const { workshopSettings } = useWorkshopSettings();
 
-  // États locaux
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTechnician, setFilterTechnician] = useState<string>('all');
-  const [filterUrgent, setFilterUrgent] = useState<boolean | 'all'>('all');
+  const [filterUrgent, setFilterUrgent] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -88,538 +118,416 @@ const SAV: React.FC = () => {
   const [thermalReceiptDialogOpen, setThermalReceiptDialogOpen] = useState(false);
   const [thermalReceiptRepair, setThermalReceiptRepair] = useState<Repair | null>(null);
 
-  // Calculer les statistiques
-  const stats = useMemo(() => {
-    return savService.calculateStats(repairs, repairStatuses);
-  }, [repairs, repairStatuses, refreshKey]);
+  /* ── stats ── */
+  const stats = useMemo(() => savService.calculateStats(repairs, repairStatuses), [repairs, repairStatuses, refreshKey]);
 
-  // Forcer une mise à jour toutes les 30 secondes pour les timers
   useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshKey((prev) => prev + 1);
-    }, 30000);
-
-    return () => clearInterval(interval);
+    const id = setInterval(() => setRefreshKey(p => p + 1), 30000);
+    return () => clearInterval(id);
   }, []);
 
-  // Filtrer les réparations
+  /* ── filtered repairs ── */
   const filteredRepairs = useMemo(() => {
-    return repairs.filter((repair) => {
-      // Filtrer uniquement les réparations créées depuis SAV
-      if (repair.source !== 'sav') {
-        return false;
-      }
-
-      // Filtre de recherche
+    return repairs.filter(repair => {
+      if (repair.source !== 'sav') return false;
       if (searchQuery) {
-        const query = searchQuery.toLowerCase();
+        const q = searchQuery.toLowerCase();
         const client = getClientById(repair.clientId);
         const device = getDeviceById(repair.deviceId);
-        const repairNumber = repair.repairNumber?.toLowerCase() || '';
-        const clientName = client ? `${client.firstName} ${client.lastName}`.toLowerCase() : '';
-        const deviceInfo = device ? `${device.brand} ${device.model}`.toLowerCase() : '';
-        const description = repair.description.toLowerCase();
-
-        const matches =
-          repairNumber.includes(query) ||
-          clientName.includes(query) ||
-          deviceInfo.includes(query) ||
-          description.includes(query);
-
-        if (!matches) return false;
+        const match =
+          (repair.repairNumber?.toLowerCase() || '').includes(q) ||
+          (client ? `${client.firstName} ${client.lastName}`.toLowerCase() : '').includes(q) ||
+          (device ? `${device.brand} ${device.model}`.toLowerCase() : '').includes(q) ||
+          repair.description.toLowerCase().includes(q);
+        if (!match) return false;
       }
-
-      // Filtre technicien
-      if (filterTechnician !== 'all' && repair.assignedTechnicianId !== filterTechnician) {
-        return false;
-      }
-
-      // Filtre urgent
-      if (filterUrgent !== 'all' && repair.isUrgent !== filterUrgent) {
-        return false;
-      }
-
+      if (filterTechnician !== 'all' && repair.assignedTechnicianId !== filterTechnician) return false;
+      if (filterUrgent === 'urgent' && !repair.isUrgent) return false;
+      if (filterUrgent === 'normal' && repair.isUrgent) return false;
       return true;
     });
   }, [repairs, searchQuery, filterTechnician, filterUrgent, getClientById, getDeviceById, refreshKey]);
 
-  // Grouper les réparations par statut
+  /* ── grouped by status ── */
   const repairsByStatus = useMemo(() => {
     const grouped: Record<string, Repair[]> = {};
-    
-    repairStatuses.forEach((status) => {
-      grouped[status.id] = filteredRepairs.filter((repair) => repair.status === status.id);
-    });
-
+    repairStatuses.forEach(s => { grouped[s.id] = filteredRepairs.filter(r => r.status === s.id); });
     return grouped;
   }, [filteredRepairs, repairStatuses]);
 
-  // Gérer le drag & drop
+  /* ── drag & drop ── */
   const handleDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
-
-    // Pas de destination ou même position
-    if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) {
-      return;
-    }
-
-    // Trouver la réparation
-    const repair = repairs.find((r) => r.id === draggableId);
+    if (!destination || (source.droppableId === destination.droppableId && source.index === destination.index)) return;
+    const repair = repairs.find(r => r.id === draggableId);
     if (!repair) return;
-
-    // Mettre à jour le statut
-    const updates = {
-      status: destination.droppableId,
-    };
-
     try {
-      await updateRepair(repair.id, updates);
+      await updateRepair(repair.id, { status: destination.droppableId });
       toast.success('Statut mis à jour');
-
-      // Recharger les réparations pour mettre à jour l'affichage
       await loadRepairs();
-
-      // Logger l'action
-      const user = users.find((u) => u.id === repair.assignedTechnicianId);
-      savService.createLog(
-        repair.id,
-        'status_change',
-        user?.id || 'system',
+      const user = users.find(u => u.id === repair.assignedTechnicianId);
+      savService.createLog(repair.id, 'status_change', user?.id || 'system',
         user ? `${user.firstName} ${user.lastName}` : 'Système',
-        `Statut changé vers: ${repairStatuses.find((s) => s.id === destination.droppableId)?.name}`
-      );
-    } catch (error) {
+        `Statut changé vers: ${repairStatuses.find(s => s.id === destination.droppableId)?.name}`);
+    } catch {
       toast.error('Erreur lors de la mise à jour du statut');
-      console.error(error);
     }
   };
 
-  // Gérer l'ajout de note
+  /* ── actions ── */
   const handleAddNote = async (repair: Repair, note: string) => {
     const updatedNotes = repair.notes ? `${repair.notes}\n\n[${new Date().toLocaleString('fr-FR')}] ${note}` : note;
-    
     try {
-      await updateRepair(repair.id, {
-        notes: updatedNotes,
-      });
+      await updateRepair(repair.id, { notes: updatedNotes });
       toast.success('Note ajoutée');
-      
-      // Recharger les réparations pour mettre à jour l'affichage
       await loadRepairs();
-    } catch (error) {
-      toast.error('Erreur lors de l\'ajout de la note');
-      console.error(error);
+    } catch {
+      toast.error("Erreur lors de l'ajout de la note");
     }
   };
 
-  // Gérer les impressions
   const handlePrint = (repair: Repair, type: 'label' | 'work_order' | 'deposit_receipt' | 'invoice' | 'complete_ticket') => {
     const client = getClientById(repair.clientId);
     const device = getDeviceById(repair.deviceId);
     const technician = repair.assignedTechnicianId ? getUserById(repair.assignedTechnicianId) : null;
-
-    if (!client) {
-      toast.error('Client introuvable');
-      return;
-    }
-
-    // Récupérer les informations de l'atelier depuis les paramètres système
+    if (!client) { toast.error('Client introuvable'); return; }
     const workshopInfo = {
-      name: systemSettings.find((s) => s.key === 'workshop.name')?.value || 'Mon Atelier',
-      address: systemSettings.find((s) => s.key === 'workshop.address')?.value || '',
-      phone: systemSettings.find((s) => s.key === 'workshop.phone')?.value || '',
-      email: systemSettings.find((s) => s.key === 'workshop.email')?.value || '',
+      name: systemSettings.find(s => s.key === 'workshop.name')?.value || 'Mon Atelier',
+      address: systemSettings.find(s => s.key === 'workshop.address')?.value || '',
+      phone: systemSettings.find(s => s.key === 'workshop.phone')?.value || '',
+      email: systemSettings.find(s => s.key === 'workshop.email')?.value || '',
     };
-
-    const template = {
-      type,
-      data: {
-        repair,
-        client,
-        device,
-        technician: technician || undefined,
-        workshopInfo,
-      },
-    };
-
-    printTemplatesService.print(template);
+    printTemplatesService.print({ type, data: { repair, client, device, technician: technician || undefined, workshopInfo } });
     toast.success('Document généré');
   };
 
-  // Gérer l'impression thermique
-  const handleOpenThermalReceipt = (repair: Repair) => {
-    setThermalReceiptRepair(repair);
-    setThermalReceiptDialogOpen(true);
-  };
+  const handleOpenThermalReceipt = (repair: Repair) => { setThermalReceiptRepair(repair); setThermalReceiptDialogOpen(true); };
+  const handleViewDetails = (repair: Repair) => { setSelectedRepair(repair); setDetailsOpen(true); };
 
-  // Gérer la vue des détails
-  const handleViewDetails = (repair: Repair) => {
-    setSelectedRepair(repair);
-    setDetailsOpen(true);
-  };
-
-  // Rafraîchir les données
   const handleRefresh = async () => {
-    try {
-      await loadRepairs();
-      toast.success('Données actualisées');
-    } catch (error) {
-      toast.error('Erreur lors de l\'actualisation');
-    }
+    try { await loadRepairs(); toast.success('Données actualisées'); } catch { toast.error("Erreur lors de l'actualisation"); }
   };
 
-  // Gérer le changement de statut de paiement
   const handlePaymentStatusChange = async (repair: Repair, isPaid: boolean) => {
     try {
-      console.log('🔄 handlePaymentStatusChange appelé avec:', { repairId: repair.id, isPaid });
-      
-      // Utiliser la même logique que la page Kanban
       await updateRepairPaymentStatus(repair.id, isPaid);
-      
-      toast.success(`✅ Statut de paiement mis à jour : ${isPaid ? 'Payé' : 'Non payé'}`);
-    } catch (error) {
-      // Ne pas afficher d'erreur car l'interface fonctionne quand même
-      console.warn('⚠️ Statut de paiement mis à jour localement (sauvegarde en base échouée):', error);
-      toast.success(`✅ Statut de paiement mis à jour localement : ${isPaid ? 'Payé' : 'Non payé'}`);
+      toast.success(`Paiement : ${isPaid ? 'Payé' : 'Non payé'}`);
+    } catch {
+      toast.success(`Paiement mis à jour localement : ${isPaid ? 'Payé' : 'Non payé'}`);
     }
   };
 
-  // Créer une nouvelle prise en charge
   const handleCreateRepair = async (repair: Omit<Repair, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      await repairService.create(repair, 'sav'); // Marquer comme créé depuis SAV
-      toast.success(`✅ Prise en charge ${repair.repairNumber} créée avec succès`);
+      await repairService.create(repair, 'sav');
+      toast.success(`Prise en charge ${repair.repairNumber} créée`);
       await loadRepairs();
       setNewRepairDialogOpen(false);
     } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la création de la prise en charge');
+      toast.error(error.message || 'Erreur lors de la création');
       throw error;
     }
   };
 
+  const clearFilters = () => { setSearchQuery(''); setFilterTechnician('all'); setFilterUrgent('all'); };
+  const hasFilters = searchQuery || filterTechnician !== 'all' || filterUrgent !== 'all';
+
+  /* ════════════════════════ render ════════════════════════ */
   return (
-    <Box sx={{ p: 3 }}>
-      {/* En-tête */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Box sx={{ pb: 4 }}>
+      {/* ── header ── */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
         <Box>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: '#1f2937', mb: 1 }}>
+          <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.01em' }}>
             SAV Réparateur
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
             Gestion des réparations et service après-vente
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setNewRepairDialogOpen(true)}
-            sx={{
-              backgroundColor: '#16a34a',
-              '&:hover': { backgroundColor: '#15803d' },
-            }}
-          >
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setNewRepairDialogOpen(true)}
+            sx={{ ...BTN_DARK, px: 3, py: 1.2, bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' },
+              boxShadow: `0 2px 8px ${alpha('#22c55e', 0.35)}` }}>
             Nouvelle prise en charge
           </Button>
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={(e, value) => value && setViewMode(value)}
-            size="small"
-          >
-            <ToggleButton value="kanban">
-              <KanbanIcon sx={{ mr: 1 }} /> Kanban
-            </ToggleButton>
-            <ToggleButton value="list">
-              <ListIcon sx={{ mr: 1 }} /> Liste
-            </ToggleButton>
+          <ToggleButtonGroup value={viewMode} exclusive onChange={(_, v) => v && setViewMode(v)} size="small"
+            sx={{ '& .MuiToggleButton-root': { borderRadius: '10px !important', textTransform: 'none', fontWeight: 600,
+              px: 2, border: '1px solid rgba(0,0,0,0.08) !important' },
+              '& .Mui-selected': { bgcolor: alpha('#6366f1', 0.10) + ' !important', color: '#6366f1 !important' },
+              gap: 0.5, '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': { borderLeft: '1px solid rgba(0,0,0,0.08) !important' },
+            }}>
+            <ToggleButton value="kanban"><KanbanIcon sx={{ mr: 0.75, fontSize: 18 }} /> Kanban</ToggleButton>
+            <ToggleButton value="list"><ListIcon sx={{ mr: 0.75, fontSize: 18 }} /> Liste</ToggleButton>
           </ToggleButtonGroup>
-          <Tooltip title="Rafraîchir">
-            <IconButton onClick={handleRefresh} color="primary">
-              <RefreshIcon />
+          <Tooltip title="Rafraîchir" arrow>
+            <IconButton onClick={handleRefresh}
+              sx={{ bgcolor: alpha('#6366f1', 0.08), color: '#6366f1', '&:hover': { bgcolor: alpha('#6366f1', 0.16) } }}>
+              <RefreshIcon sx={{ fontSize: 20 }} />
             </IconButton>
           </Tooltip>
         </Box>
       </Box>
 
-      {/* Statistiques */}
+      {/* ── KPIs ── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#6366f1' }}>
-                    {stats.totalRepairs}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total réparations
-                  </Typography>
-                </Box>
-                <BuildIcon sx={{ fontSize: 40, color: '#6366f1', opacity: 0.3 }} />
-              </Box>
-            </CardContent>
-          </Card>
+        <Grid item xs={6} md={3}>
+          <KpiMini icon={<BuildIcon sx={{ fontSize: 20 }} />} iconColor="#6366f1" label="Total réparations" value={stats.totalRepairs} />
         </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#3b82f6' }}>
-                    {stats.inProgressRepairs}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    En cours
-                  </Typography>
-                </Box>
-                <TimerIcon sx={{ fontSize: 40, color: '#3b82f6', opacity: 0.3 }} />
-              </Box>
-            </CardContent>
-          </Card>
+        <Grid item xs={6} md={3}>
+          <KpiMini icon={<TimerIcon sx={{ fontSize: 20 }} />} iconColor="#3b82f6" label="En cours" value={stats.inProgressRepairs} />
         </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#ef4444' }}>
-                    {stats.urgentRepairs}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Urgentes
-                  </Typography>
-                </Box>
-                <WarningIcon sx={{ fontSize: 40, color: '#ef4444', opacity: 0.3 }} />
-              </Box>
-            </CardContent>
-          </Card>
+        <Grid item xs={6} md={3}>
+          <KpiMini icon={<WarningIcon sx={{ fontSize: 20 }} />} iconColor="#ef4444" label="Urgentes" value={stats.urgentRepairs} />
         </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: '#10b981' }}>
-                    {stats.completedRepairs}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Terminées
-                  </Typography>
-                </Box>
-                <CheckCircleIcon sx={{ fontSize: 40, color: '#10b981', opacity: 0.3 }} />
-              </Box>
-            </CardContent>
-          </Card>
+        <Grid item xs={6} md={3}>
+          <KpiMini icon={<CheckCircleIcon sx={{ fontSize: 20 }} />} iconColor="#22c55e" label="Terminées" value={stats.completedRepairs} />
         </Grid>
       </Grid>
 
-      {/* Alertes */}
+      {/* ── overdue alert ── */}
       {stats.overdueRepairs > 0 && (
-        <Alert severity="warning" sx={{ mb: 3 }}>
-          <strong>{stats.overdueRepairs}</strong> réparation{stats.overdueRepairs > 1 ? 's' : ''} en retard !
-        </Alert>
+        <Card sx={{ ...CARD_STATIC, mb: 3, bgcolor: alpha('#ef4444', 0.04), borderColor: alpha('#ef4444', 0.15) }}>
+          <CardContent sx={{ p: '12px 16px !important', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              bgcolor: alpha('#ef4444', 0.10), color: '#ef4444', flexShrink: 0 }}>
+              <OverdueIcon sx={{ fontSize: 18 }} />
+            </Box>
+            <Typography variant="body2" sx={{ fontWeight: 600, color: '#ef4444' }}>
+              <strong>{stats.overdueRepairs}</strong> réparation{stats.overdueRepairs > 1 ? 's' : ''} en retard
+            </Typography>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Filtres */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Rechercher par client, appareil, numéro..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
+      {/* ── search + filters ── */}
+      <Card sx={{ ...CARD_STATIC, mb: 3 }}>
+        <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', p: '16px !important' }}>
+          <TextField size="small" placeholder="Rechercher client, appareil, numéro..."
+            value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            sx={{ minWidth: 260, ...INPUT_SX }}
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 20, color: 'text.disabled' }} /></InputAdornment> }} />
 
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Technicien</InputLabel>
-              <Select
-                value={filterTechnician}
-                label="Technicien"
-                onChange={(e) => setFilterTechnician(e.target.value)}
-              >
-                <MenuItem value="all">Tous les techniciens</MenuItem>
-                {users.map((user) => (
-                  <MenuItem key={user.id} value={user.id}>
-                    {user.firstName} {user.lastName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
+          <FormControl size="small" sx={{ minWidth: 180, ...INPUT_SX }}>
+            <InputLabel>Technicien</InputLabel>
+            <Select value={filterTechnician} label="Technicien" onChange={e => setFilterTechnician(e.target.value)}>
+              <MenuItem value="all">Tous les techniciens</MenuItem>
+              {users.map(u => (
+                <MenuItem key={u.id} value={u.id}>{u.firstName} {u.lastName}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Urgence</InputLabel>
-              <Select
-                value={filterUrgent === 'all' ? 'all' : filterUrgent ? 'urgent' : 'normal'}
-                label="Urgence"
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setFilterUrgent(val === 'all' ? 'all' : val === 'urgent');
-                }}
-              >
-                <MenuItem value="all">Toutes</MenuItem>
-                <MenuItem value="urgent">Urgentes uniquement</MenuItem>
-                <MenuItem value="normal">Normales uniquement</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+          <Box sx={{ display: 'flex', gap: 0.75 }}>
+            {URGENCY_CHIPS.map(f => {
+              const active = filterUrgent === f.key;
+              const col = f.key === 'urgent' ? '#ef4444' : f.key === 'normal' ? '#3b82f6' : '#6366f1';
+              return (
+                <Chip key={f.key} label={f.label} size="small"
+                  onClick={() => setFilterUrgent(f.key)}
+                  sx={{ fontWeight: 600, borderRadius: '8px', fontSize: '0.75rem',
+                    bgcolor: active ? alpha(col, 0.12) : 'transparent',
+                    color: active ? col : 'text.secondary',
+                    border: `1px solid ${active ? col : 'rgba(0,0,0,0.08)'}`,
+                    '&:hover': { bgcolor: alpha(col, 0.08) },
+                  }} />
+              );
+            })}
+          </Box>
 
-          <Grid item xs={12} md={2}>
-            <Chip
-              label={`${filteredRepairs.length} résultat${filteredRepairs.length > 1 ? 's' : ''}`}
-              color="primary"
-              variant="outlined"
-            />
-          </Grid>
-        </Grid>
-      </Paper>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, ml: 'auto' }}>
+            {filteredRepairs.length} résultat{filteredRepairs.length > 1 ? 's' : ''}
+          </Typography>
+        </CardContent>
+      </Card>
 
-      {/* Vue Kanban */}
+      {/* ═══ Kanban view ═══ */}
       {viewMode === 'kanban' && (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 2 }}>
-            {repairStatuses.map((status) => (
-              <Box
-                key={status.id}
-                sx={{
-                  minWidth: 320,
-                  flex: '0 0 auto',
-                }}
-              >
-                {/* En-tête de colonne */}
-                <Paper
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    backgroundColor: status.color,
-                    color: '#fff',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                      {getDisplayStatusName(status.name)}
-                    </Typography>
-                    <Chip
-                      label={repairsByStatus[status.id]?.length || 0}
-                      size="small"
-                      sx={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                        color: '#fff',
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Box>
-                </Paper>
+          <Box sx={{
+            display: 'flex', gap: 2, overflowX: 'auto', pb: 2,
+            '&::-webkit-scrollbar': { height: 6 },
+            '&::-webkit-scrollbar-track': { background: 'transparent' },
+            '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: 3 },
+            '&::-webkit-scrollbar-thumb:hover': { background: '#94a3b8' },
+          }}>
+            {repairStatuses.map(status => {
+              const columnRepairs = repairsByStatus[status.id] || [];
+              const overdueCount = columnRepairs.filter(r => {
+                if (r.status === 'completed' || r.status === 'returned') return false;
+                if (!r.dueDate) return false;
+                try { const d = new Date(r.dueDate); return !isNaN(d.getTime()) && d < new Date(); } catch { return false; }
+              }).length;
 
-                {/* Colonne droppable */}
-                <Droppable droppableId={status.id}>
-                  {(provided, snapshot) => (
-                    <Box
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      sx={{
-                        minHeight: 400,
-                        backgroundColor: snapshot.isDraggingOver ? '#f3f4f6' : 'transparent',
-                        borderRadius: 2,
-                        p: 1,
-                        transition: 'background-color 0.2s',
-                      }}
-                    >
-                      {repairsByStatus[status.id]?.map((repair, index) => {
-                        const client = getClientById(repair.clientId);
-                        const device = getDeviceById(repair.deviceId);
-                        const technician = repair.assignedTechnicianId
-                          ? getUserById(repair.assignedTechnicianId)
-                          : null;
-
-                        if (!client) return null;
-
-                        return (
-                          <Draggable key={repair.id} draggableId={repair.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                style={{
-                                  ...provided.draggableProps.style,
-                                  opacity: snapshot.isDragging ? 0.8 : 1,
-                                }}
-                              >
-                                <RepairCard
-                                  repair={repair}
-                                  client={client}
-                                  device={device}
-                                  technician={technician}
-                                  repairStatus={status}
-                                  onViewDetails={handleViewDetails}
-                                  onPrint={(repair, type) => handlePrint(repair, type)}
-                                  onPrintCompleteTicket={(repair) => handlePrint(repair, 'complete_ticket')}
-                                  onPaymentStatusChange={handlePaymentStatusChange}
-                                  onThermalReceipt={handleOpenThermalReceipt}
-                                />
-                              </div>
-                            )}
-                          </Draggable>
-                        );
-                      })}
-                      {provided.placeholder}
+              return (
+                <Box key={status.id} sx={{ minWidth: 320, maxWidth: 320, flexShrink: 0 }}>
+                  <Box sx={{
+                    height: '100%', backgroundColor: '#f8fafc', borderRadius: 3,
+                    border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column',
+                    overflow: 'hidden', transition: 'box-shadow 0.2s ease',
+                    '&:hover': { boxShadow: '0 4px 20px rgba(0,0,0,0.06)' },
+                  }}>
+                    {/* column header */}
+                    <Box sx={{
+                      p: 2, pb: 1.5,
+                      background: `linear-gradient(135deg, ${status.color}0A, ${status.color}05)`,
+                      borderBottom: '1px solid #e2e8f0',
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box sx={{
+                            width: 10, height: 10, borderRadius: '50%',
+                            backgroundColor: status.color,
+                            boxShadow: `0 0 8px ${status.color}60`,
+                          }} />
+                          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1e293b', fontSize: '0.9rem' }}>
+                            {getDisplayStatusName(status.name)}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          {overdueCount > 0 && (
+                            <Chip label={overdueCount} size="small"
+                              sx={{
+                                height: 22, minWidth: 22,
+                                backgroundColor: '#fef2f2', color: '#dc2626',
+                                fontWeight: 700, fontSize: '0.72rem',
+                                '& .MuiChip-label': { px: 0.75 },
+                              }} />
+                          )}
+                          <Box sx={{
+                            backgroundColor: `${status.color}18`, color: status.color,
+                            fontWeight: 700, fontSize: '0.78rem',
+                            borderRadius: 1.5, px: 1, py: 0.25,
+                            minWidth: 24, textAlign: 'center',
+                          }}>
+                            {columnRepairs.length}
+                          </Box>
+                        </Box>
+                      </Box>
                     </Box>
-                  )}
-                </Droppable>
-              </Box>
-            ))}
+
+                    {/* droppable area */}
+                    <Droppable droppableId={status.id}>
+                      {(provided, snapshot) => (
+                        <Box ref={provided.innerRef} {...provided.droppableProps}
+                          sx={{
+                            flexGrow: 1, minHeight: 200, p: 1.5,
+                            overflowY: 'auto',
+                            transition: 'background-color 0.2s ease',
+                            backgroundColor: snapshot.isDraggingOver ? `${status.color}08` : 'transparent',
+                            '&::-webkit-scrollbar': { width: 4 },
+                            '&::-webkit-scrollbar-track': { background: 'transparent' },
+                            '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: 2 },
+                            '&::-webkit-scrollbar-thumb:hover': { background: '#94a3b8' },
+                          }}>
+                          {columnRepairs.map((repair, index) => {
+                            const client = getClientById(repair.clientId);
+                            const device = getDeviceById(repair.deviceId);
+                            const technician = repair.assignedTechnicianId ? getUserById(repair.assignedTechnicianId) : null;
+                            if (!client) return null;
+                            return (
+                              <Draggable key={repair.id} draggableId={repair.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <Box ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}
+                                    sx={{
+                                      opacity: snapshot.isDragging ? 0.85 : 1,
+                                      transform: snapshot.isDragging ? 'rotate(1.5deg)' : 'none',
+                                    }}>
+                                    <RepairCard
+                                      repair={repair} client={client} device={device}
+                                      technician={technician} repairStatus={status}
+                                      onViewDetails={handleViewDetails}
+                                      onPrint={(r, t) => handlePrint(r, t)}
+                                      onPrintCompleteTicket={r => handlePrint(r, 'complete_ticket')}
+                                      onPaymentStatusChange={handlePaymentStatusChange}
+                                      onThermalReceipt={handleOpenThermalReceipt}
+                                    />
+                                  </Box>
+                                )}
+                              </Draggable>
+                            );
+                          })}
+                          {provided.placeholder}
+
+                          {/* empty column state */}
+                          {columnRepairs.length === 0 && (
+                            <Box sx={{ textAlign: 'center', py: 6, opacity: 0.4 }}>
+                              <BuildIcon sx={{ fontSize: 32, color: 'text.disabled', mb: 1 }} />
+                              <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
+                                Aucune réparation
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      )}
+                    </Droppable>
+
+                    {/* dashed add button */}
+                    <Box sx={{ p: 1.5, pt: 0 }}>
+                      <Button startIcon={<AddIcon />} size="small" fullWidth
+                        onClick={() => setNewRepairDialogOpen(true)}
+                        sx={{
+                          color: '#64748b', borderRadius: 2,
+                          border: '1.5px dashed #cbd5e1',
+                          backgroundColor: 'transparent',
+                          fontSize: '0.8rem', fontWeight: 600, py: 0.75,
+                          textTransform: 'none',
+                          '&:hover': { backgroundColor: '#f1f5f9', borderColor: '#94a3b8', color: '#475569' },
+                        }}>
+                        Nouvelle prise en charge
+                      </Button>
+                    </Box>
+                  </Box>
+                </Box>
+              );
+            })}
           </Box>
         </DragDropContext>
       )}
 
-      {/* Vue Liste */}
+      {/* ═══ List view ═══ */}
       {viewMode === 'list' && (
         <Box>
           {filteredRepairs.length === 0 ? (
-            <Paper sx={{ p: 4, textAlign: 'center' }}>
-              <Typography variant="body1" color="text.secondary">
-                Aucune réparation trouvée
+            <Box sx={{ textAlign: 'center', py: 10 }}>
+              <Box sx={{ width: 80, height: 80, borderRadius: '20px', mx: 'auto', mb: 3, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                background: `linear-gradient(135deg, #6366f1, ${alpha('#6366f1', 0.7)})`,
+                boxShadow: `0 8px 24px ${alpha('#6366f1', 0.3)}` }}>
+                <BuildIcon sx={{ fontSize: 36, color: '#fff' }} />
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                {hasFilters ? 'Aucune réparation trouvée' : 'Aucune réparation'}
               </Typography>
-            </Paper>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3, maxWidth: 400, mx: 'auto' }}>
+                {hasFilters
+                  ? 'Essayez de modifier vos critères de recherche.'
+                  : 'Créez votre première prise en charge pour commencer.'}
+              </Typography>
+              {hasFilters ? (
+                <Chip label="Effacer les filtres" size="small" onClick={clearFilters}
+                  sx={{ fontWeight: 600, borderRadius: '8px', bgcolor: alpha('#6366f1', 0.08), color: '#6366f1' }} />
+              ) : (
+                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setNewRepairDialogOpen(true)}
+                  sx={{ ...BTN_DARK, px: 3, bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' },
+                    boxShadow: `0 2px 8px ${alpha('#22c55e', 0.35)}` }}>
+                  Nouvelle prise en charge
+                </Button>
+              )}
+            </Box>
           ) : (
-            filteredRepairs.map((repair) => {
+            filteredRepairs.map(repair => {
               const client = getClientById(repair.clientId);
               const device = getDeviceById(repair.deviceId);
-              const technician = repair.assignedTechnicianId
-                ? getUserById(repair.assignedTechnicianId)
-                : null;
-              const status = repairStatuses.find((s) => s.id === repair.status);
-
+              const technician = repair.assignedTechnicianId ? getUserById(repair.assignedTechnicianId) : null;
+              const status = repairStatuses.find(s => s.id === repair.status);
               if (!client || !status) return null;
-
               return (
-                <RepairCard
-                  key={repair.id}
-                  repair={repair}
-                  client={client}
-                  device={device}
-                  technician={technician}
-                  repairStatus={status}
+                <RepairCard key={repair.id} repair={repair} client={client} device={device}
+                  technician={technician} repairStatus={status}
                   onViewDetails={handleViewDetails}
-                  onPrint={(repair, type) => handlePrint(repair, type)}
-                  onPrintCompleteTicket={(repair) => handlePrint(repair, 'complete_ticket')}
+                  onPrint={(r, t) => handlePrint(r, t)}
+                  onPrintCompleteTicket={r => handlePrint(r, 'complete_ticket')}
                   onPaymentStatusChange={handlePaymentStatusChange}
                   onThermalReceipt={handleOpenThermalReceipt}
                   onClick={() => handleViewDetails(repair)}
@@ -630,87 +538,64 @@ const SAV: React.FC = () => {
         </Box>
       )}
 
-      {/* Dialog de détails */}
+      {/* ── footer count ── */}
+      {filteredRepairs.length > 0 && (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2, px: 1 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {filteredRepairs.length} réparation{filteredRepairs.length > 1 ? 's' : ''}
+          </Typography>
+          {hasFilters && (
+            <Chip label="Effacer les filtres" size="small" onClick={clearFilters}
+              sx={{ fontWeight: 600, borderRadius: '8px', fontSize: '0.7rem',
+                bgcolor: alpha('#6366f1', 0.08), color: '#6366f1', '&:hover': { bgcolor: alpha('#6366f1', 0.15) } }} />
+          )}
+        </Box>
+      )}
+
+      {/* ── dialogs ── */}
       {selectedRepair && (
-        <RepairDetailsDialog
-          open={detailsOpen}
-          onClose={() => {
-            setDetailsOpen(false);
-            setSelectedRepair(null);
-          }}
+        <RepairDetailsDialog open={detailsOpen}
+          onClose={() => { setDetailsOpen(false); setSelectedRepair(null); }}
           repair={selectedRepair}
           client={getClientById(selectedRepair.clientId)!}
           device={getDeviceById(selectedRepair.deviceId)}
-          technician={
-            selectedRepair.assignedTechnicianId
-              ? getUserById(selectedRepair.assignedTechnicianId) || null
-              : null
-          }
-          parts={parts}
-          services={services}
-        />
+          technician={selectedRepair.assignedTechnicianId ? getUserById(selectedRepair.assignedTechnicianId) || null : null}
+          parts={parts} services={services} />
       )}
 
-      {/* Actions rapides (SpeedDial) */}
       {selectedRepair && (
-        <QuickActions
-          repair={selectedRepair}
+        <QuickActions repair={selectedRepair}
           onStatusChange={async (repair, newStatus) => {
-            try {
-              await updateRepair(repair.id, { status: newStatus });
-              toast.success('Statut mis à jour');
-              // Recharger les réparations pour mettre à jour l'affichage
-              await loadRepairs();
-            } catch (error) {
-              toast.error('Erreur lors de la mise à jour du statut');
-              console.error(error);
-            }
+            try { await updateRepair(repair.id, { status: newStatus }); toast.success('Statut mis à jour'); await loadRepairs(); }
+            catch { toast.error('Erreur lors de la mise à jour du statut'); }
           }}
           onAddNote={handleAddNote}
-          onPrintWorkOrder={(repair) => handlePrint(repair, 'work_order')}
-          onPrintReceipt={(repair) => handlePrint(repair, 'deposit_receipt')}
-          onGenerateInvoice={(repair) => handlePrint(repair, 'invoice')}
-          onPrintCompleteTicket={(repair) => handlePrint(repair, 'complete_ticket')}
-          onPaymentStatusChange={handlePaymentStatusChange}
-        />
+          onPrintWorkOrder={r => handlePrint(r, 'work_order')}
+          onPrintReceipt={r => handlePrint(r, 'deposit_receipt')}
+          onGenerateInvoice={r => handlePrint(r, 'invoice')}
+          onPrintCompleteTicket={r => handlePrint(r, 'complete_ticket')}
+          onPaymentStatusChange={handlePaymentStatusChange} />
       )}
 
-      {/* Dialog de création de prise en charge */}
-      <NewRepairDialog
-        open={newRepairDialogOpen}
-        onClose={() => setNewRepairDialogOpen(false)}
-        clients={clients}
-        devices={devices}
-        users={users}
-        repairStatuses={repairStatuses}
-        onSubmit={handleCreateRepair}
-      />
+      <NewRepairDialog open={newRepairDialogOpen} onClose={() => setNewRepairDialogOpen(false)}
+        clients={clients} devices={devices} users={users} repairStatuses={repairStatuses}
+        onSubmit={handleCreateRepair} />
 
-      {/* Dialog pour l'impression thermique */}
       {thermalReceiptRepair && (
-        <ThermalReceiptDialog
-          open={thermalReceiptDialogOpen}
-          onClose={() => {
-            setThermalReceiptDialogOpen(false);
-            setThermalReceiptRepair(null);
-          }}
+        <ThermalReceiptDialog open={thermalReceiptDialogOpen}
+          onClose={() => { setThermalReceiptDialogOpen(false); setThermalReceiptRepair(null); }}
           repair={thermalReceiptRepair}
           client={getClientById(thermalReceiptRepair.clientId)}
           device={thermalReceiptRepair.deviceId ? getDeviceById(thermalReceiptRepair.deviceId) : undefined}
           technician={thermalReceiptRepair.assignedTechnicianId ? getUserById(thermalReceiptRepair.assignedTechnicianId) : undefined}
           workshopInfo={{
             name: workshopSettings?.name || 'Atelier',
-            address: workshopSettings?.address,
-            phone: workshopSettings?.phone,
-            email: workshopSettings?.email,
-            siret: workshopSettings?.siret,
-            vatNumber: workshopSettings?.vatNumber,
-          }}
-        />
+            address: workshopSettings?.address, phone: workshopSettings?.phone,
+            email: workshopSettings?.email, siret: workshopSettings?.siret, vatNumber: workshopSettings?.vatNumber,
+          }} />
       )}
     </Box>
   );
 };
 
 export default SAV;
-

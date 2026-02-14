@@ -1,192 +1,148 @@
 import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  TextField,
+  Button,
+  Tabs,
+  Tab,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Switch,
+  FormControlLabel,
+  Snackbar,
+  Alert,
+  InputAdornment,
+  LinearProgress,
+  IconButton,
+  alpha,
+  Divider,
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  Lock as LockIcon,
+  Business as BusinessIcon,
+  Description as InvoiceIcon,
+  Save as SaveIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  Badge as BadgeIcon,
+  Visibility as VisIcon,
+  VisibilityOff as VisOffIcon,
+  Store as StoreIcon,
+  LocationOn as LocationIcon,
+  Numbers as SiretIcon,
+  Percent as PercentIcon,
+  Euro as EuroIcon,
+  Article as ArticleIcon,
+  Gavel as GavelIcon,
+} from '@mui/icons-material';
 import { useAppStore } from '../../store';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { supabase } from '../../lib/supabase';
-import { theme } from '../../theme';
 
-interface SettingsData {
-  profile: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-  };
-  preferences: {
-    themeDarkMode: boolean;
-    language: string;
-  };
-  workshop: {
-    name: string;
-    address: string;
-    phone: string;
-    email: string;
-    siret: string;
-    vatNumber: string;
-    vatRate: string;
-    currency: string;
-  };
-  invoiceQuote: {
-    conditions: string;
-    vatExempt: boolean;
-    vatNotApplicableArticle293B: boolean;
-  };
+/* ─── design tokens ─── */
+const CARD_STATIC = {
+  borderRadius: '16px', border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+} as const;
+const BTN_DARK = {
+  borderRadius: '10px', textTransform: 'none', fontWeight: 600,
+  bgcolor: '#111827', '&:hover': { bgcolor: '#1f2937' },
+  boxShadow: '0 2px 8px rgba(17,24,39,0.25)',
+} as const;
+const INPUT_SX = { '& .MuiOutlinedInput-root': { borderRadius: '10px' } } as const;
+
+/* ─── section label ─── */
+function SectionLabel({ icon, color, label, sub }: { icon: React.ReactNode; color: string; label: string; sub?: string }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
+      <Box sx={{ width: 40, height: 40, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: `linear-gradient(135deg, ${color}, ${alpha(color, 0.7)})`, color: '#fff',
+        boxShadow: `0 4px 14px ${alpha(color, 0.3)}`, flexShrink: 0 }}>
+        {icon}
+      </Box>
+      <Box>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3 }}>{label}</Typography>
+        {sub && <Typography variant="caption" sx={{ color: 'text.secondary' }}>{sub}</Typography>}
+      </Box>
+    </Box>
+  );
 }
 
+/* ─── types ─── */
+interface SettingsData {
+  profile: { firstName: string; lastName: string; email: string; phone: string };
+  preferences: { themeDarkMode: boolean; language: string };
+  workshop: { name: string; address: string; phone: string; email: string; siret: string; vatNumber: string; vatRate: string; currency: string };
+  invoiceQuote: { conditions: string; vatExempt: boolean; vatNotApplicableArticle293B: boolean };
+}
+
+/* ═══════════════════════ main component ═══════════════════════ */
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
-  
-  const { 
-    systemSettings, 
-    loadSystemSettings, 
-    updateMultipleSystemSettings,
-    currentUser 
-  } = useAppStore();
-  
-  const [settings, setSettings] = useState<SettingsData>({
-    profile: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: ''
-    },
-    preferences: {
-      themeDarkMode: false,
-      language: 'fr'
-    },
-    workshop: {
-      name: '',
-      address: '',
-      phone: '',
-      email: '',
-      siret: '',
-      vatNumber: '',
-      vatRate: '20',
-      currency: 'EUR'
-    },
-    invoiceQuote: {
-      conditions: '',
-      vatExempt: false,
-      vatNotApplicableArticle293B: false
-    }
-  });
+  const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'error' | 'info' }>({ open: false, msg: '', sev: 'info' });
 
-  const [passwordStrength, setPasswordStrength] = useState<{
-    score: number;
-    feedback: string;
-    color: string;
-  }>({ score: 0, feedback: '', color: '#666' });
-  
-  const [passwordMatch, setPasswordMatch] = useState<{
-    match: boolean;
-    message: string;
-    color: string;
-  }>({ match: false, message: '', color: '#666' });
-
+  const { systemSettings, loadSystemSettings, updateMultipleSystemSettings, currentUser } = useAppStore();
   const { saveSettings } = useWorkshopSettings();
 
-  // Charger les paramètres depuis la base de données
+  const [settings, setSettings] = useState<SettingsData>({
+    profile: { firstName: '', lastName: '', email: '', phone: '' },
+    preferences: { themeDarkMode: false, language: 'fr' },
+    workshop: { name: '', address: '', phone: '', email: '', siret: '', vatNumber: '', vatRate: '20', currency: 'EUR' },
+    invoiceQuote: { conditions: '', vatExempt: false, vatNotApplicableArticle293B: false },
+  });
+
+  /* ── password state ── */
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+
+  /* ── load settings ── */
+  useEffect(() => { loadSystemSettings().catch(() => {}); }, [loadSystemSettings]);
+
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        await loadSystemSettings();
-      } catch (error) {
-        console.error('Erreur lors du chargement des paramètres:', error);
-      }
+    if (systemSettings.length === 0) return;
+    const n = { ...settings };
+    const map: Record<string, (v: string) => void> = {
+      workshop_name: v => n.workshop.name = v,
+      workshop_address: v => n.workshop.address = v,
+      workshop_phone: v => n.workshop.phone = v,
+      workshop_email: v => n.workshop.email = v,
+      workshop_siret: v => n.workshop.siret = v,
+      workshop_vat_number: v => n.workshop.vatNumber = v,
+      vat_rate: v => n.workshop.vatRate = v,
+      currency: v => n.workshop.currency = v,
+      language: v => n.preferences.language = v,
+      user_first_name: v => n.profile.firstName = v,
+      user_last_name: v => n.profile.lastName = v,
+      user_email: v => n.profile.email = v,
+      user_phone: v => n.profile.phone = v,
+      invoice_quote_conditions: v => n.invoiceQuote.conditions = v,
+      vat_exempt: v => n.invoiceQuote.vatExempt = v === 'true',
+      vat_not_applicable_article_293b: v => n.invoiceQuote.vatNotApplicableArticle293B = v === 'true',
     };
-    
-    loadSettings();
-  }, [loadSystemSettings]);
-
-  // Mettre à jour les paramètres quand systemSettings change
-  useEffect(() => {
-    if (systemSettings.length > 0) {
-      const newSettings = { ...settings };
-      
-      // Mettre à jour les paramètres de l'atelier depuis la base de données
-      systemSettings.forEach(setting => {
-        switch (setting.key) {
-          case 'workshop_name':
-            newSettings.workshop.name = setting.value;
-            break;
-          case 'workshop_address':
-            newSettings.workshop.address = setting.value;
-            break;
-          case 'workshop_phone':
-            newSettings.workshop.phone = setting.value;
-            break;
-          case 'workshop_email':
-            newSettings.workshop.email = setting.value;
-            break;
-          case 'workshop_siret':
-            newSettings.workshop.siret = setting.value;
-            break;
-          case 'workshop_vat_number':
-            newSettings.workshop.vatNumber = setting.value;
-            break;
-          case 'vat_rate':
-            newSettings.workshop.vatRate = setting.value;
-            break;
-          case 'currency':
-            newSettings.workshop.currency = setting.value;
-            break;
-
-          case 'language':
-            newSettings.preferences.language = setting.value;
-            break;
-          case 'user_first_name':
-            newSettings.profile.firstName = setting.value;
-            break;
-          case 'user_last_name':
-            newSettings.profile.lastName = setting.value;
-            break;
-          case 'user_email':
-            newSettings.profile.email = setting.value;
-            break;
-          case 'user_phone':
-            newSettings.profile.phone = setting.value;
-            break;
-          case 'invoice_quote_conditions':
-            newSettings.invoiceQuote.conditions = setting.value;
-            break;
-          case 'vat_exempt':
-            newSettings.invoiceQuote.vatExempt = setting.value === 'true';
-            break;
-          case 'vat_not_applicable_article_293b':
-            newSettings.invoiceQuote.vatNotApplicableArticle293B = setting.value === 'true';
-            break;
-        }
-      });
-      
-      // Mettre à jour le profil avec les données de l'utilisateur connecté si pas encore défini
-      if (currentUser) {
-        if (!newSettings.profile.firstName || newSettings.profile.firstName === 'Utilisateur') {
-          newSettings.profile.firstName = currentUser.firstName;
-        }
-        if (!newSettings.profile.lastName || newSettings.profile.lastName === 'Test') {
-          newSettings.profile.lastName = currentUser.lastName;
-        }
-        if (!newSettings.profile.email || newSettings.profile.email === 'user@example.com') {
-          newSettings.profile.email = currentUser.email;
-        }
-      }
-      
-      setSettings(newSettings);
+    systemSettings.forEach(s => map[s.key]?.(s.value));
+    if (currentUser) {
+      if (!n.profile.firstName || n.profile.firstName === 'Utilisateur') n.profile.firstName = currentUser.firstName;
+      if (!n.profile.lastName || n.profile.lastName === 'Test') n.profile.lastName = currentUser.lastName;
+      if (!n.profile.email || n.profile.email === 'user@example.com') n.profile.email = currentUser.email;
     }
+    setSettings(n);
   }, [systemSettings, currentUser]);
 
-  const showMessage = (text: string, type: 'success' | 'error' | 'info') => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 3000);
-  };
-
-  const saveSettingsData = async () => {
+  /* ── save ── */
+  const handleSave = async () => {
     setLoading(true);
     try {
-      // Préparer les paramètres à sauvegarder
-      const settingsToUpdate = [
-        // Paramètres de l'atelier
+      await updateMultipleSystemSettings([
         { key: 'workshop_name', value: settings.workshop.name },
         { key: 'workshop_address', value: settings.workshop.address },
         { key: 'workshop_phone', value: settings.workshop.phone },
@@ -195,1468 +151,367 @@ const Settings: React.FC = () => {
         { key: 'workshop_vat_number', value: settings.workshop.vatNumber },
         { key: 'vat_rate', value: settings.workshop.vatRate },
         { key: 'currency', value: settings.workshop.currency },
-        
-        // Paramètres des préférences
         { key: 'language', value: settings.preferences.language },
-        
-        // Paramètres du profil utilisateur
         { key: 'user_first_name', value: settings.profile.firstName },
         { key: 'user_last_name', value: settings.profile.lastName },
         { key: 'user_email', value: settings.profile.email },
         { key: 'user_phone', value: settings.profile.phone },
-        
-        // Paramètres Facture & Devis
         { key: 'invoice_quote_conditions', value: settings.invoiceQuote.conditions },
         { key: 'vat_exempt', value: settings.invoiceQuote.vatExempt ? 'true' : 'false' },
-        { key: 'vat_not_applicable_article_293b', value: settings.invoiceQuote.vatNotApplicableArticle293B ? 'true' : 'false' }
-      ];
-
-      // Sauvegarder dans la base de données
-      await updateMultipleSystemSettings(settingsToUpdate);
-      
-      // Mettre à jour les paramètres de l'atelier via le hook (maintenant avec isolation)
-      if (settings.workshop) {
-        await saveSettings(settings.workshop);
-      }
-      
-      showMessage('Paramètres sauvegardés avec succès !', 'success');
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
-      showMessage('Erreur lors de la sauvegarde', 'error');
+        { key: 'vat_not_applicable_article_293b', value: settings.invoiceQuote.vatNotApplicableArticle293B ? 'true' : 'false' },
+      ]);
+      if (settings.workshop) await saveSettings(settings.workshop);
+      setSnack({ open: true, msg: 'Paramètres sauvegardés avec succès', sev: 'success' });
+    } catch {
+      setSnack({ open: true, msg: 'Erreur lors de la sauvegarde', sev: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const changePassword = async () => {
-    const password = (document.getElementById('newPassword') as HTMLInputElement)?.value;
-    const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value;
-    
-    if (!password || !confirmPassword) {
-      showMessage('Veuillez remplir tous les champs', 'error');
-      return;
-    }
+  /* ── password ── */
+  const pwStrength = (() => {
+    let s = 0;
+    if (newPassword.length >= 6) s++;
+    if (newPassword.length >= 8) s++;
+    if (newPassword.length >= 12) s++;
+    if (/[a-z]/.test(newPassword)) s++;
+    if (/[A-Z]/.test(newPassword)) s++;
+    if (/[0-9]/.test(newPassword)) s++;
+    if (/[^A-Za-z0-9]/.test(newPassword)) s++;
+    if (s <= 2) return { score: s, label: 'Très faible', color: '#ef4444' };
+    if (s <= 4) return { label: 'Faible', score: s, color: '#f59e0b' };
+    if (s <= 6) return { label: 'Moyen', score: s, color: '#f59e0b' };
+    return { label: 'Fort', score: s, color: '#22c55e' };
+  })();
 
-    if (!passwordMatch.match) {
-      showMessage('Les mots de passe ne correspondent pas', 'error');
-      return;
-    }
-    
-    if (passwordStrength.score < 3) {
-      showMessage('Le mot de passe est trop faible. Veuillez choisir un mot de passe plus sécurisé.', 'error');
-      return;
-    }
-    
+  const pwMatch = newPassword && confirmPassword ? newPassword === confirmPassword : null;
+  const canChangePassword = pwMatch === true && pwStrength.score >= 3;
+
+  const handleChangePassword = async () => {
+    if (!canChangePassword) return;
     setLoading(true);
     try {
-      // Utiliser l'API Supabase pour changer le mot de passe
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
-      
-      if (error) {
-        throw error;
-      }
-      
-      showMessage('Mot de passe modifié avec succès !', 'success');
-      
-      // Vider les champs et réinitialiser les états
-      (document.getElementById('newPassword') as HTMLInputElement).value = '';
-      (document.getElementById('confirmPassword') as HTMLInputElement).value = '';
-      setPasswordStrength({ score: 0, feedback: '', color: '#666' });
-      setPasswordMatch({ match: false, message: '', color: '#666' });
-    } catch (error: any) {
-      console.error('Erreur lors de la modification du mot de passe:', error);
-      showMessage(error?.message || 'Erreur lors de la modification du mot de passe', 'error');
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setSnack({ open: true, msg: 'Mot de passe modifié avec succès', sev: 'success' });
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setSnack({ open: true, msg: err?.message || 'Erreur lors de la modification', sev: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const togglePasswordVisibility = (fieldId: string) => {
-    const field = document.getElementById(fieldId) as HTMLInputElement;
-    if (field) {
-      field.type = field.type === 'password' ? 'text' : 'password';
-    }
-  };
+  /* ── helpers ── */
+  const setProfile = (k: keyof SettingsData['profile'], v: string) =>
+    setSettings(p => ({ ...p, profile: { ...p.profile, [k]: v } }));
+  const setWorkshop = (k: keyof SettingsData['workshop'], v: string) =>
+    setSettings(p => ({ ...p, workshop: { ...p.workshop, [k]: v } }));
+  const setInvoice = (k: keyof SettingsData['invoiceQuote'], v: any) =>
+    setSettings(p => ({ ...p, invoiceQuote: { ...p.invoiceQuote, [k]: v } }));
 
-  const evaluatePasswordStrength = (password: string) => {
-    let score = 0;
-    let feedback = '';
-    
-    if (password.length >= 6) score += 1;
-    if (password.length >= 8) score += 1;
-    if (password.length >= 12) score += 1;
-    if (/[a-z]/.test(password)) score += 1;
-    if (/[A-Z]/.test(password)) score += 1;
-    if (/[0-9]/.test(password)) score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) score += 1;
-    
-    let color = '#666';
-    if (score <= 2) {
-      feedback = 'Très faible';
-      color = '#dc3545';
-    } else if (score <= 4) {
-      feedback = 'Faible';
-      color = '#fd7e14';
-    } else if (score <= 6) {
-      feedback = 'Moyen';
-      color = '#ffc107';
-    } else {
-      feedback = 'Fort';
-      color = '#28a745';
-    }
-    
-    return { score, feedback, color };
-  };
-
-  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const password = event.target.value;
-    const strength = evaluatePasswordStrength(password);
-    setPasswordStrength(strength);
-    
-    // Vérifier si les mots de passe correspondent
-    const confirmPassword = (document.getElementById('confirmPassword') as HTMLInputElement)?.value;
-    if (confirmPassword) {
-      checkPasswordMatch(password, confirmPassword);
-    }
-  };
-
-  const handleConfirmPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const confirmPassword = event.target.value;
-    const password = (document.getElementById('newPassword') as HTMLInputElement)?.value;
-    if (password) {
-      checkPasswordMatch(password, confirmPassword);
-    }
-  };
-
-  const checkPasswordMatch = (password: string, confirmPassword: string) => {
-    if (!password || !confirmPassword) {
-      setPasswordMatch({ match: false, message: '', color: '#666' });
-      return;
-    }
-    
-    if (password === confirmPassword) {
-      setPasswordMatch({ 
-        match: true, 
-        message: '✅ Les mots de passe correspondent', 
-        color: '#28a745' 
-      });
-    } else {
-      setPasswordMatch({ 
-        match: false, 
-        message: '❌ Les mots de passe ne correspondent pas', 
-        color: '#dc3545' 
-      });
-    }
-  };
-
-  const tabs = [
-    { label: 'Profil', content: 'profile' },
-    { label: 'Sécurité', content: 'security' },
-    { label: 'Atelier', content: 'atelier' },
-    { label: 'Facture & Devis', content: 'invoiceQuote' }
-  ];
-
+  /* ════════════════════════ render ════════════════════════ */
   return (
-    <div style={{
-      fontFamily: theme.typography.fontFamily,
-      maxWidth: '1000px',
-      margin: '0 auto',
-      padding: '24px',
-      backgroundColor: theme.palette.background.default,
-      minHeight: '100vh'
-    }}>
-      <div style={{
-        backgroundColor: theme.palette.background.paper,
-        borderRadius: theme.shape.borderRadius,
-        boxShadow: theme.shadows[3],
-        overflow: 'hidden',
-        border: `1px solid ${theme.palette.divider}`
-      }}>
-      {/* En-tête */}
-        <div style={{
-          padding: '32px',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-          color: theme.palette.primary.contrastText
-        }}>
-          <h1 style={{
-            margin: '0 0 12px 0',
-            fontSize: theme.typography.h3.fontSize,
-            fontWeight: theme.typography.h3.fontWeight,
-            color: theme.palette.primary.contrastText,
-            letterSpacing: theme.typography.h3.letterSpacing
+    <Box sx={{ pb: 4, maxWidth: 900, mx: 'auto' }}>
+      {/* ── header ── */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.01em' }}>
+          Paramètres
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+          Gérez vos préférences et les informations de votre atelier
+        </Typography>
+      </Box>
+
+      {/* ── tabs ── */}
+      <Card sx={{ ...CARD_STATIC, mb: 3 }}>
+        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} variant="fullWidth"
+          sx={{
+            '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, fontSize: '0.85rem', py: 2 },
+            '& .Mui-selected': { color: '#6366f1 !important' },
+            '& .MuiTabs-indicator': { bgcolor: '#6366f1', height: 3, borderRadius: '3px 3px 0 0' },
           }}>
-            ⚙️ Paramètres
-          </h1>
-          <p style={{
-            margin: '0',
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: theme.typography.body1.fontSize,
-            lineHeight: theme.typography.body1.lineHeight
-          }}>
-            Gérez vos préférences et les informations de votre atelier
-          </p>
-        </div>
+          <Tab icon={<PersonIcon sx={{ fontSize: 20 }} />} iconPosition="start" label="Profil" />
+          <Tab icon={<LockIcon sx={{ fontSize: 20 }} />} iconPosition="start" label="Sécurité" />
+          <Tab icon={<BusinessIcon sx={{ fontSize: 20 }} />} iconPosition="start" label="Atelier" />
+          <Tab icon={<InvoiceIcon sx={{ fontSize: 20 }} />} iconPosition="start" label="Facture & Devis" />
+        </Tabs>
+      </Card>
 
-        {/* Onglets */}
-        <div style={{
-          display: 'flex',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          backgroundColor: theme.palette.background.paper,
-          padding: '0 8px'
-        }}>
-          {tabs.map((tab, index) => (
-            <button
-              key={tab.content}
-              onClick={() => setActiveTab(index)}
-              style={{
-                flex: '1',
-                padding: '20px 16px',
-                border: 'none',
-                backgroundColor: activeTab === index ? theme.palette.primary.main : 'transparent',
-                color: activeTab === index ? theme.palette.primary.contrastText : theme.palette.text.secondary,
-                cursor: 'pointer',
-                fontSize: theme.typography.body2.fontSize,
-                fontWeight: activeTab === index ? theme.typography.button.fontWeight : '400',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                borderRadius: `${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0 0`,
-                margin: '8px 4px 0 4px',
-                position: 'relative',
-              }}
-              onMouseEnter={(e) => {
-                if (activeTab !== index) {
-                  e.currentTarget.style.backgroundColor = 'rgba(55, 65, 81, 0.08)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (activeTab !== index) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      {/* ═══ Tab 0 : Profil ═══ */}
+      {activeTab === 0 && (
+        <Card sx={CARD_STATIC}>
+          <CardContent sx={{ p: 3 }}>
+            <SectionLabel icon={<PersonIcon sx={{ fontSize: 20 }} />} color="#6366f1"
+              label="Informations personnelles" sub="Gérez vos informations de profil et vos coordonnées" />
 
-        {/* Message de notification */}
-        {message && (
-          <div style={{
-            padding: '16px 24px',
-            backgroundColor: message.type === 'success' ? theme.palette.success.light + '20' : 
-                           message.type === 'error' ? theme.palette.error.light + '20' : theme.palette.info.light + '20',
-            color: message.type === 'success' ? theme.palette.success.dark : 
-                   message.type === 'error' ? theme.palette.error.dark : theme.palette.info.dark,
-            border: `1px solid ${message.type === 'success' ? theme.palette.success.main : 
-                                message.type === 'error' ? theme.palette.error.main : theme.palette.info.main}`,
-            borderRadius: theme.shape.borderRadius,
-            margin: '20px 24px',
-            fontSize: theme.typography.body2.fontSize,
-            fontWeight: theme.typography.body2.fontWeight,
-            boxShadow: theme.shadows[1],
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            <span style={{ fontSize: '18px' }}>
-              {message.type === 'success' ? '✅' : message.type === 'error' ? '❌' : 'ℹ️'}
-            </span>
-            {message.text}
-          </div>
-        )}
+            <Grid container spacing={2.5}>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth size="small" label="Prénom" placeholder="Ex : Jean"
+                  value={settings.profile.firstName} onChange={e => setProfile('firstName', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><BadgeIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth size="small" label="Nom" placeholder="Ex : Dupont"
+                  value={settings.profile.lastName} onChange={e => setProfile('lastName', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><BadgeIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth size="small" label="Email" placeholder="Ex : jean.dupont@email.com" type="email"
+                  value={settings.profile.email} onChange={e => setProfile('email', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth size="small" label="Téléphone" placeholder="Ex : 06 12 34 56 78" type="tel"
+                  value={settings.profile.phone} onChange={e => setProfile('phone', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><PhoneIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Contenu des onglets */}
-        <div style={{ padding: '32px' }}>
-          {activeTab === 0 && (
-            <div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '28px',
-                padding: '20px',
-                backgroundColor: 'rgba(55, 65, 81, 0.05)',
-                borderRadius: theme.shape.borderRadius,
-                border: `1px solid ${theme.palette.divider}`
-              }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: theme.palette.primary.main,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '16px',
-                  fontSize: '20px'
-                }}>
-                  👤
-                </div>
-                <div>
-                  <h2 style={{ 
-                    margin: '0 0 4px 0', 
-                    fontSize: theme.typography.h5.fontSize, 
-                    fontWeight: theme.typography.h5.fontWeight, 
-                    color: theme.palette.text.primary 
-                  }}>
-                    Informations personnelles
-                  </h2>
-                  <p style={{
-                    margin: '0',
-                    color: theme.palette.text.secondary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Gérez vos informations de profil et vos coordonnées
-                  </p>
-                </div>
-              </div>
-              
-              {/* Message informatif */}
-              <div style={{
-                padding: '16px 20px',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                borderRadius: theme.shape.borderRadius,
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <div style={{
-                  fontSize: '20px',
-                  color: '#10b981'
-                }}>
-                  👤
-                </div>
-                <div>
-                  <p style={{
-                    margin: '0',
-                    color: '#047857',
-                    fontSize: theme.typography.body2.fontSize,
-                    fontWeight: '500',
-                    lineHeight: '1.4'
-                  }}>
-                    <strong>Personnalisez votre profil :</strong> Remplissez vos vraies informations personnelles (prénom, nom, email, téléphone) pour une meilleure expérience utilisateur.
-                  </p>
-                </div>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: theme.typography.button.fontWeight,
-                    color: theme.palette.text.primary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Prénom
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.profile.firstName}
-                    placeholder="Ex: Jean"
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      profile: { ...prev.profile, firstName: e.target.value }
-                    }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: `2px solid ${theme.palette.divider}`,
-                      borderRadius: theme.shape.borderRadius,
-                      fontSize: theme.typography.body1.fontSize,
-                      boxSizing: 'border-box',
-                      backgroundColor: theme.palette.background.paper,
-                      color: theme.palette.text.primary,
-                      transition: 'all 0.2s ease-in-out',
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.palette.primary.main;
-                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.palette.divider;
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: theme.typography.button.fontWeight,
-                    color: theme.palette.text.primary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Nom
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.profile.lastName}
-                    placeholder="Ex: Dupont"
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      profile: { ...prev.profile, lastName: e.target.value }
-                    }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: `2px solid ${theme.palette.divider}`,
-                      borderRadius: theme.shape.borderRadius,
-                      fontSize: theme.typography.body1.fontSize,
-                      boxSizing: 'border-box',
-                      backgroundColor: theme.palette.background.paper,
-                      color: theme.palette.text.primary,
-                      transition: 'all 0.2s ease-in-out'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.palette.primary.main;
-                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.palette.divider;
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontWeight: theme.typography.button.fontWeight,
-                  color: theme.palette.text.primary,
-                  fontSize: theme.typography.body2.fontSize
-                }}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={settings.profile.email}
-                  placeholder="Ex: jean.dupont@email.com"
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    profile: { ...prev.profile, email: e.target.value }
-                  }))}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: `2px solid ${theme.palette.divider}`,
-                    borderRadius: theme.shape.borderRadius,
-                    fontSize: theme.typography.body1.fontSize,
-                    boxSizing: 'border-box',
-                    backgroundColor: theme.palette.background.paper,
-                    color: theme.palette.text.primary,
-                    transition: 'all 0.2s ease-in-out'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = theme.palette.primary.main;
-                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = theme.palette.divider;
-                    e.target.style.boxShadow = 'none';
-                  }}
-                />
-              </div>
-              
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontWeight: theme.typography.button.fontWeight,
-                  color: theme.palette.text.primary,
-                  fontSize: theme.typography.body2.fontSize
-                }}>
-                  Téléphone
-                </label>
-                <input
-                  type="tel"
-                  value={settings.profile.phone}
-                  placeholder="Ex: 06 12 34 56 78"
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    profile: { ...prev.profile, phone: e.target.value }
-                  }))}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: `2px solid ${theme.palette.divider}`,
-                    borderRadius: theme.shape.borderRadius,
-                    fontSize: theme.typography.body1.fontSize,
-                    boxSizing: 'border-box',
-                    backgroundColor: theme.palette.background.paper,
-                    color: theme.palette.text.primary,
-                    transition: 'all 0.2s ease-in-out'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = theme.palette.primary.main;
-                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = theme.palette.divider;
-                    e.target.style.boxShadow = 'none';
-                  }}
-                />
-              </div>
-            </div>
-          )}
+      {/* ═══ Tab 1 : Sécurité ═══ */}
+      {activeTab === 1 && (
+        <Card sx={CARD_STATIC}>
+          <CardContent sx={{ p: 3 }}>
+            <SectionLabel icon={<LockIcon sx={{ fontSize: 20 }} />} color="#ef4444"
+              label="Sécurité du compte" sub="Gérez votre mot de passe" />
 
+            <Card sx={{ ...CARD_STATIC, bgcolor: 'rgba(0,0,0,0.01)', p: 0 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 2.5 }}>Changer le mot de passe</Typography>
 
-
-          {activeTab === 1 && (
-            <div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '28px',
-                padding: '20px',
-                backgroundColor: 'rgba(239, 68, 68, 0.05)',
-                borderRadius: theme.shape.borderRadius,
-                border: `1px solid ${theme.palette.divider}`
-              }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: theme.palette.error.main,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '16px',
-                  fontSize: '20px'
-                }}>
-                  🔒
-                </div>
-                <div>
-                  <h2 style={{ 
-                    margin: '0 0 4px 0', 
-                    fontSize: theme.typography.h5.fontSize, 
-                    fontWeight: theme.typography.h5.fontWeight, 
-                    color: theme.palette.text.primary 
-                  }}>
-                    Sécurité du compte
-                  </h2>
-                  <p style={{
-                    margin: '0',
-                    color: theme.palette.text.secondary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Gérez votre mot de passe et les paramètres de sécurité
-                  </p>
-                </div>
-              </div>
-              
-              
-              <div style={{ 
-                padding: '24px', 
-                backgroundColor: theme.palette.background.default, 
-                borderRadius: theme.shape.borderRadius,
-                marginBottom: '24px',
-                border: `1px solid ${theme.palette.divider}`,
-                boxShadow: theme.shadows[1]
-              }}>
-                <h3 style={{ 
-                  margin: '0 0 20px 0', 
-                  fontSize: theme.typography.h6.fontSize, 
-                  fontWeight: theme.typography.h6.fontWeight, 
-                  color: theme.palette.text.primary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  🔐 Changer le mot de passe
-                </h3>
-                
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
-                  }}>
-                    Nouveau mot de passe
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      id="newPassword"
-                      type="password"
+                <Grid container spacing={2.5}>
+                  <Grid item xs={12}>
+                    <TextField fullWidth size="small" label="Nouveau mot de passe"
+                      type={showNewPw ? 'text' : 'password'}
+                      value={newPassword} onChange={e => setNewPassword(e.target.value)} sx={INPUT_SX}
                       placeholder="Entrez votre nouveau mot de passe"
-                      onChange={handlePasswordChange}
-                      style={{
-                        width: '100%',
-                        padding: '12px 40px 12px 12px',
-                        border: '1px solid #ddd',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePasswordVisibility('newPassword')}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        color: '#666'
-                      }}
-                    >
-                      👁️
-                    </button>
-                  </div>
-                  
-                  {/* Indicateur de force du mot de passe */}
-                  {(document.getElementById('newPassword') as HTMLInputElement)?.value && (
-                    <div style={{ marginTop: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ 
-                          fontSize: '12px', 
-                          color: '#666', 
-                          marginRight: '8px' 
-                        }}>
-                          Force du mot de passe:
-                        </span>
-                        <span style={{ 
-                          fontSize: '12px', 
-                          fontWeight: '600',
-                          color: passwordStrength.color 
-                        }}>
-                          {passwordStrength.feedback}
-                        </span>
-                      </div>
-                      <div style={{ 
-                        width: '100%', 
-                        height: '4px', 
-                        backgroundColor: '#e9ecef', 
-                        borderRadius: '2px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{ 
-                          width: `${(passwordStrength.score / 7) * 100}%`, 
-                          height: '100%', 
-                          backgroundColor: passwordStrength.color, 
-                          borderRadius: '2px',
-                          transition: 'all 0.3s ease'
-                        }}></div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: '500',
-                    color: '#333',
-                    fontSize: '14px'
-                  }}>
-                    Confirmer le mot de passe
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      id="confirmPassword"
-                      type="password"
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start"><LockIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment>,
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton size="small" onClick={() => setShowNewPw(!showNewPw)}>
+                              {showNewPw ? <VisOffIcon sx={{ fontSize: 18 }} /> : <VisIcon sx={{ fontSize: 18 }} />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }} />
+                    {newPassword && (
+                      <Box sx={{ mt: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>Force du mot de passe</Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: pwStrength.color }}>{pwStrength.label}</Typography>
+                        </Box>
+                        <LinearProgress variant="determinate" value={(pwStrength.score / 7) * 100}
+                          sx={{ height: 4, borderRadius: 2, bgcolor: 'rgba(0,0,0,0.06)',
+                            '& .MuiLinearProgress-bar': { bgcolor: pwStrength.color, borderRadius: 2 } }} />
+                      </Box>
+                    )}
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField fullWidth size="small" label="Confirmer le mot de passe"
+                      type={showConfirmPw ? 'text' : 'password'}
+                      value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} sx={INPUT_SX}
                       placeholder="Confirmez votre nouveau mot de passe"
-                      onChange={handleConfirmPasswordChange}
-                      style={{
-                        width: '100%',
-                        padding: '12px 40px 12px 12px',
-                        border: '1px solid #ddd',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePasswordVisibility('confirmPassword')}
-                      style={{
-                        position: 'absolute',
-                        right: '8px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '16px',
-                        color: '#666'
-                      }}
-                    >
-                      👁️
-                    </button>
-                  </div>
-                  
-                  {/* Indicateur de correspondance des mots de passe */}
-                  {passwordMatch.message && (
-                    <div style={{ marginTop: '8px' }}>
-                      <span style={{ 
-                        fontSize: '12px', 
-                        fontWeight: '500',
-                        color: passwordMatch.color 
-                      }}>
-                        {passwordMatch.message}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                <div style={{ 
-                  backgroundColor: '#e3f2fd', 
-                  border: '1px solid #bbdefb', 
-                  borderRadius: '6px', 
-                  padding: '12px', 
-                  marginBottom: '16px' 
-                }}>
-                  <h4 style={{ 
-                    margin: '0 0 8px 0', 
-                    fontSize: '14px', 
-                    fontWeight: '600', 
-                    color: '#1976d2',
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-                    🔒 Exigences de sécurité
-                  </h4>
-                  <ul style={{ 
-                    margin: '0', 
-                    paddingLeft: '20px', 
-                    fontSize: '13px', 
-                    color: '#1976d2',
-                    lineHeight: '1.4'
-                  }}>
-                    <li>Au moins 6 caractères</li>
-                    <li>Utilisez des lettres, chiffres et symboles</li>
-                    <li>Évitez les mots de passe courants</li>
-                  </ul>
-                </div>
-                
-                <button
-                  onClick={changePassword}
-                  disabled={loading || !passwordMatch.match || passwordStrength.score < 3}
-                  style={{
-                    backgroundColor: passwordMatch.match && passwordStrength.score >= 3 ? '#007bff' : '#6c757d',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '6px',
-                    cursor: (loading || !passwordMatch.match || passwordStrength.score < 3) ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    opacity: (loading || !passwordMatch.match || passwordStrength.score < 3) ? 0.6 : 1,
-                    transition: 'all 0.2s ease',
-                    width: '100%'
-                  }}
-                >
-                  {loading ? '🔄 Modification en cours...' : '🔐 Modifier le mot de passe'}
-                </button>
-              </div>
-            </div>
-          )}
+                      InputProps={{
+                        startAdornment: <InputAdornment position="start"><LockIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment>,
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton size="small" onClick={() => setShowConfirmPw(!showConfirmPw)}>
+                              {showConfirmPw ? <VisOffIcon sx={{ fontSize: 18 }} /> : <VisIcon sx={{ fontSize: 18 }} />}
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }} />
+                    {pwMatch !== null && (
+                      <Typography variant="caption" sx={{ mt: 0.5, display: 'block', fontWeight: 600,
+                        color: pwMatch ? '#22c55e' : '#ef4444' }}>
+                        {pwMatch ? 'Les mots de passe correspondent' : 'Les mots de passe ne correspondent pas'}
+                      </Typography>
+                    )}
+                  </Grid>
+                </Grid>
 
-          {activeTab === 2 && (
-            <div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '28px',
-                padding: '20px',
-                backgroundColor: 'rgba(16, 185, 129, 0.05)',
-                borderRadius: theme.shape.borderRadius,
-                border: `1px solid ${theme.palette.divider}`
-              }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: theme.palette.success.main,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '16px',
-                  fontSize: '20px'
-                }}>
-                  🏢
-                </div>
-                <div>
-                  <h2 style={{ 
-                    margin: '0 0 4px 0', 
-                    fontSize: theme.typography.h5.fontSize, 
-                    fontWeight: theme.typography.h5.fontWeight, 
-                    color: theme.palette.text.primary 
-                  }}>
-                    Informations de l'atelier
-                  </h2>
-                  <p style={{
-                    margin: '0',
-                    color: theme.palette.text.secondary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Configurez les informations de votre atelier et vos paramètres commerciaux
-                  </p>
-                </div>
-              </div>
-              
-              {/* Message informatif */}
-              <div style={{
-                padding: '16px 20px',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: theme.shape.borderRadius,
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <div style={{
-                  fontSize: '20px',
-                  color: '#3b82f6'
-                }}>
-                  ℹ️
-                </div>
-                <div>
-                  <p style={{
-                    margin: '0',
-                    color: '#1e40af',
-                    fontSize: theme.typography.body2.fontSize,
-                    fontWeight: '500',
-                    lineHeight: '1.4'
-                  }}>
-                    <strong>Important :</strong> Veuillez remplacer toutes les informations ci-dessous par les vraies informations de votre atelier (nom, adresse, téléphone, email, SIRET, etc.).
-                  </p>
-                </div>
-              </div>
-              
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontWeight: theme.typography.button.fontWeight,
-                  color: theme.palette.text.primary,
-                  fontSize: theme.typography.body2.fontSize
-                }}>
-                  Nom de l'atelier
-                </label>
-                <input
-                  type="text"
-                  value={settings.workshop.name}
-                  placeholder="Ex: Atelier de réparation automobile"
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    workshop: { ...prev.workshop, name: e.target.value }
-                  }))}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: `2px solid ${theme.palette.divider}`,
-                    borderRadius: theme.shape.borderRadius,
-                    fontSize: theme.typography.body1.fontSize,
-                    boxSizing: 'border-box',
-                    backgroundColor: theme.palette.background.paper,
-                    color: theme.palette.text.primary,
-                    transition: 'all 0.2s ease-in-out'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = theme.palette.primary.main;
-                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = theme.palette.divider;
-                    e.target.style.boxShadow = 'none';
-                  }}
-                />
-              </div>
-              
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontWeight: theme.typography.button.fontWeight,
-                  color: theme.palette.text.primary,
-                  fontSize: theme.typography.body2.fontSize
-                }}>
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={settings.workshop.address}
-                  placeholder="Ex: 123 Rue de la Paix, 75001 Paris"
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    workshop: { ...prev.workshop, address: e.target.value }
-                  }))}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: `2px solid ${theme.palette.divider}`,
-                    borderRadius: theme.shape.borderRadius,
-                    fontSize: theme.typography.body1.fontSize,
-                    boxSizing: 'border-box',
-                    backgroundColor: theme.palette.background.paper,
-                    color: theme.palette.text.primary,
-                    transition: 'all 0.2s ease-in-out'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = theme.palette.primary.main;
-                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = theme.palette.divider;
-                    e.target.style.boxShadow = 'none';
-                  }}
-                />
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: theme.typography.button.fontWeight,
-                    color: theme.palette.text.primary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    value={settings.workshop.phone}
-                    placeholder="Ex: 01 23 45 67 89"
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      workshop: { ...prev.workshop, phone: e.target.value }
-                    }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: `2px solid ${theme.palette.divider}`,
-                      borderRadius: theme.shape.borderRadius,
-                      fontSize: theme.typography.body1.fontSize,
-                      boxSizing: 'border-box',
-                      backgroundColor: theme.palette.background.paper,
-                      color: theme.palette.text.primary,
-                      transition: 'all 0.2s ease-in-out'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.palette.primary.main;
-                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.palette.divider;
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: theme.typography.button.fontWeight,
-                    color: theme.palette.text.primary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={settings.workshop.email}
-                    placeholder="Ex: contact@atelier.fr"
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      workshop: { ...prev.workshop, email: e.target.value }
-                    }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: `2px solid ${theme.palette.divider}`,
-                      borderRadius: theme.shape.borderRadius,
-                      fontSize: theme.typography.body1.fontSize,
-                      boxSizing: 'border-box',
-                      backgroundColor: theme.palette.background.paper,
-                      color: theme.palette.text.primary,
-                      transition: 'all 0.2s ease-in-out'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.palette.primary.main;
-                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.palette.divider;
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: theme.typography.button.fontWeight,
-                    color: theme.palette.text.primary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    SIRET
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.workshop.siret}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      workshop: { ...prev.workshop, siret: e.target.value }
-                    }))}
-                    placeholder="123 456 789 00012"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: `2px solid ${theme.palette.divider}`,
-                      borderRadius: theme.shape.borderRadius,
-                      fontSize: theme.typography.body1.fontSize,
-                      boxSizing: 'border-box',
-                      backgroundColor: theme.palette.background.paper,
-                      color: theme.palette.text.primary,
-                      transition: 'all 0.2s ease-in-out'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.palette.primary.main;
-                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.palette.divider;
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: theme.typography.button.fontWeight,
-                    color: theme.palette.text.primary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Numéro de TVA
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.workshop.vatNumber}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      workshop: { ...prev.workshop, vatNumber: e.target.value }
-                    }))}
-                    placeholder="FR12345678901"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: `2px solid ${theme.palette.divider}`,
-                      borderRadius: theme.shape.borderRadius,
-                      fontSize: theme.typography.body1.fontSize,
-                      boxSizing: 'border-box',
-                      backgroundColor: theme.palette.background.paper,
-                      color: theme.palette.text.primary,
-                      transition: 'all 0.2s ease-in-out'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.palette.primary.main;
-                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.palette.divider;
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: theme.typography.button.fontWeight,
-                    color: theme.palette.text.primary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Taux de TVA (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={settings.workshop.vatRate}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      workshop: { ...prev.workshop, vatRate: e.target.value }
-                    }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: `2px solid ${theme.palette.divider}`,
-                      borderRadius: theme.shape.borderRadius,
-                      fontSize: theme.typography.body1.fontSize,
-                      boxSizing: 'border-box',
-                      backgroundColor: theme.palette.background.paper,
-                      color: theme.palette.text.primary,
-                      transition: 'all 0.2s ease-in-out'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.palette.primary.main;
-                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.palette.divider;
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginBottom: '24px' }}>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    marginBottom: '8px', 
-                    fontWeight: theme.typography.button.fontWeight,
-                    color: theme.palette.text.primary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Devise
-                  </label>
-                  <select
-                    value={settings.workshop.currency}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      workshop: { ...prev.workshop, currency: e.target.value }
-                    }))}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: `2px solid ${theme.palette.divider}`,
-                      borderRadius: theme.shape.borderRadius,
-                      fontSize: theme.typography.body1.fontSize,
-                      boxSizing: 'border-box',
-                      backgroundColor: theme.palette.background.paper,
-                      color: theme.palette.text.primary,
-                      transition: 'all 0.2s ease-in-out',
-                      cursor: 'pointer'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = theme.palette.primary.main;
-                      e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = theme.palette.divider;
-                      e.target.style.boxShadow = 'none';
-                    }}
-                  >
-                    <option value="EUR">EUR (€)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="CHF">CHF (CHF)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
+                {/* requirements */}
+                <Box sx={{ mt: 2, p: 2, borderRadius: '10px', bgcolor: alpha('#3b82f6', 0.06), border: `1px solid ${alpha('#3b82f6', 0.15)}` }}>
+                  <Typography variant="caption" sx={{ fontWeight: 700, color: '#3b82f6', display: 'block', mb: 0.5 }}>
+                    Exigences de sécurité
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#3b82f6', lineHeight: 1.8 }}>
+                    - Au moins 6 caractères<br />
+                    - Lettres, chiffres et symboles recommandés<br />
+                    - Évitez les mots de passe courants
+                  </Typography>
+                </Box>
 
-          {activeTab === 3 && (
-            <div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '28px',
-                padding: '20px',
-                backgroundColor: 'rgba(139, 69, 19, 0.05)',
-                borderRadius: theme.shape.borderRadius,
-                border: `1px solid ${theme.palette.divider}`
-              }}>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: '#8B4513',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '16px',
-                  fontSize: '20px'
-                }}>
-                  📄
-                </div>
-                <div>
-                  <h2 style={{ 
-                    margin: '0 0 4px 0', 
-                    fontSize: theme.typography.h5.fontSize, 
-                    fontWeight: theme.typography.h5.fontWeight, 
-                    color: theme.palette.text.primary 
+                <Button fullWidth variant="contained" onClick={handleChangePassword}
+                  disabled={loading || !canChangePassword}
+                  sx={{ mt: 3, borderRadius: '10px', textTransform: 'none', fontWeight: 600, py: 1.3,
+                    bgcolor: canChangePassword ? '#6366f1' : undefined,
+                    '&:hover': { bgcolor: canChangePassword ? '#4f46e5' : undefined },
+                    boxShadow: canChangePassword ? `0 4px 14px ${alpha('#6366f1', 0.4)}` : 'none',
                   }}>
-                    Facture & Devis
-                  </h2>
-                  <p style={{
-                    margin: '0',
-                    color: theme.palette.text.secondary,
-                    fontSize: theme.typography.body2.fontSize
-                  }}>
-                    Configurez les conditions et politiques de vos factures et devis
-                  </p>
-                </div>
-              </div>
-              
-              {/* Message informatif */}
-              <div style={{
-                padding: '16px 20px',
-                backgroundColor: 'rgba(139, 69, 19, 0.1)',
-                border: '1px solid rgba(139, 69, 19, 0.3)',
-                borderRadius: theme.shape.borderRadius,
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px'
-              }}>
-                <div style={{
-                  fontSize: '20px',
-                  color: '#8B4513'
-                }}>
-                  ℹ️
-                </div>
-                <div>
-                  <p style={{
-                    margin: '0',
-                    color: '#654321',
-                    fontSize: theme.typography.body2.fontSize,
-                    fontWeight: '500',
-                    lineHeight: '1.4'
-                  }}>
-                    <strong>Personnalisez vos documents :</strong> Définissez les conditions générales qui apparaîtront sur vos factures et devis. Si vous êtes exonéré de TVA, cochez la case correspondante.
-                  </p>
-                </div>
-              </div>
-              
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  marginBottom: '8px', 
-                  fontWeight: theme.typography.button.fontWeight,
-                  color: theme.palette.text.primary,
-                  fontSize: theme.typography.body2.fontSize
-                }}>
-                  Conditions / Politiques des factures et devis
-                </label>
-                <textarea
-                  value={settings.invoiceQuote.conditions}
-                  placeholder="Ex: Facture valable 30 jours à compter de la date d'émission. Aucun escompte en cas de paiement anticipé. Pour toute question, contactez-nous."
-                  onChange={(e) => setSettings(prev => ({
-                    ...prev,
-                    invoiceQuote: { ...prev.invoiceQuote, conditions: e.target.value }
-                  }))}
-                  rows={8}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    border: `2px solid ${theme.palette.divider}`,
-                    borderRadius: theme.shape.borderRadius,
-                    fontSize: theme.typography.body1.fontSize,
-                    boxSizing: 'border-box',
-                    backgroundColor: theme.palette.background.paper,
-                    color: theme.palette.text.primary,
-                    transition: 'all 0.2s ease-in-out',
-                    fontFamily: theme.typography.fontFamily,
-                    resize: 'vertical',
-                    minHeight: '120px'
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = theme.palette.primary.main;
-                    e.target.style.boxShadow = `0 0 0 3px ${theme.palette.primary.main}20`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = theme.palette.divider;
-                    e.target.style.boxShadow = 'none';
-                  }}
-                />
-                <p style={{
-                  margin: '8px 0 0 0',
-                  color: theme.palette.text.secondary,
-                  fontSize: '12px',
-                  fontStyle: 'italic'
-                }}>
-                  Ces conditions seront affichées sur toutes vos factures et devis. Laissez vide pour utiliser les conditions par défaut.
-                </p>
-              </div>
-              
-              <div style={{ 
-                padding: '20px', 
-                backgroundColor: theme.palette.background.default, 
-                borderRadius: theme.shape.borderRadius,
-                marginBottom: '24px',
-                border: `1px solid ${theme.palette.divider}`,
-                boxShadow: theme.shadows[1]
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px'
-                }}>
-                  <input
-                    type="checkbox"
-                    id="vatExempt"
-                    checked={settings.invoiceQuote.vatExempt}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      invoiceQuote: { ...prev.invoiceQuote, vatExempt: e.target.checked }
-                    }))}
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      cursor: 'pointer',
-                      marginTop: '2px',
-                      flexShrink: 0
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <label 
-                      htmlFor="vatExempt"
-                      style={{ 
-                        display: 'block',
-                        fontWeight: theme.typography.button.fontWeight,
-                        color: theme.palette.text.primary,
-                        fontSize: theme.typography.body1.fontSize,
-                        cursor: 'pointer',
-                        marginBottom: '8px'
-                      }}
-                    >
-                      Exonéré de TVA
-                    </label>
-                    <p style={{
-                      margin: '0',
-                      color: theme.palette.text.secondary,
-                      fontSize: theme.typography.body2.fontSize,
-                      lineHeight: '1.5'
-                    }}>
-                      Si cette case est cochée, "Exonéré de TVA" sera affiché sur vos factures et devis au lieu du calcul de la TVA. Le total TTC sera égal au total HT.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div style={{ 
-                padding: '20px', 
-                backgroundColor: theme.palette.background.default, 
-                borderRadius: theme.shape.borderRadius,
-                marginBottom: '24px',
-                border: `1px solid ${theme.palette.divider}`,
-                boxShadow: theme.shadows[1]
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px'
-                }}>
-                  <input
-                    type="checkbox"
-                    id="vatNotApplicableArticle293B"
-                    checked={settings.invoiceQuote.vatNotApplicableArticle293B}
-                    onChange={(e) => setSettings(prev => ({
-                      ...prev,
-                      invoiceQuote: { ...prev.invoiceQuote, vatNotApplicableArticle293B: e.target.checked }
-                    }))}
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      cursor: 'pointer',
-                      marginTop: '2px',
-                      flexShrink: 0
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <label 
-                      htmlFor="vatNotApplicableArticle293B"
-                      style={{ 
-                        display: 'block',
-                        fontWeight: theme.typography.button.fontWeight,
-                        color: theme.palette.text.primary,
-                        fontSize: theme.typography.body1.fontSize,
-                        cursor: 'pointer',
-                        marginBottom: '8px'
-                      }}
-                    >
-                      TVA non applicable, article 293 B du CGI
-                    </label>
-                    <p style={{
-                      margin: '0',
-                      color: theme.palette.text.secondary,
-                      fontSize: theme.typography.body2.fontSize,
-                      lineHeight: '1.5'
-                    }}>
-                      Si cette case est cochée, "TVA non applicable, article 293 B du CGI" sera affiché sur vos factures.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                  {loading ? 'Modification en cours...' : 'Modifier le mot de passe'}
+                </Button>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Bouton de sauvegarde */}
-          <div style={{
-            marginTop: '40px',
-            paddingTop: '24px',
-            borderTop: `1px solid ${theme.palette.divider}`,
-            textAlign: 'right'
-          }}>
-            <button
-              onClick={saveSettingsData}
-              disabled={loading}
-              style={{
-                backgroundColor: loading ? theme.palette.secondary.main : theme.palette.success.main,
-                color: theme.palette.success.contrastText || 'white',
-                border: 'none',
-                padding: '14px 32px',
-                borderRadius: theme.shape.borderRadius,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontSize: theme.typography.button.fontSize,
-                fontWeight: theme.typography.button.fontWeight,
-                opacity: loading ? 0.7 : 1,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: theme.shadows[2],
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginLeft: 'auto',
-                minWidth: '200px',
-                justifyContent: 'center'
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = theme.shadows[4];
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = theme.shadows[2];
-                }
-              }}
-            >
-              <span style={{ fontSize: '16px' }}>
-                {loading ? '🔄' : '💾'}
-              </span>
-              {loading ? 'Sauvegarde...' : 'Sauvegarder les paramètres'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* ═══ Tab 2 : Atelier ═══ */}
+      {activeTab === 2 && (
+        <Card sx={CARD_STATIC}>
+          <CardContent sx={{ p: 3 }}>
+            <SectionLabel icon={<BusinessIcon sx={{ fontSize: 20 }} />} color="#22c55e"
+              label="Informations de l'atelier" sub="Configurez les informations de votre atelier et vos paramètres commerciaux" />
+
+            <Grid container spacing={2.5}>
+              <Grid item xs={12}>
+                <TextField fullWidth size="small" label="Nom de l'atelier" placeholder="Ex : Atelier de réparation"
+                  value={settings.workshop.name} onChange={e => setWorkshop('name', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><StoreIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth size="small" label="Adresse" placeholder="Ex : 123 Rue de la Paix, 75001 Paris"
+                  value={settings.workshop.address} onChange={e => setWorkshop('address', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><LocationIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth size="small" label="Téléphone" placeholder="Ex : 01 23 45 67 89" type="tel"
+                  value={settings.workshop.phone} onChange={e => setWorkshop('phone', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><PhoneIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField fullWidth size="small" label="Email" placeholder="Ex : contact@atelier.fr" type="email"
+                  value={settings.workshop.email} onChange={e => setWorkshop('email', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+
+              <Grid item xs={12}><Divider sx={{ my: 0.5 }} /></Grid>
+
+              <Grid item xs={12} md={4}>
+                <TextField fullWidth size="small" label="SIRET" placeholder="123 456 789 00012"
+                  value={settings.workshop.siret} onChange={e => setWorkshop('siret', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><SiretIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField fullWidth size="small" label="Numéro de TVA" placeholder="FR12345678901"
+                  value={settings.workshop.vatNumber} onChange={e => setWorkshop('vatNumber', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><ArticleIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <TextField fullWidth size="small" label="Taux de TVA (%)" type="number"
+                  value={settings.workshop.vatRate} onChange={e => setWorkshop('vatRate', e.target.value)} sx={INPUT_SX}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><PercentIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment> }} />
+              </Grid>
+
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth size="small" sx={INPUT_SX}>
+                  <InputLabel>Devise</InputLabel>
+                  <Select value={settings.workshop.currency} label="Devise"
+                    onChange={e => setWorkshop('currency', e.target.value as string)}
+                    startAdornment={<InputAdornment position="start"><EuroIcon sx={{ fontSize: 18, color: 'text.disabled' }} /></InputAdornment>}>
+                    <MenuItem value="EUR">EUR</MenuItem>
+                    <MenuItem value="USD">USD ($)</MenuItem>
+                    <MenuItem value="CHF">CHF</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ═══ Tab 3 : Facture & Devis ═══ */}
+      {activeTab === 3 && (
+        <Card sx={CARD_STATIC}>
+          <CardContent sx={{ p: 3 }}>
+            <SectionLabel icon={<InvoiceIcon sx={{ fontSize: 20 }} />} color="#8b5cf6"
+              label="Facture & Devis" sub="Configurez les conditions et politiques de vos documents" />
+
+            <TextField fullWidth size="small" label="Conditions / Politiques" multiline rows={6}
+              placeholder="Ex : Facture valable 30 jours. Aucun escompte en cas de paiement anticipé."
+              value={settings.invoiceQuote.conditions} onChange={e => setInvoice('conditions', e.target.value)} sx={{ ...INPUT_SX, mb: 1 }} />
+            <Typography variant="caption" sx={{ color: 'text.disabled', fontStyle: 'italic', display: 'block', mb: 3 }}>
+              Ces conditions seront affichées sur toutes vos factures et devis.
+            </Typography>
+
+            {/* VAT switches */}
+            <Card sx={{ ...CARD_STATIC, bgcolor: 'rgba(0,0,0,0.01)', mb: 2 }}>
+              <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                  <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    bgcolor: alpha('#f59e0b', 0.10), color: '#f59e0b', flexShrink: 0, mt: 0.5 }}>
+                    <PercentIcon sx={{ fontSize: 18 }} />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <FormControlLabel
+                      control={<Switch checked={settings.invoiceQuote.vatExempt}
+                        onChange={e => setInvoice('vatExempt', e.target.checked)}
+                        sx={{ '& .Mui-checked': { color: '#f59e0b' }, '& .Mui-checked+.MuiSwitch-track': { bgcolor: '#f59e0b' } }} />}
+                      label={<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Exonéré de TVA</Typography>}
+                      sx={{ m: 0 }} />
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+                      "Exonéré de TVA" sera affiché sur vos documents. Le total TTC sera égal au total HT.
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+
+            <Card sx={{ ...CARD_STATIC, bgcolor: 'rgba(0,0,0,0.01)' }}>
+              <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                  <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    bgcolor: alpha('#8b5cf6', 0.10), color: '#8b5cf6', flexShrink: 0, mt: 0.5 }}>
+                    <GavelIcon sx={{ fontSize: 18 }} />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <FormControlLabel
+                      control={<Switch checked={settings.invoiceQuote.vatNotApplicableArticle293B}
+                        onChange={e => setInvoice('vatNotApplicableArticle293B', e.target.checked)}
+                        sx={{ '& .Mui-checked': { color: '#8b5cf6' }, '& .Mui-checked+.MuiSwitch-track': { bgcolor: '#8b5cf6' } }} />}
+                      label={<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>TVA non applicable, art. 293 B du CGI</Typography>}
+                      sx={{ m: 0 }} />
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+                      Cette mention légale sera affichée sur vos factures et devis.
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── save button ── */}
+      {activeTab !== 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+          <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={loading}
+            sx={{ ...BTN_DARK, px: 4, py: 1.3,
+              bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' },
+              boxShadow: `0 4px 14px ${alpha('#22c55e', 0.4)}`,
+              '&.Mui-disabled': { bgcolor: alpha('#22c55e', 0.5), color: '#fff' },
+            }}>
+            {loading ? 'Sauvegarde...' : 'Sauvegarder les paramètres'}
+          </Button>
+        </Box>
+      )}
+
+      {/* ── snackbar ── */}
+      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity={snack.sev} variant="filled" sx={{ borderRadius: '10px', fontWeight: 600 }}
+          onClose={() => setSnack(s => ({ ...s, open: false }))}>
+          {snack.msg}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

@@ -12,7 +12,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
   Dialog,
   DialogTitle,
@@ -24,30 +23,20 @@ import {
   Select,
   MenuItem,
   Chip,
-  Alert,
   InputAdornment,
   Tooltip,
-  Badge,
-  Avatar,
+  alpha,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
-  FilterList as FilterIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
   MonetizationOn as MonetizationOnIcon,
-  CalendarToday as CalendarTodayIcon,
   Assessment as AssessmentIcon,
   Receipt as ReceiptIcon,
-  Payment as PaymentIcon,
-  Euro as EuroIcon,
-  AttachMoney as AttachMoneyIcon,
-  Visibility as VisibilityIcon,
-  Download as DownloadIcon,
-  Print as PrintIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -57,20 +46,85 @@ import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
 import toast from 'react-hot-toast';
 
+/* ─── Design tokens ─── */
+const CARD_BASE = {
+  borderRadius: '16px',
+  border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+  transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+  '&:hover': {
+    boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
+    transform: 'translateY(-2px)',
+  },
+} as const;
 
+const TABLE_HEAD_SX = {
+  '& th': {
+    borderBottom: '2px solid', borderColor: 'divider', fontWeight: 600,
+    fontSize: '0.75rem', color: 'text.secondary', textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+} as const;
+
+const BTN_DARK = {
+  borderRadius: '10px', textTransform: 'none', fontWeight: 600,
+  bgcolor: '#111827', '&:hover': { bgcolor: '#1f2937' },
+  boxShadow: '0 2px 8px rgba(17,24,39,0.25)',
+} as const;
+
+const INPUT_SX = { '& .MuiOutlinedInput-root': { borderRadius: '10px' } } as const;
+
+/* ─── KPI Mini Card ─── */
+function KpiMini({ icon, iconColor, label, value }: {
+  icon: React.ReactNode; iconColor: string; label: string; value: string;
+}) {
+  return (
+    <Card sx={CARD_BASE}>
+      <CardContent sx={{ p: '16px !important' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '12px', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            background: `linear-gradient(135deg, ${iconColor}, ${alpha(iconColor, 0.7)})`,
+            color: '#fff', flexShrink: 0,
+            boxShadow: `0 4px 14px ${alpha(iconColor, 0.3)}`,
+          }}>
+            {icon}
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, fontSize: '1.1rem' }}>
+              {value}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}>
+              {label}
+            </Typography>
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Filter options ─── */
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'Tous' },
+  { value: 'pending', label: 'En attente' },
+  { value: 'paid', label: 'Payé' },
+  { value: 'cancelled', label: 'Annulé' },
+];
+
+const PERIOD_OPTIONS = [
+  { value: 'all', label: 'Toutes' },
+  { value: 'today', label: "Aujourd'hui" },
+  { value: 'week', label: 'Semaine' },
+  { value: 'month', label: 'Mois' },
+  { value: 'year', label: 'Année' },
+];
+
+/* ─── Main component ─── */
 const Expenses: React.FC = () => {
-  const {
-    expenses,
-    expenseStats,
-    loadExpenses,
-    loadExpenseStats,
-    addExpense,
-    updateExpense,
-    deleteExpense,
-  } = useAppStore();
+  const { expenses, expenseStats, loadExpenses, loadExpenseStats, addExpense, updateExpense, deleteExpense } = useAppStore();
   const { workshopSettings } = useWorkshopSettings();
-  
-  // Valeur par défaut pour éviter les erreurs
   const currency = workshopSettings?.currency || 'EUR';
 
   const [newExpenseDialogOpen, setNewExpenseDialogOpen] = useState(false);
@@ -80,80 +134,44 @@ const Expenses: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRangeFilter, setDateRangeFilter] = useState<string>('all');
 
-  // Formulaire de dépense
   const [expenseForm, setExpenseForm] = useState({
-    title: '',
-    description: '',
-    amount: '',
-    supplier: '',
-    invoiceNumber: '',
+    title: '', description: '', amount: '', supplier: '', invoiceNumber: '',
     paymentMethod: 'card' as 'cash' | 'card' | 'transfer' | 'check',
     status: 'pending' as 'pending' | 'paid' | 'cancelled',
-    expenseDate: format(new Date(), 'yyyy-MM-dd'),
-    dueDate: '',
-    tags: [] as string[],
+    expenseDate: format(new Date(), 'yyyy-MM-dd'), dueDate: '', tags: [] as string[],
   });
 
   useEffect(() => {
-    const initializeExpenses = async () => {
-      await loadExpenses();
-      await loadExpenseStats();
-    };
-    
-    initializeExpenses();
+    const init = async () => { await loadExpenses(); await loadExpenseStats(); };
+    init();
   }, [loadExpenses, loadExpenseStats]);
 
-  // Filtrage des dépenses
   const filteredExpenses = useMemo(() => {
     return expenses.filter(expense => {
       const matchesSearch = expense.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           expense.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           expense.supplier?.toLowerCase().includes(searchQuery.toLowerCase());
-      
+        expense.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        expense.supplier?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'all' || expense.status === statusFilter;
-      
       let matchesDate = true;
       if (dateRangeFilter !== 'all') {
         const expenseDate = new Date(expense.expenseDate);
         const now = new Date();
-        
         switch (dateRangeFilter) {
-          case 'today':
-            matchesDate = expenseDate.toDateString() === now.toDateString();
-            break;
-          case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            matchesDate = expenseDate >= weekAgo;
-            break;
-          case 'month':
-            const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-            matchesDate = expenseDate >= monthAgo;
-            break;
-          case 'year':
-            const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-            matchesDate = expenseDate >= yearAgo;
-            break;
+          case 'today': matchesDate = expenseDate.toDateString() === now.toDateString(); break;
+          case 'week': matchesDate = expenseDate >= new Date(now.getTime() - 7 * 86400000); break;
+          case 'month': matchesDate = expenseDate >= new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()); break;
+          case 'year': matchesDate = expenseDate >= new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()); break;
         }
       }
-      
       return matchesSearch && matchesStatus && matchesDate;
     });
   }, [expenses, searchQuery, statusFilter, dateRangeFilter]);
 
-
-
   const resetExpenseForm = () => {
     setExpenseForm({
-      title: '',
-      description: '',
-      amount: '',
-      supplier: '',
-      invoiceNumber: '',
-      paymentMethod: 'card',
-      status: 'pending',
-      expenseDate: format(new Date(), 'yyyy-MM-dd'),
-      dueDate: '',
-      tags: [],
+      title: '', description: '', amount: '', supplier: '', invoiceNumber: '',
+      paymentMethod: 'card', status: 'pending',
+      expenseDate: format(new Date(), 'yyyy-MM-dd'), dueDate: '', tags: [],
     });
   };
 
@@ -162,41 +180,27 @@ const Expenses: React.FC = () => {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
-
     try {
       await addExpense({
-        title: expenseForm.title,
-        description: expenseForm.description || undefined,
+        title: expenseForm.title, description: expenseForm.description || undefined,
         amount: parseFloat(expenseForm.amount),
-        category: {
-          id: '', // Sera généré automatiquement par le service
-          name: 'General',
-          description: 'Catégorie par défaut',
-          color: '#757575',
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        supplier: expenseForm.supplier || undefined,
-        invoiceNumber: expenseForm.invoiceNumber || undefined,
-        paymentMethod: expenseForm.paymentMethod,
-        status: expenseForm.status,
+        category: { id: '', name: 'General', description: 'Catégorie par défaut', color: '#757575', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        supplier: expenseForm.supplier || undefined, invoiceNumber: expenseForm.invoiceNumber || undefined,
+        paymentMethod: expenseForm.paymentMethod, status: expenseForm.status,
         expenseDate: new Date(expenseForm.expenseDate),
         dueDate: expenseForm.dueDate ? new Date(expenseForm.dueDate) : undefined,
         tags: expenseForm.tags,
       });
-
       toast.success('Dépense créée avec succès');
       setNewExpenseDialogOpen(false);
       resetExpenseForm();
       loadExpenseStats();
     } catch (error) {
       if (error instanceof Error && error.message.includes('catégorie')) {
-        toast.error('Aucune catégorie de dépense disponible. Veuillez d\'abord créer une catégorie dans les paramètres.');
+        toast.error("Aucune catégorie disponible. Créez-en une dans les paramètres.");
       } else {
         toast.error('Erreur lors de la création de la dépense');
       }
-      console.error(error);
     }
   };
 
@@ -205,316 +209,300 @@ const Expenses: React.FC = () => {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
-
     try {
       await updateExpense(selectedExpense.id, {
-        title: expenseForm.title,
-        description: expenseForm.description || undefined,
+        title: expenseForm.title, description: expenseForm.description || undefined,
         amount: parseFloat(expenseForm.amount),
-        category: {
-          id: '', // Sera généré automatiquement par le service
-          name: 'General',
-          description: 'Catégorie par défaut',
-          color: '#757575',
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        supplier: expenseForm.supplier || undefined,
-        invoiceNumber: expenseForm.invoiceNumber || undefined,
-        paymentMethod: expenseForm.paymentMethod,
-        status: expenseForm.status,
+        category: { id: '', name: 'General', description: 'Catégorie par défaut', color: '#757575', isActive: true, createdAt: new Date(), updatedAt: new Date() },
+        supplier: expenseForm.supplier || undefined, invoiceNumber: expenseForm.invoiceNumber || undefined,
+        paymentMethod: expenseForm.paymentMethod, status: expenseForm.status,
         expenseDate: new Date(expenseForm.expenseDate),
         dueDate: expenseForm.dueDate ? new Date(expenseForm.dueDate) : undefined,
         tags: expenseForm.tags,
       });
-
       toast.success('Dépense mise à jour avec succès');
       setEditExpenseDialogOpen(false);
       setSelectedExpense(null);
       resetExpenseForm();
       loadExpenseStats();
-    } catch (error) {
-      toast.error('Erreur lors de la mise à jour de la dépense');
-      console.error(error);
+    } catch {
+      toast.error('Erreur lors de la mise à jour');
     }
   };
 
   const handleDeleteExpense = async (expense: Expense) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer la dépense "${expense.title}" ?`)) {
-      try {
-        await deleteExpense(expense.id);
-        toast.success('Dépense supprimée avec succès');
-        loadExpenseStats();
-      } catch (error) {
-        toast.error('Erreur lors de la suppression de la dépense');
-        console.error(error);
-      }
+    if (!window.confirm(`Supprimer la dépense "${expense.title}" ?`)) return;
+    try {
+      await deleteExpense(expense.id);
+      toast.success('Dépense supprimée');
+      loadExpenseStats();
+    } catch {
+      toast.error('Erreur lors de la suppression');
     }
   };
 
   const openEditExpenseDialog = (expense: Expense) => {
     setSelectedExpense(expense);
     setExpenseForm({
-      title: expense.title,
-      description: expense.description || '',
-      amount: expense.amount.toString(),
-      supplier: expense.supplier || '',
-      invoiceNumber: expense.invoiceNumber || '',
-      paymentMethod: expense.paymentMethod,
-      status: expense.status,
-      expenseDate: format(expense.expenseDate, 'yyyy-MM-dd'),
-      dueDate: expense.dueDate ? format(expense.dueDate, 'yyyy-MM-dd') : '',
-      tags: expense.tags || [],
+      title: expense.title, description: expense.description || '',
+      amount: expense.amount.toString(), supplier: expense.supplier || '',
+      invoiceNumber: expense.invoiceNumber || '', paymentMethod: expense.paymentMethod,
+      status: expense.status, expenseDate: format(expense.expenseDate, 'yyyy-MM-dd'),
+      dueDate: expense.dueDate ? format(expense.dueDate, 'yyyy-MM-dd') : '', tags: expense.tags || [],
     });
     setEditExpenseDialogOpen(true);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': return 'success';
-      case 'pending': return 'warning';
-      case 'cancelled': return 'error';
-      default: return 'default';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'paid': return 'Payé';
-      case 'pending': return 'En attente';
-      case 'cancelled': return 'Annulé';
-      default: return status;
-    }
+  const getStatusChip = (status: string) => {
+    const map: Record<string, { label: string; color: string }> = {
+      paid: { label: 'Payé', color: '#22c55e' },
+      pending: { label: 'En attente', color: '#f59e0b' },
+      cancelled: { label: 'Annulé', color: '#ef4444' },
+    };
+    const c = map[status] || { label: status, color: '#6b7280' };
+    return (
+      <Chip label={c.label} size="small" sx={{
+        fontWeight: 600, borderRadius: '8px', fontSize: '0.72rem',
+        bgcolor: alpha(c.color, 0.1), color: c.color,
+      }} />
+    );
   };
 
   const getPaymentMethodLabel = (method: string) => {
-    switch (method) {
-      case 'cash': return 'Espèces';
-      case 'card': return 'Carte bancaire';
-      case 'transfer': return 'Virement';
-      case 'check': return 'Chèque';
-      default: return method;
-    }
+    const map: Record<string, string> = { cash: 'Espèces', card: 'Carte bancaire', transfer: 'Virement', check: 'Chèque' };
+    return map[method] || method;
   };
 
+  /* ─── Expense form fields (shared between create & edit) ─── */
+  const renderFormFields = () => (
+    <Grid container spacing={2} sx={{ mt: 0.5 }}>
+      <Grid item xs={12}>
+        <TextField fullWidth label="Titre *" value={expenseForm.title}
+          onChange={e => setExpenseForm({ ...expenseForm, title: e.target.value })} sx={INPUT_SX} />
+      </Grid>
+      <Grid item xs={12}>
+        <TextField fullWidth label="Description" multiline rows={3} value={expenseForm.description}
+          onChange={e => setExpenseForm({ ...expenseForm, description: e.target.value })} sx={INPUT_SX} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField fullWidth label="Montant *" type="number" value={expenseForm.amount}
+          onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+          InputProps={{ startAdornment: <InputAdornment position="start">{currency}</InputAdornment> }}
+          sx={INPUT_SX} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField fullWidth label="Fournisseur" value={expenseForm.supplier}
+          onChange={e => setExpenseForm({ ...expenseForm, supplier: e.target.value })} sx={INPUT_SX} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField fullWidth label="N° de facture" value={expenseForm.invoiceNumber}
+          onChange={e => setExpenseForm({ ...expenseForm, invoiceNumber: e.target.value })} sx={INPUT_SX} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <FormControl fullWidth>
+          <InputLabel>Méthode de paiement</InputLabel>
+          <Select value={expenseForm.paymentMethod} label="Méthode de paiement"
+            onChange={e => setExpenseForm({ ...expenseForm, paymentMethod: e.target.value as any })}
+            sx={{ borderRadius: '10px' }}>
+            <MenuItem value="cash">Espèces</MenuItem>
+            <MenuItem value="card">Carte bancaire</MenuItem>
+            <MenuItem value="transfer">Virement</MenuItem>
+            <MenuItem value="check">Chèque</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <FormControl fullWidth>
+          <InputLabel>Statut</InputLabel>
+          <Select value={expenseForm.status} label="Statut"
+            onChange={e => setExpenseForm({ ...expenseForm, status: e.target.value as any })}
+            sx={{ borderRadius: '10px' }}>
+            <MenuItem value="pending">En attente</MenuItem>
+            <MenuItem value="paid">Payé</MenuItem>
+            <MenuItem value="cancelled">Annulé</MenuItem>
+          </Select>
+        </FormControl>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField fullWidth label="Date de dépense" type="date" value={expenseForm.expenseDate}
+          onChange={e => setExpenseForm({ ...expenseForm, expenseDate: e.target.value })}
+          InputLabelProps={{ shrink: true }} sx={INPUT_SX} />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField fullWidth label="Date d'échéance" type="date" value={expenseForm.dueDate}
+          onChange={e => setExpenseForm({ ...expenseForm, dueDate: e.target.value })}
+          InputLabelProps={{ shrink: true }} sx={INPUT_SX} />
+      </Grid>
+    </Grid>
+  );
+
   return (
-    <Box sx={{ p: 3 }}>
-      {/* En-tête */}
+    <Box>
+      {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Gestion des Dépenses
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            Gestion des dépenses
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Gérez vos dépenses
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            Suivez et gérez toutes vos dépenses
           </Typography>
         </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => {
-            resetExpenseForm();
-            setNewExpenseDialogOpen(true);
-          }}
-          sx={{ mr: 1 }}
+          onClick={() => { resetExpenseForm(); setNewExpenseDialogOpen(true); }}
+          sx={BTN_DARK}
         >
-          Nouvelle Dépense
+          Nouvelle dépense
         </Button>
       </Box>
 
-      {/* Statistiques */}
+      {/* KPI Cards */}
       {expenseStats && (
-        <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                    <MonetizationOnIcon />
-                  </Avatar>
-                  <Box>
-                    <Typography color="text.secondary" gutterBottom>
-                      Total Dépenses
-                    </Typography>
-                    <Typography variant="h5">
-                      {formatFromEUR(expenseStats.total, currency)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <KpiMini
+              icon={<MonetizationOnIcon sx={{ fontSize: 20 }} />}
+              iconColor="#ef4444"
+              label="Total des dépenses"
+              value={formatFromEUR(expenseStats.total, currency)}
+            />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
-                    <TrendingUpIcon />
-                  </Avatar>
-                  <Box>
-                    <Typography color="text.secondary" gutterBottom>
-                      Ce Mois
-                    </Typography>
-                    <Typography variant="h5">
-                      {formatFromEUR(expenseStats.monthly, currency)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <KpiMini
+              icon={<TrendingUpIcon sx={{ fontSize: 20 }} />}
+              iconColor="#6366f1"
+              label="Ce mois"
+              value={formatFromEUR(expenseStats.monthly, currency)}
+            />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
-                    <TrendingDownIcon />
-                  </Avatar>
-                  <Box>
-                    <Typography color="text.secondary" gutterBottom>
-                      En Attente
-                    </Typography>
-                    <Typography variant="h5">
-                      {formatFromEUR(expenseStats.pending, currency)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <KpiMini
+              icon={<TrendingDownIcon sx={{ fontSize: 20 }} />}
+              iconColor="#f59e0b"
+              label="En attente"
+              value={formatFromEUR(expenseStats.pending, currency)}
+            />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Avatar sx={{ bgcolor: 'info.main', mr: 2 }}>
-                    <AssessmentIcon />
-                  </Avatar>
-                  <Box>
-                    <Typography color="text.secondary" gutterBottom>
-                      Payé
-                    </Typography>
-                    <Typography variant="h5">
-                      {formatFromEUR(expenseStats.paid, currency)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <KpiMini
+              icon={<AssessmentIcon sx={{ fontSize: 20 }} />}
+              iconColor="#22c55e"
+              label="Payé"
+              value={formatFromEUR(expenseStats.paid, currency)}
+            />
           </Grid>
         </Grid>
       )}
 
-
-        {/* Filtres */}
-        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+      {/* Filters */}
+      <Card sx={{ ...CARD_BASE, mb: 3, '&:hover': {} }}>
+        <CardContent sx={{ p: '16px !important', display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           <TextField
             placeholder="Rechercher..."
+            size="small"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
+            sx={{ flex: 1, minWidth: 200, ...INPUT_SX }}
             InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
+              startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'text.disabled', fontSize: 20 }} /></InputAdornment>,
             }}
-            sx={{ minWidth: 200 }}
           />
-          <FormControl sx={{ minWidth: 120 }}>
-            <InputLabel>Statut</InputLabel>
-            <Select
-              value={statusFilter}
-              label="Statut"
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <MenuItem value="all">Tous</MenuItem>
-              <MenuItem value="pending">En attente</MenuItem>
-              <MenuItem value="paid">Payé</MenuItem>
-              <MenuItem value="cancelled">Annulé</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl sx={{ minWidth: 120 }}>
-            <InputLabel>Période</InputLabel>
-            <Select
-              value={dateRangeFilter}
-              label="Période"
-              onChange={(e) => setDateRangeFilter(e.target.value)}
-            >
-              <MenuItem value="all">Toutes</MenuItem>
-              <MenuItem value="today">Aujourd'hui</MenuItem>
-              <MenuItem value="week">Cette semaine</MenuItem>
-              <MenuItem value="month">Ce mois</MenuItem>
-              <MenuItem value="year">Cette année</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+            {STATUS_OPTIONS.map(opt => (
+              <Chip
+                key={opt.value}
+                label={opt.label}
+                onClick={() => setStatusFilter(opt.value)}
+                size="small"
+                sx={{
+                  fontWeight: 600, borderRadius: '8px', fontSize: '0.75rem',
+                  ...(statusFilter === opt.value
+                    ? { bgcolor: '#111827', color: '#fff', '&:hover': { bgcolor: '#1f2937' } }
+                    : { bgcolor: 'grey.100', color: 'text.secondary', '&:hover': { bgcolor: 'grey.200' } }),
+                }}
+              />
+            ))}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+            {PERIOD_OPTIONS.map(opt => (
+              <Chip
+                key={opt.value}
+                label={opt.label}
+                onClick={() => setDateRangeFilter(opt.value)}
+                size="small"
+                sx={{
+                  fontWeight: 600, borderRadius: '8px', fontSize: '0.75rem',
+                  ...(dateRangeFilter === opt.value
+                    ? { bgcolor: '#6366f1', color: '#fff', '&:hover': { bgcolor: '#4f46e5' } }
+                    : { bgcolor: 'grey.100', color: 'text.secondary', '&:hover': { bgcolor: 'grey.200' } }),
+                }}
+              />
+            ))}
+          </Box>
+        </CardContent>
+      </Card>
 
-        {/* Liste des dépenses */}
-        <TableContainer component={Paper}>
+      {/* Table */}
+      <Card sx={CARD_BASE}>
+        <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
+              <TableRow sx={TABLE_HEAD_SX}>
                 <TableCell>Titre</TableCell>
-                <TableCell>Montant</TableCell>
+                <TableCell align="right">Montant</TableCell>
                 <TableCell>Statut</TableCell>
                 <TableCell>Date</TableCell>
-                <TableCell>Méthode de paiement</TableCell>
-                <TableCell>Actions</TableCell>
+                <TableCell>Paiement</TableCell>
+                <TableCell>Fournisseur</TableCell>
+                <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredExpenses.map((expense) => (
-                <TableRow key={expense.id}>
+              {filteredExpenses.map(expense => (
+                <TableRow key={expense.id} sx={{ '&:last-child td': { borderBottom: 0 }, '& td': { py: 1.5 } }}>
                   <TableCell>
                     <Box>
-                      <Typography variant="subtitle2">{expense.title}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{expense.title}</Typography>
                       {expense.description && (
-                        <Typography variant="body2" color="text.secondary">
-                          {expense.description}
-                        </Typography>
+                        <Typography variant="caption" color="text.disabled">{expense.description}</Typography>
                       )}
                     </Box>
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="subtitle2" fontWeight="bold">
+                  <TableCell align="right">
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#ef4444' }}>
                       {formatFromEUR(expense.amount, currency)}
                     </Typography>
                   </TableCell>
+                  <TableCell>{getStatusChip(expense.status)}</TableCell>
                   <TableCell>
-                    <Chip
-                      label={getStatusLabel(expense.status)}
-                      color={getStatusColor(expense.status) as any}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
                       {format(expense.expenseDate, 'dd/MM/yyyy', { locale: fr })}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2">
+                    <Typography variant="body2" color="text.secondary">
                       {getPaymentMethodLabel(expense.paymentMethod)}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {expense.supplier || '—'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                       <Tooltip title="Modifier">
-                        <IconButton
-                          size="small"
-                          onClick={() => openEditExpenseDialog(expense)}
-                        >
-                          <EditIcon />
+                        <IconButton size="small" onClick={() => openEditExpenseDialog(expense)}
+                          sx={{ color: '#6366f1', bgcolor: alpha('#6366f1', 0.08), '&:hover': { bgcolor: alpha('#6366f1', 0.15) } }}>
+                          <EditIcon sx={{ fontSize: 18 }} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Supprimer">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteExpense(expense)}
-                        >
-                          <DeleteIcon />
+                        <IconButton size="small" onClick={() => handleDeleteExpense(expense)}
+                          sx={{ color: '#ef4444', bgcolor: alpha('#ef4444', 0.08), '&:hover': { bgcolor: alpha('#ef4444', 0.15) } }}>
+                          <DeleteIcon sx={{ fontSize: 18 }} />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -526,247 +514,44 @@ const Expenses: React.FC = () => {
         </TableContainer>
 
         {filteredExpenses.length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="h6" color="text.secondary">
-              Aucune dépense trouvée
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Créez votre première dépense pour commencer
-            </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6 }}>
+            <ReceiptIcon sx={{ fontSize: 40, color: 'grey.300', mb: 1 }} />
+            <Typography variant="body2" color="text.disabled">Aucune dépense trouvée</Typography>
           </Box>
         )}
+      </Card>
 
-      {/* Dialog Nouvelle Dépense */}
-      <Dialog 
-        open={newExpenseDialogOpen} 
-        onClose={() => {
-          setNewExpenseDialogOpen(false);
-          resetExpenseForm();
-        }} 
-        maxWidth="md" 
-        fullWidth
-      >
-        <DialogTitle>Nouvelle Dépense</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Titre *"
-                value={expenseForm.title}
-                onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={3}
-                value={expenseForm.description}
-                onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Montant *"
-                type="number"
-                value={expenseForm.amount}
-                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">{currency}</InputAdornment>,
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Fournisseur"
-                value={expenseForm.supplier}
-                onChange={(e) => setExpenseForm({ ...expenseForm, supplier: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Numéro de facture"
-                value={expenseForm.invoiceNumber}
-                onChange={(e) => setExpenseForm({ ...expenseForm, invoiceNumber: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Méthode de paiement</InputLabel>
-                <Select
-                  value={expenseForm.paymentMethod}
-                  label="Méthode de paiement"
-                  onChange={(e) => setExpenseForm({ ...expenseForm, paymentMethod: e.target.value as any })}
-                >
-                  <MenuItem value="cash">Espèces</MenuItem>
-                  <MenuItem value="card">Carte bancaire</MenuItem>
-                  <MenuItem value="transfer">Virement</MenuItem>
-                  <MenuItem value="check">Chèque</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Statut</InputLabel>
-                <Select
-                  value={expenseForm.status}
-                  label="Statut"
-                  onChange={(e) => setExpenseForm({ ...expenseForm, status: e.target.value as any })}
-                >
-                  <MenuItem value="pending">En attente</MenuItem>
-                  <MenuItem value="paid">Payé</MenuItem>
-                  <MenuItem value="cancelled">Annulé</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Date de dépense"
-                type="date"
-                value={expenseForm.expenseDate}
-                onChange={(e) => setExpenseForm({ ...expenseForm, expenseDate: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Date d'échéance"
-                type="date"
-                value={expenseForm.dueDate}
-                onChange={(e) => setExpenseForm({ ...expenseForm, dueDate: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => {
-            setNewExpenseDialogOpen(false);
-            resetExpenseForm();
-          }}>Annuler</Button>
-          <Button onClick={handleCreateExpense} variant="contained">
+      {/* ─── Create dialog ─── */}
+      <Dialog open={newExpenseDialogOpen} onClose={() => { setNewExpenseDialogOpen(false); resetExpenseForm(); }}
+        maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Nouvelle dépense</DialogTitle>
+        <DialogContent>{renderFormFields()}</DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => { setNewExpenseDialogOpen(false); resetExpenseForm(); }}
+            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>
+            Annuler
+          </Button>
+          <Button onClick={handleCreateExpense} variant="contained" sx={BTN_DARK}>
             Créer
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialog Modifier Dépense */}
-      <Dialog open={editExpenseDialogOpen} onClose={() => setEditExpenseDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Modifier la Dépense</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Titre *"
-                value={expenseForm.title}
-                onChange={(e) => setExpenseForm({ ...expenseForm, title: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Description"
-                multiline
-                rows={3}
-                value={expenseForm.description}
-                onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Montant *"
-                type="number"
-                value={expenseForm.amount}
-                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">{currency}</InputAdornment>,
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Fournisseur"
-                value={expenseForm.supplier}
-                onChange={(e) => setExpenseForm({ ...expenseForm, supplier: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Numéro de facture"
-                value={expenseForm.invoiceNumber}
-                onChange={(e) => setExpenseForm({ ...expenseForm, invoiceNumber: e.target.value })}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Méthode de paiement</InputLabel>
-                <Select
-                  value={expenseForm.paymentMethod}
-                  label="Méthode de paiement"
-                  onChange={(e) => setExpenseForm({ ...expenseForm, paymentMethod: e.target.value as any })}
-                >
-                  <MenuItem value="cash">Espèces</MenuItem>
-                  <MenuItem value="card">Carte bancaire</MenuItem>
-                  <MenuItem value="transfer">Virement</MenuItem>
-                  <MenuItem value="check">Chèque</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Statut</InputLabel>
-                <Select
-                  value={expenseForm.status}
-                  label="Statut"
-                  onChange={(e) => setExpenseForm({ ...expenseForm, status: e.target.value as any })}
-                >
-                  <MenuItem value="pending">En attente</MenuItem>
-                  <MenuItem value="paid">Payé</MenuItem>
-                  <MenuItem value="cancelled">Annulé</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Date de dépense"
-                type="date"
-                value={expenseForm.expenseDate}
-                onChange={(e) => setExpenseForm({ ...expenseForm, expenseDate: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Date d'échéance"
-                type="date"
-                value={expenseForm.dueDate}
-                onChange={(e) => setExpenseForm({ ...expenseForm, dueDate: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditExpenseDialogOpen(false)}>Annuler</Button>
-          <Button onClick={handleUpdateExpense} variant="contained">
+      {/* ─── Edit dialog ─── */}
+      <Dialog open={editExpenseDialogOpen} onClose={() => setEditExpenseDialogOpen(false)}
+        maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Modifier la dépense</DialogTitle>
+        <DialogContent>{renderFormFields()}</DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEditExpenseDialogOpen(false)}
+            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>
+            Annuler
+          </Button>
+          <Button onClick={handleUpdateExpense} variant="contained" sx={BTN_DARK}>
             Mettre à jour
           </Button>
         </DialogActions>
       </Dialog>
-
     </Box>
   );
 };

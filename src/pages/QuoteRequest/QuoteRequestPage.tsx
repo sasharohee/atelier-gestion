@@ -259,15 +259,15 @@ const QuoteRequestPage: React.FC = () => {
           >
             <BuildIcon sx={{ fontSize: 40 }} />
           </Box>
-          
+
           <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#ff9800' }}>
             🚧 Page en cours de développement
           </Typography>
-          
+
           <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
             La fonctionnalité de demande de devis est temporairement indisponible
           </Typography>
-          
+
           <Alert severity="info" sx={{ mb: 4, textAlign: 'left' }}>
             <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
               Nous travaillons actuellement sur l'amélioration de cette fonctionnalité.
@@ -302,7 +302,7 @@ const QuoteRequestPage: React.FC = () => {
               variant="contained"
               startIcon={<ArrowBackIcon />}
               onClick={handleGoBack}
-              sx={{ 
+              sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',

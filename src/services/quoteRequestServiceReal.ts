@@ -44,54 +44,72 @@ export class QuoteRequestServiceReal {
   // Créer une nouvelle demande de devis
   static async createQuoteRequest(requestData: any): Promise<any> {
     try {
-      // Générer un numéro de demande unique
-      const { data: requestNumber, error: numberError } = await supabase
+      // Générer un numéro de demande unique (avec fallback si la RPC n'existe pas)
+      let requestNumber: string;
+      const { data: rpcNumber, error: numberError } = await supabase
         .rpc('generate_quote_request_number');
 
       if (numberError) {
-        console.error('Erreur génération numéro:', numberError);
-        return null;
+        console.warn('RPC generate_quote_request_number indisponible, génération client:', numberError.message);
+        requestNumber = `QR-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+      } else {
+        requestNumber = rpcNumber;
       }
 
-      const { data, error } = await supabase
+      // Champs de base (colonnes qui existent à coup sûr)
+      const coreFields: Record<string, any> = {
+        request_number: requestNumber,
+        custom_url: requestData.customUrl,
+        technician_id: requestData.technicianId,
+        client_first_name: requestData.clientFirstName,
+        client_last_name: requestData.clientLastName,
+        client_email: requestData.clientEmail,
+        client_phone: requestData.clientPhone,
+        description: requestData.description,
+        device_type: requestData.deviceType,
+        device_brand: requestData.deviceBrand,
+        device_model: requestData.deviceModel,
+        issue_description: requestData.issueDescription,
+        urgency: requestData.urgency,
+        status: requestData.status || 'pending',
+        priority: requestData.priority || 'medium',
+        source: requestData.source || 'website',
+        ip_address: requestData.ipAddress || null,
+        user_agent: requestData.userAgent,
+      };
+
+      // Champs optionnels (colonnes potentiellement absentes)
+      const extraFields: Record<string, any> = {
+        company: requestData.company,
+        vat_number: requestData.vatNumber,
+        siren_number: requestData.sirenNumber,
+        address: requestData.address,
+        address_complement: requestData.addressComplement,
+        city: requestData.city,
+        postal_code: requestData.postalCode,
+        region: requestData.region,
+        device_serial: requestData.deviceId,
+        color: requestData.color,
+        accessories: requestData.accessories,
+        device_remarks: requestData.deviceRemarks,
+      };
+
+      // Tenter l'insert avec tous les champs
+      let { data, error } = await supabase
         .from('quote_requests')
-        .insert({
-          request_number: requestNumber,
-          custom_url: requestData.customUrl,
-          technician_id: requestData.technicianId,
-          client_first_name: requestData.clientFirstName,
-          client_last_name: requestData.clientLastName,
-          client_email: requestData.clientEmail,
-          client_phone: requestData.clientPhone,
-          description: requestData.description,
-          device_type: requestData.deviceType,
-          device_brand: requestData.deviceBrand,
-          device_model: requestData.deviceModel,
-          issue_description: requestData.issueDescription,
-          urgency: requestData.urgency,
-          status: requestData.status || 'pending',
-          priority: requestData.priority || 'medium',
-          source: requestData.source || 'website',
-          ip_address: requestData.ipAddress || null,
-          user_agent: requestData.userAgent,
-          // Nouveaux champs client
-          company: requestData.company,
-          vat_number: requestData.vatNumber,
-          siren_number: requestData.sirenNumber,
-          // Nouveaux champs adresse
-          address: requestData.address,
-          address_complement: requestData.addressComplement,
-          city: requestData.city,
-          postal_code: requestData.postalCode,
-          region: requestData.region,
-          // Nouveaux champs appareil
-          device_id: requestData.deviceId,
-          color: requestData.color,
-          accessories: requestData.accessories,
-          device_remarks: requestData.deviceRemarks,
-        })
+        .insert({ ...coreFields, ...extraFields })
         .select()
         .single();
+
+      // Si erreur (colonne inconnue ou type incompatible), retenter avec les champs de base uniquement
+      if (error && (error.code === 'PGRST204' || error.code === '42703' || error.code === '22P02' || error.message?.includes('column'))) {
+        console.warn('Colonnes optionnelles absentes, retry avec champs de base:', error.message);
+        ({ data, error } = await supabase
+          .from('quote_requests')
+          .insert(coreFields)
+          .select()
+          .single());
+      }
 
       if (error) {
         console.error('Erreur création demande:', error);

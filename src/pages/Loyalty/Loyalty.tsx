@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Paper,
   Grid,
   Card,
   CardContent,
@@ -22,9 +21,6 @@ import {
   IconButton,
   Alert,
   CircularProgress,
-  Tabs,
-  Tab,
-  Divider,
   Avatar,
   LinearProgress,
   Tooltip,
@@ -32,8 +28,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Switch,
-  FormControlLabel
+  alpha,
+  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -48,21 +44,45 @@ import {
   Refresh as RefreshIcon,
   Visibility as ViewIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Search,
+  CardGiftcard,
+  EmojiEvents,
 } from '@mui/icons-material';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import LoyaltyHistory from '../../components/LoyaltyHistory/LoyaltyHistory';
 import ClientForm from '../../components/ClientForm';
-import LoyaltySettings from '../../components/LoyaltyManagement/LoyaltySettings';
-import LoyaltySettingsTest from '../../components/LoyaltyManagement/LoyaltySettingsTest';
 import LoyaltySettingsSimple from '../../components/LoyaltyManagement/LoyaltySettingsSimple';
-import LoyaltySettingsDebug from '../../components/LoyaltyManagement/LoyaltySettingsDebug';
-import LoyaltySettingsTestUpdate from '../../components/LoyaltyManagement/LoyaltySettingsTestUpdate';
-import LoyaltySettingsTestPoints from '../../components/LoyaltyManagement/LoyaltySettingsTestPoints';
 import LoyaltyTiersDisplay from '../../components/LoyaltyManagement/LoyaltyTiersDisplay';
 
-// Types pour les données de fidélité
+/* ─── Design tokens ─── */
+const CARD_BASE = {
+  borderRadius: '16px',
+  border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+  transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+  '&:hover': {
+    boxShadow: '0 8px 32px rgba(0,0,0,0.10)',
+    transform: 'translateY(-2px)',
+  },
+} as const;
+
+const TABLE_HEAD_SX = {
+  '& th': {
+    borderBottom: '2px solid', borderColor: 'divider', fontWeight: 600,
+    fontSize: '0.75rem', color: 'text.secondary', textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+} as const;
+
+const BTN_DARK = {
+  borderRadius: '10px', textTransform: 'none', fontWeight: 600,
+  bgcolor: '#111827', '&:hover': { bgcolor: '#1f2937' },
+  boxShadow: '0 2px 8px rgba(17,24,39,0.25)',
+} as const;
+
+/* ─── Types ─── */
 interface LoyaltyTier {
   id: string;
   name: string;
@@ -97,16 +117,8 @@ interface Referral {
   status: 'pending' | 'confirmed' | 'rejected' | 'completed';
   points_awarded: number;
   created_at: string;
-  referrer_client?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
-  referred_client?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
+  referrer_client?: { first_name: string; last_name: string; email: string };
+  referred_client?: { first_name: string; last_name: string; email: string };
 }
 
 interface LoyaltyStatistics {
@@ -120,7 +132,45 @@ interface LoyaltyStatistics {
   tier_distribution: Record<string, number>;
 }
 
-// Composant principal
+/* ─── KPI Mini Card ─── */
+function KpiMini({ icon, iconColor, label, value }: {
+  icon: React.ReactNode; iconColor: string; label: string; value: string | number;
+}) {
+  return (
+    <Card sx={CARD_BASE}>
+      <CardContent sx={{ p: '16px !important' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{
+            width: 40, height: 40, borderRadius: '12px', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            background: `linear-gradient(135deg, ${iconColor}, ${alpha(iconColor, 0.7)})`,
+            color: '#fff', flexShrink: 0,
+            boxShadow: `0 4px 14px ${alpha(iconColor, 0.3)}`,
+          }}>
+            {icon}
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, fontSize: '1.1rem' }}>
+              {value}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}>
+              {label}
+            </Typography>
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Tab options ─── */
+const TAB_OPTIONS = [
+  { value: 0, label: 'Clients fidèles' },
+  { value: 1, label: 'Parrainages' },
+  { value: 2, label: 'Niveaux de fidélité' },
+];
+
+/* ─── Main component ─── */
 const Loyalty: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -131,403 +181,172 @@ const Loyalty: React.FC = () => {
   const [loyaltyTiers, setLoyaltyTiers] = useState<LoyaltyTier[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // États pour les dialogues
+  const [searchTerm, setSearchTerm] = useState('');
+
   const [referralDialog, setReferralDialog] = useState(false);
   const [pointsDialog, setPointsDialog] = useState(false);
   const [usePointsDialog, setUsePointsDialog] = useState(false);
   const [settingsDialog, setSettingsDialog] = useState(false);
   const [historyDialog, setHistoryDialog] = useState(false);
   const [selectedClient, setSelectedClient] = useState<ClientLoyalty | null>(null);
-  const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null);
-  
-  // États pour les formulaires
-  const [referralForm, setReferralForm] = useState({
-    referrer_client_id: '',
-    referred_client_id: '',
-    notes: ''
-  });
-  const [pointsForm, setPointsForm] = useState({
-    client_id: '',
-    points: 0,
-    description: ''
-  });
-  const [usePointsForm, setUsePointsForm] = useState({
-    client_id: '',
-    points: 0,
-    description: ''
-  });
-  
-  // État pour la création de nouveau client
+
+  const [referralForm, setReferralForm] = useState({ referrer_client_id: '', referred_client_id: '', notes: '' });
+  const [pointsForm, setPointsForm] = useState({ client_id: '', points: 0, description: '' });
+  const [usePointsForm, setUsePointsForm] = useState({ client_id: '', points: 0, description: '' });
   const [showNewClientForm, setShowNewClientForm] = useState(false);
 
-  // Charger les données
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  // Fonction pour rafraîchir les données après modification des paramètres
   const handleSettingsDataChanged = () => {
-    if (isRefreshing) {
-      console.log('🔄 Rafraîchissement déjà en cours, ignoré...');
-      return;
-    }
-    
-    console.log('🔄 Rafraîchissement des données après modification des paramètres...');
+    if (isRefreshing) return;
     setIsRefreshing(true);
     loadData();
-    
-    // Incrémenter le trigger pour forcer le rechargement du composant avec un délai
     setTimeout(() => {
-      console.log('🔄 Rafraîchissement forcé des niveaux après paramètres...');
       setRefreshTrigger(prev => prev + 1);
       setIsRefreshing(false);
     }, 2000);
   };
 
-
   const loadData = async () => {
     try {
       setLoading(true);
-      
-      // Charger les statistiques
-      const { data: statsData } = await supabase.rpc('get_loyalty_statistics');
-      if (statsData?.success) {
-        setStatistics(statsData.data);
-      }
-      
-      // Récupérer l'utilisateur actuel
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.error('❌ Aucun utilisateur connecté');
-        toast.error('Erreur d\'authentification');
-        return;
-      }
 
-      // Charger SEULEMENT les clients de l'utilisateur connecté pour les formulaires
+      const { data: statsData } = await supabase.rpc('get_loyalty_statistics');
+      if (statsData?.success) setStatistics(statsData.data);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Erreur d'authentification"); return; }
+
       const { data: allClientsData } = await supabase
         .from('clients')
         .select('id, first_name, last_name, email')
-        .eq('user_id', user.id)  // Filtrage par user_id pour l'isolation
+        .eq('user_id', user.id)
         .order('first_name');
       setAllClients(allClientsData || []);
 
-      // Charger SEULEMENT les clients de l'utilisateur connecté avec leurs points
-      console.log('🔍 Chargement des clients avec points...');
-      console.log('🔍 User ID:', user.id);
-      
-      // Utiliser le filtre user_id pour l'isolation
-      let { data: clientsData, error: clientsError } = await supabase
+      const { data: clientsData } = await supabase
         .from('clients')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          email,
-          phone,
-          loyalty_points,
-          current_tier_id,
-          user_id,
-          created_at,
-          updated_at
-        `)
-        .eq('user_id', user.id)  // Filtrage par user_id pour l'isolation
+        .select('id, first_name, last_name, email, phone, loyalty_points, current_tier_id, user_id, created_at, updated_at')
+        .eq('user_id', user.id)
         .order('loyalty_points', { ascending: false });
-      
-      // Diagnostic si aucun client trouvé
-      if (!clientsData || clientsData.length === 0) {
-        console.log('⚠️ Aucun client trouvé pour user_id:', user.id);
-        console.log('🔍 Vérification de l\'isolation des clients...');
-        
-        // Vérifier combien de clients existent au total (pour diagnostic)
-        const { data: totalClientsData } = await supabase
-          .from('clients')
-          .select('id, user_id', { count: 'exact', head: true });
-        
-        console.log('📊 Total clients dans la base:', totalClientsData?.length || 0);
-      }
-      
-      if (clientsError) {
-        console.error('❌ Erreur lors du chargement des clients:', clientsError);
-      } else {
-        console.log('✅ Clients chargés:', clientsData?.length || 0);
-        console.log('📊 Détail des clients:', clientsData);
-        
-        // Diagnostic supplémentaire
-        if (clientsData && clientsData.length > 0) {
-          console.log('🔍 Premier client:', clientsData[0]);
-          console.log('🔍 Workshop ID du premier client:', (clientsData[0] as any).workshop_id);
-        } else {
-          console.log('⚠️ Aucun client trouvé pour workshop_id:', user.id);
-        }
-      }
-      
-      // Charger les niveaux de fidélité (sans filtre workshop_id pour l'instant)
-      console.log('🔍 Chargement des niveaux de fidélité...');
-      const { data: tiersData, error: tiersError } = await supabase
+
+      const { data: tiersData } = await supabase
         .from('loyalty_tiers_advanced')
         .select('*')
         .order('points_required', { ascending: true });
 
-      if (tiersError) {
-        console.error('❌ Erreur lors du chargement des niveaux:', tiersError);
-      } else {
-        console.log('✅ Niveaux chargés:', tiersData?.length || 0);
-        
-        // Supprimer les doublons en gardant seulement le premier de chaque nom
-        const uniqueTiers = tiersData?.reduce((acc: any[], tier: any) => {
-          if (!acc.find((t: any) => t.name === tier.name)) {
-            acc.push(tier);
-          }
-          return acc;
-        }, [] as LoyaltyTier[]) || [];
-        
-        console.log('✅ Niveaux uniques après déduplication:', uniqueTiers.length);
-        setLoyaltyTiers(uniqueTiers);
-      }
+      const uniqueTiers = tiersData?.reduce((acc: any[], tier: any) => {
+        if (!acc.find((t: any) => t.name === tier.name)) acc.push(tier);
+        return acc;
+      }, [] as LoyaltyTier[]) || [];
+      setLoyaltyTiers(uniqueTiers);
 
-      // Charger l'historique des points pour cet utilisateur uniquement
-      console.log('🔍 Chargement de l\'historique des points...');
-      const { data: historyData, error: historyError } = await supabase
+      const { data: historyData } = await supabase
         .from('loyalty_points_history')
         .select('client_id, points_change')
-        .lt('points_change', 0); // Seulement les utilisations (points négatifs)
+        .lt('points_change', 0);
 
-      if (historyError) {
-        console.error('❌ Erreur lors du chargement de l\'historique:', historyError);
-      } else {
-        console.log('✅ Historique chargé:', historyData?.length || 0);
-      }
-
-      // Calculer les points utilisés par client
       const usedPointsByClient: Record<string, number> = {};
       (historyData || []).forEach(record => {
-        const clientId = record.client_id;
-        usedPointsByClient[clientId] = (usedPointsByClient[clientId] || 0) + Math.abs(record.points_change);
+        usedPointsByClient[record.client_id] = (usedPointsByClient[record.client_id] || 0) + Math.abs(record.points_change);
       });
 
-      // Associer les niveaux aux clients et calculer les points utilisés
       const clientsWithTiers = (clientsData || []).map(client => {
-        // Essayer plusieurs méthodes de correspondance
-        let tier = null;
-        
-        // Méthode 1: Correspondance exacte
-        tier = (tiersData || []).find(t => t.id === client.current_tier_id);
-        
-        // Méthode 2: Correspondance avec conversion string
+        let tier = (tiersData || []).find(t => t.id === client.current_tier_id);
         if (!tier && client.current_tier_id) {
           tier = (tiersData || []).find(t => String(t.id) === String(client.current_tier_id));
         }
-        
-        // Méthode 3: Correspondance par nom si current_tier_id est null
-        if (!tier && !client.current_tier_id) {
-          // Assigner le niveau selon les points
-          if (client.loyalty_points >= 2000) {
-            tier = (tiersData || []).find(t => t.name === 'Diamant');
-          } else if (client.loyalty_points >= 1000) {
-            tier = (tiersData || []).find(t => t.name === 'Platine');
-          } else if (client.loyalty_points >= 500) {
-            tier = (tiersData || []).find(t => t.name === 'Or');
-          } else if (client.loyalty_points >= 100) {
-            tier = (tiersData || []).find(t => t.name === 'Argent');
-          } else {
-            tier = (tiersData || []).find(t => t.name === 'Bronze');
-          }
+        if (!tier) {
+          const pts = client.loyalty_points;
+          if (pts >= 2000) tier = (tiersData || []).find(t => t.name === 'Diamant');
+          else if (pts >= 1000) tier = (tiersData || []).find(t => t.name === 'Platine');
+          else if (pts >= 500) tier = (tiersData || []).find(t => t.name === 'Or');
+          else if (pts >= 100) tier = (tiersData || []).find(t => t.name === 'Argent');
+          else tier = (tiersData || []).find(t => t.name === 'Bronze');
         }
-        
-        const usedPoints = usedPointsByClient[client.id] || 0;
-        
-        // Log d'erreur si aucun tier trouvé
-        if (!tier && client.current_tier_id) {
-          console.log(`⚠️ Client ${client.first_name} a un current_tier_id (${client.current_tier_id}) mais aucun tier trouvé`);
-        }
-        
-        // Si aucun tier trouvé, créer un tier virtuel selon les points
         let finalTier = tier;
         if (!finalTier) {
-          // Créer un tier virtuel selon les points
-          if (client.loyalty_points >= 2000) {
-            finalTier = { name: 'Diamant', color: '#B9F2FF', discount_percentage: 20 };
-          } else if (client.loyalty_points >= 1000) {
-            finalTier = { name: 'Platine', color: '#E5E4E2', discount_percentage: 15 };
-          } else if (client.loyalty_points >= 500) {
-            finalTier = { name: 'Or', color: '#FFD700', discount_percentage: 10 };
-          } else if (client.loyalty_points >= 100) {
-            finalTier = { name: 'Argent', color: '#C0C0C0', discount_percentage: 5 };
-          } else {
-            finalTier = { name: 'Bronze', color: '#CD7F32', discount_percentage: 0 };
-          }
+          const pts = client.loyalty_points;
+          if (pts >= 2000) finalTier = { name: 'Diamant', color: '#B9F2FF', discount_percentage: 20 };
+          else if (pts >= 1000) finalTier = { name: 'Platine', color: '#E5E4E2', discount_percentage: 15 };
+          else if (pts >= 500) finalTier = { name: 'Or', color: '#FFD700', discount_percentage: 10 };
+          else if (pts >= 100) finalTier = { name: 'Argent', color: '#C0C0C0', discount_percentage: 5 };
+          else finalTier = { name: 'Bronze', color: '#CD7F32', discount_percentage: 0 };
         }
-        
-        // Log final (après la déclaration de finalTier)
-        console.log(`🔍 Client ${client.first_name} ${client.last_name}:`, {
-          points: client.loyalty_points,
-          current_tier_id: client.current_tier_id,
-          tier_trouve: tier ? tier.name : 'Aucun',
-          tier_id_trouve: tier ? tier.id : null,
-          tier_object: tier,
-          final_tier: finalTier ? finalTier.name : 'Aucun'
-        });
-        
-        return {
-          ...client,
-          tier: finalTier,
-          used_points: usedPoints
-        };
+        return { ...client, tier: finalTier, used_points: usedPointsByClient[client.id] || 0 };
       });
-
       setClients(clientsWithTiers);
-      
-      // Charger les parrainages pour cet utilisateur uniquement (avec gestion d'erreur)
-      let referralsData = [];
+
+      let referralsData: any[] = [];
       try {
         const { data: referralsResult, error: referralsError } = await supabase
           .from('referrals')
-          .select(`
-            *,
-            referrer_client:clients!referrals_referrer_client_id_fkey(first_name, last_name, email),
-            referred_client:clients!referrals_referred_client_id_fkey(first_name, last_name, email)
-          `)
+          .select(`*, referrer_client:clients!referrals_referrer_client_id_fkey(first_name, last_name, email), referred_client:clients!referrals_referred_client_id_fkey(first_name, last_name, email)`)
           .order('created_at', { ascending: false });
-        
-        if (referralsError) {
-          console.warn('⚠️ Erreur lors du chargement des parrainages:', referralsError);
-          referralsData = [];
-        } else {
-          referralsData = referralsResult || [];
-        }
-      } catch (error) {
-        console.warn('⚠️ Erreur lors du chargement des parrainages:', error);
-        referralsData = [];
-      }
-      setReferrals(referralsData || []);
-      
-          } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-        toast.error('Erreur lors du chargement des données');
-      } finally {
-        setLoading(false);
-      }
-      
-      // Debug: afficher le nombre de clients chargés
-      console.log('Clients chargés:', allClients.length);
-      console.log('Clients avec points:', clients.length);
+        if (!referralsError) referralsData = referralsResult || [];
+      } catch { /* ignore */ }
+      setReferrals(referralsData);
+    } catch {
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Créer un parrainage
+  /* ─── Actions ─── */
   const createReferral = async () => {
     try {
       const { data, error } = await supabase.rpc('create_referral', {
         p_referrer_client_id: referralForm.referrer_client_id,
         p_referred_client_id: referralForm.referred_client_id,
-        p_notes: referralForm.notes
+        p_notes: referralForm.notes,
       });
-      
       if (error) throw error;
-      
       if (data?.success) {
         toast.success('Parrainage créé avec succès');
         setReferralDialog(false);
         setReferralForm({ referrer_client_id: '', referred_client_id: '', notes: '' });
         loadData();
-      } else {
-        toast.error(data?.error || 'Erreur lors de la création du parrainage');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      toast.error('Erreur lors de la création du parrainage');
-    }
+      } else toast.error(data?.error || 'Erreur lors de la création du parrainage');
+    } catch { toast.error('Erreur lors de la création du parrainage'); }
   };
 
-  // Confirmer un parrainage
-  const confirmReferral = async (referralId: string) => {
+  const confirmReferral = async (id: string) => {
     try {
-      const { data, error } = await supabase.rpc('confirm_referral', {
-        p_referral_id: referralId
-      });
-      
+      const { data, error } = await supabase.rpc('confirm_referral', { p_referral_id: id });
       if (error) throw error;
-      
-      if (data?.success) {
-        toast.success('Parrainage confirmé avec succès');
-        loadData();
-      } else {
-        toast.error(data?.error || 'Erreur lors de la confirmation');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      toast.error('Erreur lors de la confirmation');
-    }
+      if (data?.success) { toast.success('Parrainage confirmé'); loadData(); }
+      else toast.error(data?.error || 'Erreur lors de la confirmation');
+    } catch { toast.error('Erreur lors de la confirmation'); }
   };
 
-  // Rejeter un parrainage
-  const rejectReferral = async (referralId: string) => {
+  const rejectReferral = async (id: string) => {
     try {
-      const { data, error } = await supabase.rpc('reject_referral', {
-        p_referral_id: referralId
-      });
-      
+      const { data, error } = await supabase.rpc('reject_referral', { p_referral_id: id });
       if (error) throw error;
-      
-      if (data?.success) {
-        toast.success('Parrainage rejeté');
-        loadData();
-      } else {
-        toast.error(data?.error || 'Erreur lors du rejet');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      toast.error('Erreur lors du rejet');
-    }
+      if (data?.success) { toast.success('Parrainage rejeté'); loadData(); }
+      else toast.error(data?.error || 'Erreur lors du rejet');
+    } catch { toast.error('Erreur lors du rejet'); }
   };
 
-  // Supprimer un parrainage
-  const handleDeleteReferral = async (referralId: string) => {
+  const handleDeleteReferral = async (id: string) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce parrainage ? Cette action est irréversible.')) return;
     try {
-      // Confirmation de suppression
-      const confirmed = window.confirm(
-        'Êtes-vous sûr de vouloir supprimer ce parrainage ? Cette action est irréversible.'
-      );
-      
-      if (!confirmed) return;
-      
-      // Supprimer le parrainage
-      const { error } = await supabase
-        .from('referrals')
-        .delete()
-        .eq('id', referralId);
-      
-      if (error) {
-        console.error('Erreur lors de la suppression du parrainage:', error);
-        toast.error('Erreur lors de la suppression du parrainage');
-        return;
-      }
-      
-      toast.success('Parrainage supprimé avec succès');
-      loadData(); // Recharger les données
-    } catch (error) {
-      console.error('Erreur lors de la suppression du parrainage:', error);
-      toast.error('Erreur lors de la suppression du parrainage');
-    }
+      const { error } = await supabase.from('referrals').delete().eq('id', id);
+      if (error) { toast.error('Erreur lors de la suppression'); return; }
+      toast.success('Parrainage supprimé'); loadData();
+    } catch { toast.error('Erreur lors de la suppression'); }
   };
 
-  // Créer un nouveau client
   const handleCreateNewClient = async (clientData: any) => {
     try {
-      // Convertir les données du formulaire vers le format de la base de données
       const clientToInsert = {
-        first_name: clientData.firstName,
-        last_name: clientData.lastName,
-        email: clientData.email,
-        phone: clientData.mobile,
-        address: clientData.address,
-        city: clientData.city,
-        postal_code: clientData.postalCode,
-        region: clientData.region,
-        company_name: clientData.companyName,
-        vat_number: clientData.vatNumber,
-        siren_number: clientData.sirenNumber,
-        country_code: clientData.countryCode,
+        first_name: clientData.firstName, last_name: clientData.lastName,
+        email: clientData.email, phone: clientData.mobile,
+        address: clientData.address, city: clientData.city,
+        postal_code: clientData.postalCode, region: clientData.region,
+        company_name: clientData.companyName, vat_number: clientData.vatNumber,
+        siren_number: clientData.sirenNumber, country_code: clientData.countryCode,
         address_complement: clientData.addressComplement,
         billing_address: clientData.billingAddress,
         billing_address_complement: clientData.billingAddressComplement,
@@ -542,237 +361,140 @@ const Loyalty: React.FC = () => {
         email_notification: clientData.emailNotification,
         sms_marketing: clientData.smsMarketing,
         email_marketing: clientData.emailMarketing,
-        category: clientData.category,
-        title: clientData.title
+        category: clientData.category, title: clientData.title,
       };
-      
-      const { data, error } = await supabase
-        .from('clients')
-        .insert([clientToInsert])
-        .select()
-        .single();
-      
+      const { data, error } = await supabase.from('clients').insert([clientToInsert]).select().single();
       if (error) throw error;
-      
       if (data) {
         toast.success('Client créé avec succès');
         setShowNewClientForm(false);
-        
-        // Mettre à jour la liste des clients et sélectionner le nouveau client
         await loadData();
         setReferralForm({ ...referralForm, referred_client_id: data.id });
       }
     } catch (error: any) {
-      console.error('Erreur lors de la création du client:', error);
-      // Gérer l'erreur d'email en doublon
-      let errorMessage = 'Erreur lors de la création du client';
+      let msg = 'Erreur lors de la création du client';
       if (error?.message) {
-        const errorText = error.message.toLowerCase();
-        if (errorText.includes('duplicate key') && errorText.includes('email')) {
-          errorMessage = 'Un client avec cet email existe déjà. Veuillez utiliser un autre email.';
-        } else if (errorText.includes('unique constraint')) {
-          errorMessage = 'Cette information existe déjà dans le système.';
-        } else {
-          errorMessage = error.message;
-        }
+        const t = error.message.toLowerCase();
+        if (t.includes('duplicate key') && t.includes('email')) msg = 'Un client avec cet email existe déjà.';
+        else if (t.includes('unique constraint')) msg = 'Cette information existe déjà dans le système.';
+        else msg = error.message;
       }
-      toast.error(errorMessage);
+      toast.error(msg);
     }
   };
 
-  // Ajouter des points manuellement
   const addPoints = async () => {
     try {
-      console.log('🔍 Appel add_loyalty_points avec:', {
-        p_client_id: pointsForm.client_id,
-        p_points: pointsForm.points,
-        p_description: pointsForm.description
-      });
-
       const { data, error } = await supabase.rpc('add_loyalty_points', {
         p_client_id: pointsForm.client_id,
         p_points: pointsForm.points,
-        p_description: pointsForm.description
+        p_description: pointsForm.description,
       });
-      
-      console.log('📊 Réponse Supabase:', { data, error });
-      
-      if (error) {
-        console.error('❌ Erreur Supabase:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
       if (data?.success) {
-        console.log('✅ Points ajoutés avec succès:', data);
-        
-        // Mettre à jour les niveaux après l'ajout de points (temporairement sans isolation)
-        try {
-          const { data: tierData, error: tierError } = await supabase.rpc('update_client_tiers');
-          if (tierError) {
-            console.warn('⚠️ Erreur lors de la mise à jour des niveaux:', tierError);
-          } else {
-            console.log('✅ Niveaux mis à jour:', tierData);
-          }
-        } catch (tierError) {
-          console.warn('⚠️ Exception lors de la mise à jour des niveaux:', tierError);
-        }
-        
+        try { await supabase.rpc('update_client_tiers'); } catch { /* ignore */ }
         toast.success('Points ajoutés avec succès');
         setPointsDialog(false);
         setPointsForm({ client_id: '', points: 0, description: '' });
         loadData();
-      } else {
-        console.error('❌ Erreur dans la réponse:', data?.error);
-        toast.error(data?.error || 'Erreur lors de l\'ajout des points');
-      }
-    } catch (error) {
-      console.error('💥 Exception dans addPoints:', error);
-      toast.error('Erreur lors de l\'ajout des points');
-    }
+      } else toast.error(data?.error || "Erreur lors de l'ajout des points");
+    } catch { toast.error("Erreur lors de l'ajout des points"); }
   };
 
-  // Utiliser des points
   const usePoints = async () => {
     try {
-      console.log('🔍 Appel use_loyalty_points avec:', {
-        p_client_id: usePointsForm.client_id,
-        p_points: usePointsForm.points,
-        p_description: usePointsForm.description
-      });
-
       const { data, error } = await supabase.rpc('use_loyalty_points', {
         p_client_id: usePointsForm.client_id,
         p_points: usePointsForm.points,
-        p_description: usePointsForm.description
+        p_description: usePointsForm.description,
       });
-      
-      console.log('📊 Réponse Supabase:', { data, error });
-      
-      if (error) {
-        console.error('❌ Erreur Supabase:', error);
-        throw error;
-      }
-      
+      if (error) throw error;
       if (data?.success) {
-        console.log('✅ Points utilisés avec succès:', data);
         toast.success('Points utilisés avec succès');
         setUsePointsDialog(false);
         setUsePointsForm({ client_id: '', points: 0, description: '' });
         loadData();
-      } else {
-        console.error('❌ Erreur dans la réponse:', data?.error);
-        toast.error(data?.error || 'Erreur lors de l\'utilisation des points');
-      }
-    } catch (error) {
-      console.error('💥 Exception dans usePoints:', error);
-      toast.error('Erreur lors de l\'utilisation des points');
-    }
+      } else toast.error(data?.error || "Erreur lors de l'utilisation des points");
+    } catch { toast.error("Erreur lors de l'utilisation des points"); }
   };
 
-  // Supprimer un client
   const handleDeleteClient = async (clientId: string) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce client ? Cette action supprimera également tous ses points.')) return;
     try {
-      // Confirmation de suppression
-      const confirmed = window.confirm(
-        'Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible et supprimera également tous ses points de fidélité.'
-      );
-      
-      if (!confirmed) return;
-      
-      // Supprimer le client
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', clientId);
-      
-      if (error) {
-        console.error('Erreur lors de la suppression du client:', error);
-        toast.error('Erreur lors de la suppression du client');
-        return;
-      }
-      
-      toast.success('Client supprimé avec succès');
-      loadData(); // Recharger les données
-    } catch (error) {
-      console.error('Erreur lors de la suppression du client:', error);
-      toast.error('Erreur lors de la suppression du client');
-    }
+      const { error } = await supabase.from('clients').delete().eq('id', clientId);
+      if (error) { toast.error('Erreur lors de la suppression'); return; }
+      toast.success('Client supprimé'); loadData();
+    } catch { toast.error('Erreur lors de la suppression'); }
   };
 
-  // Supprimer les points de fidélité d'un client
   const handleDeleteLoyaltyPoints = async (clientId: string) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer tous les points de ce client ?')) return;
     try {
-      // Confirmation de suppression
-      const confirmed = window.confirm(
-        'Êtes-vous sûr de vouloir supprimer tous les points de fidélité de ce client ? Cette action est irréversible.'
-      );
-      
-      if (!confirmed) return;
-      
-      // Supprimer les points de fidélité du client
-      const { error } = await supabase
-        .from('client_loyalty_points')
-        .delete()
-        .eq('client_id', clientId);
-      
-      if (error) {
-        console.error('Erreur lors de la suppression des points de fidélité:', error);
-        toast.error('Erreur lors de la suppression des points de fidélité');
-        return;
-      }
-      
-      toast.success('Points de fidélité supprimés avec succès');
-      loadData(); // Recharger les données
-    } catch (error) {
-      console.error('Erreur lors de la suppression des points de fidélité:', error);
-      toast.error('Erreur lors de la suppression des points de fidélité');
-    }
+      const { error } = await supabase.from('client_loyalty_points').delete().eq('client_id', clientId);
+      if (error) { toast.error('Erreur lors de la suppression des points'); return; }
+      toast.success('Points supprimés'); loadData();
+    } catch { toast.error('Erreur lors de la suppression des points'); }
   };
 
-  // Obtenir le statut coloré
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'warning';
-      case 'confirmed': return 'success';
-      case 'rejected': return 'error';
-      case 'completed': return 'info';
-      default: return 'default';
-    }
+  const getStatusChip = (status: string) => {
+    const map: Record<string, { label: string; color: string }> = {
+      pending: { label: 'En attente', color: '#f59e0b' },
+      confirmed: { label: 'Confirmé', color: '#22c55e' },
+      rejected: { label: 'Rejeté', color: '#ef4444' },
+      completed: { label: 'Terminé', color: '#06b6d4' },
+    };
+    const c = map[status] || { label: status, color: '#6b7280' };
+    return (
+      <Chip label={c.label} size="small" sx={{
+        fontWeight: 600, borderRadius: '8px', fontSize: '0.72rem',
+        bgcolor: alpha(c.color, 0.1), color: c.color,
+      }} />
+    );
   };
 
-  // Obtenir le texte du statut
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'En attente';
-      case 'confirmed': return 'Confirmé';
-      case 'rejected': return 'Rejeté';
-      case 'completed': return 'Terminé';
-      default: return status;
-    }
+  const getTierColor = (name: string) => {
+    const map: Record<string, string> = {
+      Bronze: '#CD7F32', Argent: '#9CA3AF', Or: '#F59E0B',
+      Platine: '#8B5CF6', Diamant: '#06B6D4',
+    };
+    return map[name] || '#6b7280';
   };
 
+  /* ─── Filter clients by search ─── */
+  const filteredClients = searchTerm
+    ? clients.filter(c =>
+        `${c.first_name} ${c.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.email.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : clients;
+
+  /* ─── Loading ─── */
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <CircularProgress />
+        <CircularProgress sx={{ color: '#111827' }} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {/* En-tête */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <StarIcon color="primary" />
-          Gestion des Points de Fidélité
-        </Typography>
+    <Box>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            Programme de fidélité
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            Gérez les points de fidélité, parrainages et niveaux
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={loadData}
-            sx={{ mr: 1 }}
+            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'grey.300', color: 'text.primary' }}
           >
             Actualiser
           </Button>
@@ -780,638 +502,559 @@ const Loyalty: React.FC = () => {
             variant="contained"
             startIcon={<SettingsIcon />}
             onClick={() => setSettingsDialog(true)}
+            sx={BTN_DARK}
           >
             Paramètres
           </Button>
         </Box>
       </Box>
 
-      {/* Statistiques */}
+      {/* KPI Cards */}
       {statistics && (
-        <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <PeopleIcon color="primary" sx={{ mr: 1 }} />
-                  <Box>
-                    <Typography variant="h6">{statistics.total_clients_with_points}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Clients avec points
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <KpiMini
+              icon={<PeopleIcon sx={{ fontSize: 20 }} />}
+              iconColor="#6366f1"
+              label="Clients avec points"
+              value={statistics.total_clients_with_points}
+            />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <TrendingUpIcon color="success" sx={{ mr: 1 }} />
-                  <Box>
-                    <Typography variant="h6">{statistics.total_points_distributed}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Points distribués
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <KpiMini
+              icon={<TrendingUpIcon sx={{ fontSize: 20 }} />}
+              iconColor="#22c55e"
+              label="Points distribués"
+              value={statistics.total_points_distributed}
+            />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <HistoryIcon color="info" sx={{ mr: 1 }} />
-                  <Box>
-                    <Typography variant="h6">{statistics.total_referrals_pending}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Parrainages en attente
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <KpiMini
+              icon={<CardGiftcard sx={{ fontSize: 20 }} />}
+              iconColor="#f59e0b"
+              label="Parrainages en attente"
+              value={statistics.total_referrals_pending}
+            />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <StarIcon color="warning" sx={{ mr: 1 }} />
-                  <Box>
-                    <Typography variant="h6">{statistics.total_discounts_applied}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Réductions appliquées
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <KpiMini
+              icon={<EmojiEvents sx={{ fontSize: 20 }} />}
+              iconColor="#8b5cf6"
+              label="Réductions appliquées"
+              value={statistics.total_discounts_applied}
+            />
           </Grid>
         </Grid>
       )}
 
-      {/* Onglets */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={activeTab} onChange={(_, newValue) => {
-          setActiveTab(newValue);
-          // Recharger les données quand on change d'onglet pour s'assurer que les niveaux sont à jour
-          if (newValue === 0) {
-            loadData();
-          }
-        }}>
-          <Tab label="Clients Fidèles" />
-          <Tab label="Parrainages" />
-          <Tab label="Niveaux de Fidélité" />
-        </Tabs>
-      </Paper>
+      {/* Tab chips */}
+      <Box sx={{ display: 'flex', gap: 0.75, mb: 3, flexWrap: 'wrap' }}>
+        {TAB_OPTIONS.map(opt => (
+          <Chip
+            key={opt.value}
+            label={opt.label}
+            onClick={() => {
+              setActiveTab(opt.value);
+              if (opt.value === 0) loadData();
+            }}
+            sx={{
+              fontWeight: 600, borderRadius: '10px', fontSize: '0.8rem', px: 1, py: 2.2,
+              ...(activeTab === opt.value
+                ? { bgcolor: '#111827', color: '#fff', '&:hover': { bgcolor: '#1f2937' } }
+                : { bgcolor: 'grey.100', color: 'text.secondary', '&:hover': { bgcolor: 'grey.200' } }),
+            }}
+          />
+        ))}
+      </Box>
 
-      {/* Contenu des onglets */}
+      {/* ───────── TAB 0 : Clients ───────── */}
       {activeTab === 0 && (
         <Box>
-                     <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <Typography variant="h6">Clients avec Points de Fidélité</Typography>
-             <Box sx={{ display: 'flex', gap: 1 }}>
-               <Button
-                 variant="contained"
-                 startIcon={<AddIcon />}
-                 onClick={() => setPointsDialog(true)}
-                 disabled={allClients.length === 0}
-               >
-                 Ajouter des Points
-               </Button>
-               <Button
-                 variant="outlined"
-                 color="warning"
-                 startIcon={<RemoveIcon />}
-                 onClick={() => setUsePointsDialog(true)}
-                 disabled={allClients.length === 0}
-               >
-                 Utiliser des Points
-               </Button>
-               <Button
-                 variant="outlined"
-                 startIcon={<RefreshIcon />}
-                 onClick={loadData}
-               >
-                 Actualiser
-               </Button>
-             </Box>
-           </Box>
-           
-           {allClients.length === 0 && (
-             <Alert severity="info" sx={{ mb: 2 }}>
-               Aucun client trouvé. Veuillez d'abord créer des clients dans la section Transaction → Clients.
-             </Alert>
-           )}
-          
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Client</TableCell>
-                  <TableCell>Points Totaux</TableCell>
-                  <TableCell>Points Utilisés</TableCell>
-                  <TableCell>Points Disponibles</TableCell>
-                  <TableCell>Niveau Actuel</TableCell>
-                  <TableCell>Progression</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {clients.map((client) => {
-                  const availablePoints = (client.loyalty_points || 0) - (client.used_points || 0);
-                  
-                  // Trouver le niveau actuel et le niveau suivant
-                  const currentTier = client.tier;
-                  const nextTier = loyaltyTiers.find(t => t.points_required > availablePoints);
-                  
-                  // Calculer la progression
-                  let progress = 0;
-                  if (nextTier && currentTier) {
-                    // Si on a un niveau actuel et un niveau suivant
-                    const currentTierPoints = currentTier.points_required || 0;
-                    const nextTierPoints = nextTier.points_required;
-                    const pointsInCurrentTier = availablePoints - currentTierPoints;
-                    const pointsNeededForNextTier = nextTierPoints - currentTierPoints;
-                    
-                    if (pointsNeededForNextTier > 0) {
-                      progress = Math.max(0, Math.min(100, (pointsInCurrentTier / pointsNeededForNextTier) * 100));
+          {/* Search + actions bar */}
+          <Card sx={{ ...CARD_BASE, mb: 3, '&:hover': {} }}>
+            <CardContent sx={{ p: '16px !important', display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+              <TextField
+                placeholder="Rechercher un client..."
+                size="small"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                sx={{ flex: 1, minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start"><Search sx={{ color: 'text.disabled', fontSize: 20 }} /></InputAdornment>,
+                }}
+              />
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => setPointsDialog(true)}
+                  disabled={allClients.length === 0}
+                  sx={{ ...BTN_DARK, fontSize: '0.8rem' }}
+                >
+                  Ajouter des points
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<RemoveIcon />}
+                  onClick={() => setUsePointsDialog(true)}
+                  disabled={allClients.length === 0}
+                  sx={{
+                    borderRadius: '10px', textTransform: 'none', fontWeight: 600, fontSize: '0.8rem',
+                    borderColor: '#f59e0b', color: '#f59e0b',
+                    '&:hover': { borderColor: '#d97706', bgcolor: alpha('#f59e0b', 0.04) },
+                  }}
+                >
+                  Utiliser des points
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+
+          {allClients.length === 0 && (
+            <Alert severity="info" sx={{ mb: 2, borderRadius: '12px' }}>
+              Aucun client trouvé. Créez des clients dans la section Transactions.
+            </Alert>
+          )}
+
+          {/* Clients table */}
+          <Card sx={CARD_BASE}>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={TABLE_HEAD_SX}>
+                    <TableCell>Client</TableCell>
+                    <TableCell align="right">Points totaux</TableCell>
+                    <TableCell align="right">Utilisés</TableCell>
+                    <TableCell align="right">Disponibles</TableCell>
+                    <TableCell>Niveau</TableCell>
+                    <TableCell>Progression</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredClients.map(client => {
+                    const availablePoints = (client.loyalty_points || 0) - (client.used_points || 0);
+                    const currentTier = client.tier;
+                    const nextTier = loyaltyTiers.find(t => t.points_required > availablePoints);
+
+                    let progress = 0;
+                    if (nextTier && currentTier) {
+                      const curPts = (currentTier as any).points_required || 0;
+                      const needed = nextTier.points_required - curPts;
+                      progress = needed > 0 ? Math.max(0, Math.min(100, ((availablePoints - curPts) / needed) * 100)) : 100;
+                    } else if (nextTier && !currentTier) {
+                      progress = Math.max(0, Math.min(100, (availablePoints / nextTier.points_required) * 100));
                     } else {
                       progress = 100;
                     }
-                  } else if (nextTier && !currentTier) {
-                    // Si on n'a pas de niveau actuel mais un niveau suivant
-                    progress = Math.max(0, Math.min(100, (availablePoints / nextTier.points_required) * 100));
-                  } else {
-                    // Si on est au niveau maximum ou plus
-                    progress = 100;
-                  }
-                  
-                  return (
-                    <TableRow key={client.id}>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Avatar sx={{ bgcolor: client.tier?.color || 'grey.500' }}>
-                            {client.first_name?.[0]}{client.last_name?.[0]}
-                          </Avatar>
-                          <Box>
-                            <Typography variant="body2">
-                              {client.first_name} {client.last_name}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {client.email}
-                            </Typography>
+
+                    const tierName = currentTier?.name || 'Sans niveau';
+                    const tierColor = getTierColor(tierName);
+
+                    return (
+                      <TableRow key={client.id} sx={{ '&:last-child td': { borderBottom: 0 }, '& td': { py: 1.5 } }}>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <Avatar sx={{
+                              width: 36, height: 36, fontSize: '0.8rem', fontWeight: 700,
+                              background: `linear-gradient(135deg, ${tierColor}, ${alpha(tierColor, 0.6)})`,
+                              color: '#fff',
+                            }}>
+                              {client.first_name?.[0]}{client.last_name?.[0]}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {client.first_name} {client.last_name}
+                              </Typography>
+                              <Typography variant="caption" color="text.disabled">{client.email}</Typography>
+                            </Box>
                           </Box>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{client.loyalty_points || 0}</Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" color="text.secondary">{client.used_points || 0}</Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#6366f1' }}>
+                            {availablePoints}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={tierName}
+                            size="small"
+                            sx={{
+                              fontWeight: 600, borderRadius: '8px', fontSize: '0.72rem',
+                              bgcolor: alpha(tierColor, 0.12), color: tierColor,
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ width: '100%', maxWidth: 180 }}>
+                            <LinearProgress
+                              variant="determinate"
+                              value={Math.min(progress, 100)}
+                              sx={{
+                                height: 6, borderRadius: 3,
+                                bgcolor: 'grey.100',
+                                '& .MuiLinearProgress-bar': {
+                                  borderRadius: 3,
+                                  background: progress >= 100
+                                    ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                                    : `linear-gradient(135deg, ${tierColor}, ${alpha(tierColor, 0.6)})`,
+                                },
+                              }}
+                            />
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.3 }}>
+                              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+                                {Math.round(progress)}%
+                              </Typography>
+                              {nextTier && progress < 100 ? (
+                                <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+                                  {nextTier.points_required - availablePoints} pts vers {nextTier.name}
+                                </Typography>
+                              ) : progress >= 100 ? (
+                                <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600, fontSize: '0.65rem' }}>
+                                  Niveau max
+                                </Typography>
+                              ) : null}
+                            </Box>
+                          </Box>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                            <Tooltip title="Historique">
+                              <IconButton size="small" onClick={() => { setSelectedClient(client); setHistoryDialog(true); }}
+                                sx={{ color: '#6366f1', bgcolor: alpha('#6366f1', 0.08), '&:hover': { bgcolor: alpha('#6366f1', 0.15) } }}>
+                                <ViewIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Modifier les points">
+                              <IconButton size="small" onClick={() => {
+                                setSelectedClient(client);
+                                setPointsForm({ client_id: client.id, points: 0, description: '' });
+                                setPointsDialog(true);
+                              }}
+                                sx={{ color: '#f59e0b', bgcolor: alpha('#f59e0b', 0.08), '&:hover': { bgcolor: alpha('#f59e0b', 0.15) } }}>
+                                <EditIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Supprimer les points">
+                              <IconButton size="small" onClick={() => handleDeleteLoyaltyPoints(client.id)}
+                                sx={{ color: '#ef4444', bgcolor: alpha('#ef4444', 0.08), '&:hover': { bgcolor: alpha('#ef4444', 0.15) } }}>
+                                <CancelIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Supprimer le client">
+                              <IconButton size="small" onClick={() => handleDeleteClient(client.id)}
+                                sx={{ color: '#ef4444', bgcolor: alpha('#ef4444', 0.08), '&:hover': { bgcolor: alpha('#ef4444', 0.15) } }}>
+                                <DeleteIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {filteredClients.length === 0 && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6 }}>
+                <PeopleIcon sx={{ fontSize: 40, color: 'grey.300', mb: 1 }} />
+                <Typography variant="body2" color="text.disabled">Aucun client trouvé</Typography>
+              </Box>
+            )}
+          </Card>
+        </Box>
+      )}
+
+      {/* ───────── TAB 1 : Referrals ───────── */}
+      {activeTab === 1 && (
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>Parrainages</Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setReferralDialog(true)}
+              disabled={allClients.length === 0}
+              sx={BTN_DARK}
+            >
+              Nouveau parrainage
+            </Button>
+          </Box>
+
+          {allClients.length === 0 && (
+            <Alert severity="info" sx={{ mb: 2, borderRadius: '12px' }}>
+              Aucun client trouvé. Créez des clients dans la section Transactions.
+            </Alert>
+          )}
+
+          <Card sx={CARD_BASE}>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow sx={TABLE_HEAD_SX}>
+                    <TableCell>Parrain</TableCell>
+                    <TableCell>Parrainé</TableCell>
+                    <TableCell>Statut</TableCell>
+                    <TableCell align="right">Points</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {referrals.map(referral => (
+                    <TableRow key={referral.id} sx={{ '&:last-child td': { borderBottom: 0 }, '& td': { py: 1.5 } }}>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {referral.referrer_client?.first_name} {referral.referrer_client?.last_name}
+                          </Typography>
+                          <Typography variant="caption" color="text.disabled">{referral.referrer_client?.email}</Typography>
                         </Box>
                       </TableCell>
-                      <TableCell>{client.loyalty_points || 0}</TableCell>
-                      <TableCell>{client.used_points}</TableCell>
                       <TableCell>
-                        <Typography variant="body2" color="primary" fontWeight="bold">
-                          {availablePoints}
-                        </Typography>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {referral.referred_client?.first_name} {referral.referred_client?.last_name}
+                          </Typography>
+                          <Typography variant="caption" color="text.disabled">{referral.referred_client?.email}</Typography>
+                        </Box>
                       </TableCell>
-                      <TableCell>
-                        {client.tier ? (
-                          <Chip
-                            label={client.tier.name}
-                            sx={{ bgcolor: client.tier.color, color: 'white' }}
-                            size="small"
-                          />
+                      <TableCell>{getStatusChip(referral.status)}</TableCell>
+                      <TableCell align="right">
+                        {referral.points_awarded > 0 ? (
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#22c55e' }}>
+                            +{referral.points_awarded}
+                          </Typography>
                         ) : (
-                          <Chip
-                            label="Sans niveau"
-                            sx={{ bgcolor: '#ccc', color: 'white' }}
-                            size="small"
-                          />
+                          <Typography variant="body2" color="text.disabled">—</Typography>
                         )}
                       </TableCell>
                       <TableCell>
-                        <Box sx={{ width: '100%', maxWidth: 200 }}>
-                          <LinearProgress
-                            variant="determinate"
-                            value={Math.min(progress, 100)}
-                            sx={{ 
-                              height: 8, 
-                              borderRadius: 4,
-                              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                              '& .MuiLinearProgress-bar': {
-                                backgroundColor: progress >= 100 ? '#4caf50' : '#2196f3'
-                              }
-                            }}
-                          />
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {Math.round(progress)}%
-                            </Typography>
-                            {nextTier && progress < 100 && (
-                              <Typography variant="caption" color="text.secondary">
-                                {nextTier.points_required - availablePoints} pts vers {nextTier.name}
-                              </Typography>
-                            )}
-                            {progress >= 100 && (
-                              <Typography variant="caption" color="success.main" fontWeight="bold">
-                                Niveau max atteint
-                              </Typography>
-                            )}
-                          </Box>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {new Date(referral.created_at).toLocaleDateString('fr-FR')}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
+                          {referral.status === 'pending' && (
+                            <>
+                              <Tooltip title="Confirmer">
+                                <IconButton size="small" onClick={() => confirmReferral(referral.id)}
+                                  sx={{ color: '#22c55e', bgcolor: alpha('#22c55e', 0.08), '&:hover': { bgcolor: alpha('#22c55e', 0.15) } }}>
+                                  <CheckIcon sx={{ fontSize: 18 }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Rejeter">
+                                <IconButton size="small" onClick={() => rejectReferral(referral.id)}
+                                  sx={{ color: '#ef4444', bgcolor: alpha('#ef4444', 0.08), '&:hover': { bgcolor: alpha('#ef4444', 0.15) } }}>
+                                  <CancelIcon sx={{ fontSize: 18 }} />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                          <Tooltip title="Supprimer">
+                            <IconButton size="small" onClick={() => handleDeleteReferral(referral.id)}
+                              sx={{ color: '#ef4444', bgcolor: alpha('#ef4444', 0.08), '&:hover': { bgcolor: alpha('#ef4444', 0.15) } }}>
+                              <DeleteIcon sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </TableCell>
-                                             <TableCell>
-                         <Tooltip title="Voir l'historique">
-                           <IconButton 
-                             size="small"
-                             onClick={() => {
-                               setSelectedClient(client);
-                               setHistoryDialog(true);
-                             }}
-                           >
-                             <ViewIcon />
-                           </IconButton>
-                         </Tooltip>
-                        <Tooltip title="Modifier les points">
-                          <IconButton 
-                            size="small"
-                            onClick={() => {
-                              setSelectedClient(client);
-                              setPointsForm({
-                                client_id: client.id,
-                                points: 0,
-                                description: ''
-                              });
-                              setPointsDialog(true);
-                            }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Supprimer le client">
-                          <IconButton 
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteClient(client.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Supprimer les points de fidélité">
-                          <IconButton 
-                            size="small"
-                            color="warning"
-                            onClick={() => handleDeleteLoyaltyPoints(client.id)}
-                          >
-                            <CancelIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {referrals.length === 0 && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 6 }}>
+                <CardGiftcard sx={{ fontSize: 40, color: 'grey.300', mb: 1 }} />
+                <Typography variant="body2" color="text.disabled">Aucun parrainage</Typography>
+              </Box>
+            )}
+          </Card>
         </Box>
       )}
 
-      {activeTab === 1 && (
-        <Box>
-                     <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <Typography variant="h6">Parrainages</Typography>
-             <Button
-               variant="contained"
-               startIcon={<AddIcon />}
-               onClick={() => setReferralDialog(true)}
-               disabled={allClients.length === 0}
-             >
-               Créer un Parrainage
-             </Button>
-           </Box>
-           
-           {allClients.length === 0 && (
-             <Alert severity="info" sx={{ mb: 2 }}>
-               Aucun client trouvé. Veuillez d'abord créer des clients dans la section Transaction → Clients.
-             </Alert>
-           )}
-          
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Parrain</TableCell>
-                  <TableCell>Parrainé</TableCell>
-                  <TableCell>Statut</TableCell>
-                  <TableCell>Points Attribués</TableCell>
-                  <TableCell>Date de Création</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {referrals.map((referral) => (
-                  <TableRow key={referral.id}>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {referral.referrer_client?.first_name} {referral.referrer_client?.last_name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {referral.referrer_client?.email}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {referral.referred_client?.first_name} {referral.referred_client?.last_name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {referral.referred_client?.email}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getStatusText(referral.status)}
-                        color={getStatusColor(referral.status) as any}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {referral.points_awarded > 0 ? (
-                        <Typography variant="body2" color="success.main" fontWeight="bold">
-                          +{referral.points_awarded}
-                        </Typography>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          -
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(referral.created_at).toLocaleDateString('fr-FR')}
-                    </TableCell>
-                    <TableCell>
-                      {referral.status === 'pending' && (
-                        <>
-                          <Tooltip title="Confirmer">
-                            <IconButton
-                              size="small"
-                              color="success"
-                              onClick={() => confirmReferral(referral.id)}
-                            >
-                              <CheckIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Rejeter">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => rejectReferral(referral.id)}
-                            >
-                              <CancelIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                      <Tooltip title="Supprimer le parrainage">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteReferral(referral.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      )}
-
+      {/* ───────── TAB 2 : Tiers ───────── */}
       {activeTab === 2 && (
         <Box>
-          {/* Bouton de rafraîchissement forcé */}
-          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Niveaux de Fidélité</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>Niveaux de fidélité</Typography>
             <Button
               variant="contained"
               startIcon={<RefreshIcon />}
               onClick={() => {
-                if (isRefreshing) {
-                  console.log('🔄 Rafraîchissement déjà en cours, ignoré...');
-                  return;
-                }
-                console.log('🔄 Rafraîchissement forcé depuis l\'onglet niveaux...');
+                if (isRefreshing) return;
                 setIsRefreshing(true);
                 loadData();
-                // Incrémenter le trigger pour forcer le rechargement du composant
                 setRefreshTrigger(prev => prev + 1);
                 setTimeout(() => setIsRefreshing(false), 1000);
               }}
-              color="primary"
               disabled={isRefreshing}
+              sx={BTN_DARK}
             >
-              {isRefreshing ? 'Rafraîchissement...' : 'Rafraîchir depuis la Base'}
+              {isRefreshing ? 'Rafraîchissement...' : 'Rafraîchir'}
             </Button>
           </Box>
-          
-          {/* Nouveau composant de niveaux de fidélité */}
-          <LoyaltyTiersDisplay 
-            onTierUpdate={() => {
-              console.log('🔄 Niveau mis à jour, rafraîchissement des données...');
-              loadData();
-            }}
+
+          <LoyaltyTiersDisplay
+            onTierUpdate={() => loadData()}
             refreshTrigger={refreshTrigger}
           />
-          
         </Box>
       )}
 
-      {/* Dialogue de création de parrainage */}
-      <Dialog open={referralDialog} onClose={() => setReferralDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Créer un Parrainage</DialogTitle>
+      {/* ───────── DIALOGS ───────── */}
+
+      {/* Referral dialog */}
+      <Dialog open={referralDialog} onClose={() => setReferralDialog(false)} maxWidth="sm" fullWidth
+        PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Créer un parrainage</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             {allClients.length === 0 ? (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Aucun client trouvé. Veuillez d'abord créer des clients dans la section Transaction.
+              <Alert severity="warning" sx={{ mb: 2, borderRadius: '12px' }}>
+                Aucun client trouvé. Créez d'abord des clients.
               </Alert>
             ) : (
               <>
                 <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>Client Parrain</InputLabel>
-                             <Select
-                 value={referralForm.referrer_client_id}
-                 onChange={(e) => setReferralForm({ ...referralForm, referrer_client_id: e.target.value })}
-                 label="Client Parrain"
-               >
-                 {allClients.map((client) => (
-                   <MenuItem key={client.id} value={client.id}>
-                     {client.first_name} {client.last_name} ({client.email})
-                   </MenuItem>
-                 ))}
-               </Select>
-            </FormControl>
-            
-            {referralForm.referrer_client_id && (
-              <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  startIcon={<DeleteIcon />}
-                  onClick={() => handleDeleteClient(referralForm.referrer_client_id)}
-                >
-                  Supprimer ce client
-                </Button>
-              </Box>
-            )}
-            
-                         <FormControl fullWidth sx={{ mb: 2 }}>
-               <InputLabel>Client Parrainé</InputLabel>
-               <Select
-                 value={referralForm.referred_client_id}
-                 onChange={(e) => setReferralForm({ ...referralForm, referred_client_id: e.target.value })}
-                 label="Client Parrainé"
-               >
-                 {allClients.map((client) => (
-                   <MenuItem key={client.id} value={client.id}>
-                     {client.first_name} {client.last_name} ({client.email})
-                   </MenuItem>
-                 ))}
-               </Select>
-             </FormControl>
-             
-             {referralForm.referred_client_id && (
-               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                 <Button
-                   variant="outlined"
-                   color="error"
-                   size="small"
-                   startIcon={<DeleteIcon />}
-                   onClick={() => handleDeleteClient(referralForm.referred_client_id)}
-                 >
-                   Supprimer ce client
-                 </Button>
-               </Box>
-             )}
-             
-             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-               <Button
-                 variant="outlined"
-                 startIcon={<AddIcon />}
-                 onClick={() => setShowNewClientForm(true)}
-                 sx={{ borderStyle: 'dashed' }}
-               >
-                 Créer un nouveau client
-               </Button>
-             </Box>
-            
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              label="Notes"
-              value={referralForm.notes}
-              onChange={(e) => setReferralForm({ ...referralForm, notes: e.target.value })}
-            />
+                  <InputLabel>Client parrain</InputLabel>
+                  <Select
+                    value={referralForm.referrer_client_id}
+                    onChange={e => setReferralForm({ ...referralForm, referrer_client_id: e.target.value })}
+                    label="Client parrain"
+                    sx={{ borderRadius: '10px' }}
+                  >
+                    {allClients.map(c => (
+                      <MenuItem key={c.id} value={c.id}>{c.first_name} {c.last_name} ({c.email})</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Client parrainé</InputLabel>
+                  <Select
+                    value={referralForm.referred_client_id}
+                    onChange={e => setReferralForm({ ...referralForm, referred_client_id: e.target.value })}
+                    label="Client parrainé"
+                    sx={{ borderRadius: '10px' }}
+                  >
+                    {allClients.map(c => (
+                      <MenuItem key={c.id} value={c.id}>{c.first_name} {c.last_name} ({c.email})</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={() => setShowNewClientForm(true)}
+                    sx={{ borderStyle: 'dashed', borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: 'grey.300', color: 'text.secondary' }}
+                  >
+                    Nouveau client
+                  </Button>
+                </Box>
+
+                <TextField
+                  fullWidth multiline rows={3} label="Notes"
+                  value={referralForm.notes}
+                  onChange={e => setReferralForm({ ...referralForm, notes: e.target.value })}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                />
               </>
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setReferralDialog(false)}>Annuler</Button>
-          <Button onClick={createReferral} variant="contained">
-            Créer le Parrainage
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setReferralDialog(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>
+            Annuler
+          </Button>
+          <Button onClick={createReferral} variant="contained" sx={BTN_DARK}>
+            Créer le parrainage
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialogue de création de nouveau client */}
+      {/* New client form */}
       <ClientForm
         open={showNewClientForm}
         onClose={() => setShowNewClientForm(false)}
         onSubmit={handleCreateNewClient}
-        existingEmails={allClients.map(client => client.email)}
+        existingEmails={allClients.map(c => c.email)}
       />
 
-      {/* Dialogue d'ajout de points */}
-      <Dialog open={pointsDialog} onClose={() => setPointsDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Ajouter des Points</DialogTitle>
+      {/* Add points dialog */}
+      <Dialog open={pointsDialog} onClose={() => setPointsDialog(false)} maxWidth="sm" fullWidth
+        PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Ajouter des points</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             {allClients.length === 0 ? (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Aucun client trouvé. Veuillez d'abord créer des clients dans la section Transaction.
+              <Alert severity="warning" sx={{ mb: 2, borderRadius: '12px' }}>
+                Aucun client trouvé.
               </Alert>
             ) : (
               <>
                 <FormControl fullWidth sx={{ mb: 2 }}>
-               <InputLabel>Client</InputLabel>
-               <Select
-                 value={pointsForm.client_id}
-                 onChange={(e) => setPointsForm({ ...pointsForm, client_id: e.target.value })}
-                 label="Client"
-               >
-                 {allClients.map((client) => (
-                   <MenuItem key={client.id} value={client.id}>
-                     {client.first_name} {client.last_name} ({client.email})
-                   </MenuItem>
-                 ))}
-               </Select>
-             </FormControl>
-             
-             {pointsForm.client_id && (
-               <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                 <Button
-                   variant="outlined"
-                   color="error"
-                   size="small"
-                   startIcon={<DeleteIcon />}
-                   onClick={() => handleDeleteClient(pointsForm.client_id)}
-                 >
-                   Supprimer ce client
-                 </Button>
-               </Box>
-             )}
-            
-            <TextField
-              fullWidth
-              type="number"
-              label="Points à ajouter"
-              value={pointsForm.points}
-              onChange={(e) => setPointsForm({ ...pointsForm, points: parseInt(e.target.value) || 0 })}
-              sx={{ mb: 2 }}
-            />
-            
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              label="Description"
-              value={pointsForm.description}
-              onChange={(e) => setPointsForm({ ...pointsForm, description: e.target.value })}
-            />
+                  <InputLabel>Client</InputLabel>
+                  <Select
+                    value={pointsForm.client_id}
+                    onChange={e => setPointsForm({ ...pointsForm, client_id: e.target.value })}
+                    label="Client"
+                    sx={{ borderRadius: '10px' }}
+                  >
+                    {allClients.map(c => (
+                      <MenuItem key={c.id} value={c.id}>{c.first_name} {c.last_name} ({c.email})</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField
+                  fullWidth type="number" label="Points à ajouter"
+                  value={pointsForm.points}
+                  onChange={e => setPointsForm({ ...pointsForm, points: parseInt(e.target.value) || 0 })}
+                  sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                />
+                <TextField
+                  fullWidth multiline rows={3} label="Description"
+                  value={pointsForm.description}
+                  onChange={e => setPointsForm({ ...pointsForm, description: e.target.value })}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                />
               </>
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPointsDialog(false)}>Annuler</Button>
-          <Button onClick={addPoints} variant="contained">
-            Ajouter les Points
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPointsDialog(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>
+            Annuler
+          </Button>
+          <Button onClick={addPoints} variant="contained" sx={BTN_DARK}>
+            Ajouter les points
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialogue d'utilisation de points */}
-      <Dialog open={usePointsDialog} onClose={() => setUsePointsDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Utiliser des Points</DialogTitle>
+      {/* Use points dialog */}
+      <Dialog open={usePointsDialog} onClose={() => setUsePointsDialog(false)} maxWidth="sm" fullWidth
+        PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Utiliser des points</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             {allClients.length === 0 ? (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Aucun client trouvé. Veuillez d'abord créer des clients dans la section Transaction.
+              <Alert severity="warning" sx={{ mb: 2, borderRadius: '12px' }}>
+                Aucun client trouvé.
               </Alert>
             ) : (
               <>
@@ -1419,82 +1062,65 @@ const Loyalty: React.FC = () => {
                   <InputLabel>Client</InputLabel>
                   <Select
                     value={usePointsForm.client_id}
-                    onChange={(e) => setUsePointsForm({ ...usePointsForm, client_id: e.target.value })}
+                    onChange={e => setUsePointsForm({ ...usePointsForm, client_id: e.target.value })}
                     label="Client"
+                    sx={{ borderRadius: '10px' }}
                   >
-                    {allClients.map((client) => (
-                      <MenuItem key={client.id} value={client.id}>
-                        {client.first_name} {client.last_name} ({client.email})
-                      </MenuItem>
+                    {allClients.map(c => (
+                      <MenuItem key={c.id} value={c.id}>{c.first_name} {c.last_name} ({c.email})</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
-                
-                {usePointsForm.client_id && (
-                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      startIcon={<DeleteIcon />}
-                      onClick={() => handleDeleteClient(usePointsForm.client_id)}
-                    >
-                      Supprimer ce client
-                    </Button>
-                  </Box>
-                )}
-                
                 <TextField
-                  fullWidth
-                  type="number"
-                  label="Points à utiliser"
+                  fullWidth type="number" label="Points à utiliser"
                   value={usePointsForm.points}
-                  onChange={(e) => setUsePointsForm({ ...usePointsForm, points: parseInt(e.target.value) || 0 })}
-                  sx={{ mb: 2 }}
+                  onChange={e => setUsePointsForm({ ...usePointsForm, points: parseInt(e.target.value) || 0 })}
+                  sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
                 />
-                
                 <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="Description"
+                  fullWidth multiline rows={3} label="Description"
                   value={usePointsForm.description}
-                  onChange={(e) => setUsePointsForm({ ...usePointsForm, description: e.target.value })}
+                  onChange={e => setUsePointsForm({ ...usePointsForm, description: e.target.value })}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
                 />
               </>
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUsePointsDialog(false)}>Annuler</Button>
-          <Button onClick={usePoints} variant="contained" color="warning">
-            Utiliser les Points
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setUsePointsDialog(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>
+            Annuler
+          </Button>
+          <Button onClick={usePoints} variant="contained"
+            sx={{ ...BTN_DARK, bgcolor: '#f59e0b', '&:hover': { bgcolor: '#d97706' }, boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>
+            Utiliser les points
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Dialogue des paramètres - Composant simple */}
-      <Dialog open={settingsDialog} onClose={() => setSettingsDialog(false)} maxWidth="xl" fullWidth>
-        <DialogTitle>Paramètres de Fidélité</DialogTitle>
+      {/* Settings dialog */}
+      <Dialog open={settingsDialog} onClose={() => setSettingsDialog(false)} maxWidth="xl" fullWidth
+        PaperProps={{ sx: { borderRadius: '16px' } }}>
+        <DialogTitle sx={{ fontWeight: 700 }}>Paramètres de fidélité</DialogTitle>
         <DialogContent>
-          <LoyaltySettingsSimple 
-            onDataChanged={handleSettingsDataChanged} 
-          />
+          <LoyaltySettingsSimple onDataChanged={handleSettingsDataChanged} />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSettingsDialog(false)}>Fermer</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSettingsDialog(false)} sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}>
+            Fermer
+          </Button>
         </DialogActions>
       </Dialog>
 
-       {/* Dialogue d'historique des points */}
-       <LoyaltyHistory
-         open={historyDialog}
-         onClose={() => setHistoryDialog(false)}
-                   clientId={selectedClient?.id || ''}
-          clientName={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : ''}
-       />
-     </Box>
-   );
- };
+      {/* History dialog */}
+      <LoyaltyHistory
+        open={historyDialog}
+        onClose={() => setHistoryDialog(false)}
+        clientId={selectedClient?.id || ''}
+        clientName={selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : ''}
+      />
+    </Box>
+  );
+};
 
 export default Loyalty;

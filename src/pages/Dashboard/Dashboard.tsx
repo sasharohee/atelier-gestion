@@ -1,2278 +1,613 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Chip,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
-  Button,
-  LinearProgress,
-  Divider,
-  Alert,
-  Badge,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Fade,
-  Collapse,
+  Box, Typography, Card, CardContent, Grid, Chip, Button, Avatar,
+  LinearProgress, IconButton, Tooltip, alpha,
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-
 import {
   Build as BuildIcon,
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
   Schedule as ScheduleIcon,
   TrendingUp as TrendingUpIcon,
-  Inventory as InventoryIcon,
-  Message as MessageIcon,
   Phone as PhoneIcon,
   Laptop as LaptopIcon,
   Tablet as TabletIcon,
   Computer as ComputerIcon,
-  NewReleases as NewReleasesIcon,
-  ExpandMore as ExpandMoreIcon,
-  Dashboard as DashboardIcon,
-  Assignment as AssignmentIcon,
-  Today as TodayIcon,
+  Add as AddIcon,
+  Refresh as RefreshIcon,
   PointOfSale as CashRegisterIcon,
   Description as QuoteIcon,
   People as PeopleIcon,
   Receipt as SalesIcon,
+  ErrorOutline as OverdueIcon,
+  ArrowForward as ArrowIcon,
+  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../store';
-import { deviceTypeColors, repairStatusColors } from '../../theme';
+import { deviceTypeColors } from '../../theme';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
-// import AppStatus from '../../components/AppStatus'; // MASQUÉ
-// import SupabaseTest from '../../components/SupabaseTest'; // MASQUÉ
-import { demoDataService } from '../../services/demoDataService';
-import WhatsNewButton from '../../components/WhatsNewButton';
-import { whatsNewItems } from '../../config/whatsNew';
 import SimplifiedSalesDialog from '../../components/SimplifiedSalesDialog';
 
-// Styles CSS pour les animations
-const pulseAnimation = `
-  @keyframes pulse {
-    0% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.5;
-      transform: scale(1.1);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-`;
+/* ─── design tokens ─── */
+const CARD_BASE = {
+  borderRadius: '16px', border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+  transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+  '&:hover': { boxShadow: '0 8px 32px rgba(0,0,0,0.10)', transform: 'translateY(-2px)' },
+} as const;
+const CARD_STATIC = {
+  borderRadius: '16px', border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+} as const;
+const BTN_DARK = {
+  borderRadius: '10px', textTransform: 'none', fontWeight: 600,
+  bgcolor: '#111827', '&:hover': { bgcolor: '#1f2937' },
+  boxShadow: '0 2px 8px rgba(17,24,39,0.25)',
+} as const;
 
-const Dashboard: React.FC = () => {
-  const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [unreadNewsCount, setUnreadNewsCount] = useState(0);
-  const [simplifiedSaleDialogOpen, setSimplifiedSaleDialogOpen] = useState(false);
-  const navigate = useNavigate();
-  
-  // États pour gérer les sections collapsibles
-  const [expandedSections, setExpandedSections] = useState({
-    overview: true,      // Vue d'ensemble rapide - ouvert par défaut
-    tracking: false,    // Suivi des réparations - fermé par défaut
-    tasks: true,        // Tâches du jour - ouvert par défaut
-  });
-
-  // Fonction pour gérer l'expansion des sections
-  const handleSectionToggle = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-  
-  // Ajouter les styles CSS pour l'animation
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = pulseAnimation;
-    document.head.appendChild(style);
-    
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-
-  // Calculer le nombre de nouveautés non lues
-  useEffect(() => {
-    const calculateUnreadCount = () => {
-      try {
-        const lastReadDate = localStorage.getItem('app-atelier-last-read-news');
-        if (!lastReadDate) {
-          setUnreadNewsCount(whatsNewItems.length);
-          return;
-        }
-
-        const lastRead = new Date(lastReadDate);
-        const unreadItems = whatsNewItems.filter(item => 
-          new Date(item.date) > lastRead
-        );
-        setUnreadNewsCount(unreadItems.length);
-      } catch (error) {
-        console.error('Erreur lors du calcul des nouveautés non lues:', error);
-        setUnreadNewsCount(0);
-      }
-    };
-
-    calculateUnreadCount();
-  }, []);
-
-  const {
-    dashboardStats,
-    repairs,
-    appointments,
-    clients,
-    devices,
-    repairStatuses,
-    getRepairsByStatus,
-    getClientById,
-    getDeviceById,
-    loadClients,
-    loadDevices,
-    loadServices,
-    loadParts,
-    loadProducts,
-    loadRepairs,
-    loadSales,
-    loadAppointments,
-  } = useAppStore();
-  const { workshopSettings } = useWorkshopSettings();
-  
-  // Valeur par défaut pour éviter les erreurs
-  const currency = workshopSettings?.currency || 'EUR';
-
-  // Charger les données au montage du composant
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        console.log('🔄 Chargement des données du dashboard...');
-        await loadRepairs();
-        console.log('✅ Données des réparations chargées dans le dashboard');
-      } catch (error) {
-        console.error('❌ Erreur lors du chargement des données du dashboard:', error);
-      }
-    };
-    
-    loadDashboardData();
-  }, [loadRepairs]);
-
-  // Gestion d'erreur pour éviter les crashes
-  useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      console.error('Dashboard error:', event.error);
-      setHasError(true);
-      setErrorMessage(event.error?.message || 'Erreur inconnue');
-    };
-
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
-
-  // Données sécurisées avec fallback
-  const safeRepairs = repairs || [];
-  const safeAppointments = appointments || [];
-  const safeClients = clients || [];
-  const safeDevices = devices || [];
-  const safeRepairStatuses = repairStatuses || [];
-
-  // Surveiller les changements dans les réparations
-  useEffect(() => {
-    console.log('📊 Dashboard - État des réparations mis à jour:', {
-      totalRepairs: safeRepairs.length,
-      repairsStatuses: safeRepairs.map(r => ({ id: r.id, status: r.status, dueDate: r.dueDate }))
-    });
-  }, [safeRepairs]);
-
-  const recentRepairs = safeRepairs
-    .filter((repair) => {
-      try {
-        if (!repair.createdAt) return false;
-        const date = new Date(repair.createdAt);
-        return !isNaN(date.getTime());
-      } catch (error) {
-        console.error('Erreur de date dans la réparation:', error);
-        return false;
-      }
-    })
-    .sort((a, b) => {
-      try {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      } catch (error) {
-        console.error('Erreur de tri des réparations:', error);
-        return 0;
-      }
-    })
-    .slice(0, 5);
-
-  const todayAppointments = safeAppointments.filter((appointment) => {
-    try {
-      if (!appointment.startDate) return false;
-      const appointmentDate = new Date(appointment.startDate);
-      if (isNaN(appointmentDate.getTime())) return false;
-      return format(appointmentDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-    } catch (error) {
-      console.error('Erreur de date dans le rendez-vous:', error);
-      return false;
-    }
-  });
-
-  const getStatusColor = (status: string) => {
-    return repairStatusColors[status as keyof typeof repairStatusColors] || '#757575';
-  };
-
-  const getDeviceTypeIcon = (type: string) => {
-    const icons = {
-      smartphone: <PhoneIcon />,
-      tablet: <TabletIcon />,
-      laptop: <LaptopIcon />,
-      desktop: <ComputerIcon />,
-      other: <ComputerIcon />,
-    };
-    return icons[type as keyof typeof icons] || <ComputerIcon />;
-  };
-
-  const getDeviceTypeColor = (type: string) => {
-    return deviceTypeColors[type as keyof typeof deviceTypeColors] || '#757575';
-  };
-
-  // Fonction utilitaire pour sécuriser les dates
-  const safeFormatDate = (date: any, formatString: string) => {
-    try {
-      if (!date) return 'Date inconnue';
-      const dateObj = new Date(date);
-      if (isNaN(dateObj.getTime())) return 'Date invalide';
-      return format(dateObj, formatString);
-    } catch (error) {
-      console.error('Erreur de formatage de date:', error);
-      return 'Date invalide';
-    }
-  };
-
-  const StatCard: React.FC<{
-    title: string;
-    value: string | number;
-    icon: React.ReactNode;
-    color: string;
-    subtitle?: string;
-    gradient?: string;
-  }> = ({ title, value, icon, color, subtitle, gradient }) => (
-    <Card 
-      sx={{ 
-        height: '100%',
-        background: gradient || 'white',
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
-        },
-        '&::before': gradient ? {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-          opacity: 0.3,
-        } : undefined,
-      }}
-    >
-      <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography 
-              color={gradient ? 'rgba(255, 255, 255, 0.8)' : 'text.secondary'} 
-              gutterBottom 
-              variant="body2"
-              sx={{ fontWeight: 500 }}
-            >
-              {title}
-            </Typography>
-            <Typography 
-              variant="h4" 
-              component="div" 
-              sx={{ 
-                fontWeight: 700,
-                color: gradient ? 'white' : 'text.primary',
-                mb: subtitle ? 1 : 0
-              }}
-            >
-              {value}
-            </Typography>
-            {subtitle && (
-              <Typography 
-                variant="body2" 
-                color={gradient ? 'rgba(255, 255, 255, 0.7)' : 'text.secondary'} 
-                sx={{ fontWeight: 500 }}
-              >
-                {subtitle}
-              </Typography>
-            )}
-          </Box>
-          <Avatar
-            sx={{
-              backgroundColor: gradient ? 'rgba(255, 255, 255, 0.2)' : color,
-              width: 64,
-              height: 64,
-              backdropFilter: gradient ? 'blur(10px)' : 'none',
-              border: gradient ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                transform: 'scale(1.1)',
-              }
-            }}
-          >
+/* ─── KpiMini ─── */
+function KpiMini({ icon, iconColor, label, value }: { icon: React.ReactNode; iconColor: string; label: string; value: string | number }) {
+  return (
+    <Card sx={CARD_BASE}>
+      <CardContent sx={{ p: '16px !important' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{ width: 40, height: 40, borderRadius: '12px', display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            background: `linear-gradient(135deg, ${iconColor}, ${alpha(iconColor, 0.7)})`,
+            color: '#fff', flexShrink: 0, boxShadow: `0 4px 14px ${alpha(iconColor, 0.3)}` }}>
             {icon}
-          </Avatar>
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, fontSize: '1.1rem' }}>{value}</Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}>{label}</Typography>
+          </Box>
         </Box>
       </CardContent>
     </Card>
   );
+}
 
-  const ProgressCard: React.FC<{
-    title: string;
-    value: number;
-    total: number;
-    color: string;
-  }> = ({ title, value, total, color }) => {
-    const percentage = total > 0 ? (value / total) * 100 : 0;
-    return (
-      <Card sx={{ height: '100%' }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            {title}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h4" sx={{ fontWeight: 600, mr: 1 }}>
-              {value}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              / {total}
-            </Typography>
-          </Box>
-          <LinearProgress
-            variant="determinate"
-            value={percentage}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: 'grey.200',
-              '& .MuiLinearProgress-bar': {
-                backgroundColor: color,
-              },
-            }}
-          />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {percentage.toFixed(1)}% complété
-          </Typography>
-        </CardContent>
-      </Card>
-    );
-  };
+/* ─── helpers ─── */
+const safeDate = (date: any, fmt: string) => {
+  try {
+    if (!date) return '—';
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? '—' : format(d, fmt, { locale: fr });
+  } catch { return '—'; }
+};
 
-  // Statistiques par défaut pour un atelier vide - recalculées à chaque changement
-  const defaultStats = useMemo(() => {
-    // Analyser chaque réparation individuellement
-    const repairsAnalysis = safeRepairs.map(repair => {
-      const isCompleted = repair.status === 'completed' || repair.status === 'returned';
-      const hasDueDate = repair.dueDate && !isNaN(new Date(repair.dueDate).getTime());
-      const isOverdue = !isCompleted && hasDueDate && new Date(repair.dueDate) < new Date();
-      
-      return {
-        id: repair.id,
-        status: repair.status,
-        dueDate: repair.dueDate,
-        isCompleted,
-        hasDueDate,
-        isOverdue,
-        shouldBeCounted: isOverdue
-      };
+const DEVICE_ICONS: Record<string, React.ReactNode> = {
+  smartphone: <PhoneIcon sx={{ fontSize: 18 }} />,
+  tablet: <TabletIcon sx={{ fontSize: 18 }} />,
+  laptop: <LaptopIcon sx={{ fontSize: 18 }} />,
+  desktop: <ComputerIcon sx={{ fontSize: 18 }} />,
+};
+
+/* ═══════════════════════ main component ═══════════════════════ */
+const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const [saleOpen, setSaleOpen] = useState(false);
+
+  const {
+    repairs, appointments, repairStatuses, sales,
+    getClientById, getDeviceById,
+    loadRepairs,
+  } = useAppStore();
+  const { workshopSettings } = useWorkshopSettings();
+  const currency = workshopSettings?.currency || 'EUR';
+
+  useEffect(() => { loadRepairs(); }, [loadRepairs]);
+
+  const safeRepairs = repairs || [];
+  const safeAppointments = appointments || [];
+  const safeSales = sales || [];
+
+  /* ── computed stats ── */
+  const stats = useMemo(() => {
+    const now = new Date();
+    const active = safeRepairs.filter(r => !['completed', 'returned'].includes(r.status));
+    const overdue = safeRepairs.filter(r => {
+      if (r.status === 'completed' || r.status === 'returned') return false;
+      if (!r.dueDate) return false;
+      try { const d = new Date(r.dueDate); return !isNaN(d.getTime()) && d < now; } catch { return false; }
+    });
+    const urgent = safeRepairs.filter(r => r.isUrgent && !['completed', 'returned'].includes(r.status));
+    const completed = safeRepairs.filter(r => r.status === 'completed' || r.status === 'returned');
+    const todayAppts = safeAppointments.filter(a => {
+      try {
+        if (!a.startDate) return false;
+        const d = new Date(a.startDate);
+        return !isNaN(d.getTime()) && format(d, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd');
+      } catch { return false; }
     });
 
-    const overdueCount = repairsAnalysis.filter(repair => repair.shouldBeCounted).length;
-
-    // Log de débogage détaillé
-    console.log('🔍 Dashboard - Analyse détaillée des réparations:', {
-      totalRepairs: safeRepairs.length,
-      completedRepairs: repairsAnalysis.filter(r => r.isCompleted).length,
-      overdueCount,
-      repairsAnalysis,
-      summary: {
-        completed: repairsAnalysis.filter(r => r.isCompleted).length,
-        overdue: overdueCount,
-        noDueDate: repairsAnalysis.filter(r => !r.hasDueDate).length,
-        futureDueDate: repairsAnalysis.filter(r => r.hasDueDate && !r.isCompleted && new Date(r.dueDate) >= new Date()).length
-      }
-    });
-
-    // Log spécifique pour les réparations archivées
-    const archivedRepairs = repairsAnalysis.filter(r => r.status === 'returned');
-    if (archivedRepairs.length > 0) {
-      console.log('📦 Réparations archivées (ne doivent pas être en retard):', archivedRepairs.map(r => ({
-        id: r.id,
-        status: r.status,
-        dueDate: r.dueDate,
-        isOverdue: r.isOverdue,
-        shouldBeCounted: r.shouldBeCounted
-      })));
-    }
-
-    // Log de vérification de cohérence
-    console.log('🔍 Vérification cohérence - defaultStats.overdueRepairs:', overdueCount);
-    console.log('🔍 Vérification cohérence - Toutes les réparations:', safeRepairs.map(r => ({
-      id: r.id,
-      status: r.status,
-      dueDate: r.dueDate,
-      isCompleted: r.status === 'completed' || r.status === 'returned',
-      isOverdue: (r.status !== 'completed' && r.status !== 'returned') && r.dueDate && new Date(r.dueDate) < new Date()
-    })));
+    // Monthly revenue from sales
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthRevenue = safeSales
+      .filter(s => { try { return new Date(s.createdAt) >= monthStart; } catch { return false; } })
+      .reduce((sum, s) => sum + (s.totalAmount || 0), 0);
 
     return {
-      totalRepairs: safeRepairs.length,
-      activeRepairs: safeRepairs.filter(r => r.status === 'in_progress').length,
-      completedRepairs: safeRepairs.filter(r => r.status === 'completed' || r.status === 'returned').length,
-      overdueRepairs: overdueCount,
-      todayAppointments: todayAppointments.length,
-      monthlyRevenue: 0,
-      lowStockItems: 0,
-      pendingMessages: 0,
+      active: active.length, total: safeRepairs.length,
+      overdue: overdue.length, overdueList: overdue,
+      urgent: urgent.length, urgentList: urgent,
+      completed: completed.length,
+      todayAppts: todayAppts.length, todayApptsList: todayAppts,
+      inProgress: safeRepairs.filter(r => r.status === 'in_progress').length,
+      monthRevenue,
     };
-  }, [safeRepairs, todayAppointments]);
+  }, [safeRepairs, safeAppointments, safeSales]);
 
-  if (hasError) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
-          <strong>Erreur de chargement du dashboard :</strong> {errorMessage}
-        </Alert>
-        <Button 
-          variant="contained" 
-          onClick={() => window.location.reload()}
-          sx={{ mr: 2 }}
-        >
-          Recharger la page
-        </Button>
-        <Button 
-          variant="outlined" 
-          onClick={() => setHasError(false)}
-        >
-          Continuer sans données
-        </Button>
-      </Box>
-    );
-  }
+  /* ── recent repairs ── */
+  const recentRepairs = useMemo(() =>
+    safeRepairs
+      .filter(r => r.createdAt && !isNaN(new Date(r.createdAt).getTime()))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 6),
+  [safeRepairs]);
 
+  /* ── pipeline ── */
+  const pipeline = useMemo(() =>
+    (repairStatuses || []).sort((a, b) => a.order - b.order).map(s => ({
+      ...s,
+      count: safeRepairs.filter(r => r.status === s.id).length,
+      overdueCount: safeRepairs.filter(r => {
+        if (r.status !== s.id || r.status === 'completed' || r.status === 'returned') return false;
+        if (!r.dueDate) return false;
+        try { const d = new Date(r.dueDate); return !isNaN(d.getTime()) && d < new Date(); } catch { return false; }
+      }).length,
+    })),
+  [repairStatuses, safeRepairs]);
+
+  const completionPct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+
+  const QUICK_ACTIONS = [
+    { label: 'Ventes', icon: <SalesIcon sx={{ fontSize: 20 }} />, color: '#3b82f6', onClick: () => navigate('/app/transaction/sales') },
+    { label: 'Caisse rapide', icon: <CashRegisterIcon sx={{ fontSize: 20 }} />, color: '#22c55e', onClick: () => setSaleOpen(true) },
+    { label: 'Devis', icon: <QuoteIcon sx={{ fontSize: 20 }} />, color: '#f59e0b', onClick: () => navigate('/app/transaction/quotes') },
+    { label: 'Clients', icon: <PeopleIcon sx={{ fontSize: 20 }} />, color: '#8b5cf6', onClick: () => navigate('/app/transaction/clients') },
+  ];
+
+  /* ════════════════════════ render ════════════════════════ */
   return (
-    <Box>
-      {/* En-tête moderne */}
-      <Card 
-        sx={{ 
-          mb: 4, 
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          position: 'relative',
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-            opacity: 0.3,
-          },
-          boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-        }}
-      >
-        <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            mb: 2,
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 }
-          }}>
-            <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
-              <Typography variant="h4" sx={{ fontWeight: 700, color: 'white', mb: 1 }}>
-                📊 Tableau de bord
-              </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                Vue d'ensemble de votre atelier - {format(new Date(), 'EEEE d MMMM yyyy', { locale: fr })}
-              </Typography>
-            </Box>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 2,
-              flexDirection: { xs: 'column', sm: 'row' },
-              width: { xs: '100%', sm: 'auto' }
-            }}>
-              <Button 
-                variant="outlined" 
-                size="small"
-                onClick={async () => {
-                  console.log('🔄 Rechargement forcé des données...');
-                  await loadRepairs();
-                  console.log('✅ Données rechargées');
-                }}
-                sx={{
-                  color: 'white',
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  backdropFilter: 'blur(10px)',
-                  width: { xs: '100%', sm: 'auto' },
-                  '&:hover': {
-                    borderColor: 'rgba(255, 255, 255, 0.5)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    transform: 'translateY(-1px)',
-                  },
-                }}
-              >
-                🔄 Recharger
-              </Button>
-              <Badge
-                badgeContent={unreadNewsCount}
-                color="error"
-                sx={{
-                  '& .MuiBadge-badge': {
-                    backgroundColor: '#ff4757',
-                    color: 'white',
-                    fontWeight: 600,
-                    fontSize: '0.7rem',
-                    minWidth: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                  },
-                }}
-              >
-                <Button
-                  variant="contained"
-                  size="small"
-                  startIcon={<NewReleasesIcon />}
-                  onClick={() => {
-                    const event = new CustomEvent('openWhatsNew');
-                    window.dispatchEvent(event);
-                  }}
-                  sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    fontWeight: 600,
-                    backdropFilter: 'blur(10px)',
-                    width: { xs: '100%', sm: 'auto' },
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.3)',
-                      transform: 'translateY(-1px)',
-                    },
-                    transition: 'all 0.2s ease-in-out',
-                  }}
-                >
-                  Nouveautés
-                </Button>
-              </Badge>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Bannière Motivation & Productivité */}
-      <Card 
-        sx={{ 
-          mb: 4, 
-          background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
-          color: 'white',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '2px solid #00d4ff',
-          boxShadow: '0 8px 32px rgba(0, 212, 255, 0.2), 0 0 20px rgba(0, 212, 255, 0.1)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              radial-gradient(circle at 10% 20%, rgba(0, 212, 255, 0.1) 0%, transparent 25%),
-              radial-gradient(circle at 90% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 25%),
-              radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 30%)
-            `,
-            pointerEvents: 'none',
-          },
-        }}
-      >
-        <CardContent sx={{ position: 'relative', zIndex: 1, py: 3 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            flexDirection: 'column',
-            textAlign: 'center',
-            gap: 1
-          }}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 700, 
-                color: '#fff',
-                textShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                flexWrap: 'wrap',
-                justifyContent: 'center'
-              }}
-            >
-              <span style={{ fontSize: '2rem' }}>🚀</span>
-              <span style={{ 
-                background: 'linear-gradient(180deg, #fff 0%, #00d4ff 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>
-                Prêt à conquérir la journée !
-              </span>
-              <span style={{ fontSize: '2rem' }}>💪</span>
-            </Typography>
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                color: 'rgba(255, 255, 255, 0.9)',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                flexWrap: 'wrap',
-                justifyContent: 'center'
-              }}
-            >
-              <span>⚡</span>
-              Chaque réparation est une opportunité de briller !
-              <span>🔧</span>
-            </Typography>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Liens rapides vers les pages essentielles */}
-      <Card sx={{ mb: 4, boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)' }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <DashboardIcon /> Accès rapides
+    <Box sx={{ pb: 4 }}>
+      {/* ── header ── */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4, flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.01em' }}>
+            Tableau de bord
           </Typography>
-          <Grid container spacing={3}>
-            {/* Ventes */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  height: '100%',
-                  background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
-                  color: 'white',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(25, 118, 210, 0.3)',
-                  },
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                    opacity: 0.3,
-                  },
-                }}
-                onClick={() => navigate('/app/transaction/sales')}
-              >
-                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography 
-                        color="rgba(255, 255, 255, 0.8)" 
-                        gutterBottom 
-                        variant="body2"
-                        sx={{ fontWeight: 500 }}
-                      >
-                        Ventes
-                      </Typography>
-                      <Typography 
-                        variant="h5" 
-                        component="div" 
-                        sx={{ 
-                          fontWeight: 700,
-                          color: 'white',
-                          mb: 1
-                        }}
-                      >
-                        Gestion des ventes
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        color="rgba(255, 255, 255, 0.7)" 
-                        sx={{ fontWeight: 500 }}
-                      >
-                        Facturation et historique
-                      </Typography>
-                    </Box>
-                    <Avatar
-                      sx={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                        width: 64,
-                        height: 64,
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'scale(1.1)',
-                        }
-                      }}
-                    >
-                      <SalesIcon />
-                    </Avatar>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5, textTransform: 'capitalize' }}>
+            {safeDate(new Date(), 'EEEE d MMMM yyyy')}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/app/sav')}
+            sx={{ ...BTN_DARK, px: 3, py: 1.2 }}>
+            Nouvelle réparation
+          </Button>
+          <Tooltip title="Actualiser" arrow>
+            <IconButton onClick={() => loadRepairs()}
+              sx={{ bgcolor: alpha('#6366f1', 0.08), color: '#6366f1', '&:hover': { bgcolor: alpha('#6366f1', 0.16) } }}>
+              <RefreshIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
 
-            {/* Caisse */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  height: '100%',
-                  background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
-                  color: 'white',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(46, 125, 50, 0.3)',
-                  },
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                    opacity: 0.3,
-                  },
-                }}
-                onClick={() => setSimplifiedSaleDialogOpen(true)}
-              >
-                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography 
-                        color="rgba(255, 255, 255, 0.8)" 
-                        gutterBottom 
-                        variant="body2"
-                        sx={{ fontWeight: 500 }}
-                      >
-                        Caisse
-                      </Typography>
-                      <Typography 
-                        variant="h5" 
-                        component="div" 
-                        sx={{ 
-                          fontWeight: 700,
-                          color: 'white',
-                          mb: 1
-                        }}
-                      >
-                        Vente rapide
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        color="rgba(255, 255, 255, 0.7)" 
-                        sx={{ fontWeight: 500 }}
-                      >
-                        Interface simplifiée
-                      </Typography>
-                    </Box>
-                    <Avatar
-                      sx={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                        width: 64,
-                        height: 64,
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'scale(1.1)',
-                        }
-                      }}
-                    >
-                      <CashRegisterIcon />
-                    </Avatar>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Devis */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  height: '100%',
-                  background: 'linear-gradient(135deg, #ed6c02 0%, #e65100 100%)',
-                  color: 'white',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(237, 108, 2, 0.3)',
-                  },
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                    opacity: 0.3,
-                  },
-                }}
-                onClick={() => navigate('/app/transaction/quotes')}
-              >
-                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography 
-                        color="rgba(255, 255, 255, 0.8)" 
-                        gutterBottom 
-                        variant="body2"
-                        sx={{ fontWeight: 500 }}
-                      >
-                        Devis
-                      </Typography>
-                      <Typography 
-                        variant="h5" 
-                        component="div" 
-                        sx={{ 
-                          fontWeight: 700,
-                          color: 'white',
-                          mb: 1
-                        }}
-                      >
-                        Estimations
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        color="rgba(255, 255, 255, 0.7)" 
-                        sx={{ fontWeight: 500 }}
-                      >
-                        Devis et propositions
-                      </Typography>
-                    </Box>
-                    <Avatar
-                      sx={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                        width: 64,
-                        height: 64,
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'scale(1.1)',
-                        }
-                      }}
-                    >
-                      <QuoteIcon />
-                    </Avatar>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Clients */}
-            <Grid item xs={12} sm={6} md={3}>
-              <Card 
-                sx={{ 
-                  height: '100%',
-                  background: 'linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%)',
-                  color: 'white',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(123, 31, 162, 0.3)',
-                  },
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                    opacity: 0.3,
-                  },
-                }}
-                onClick={() => navigate('/app/transaction/clients')}
-              >
-                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography 
-                        color="rgba(255, 255, 255, 0.8)" 
-                        gutterBottom 
-                        variant="body2"
-                        sx={{ fontWeight: 500 }}
-                      >
-                        Clients
-                      </Typography>
-                      <Typography 
-                        variant="h5" 
-                        component="div" 
-                        sx={{ 
-                          fontWeight: 700,
-                          color: 'white',
-                          mb: 1
-                        }}
-                      >
-                        Base clients
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        color="rgba(255, 255, 255, 0.7)" 
-                        sx={{ fontWeight: 500 }}
-                      >
-                        Gestion des contacts
-                      </Typography>
-                    </Box>
-                    <Avatar
-                      sx={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                        width: 64,
-                        height: 64,
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'scale(1.1)',
-                        }
-                      }}
-                    >
-                      <PeopleIcon />
-                    </Avatar>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+      {/* ── KPIs ── */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {[
+          { icon: <BuildIcon sx={{ fontSize: 20 }} />, color: '#6366f1', label: 'Actives', value: stats.active },
+          { icon: <TrendingUpIcon sx={{ fontSize: 20 }} />, color: '#3b82f6', label: 'En cours', value: stats.inProgress },
+          { icon: <WarningIcon sx={{ fontSize: 20 }} />, color: '#ef4444', label: 'Urgentes', value: stats.urgent },
+          { icon: <OverdueIcon sx={{ fontSize: 20 }} />, color: '#f59e0b', label: 'En retard', value: stats.overdue },
+          { icon: <CheckCircleIcon sx={{ fontSize: 20 }} />, color: '#22c55e', label: 'Terminées', value: stats.completed },
+        ].map(k => (
+          <Grid item xs={6} sm={4} md key={k.label}>
+            <KpiMini icon={k.icon} iconColor={k.color} label={k.label} value={k.value} />
           </Grid>
-        </CardContent>
-      </Card>
-
-      {/* Statistiques principales modernisées */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Réparations actives"
-            value={defaultStats.activeRepairs}
-            icon={<BuildIcon />}
-            color="#ff9800"
-            subtitle={`${defaultStats.totalRepairs} total`}
-            gradient="linear-gradient(135deg, #ff9800 0%, #f57c00 100%)"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Réparations terminées"
-            value={defaultStats.completedRepairs}
-            icon={<CheckCircleIcon />}
-            color="#4caf50"
-            subtitle="Ce mois"
-            gradient="linear-gradient(135deg, #4caf50 0%, #388e3c 100%)"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Rendez-vous aujourd'hui"
-            value={defaultStats.todayAppointments}
-            icon={<ScheduleIcon />}
-            color="#2196f3"
-            subtitle="Planifiés"
-            gradient="linear-gradient(135deg, #2196f3 0%, #1976d2 100%)"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Chiffre d'affaires"
-            value={formatFromEUR(defaultStats.monthlyRevenue, currency)}
-            icon={<TrendingUpIcon />}
-            color="#9c27b0"
-            subtitle="Ce mois"
-            gradient="linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)"
-          />
-        </Grid>
+        ))}
       </Grid>
 
-      {/* Section Vue d'ensemble rapide - Collapsible */}
-      <Accordion 
-        expanded={expandedSections.overview}
-        onChange={() => handleSectionToggle('overview')}
-        sx={{ 
-          mb: 4,
-          borderRadius: '16px !important',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-          '&:before': { display: 'none' },
-          '&.Mui-expanded': {
-            margin: '0 0 32px 0',
-          }
-        }}
-      >
-        <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
-          sx={{
-            backgroundColor: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-            borderRadius: '16px 16px 0 0',
-            '&.Mui-expanded': {
-              borderRadius: '16px 16px 0 0',
-            },
-            '& .MuiAccordionSummary-content': {
-              alignItems: 'center',
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <DashboardIcon sx={{ color: 'primary.main', fontSize: 28 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              📊 Vue d'ensemble rapide
-            </Typography>
-            <Chip 
-              label="Détails" 
-              size="small" 
-              sx={{ 
-                backgroundColor: 'primary.main', 
-                color: 'white',
-                fontWeight: 600 
-              }} 
-            />
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails sx={{ p: 3 }}>
-          {safeRepairStatuses.length > 0 ? (
-            <>
-              {/* Statistiques détaillées en grid responsive */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6} sm={4} md={2} lg={2}>
-                  <StatCard
-                    title="Nouvelles"
-                    value={repairs.filter(r => r.status === 'new').length}
-                    icon={<BuildIcon />}
-                    color="#2196f3"
-                    subtitle="En attente"
-                  />
-                </Grid>
-                <Grid item xs={6} sm={4} md={2} lg={2}>
-                  <StatCard
-                    title="En cours"
-                    value={repairs.filter(r => r.status === 'in_progress').length}
-                    icon={<BuildIcon />}
-                    color="#ff9800"
-                    subtitle="En traitement"
-                  />
-                </Grid>
-                <Grid item xs={6} sm={4} md={2} lg={2}>
-                  <StatCard
-                    title="En attente"
-                    value={repairs.filter(r => r.status === 'waiting_parts').length}
-                    icon={<InventoryIcon />}
-                    color="#f44336"
-                    subtitle="Pièces manquantes"
-                  />
-                </Grid>
-                <Grid item xs={6} sm={4} md={2} lg={2}>
-                  <StatCard
-                    title="Livraison"
-                    value={repairs.filter(r => r.status === 'waiting_delivery').length}
-                    icon={<ScheduleIcon />}
-                    color="#9c27b0"
-                    subtitle="À livrer"
-                  />
-                </Grid>
-                <Grid item xs={6} sm={4} md={2} lg={2}>
-                  <StatCard
-                    title="Terminées"
-                    value={repairs.filter(r => r.status === 'completed' || r.status === 'returned').length}
-                    icon={<CheckCircleIcon />}
-                    color="#4caf50"
-                    subtitle="Ce mois"
-                  />
-                </Grid>
-                <Grid item xs={6} sm={4} md={2} lg={2}>
-                  <StatCard
-                    title="Urgentes"
-                    value={repairs.filter(r => r.isUrgent).length}
-                    icon={<WarningIcon />}
-                    color="#f44336"
-                    subtitle="Priorité haute"
-                  />
-                </Grid>
-              </Grid>
+      {/* ── quick access ── */}
+      <Box sx={{ display: 'flex', gap: 1.5, mb: 3, flexWrap: 'wrap' }}>
+        {QUICK_ACTIONS.map(a => (
+          <Card key={a.label} onClick={a.onClick}
+            sx={{ ...CARD_BASE, cursor: 'pointer', flex: '1 1 0', minWidth: 140 }}>
+            <CardContent sx={{ p: '14px 16px !important', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                bgcolor: alpha(a.color, 0.10), color: a.color, flexShrink: 0 }}>
+                {a.icon}
+              </Box>
+              <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }}>{a.label}</Typography>
+              <ArrowIcon sx={{ fontSize: 16, color: 'text.disabled', ml: 'auto' }} />
+            </CardContent>
+          </Card>
+        ))}
+      </Box>
 
-              {/* Progression et alertes */}
-              <Grid container spacing={3}>
-                <Grid item xs={12} md={6}>
-                  <ProgressCard
-                    title="Progression des réparations"
-                    value={defaultStats.completedRepairs}
-                    total={defaultStats.totalRepairs}
-                    color="#4caf50"
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Card sx={{ height: '100%' }}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                        🚨 Alertes
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <WarningIcon color="error" sx={{ mr: 1 }} />
-                            <Typography variant="body2" component="span">Réparations en retard</Typography>
-                          </Box>
-                          <Chip label={defaultStats.overdueRepairs} color="error" size="small" />
+      {/* ── pipeline ── */}
+      <Card sx={{ ...CARD_STATIC, mb: 3 }}>
+        <CardContent sx={{ p: '20px !important' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
+              Pipeline des réparations
+            </Typography>
+            <Button size="small" onClick={() => navigate('/app/kanban')}
+              sx={{ textTransform: 'none', fontWeight: 600, color: '#6366f1', fontSize: '0.8rem' }}>
+              Voir le Kanban
+            </Button>
+          </Box>
+
+          <Box sx={{ display: 'flex', gap: 1.5, overflowX: 'auto', pb: 1,
+            '&::-webkit-scrollbar': { height: 4 },
+            '&::-webkit-scrollbar-thumb': { background: '#cbd5e1', borderRadius: 2 },
+          }}>
+            {pipeline.map(s => (
+              <Box key={s.id} sx={{ flex: '1 1 0', minWidth: 110 }}>
+                <Box sx={{
+                  p: 1.5, borderRadius: '12px',
+                  border: '1px solid', borderColor: alpha(s.color, 0.2),
+                  bgcolor: alpha(s.color, 0.04),
+                  textAlign: 'center', position: 'relative', cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { bgcolor: alpha(s.color, 0.08), transform: 'translateY(-1px)' },
+                }} onClick={() => navigate('/app/kanban')}>
+                  {s.overdueCount > 0 && (
+                    <Box sx={{ position: 'absolute', top: -6, right: -6,
+                      width: 18, height: 18, borderRadius: '50%', bgcolor: '#ef4444', color: '#fff',
+                      fontSize: '0.65rem', fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {s.overdueCount}
+                    </Box>
+                  )}
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: s.color,
+                    boxShadow: `0 0 6px ${alpha(s.color, 0.5)}`, mx: 'auto', mb: 1 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.1rem', color: s.color }}>
+                    {s.count}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.68rem', display: 'block' }}>
+                    {s.name}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+
+          {/* progress */}
+          <Box sx={{ mt: 2.5, display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ flexGrow: 1 }}>
+              <LinearProgress variant="determinate" value={completionPct}
+                sx={{ height: 6, borderRadius: 3, bgcolor: alpha('#22c55e', 0.1),
+                  '& .MuiLinearProgress-bar': { bgcolor: '#22c55e', borderRadius: 3 } }} />
+            </Box>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+              {completionPct}% terminées
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* ── main: 2 columns ── */}
+      <Grid container spacing={3}>
+        {/* ─ left ─ */}
+        <Grid item xs={12} lg={8}>
+          {/* alerts */}
+          {(stats.urgent > 0 || stats.overdue > 0) && (
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              {stats.urgent > 0 && (
+                <Grid item xs={12} sm={6}>
+                  <Card sx={{ ...CARD_STATIC, bgcolor: alpha('#ef4444', 0.04), borderColor: alpha('#ef4444', 0.15) }}>
+                    <CardContent sx={{ p: '16px !important' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                        <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center',
+                          bgcolor: alpha('#ef4444', 0.10), color: '#ef4444', flexShrink: 0 }}>
+                          <WarningIcon sx={{ fontSize: 18 }} />
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <InventoryIcon color="warning" sx={{ mr: 1 }} />
-                            <Typography variant="body2" component="span">Stock faible</Typography>
-                          </Box>
-                          <Chip label={defaultStats.lowStockItems} color="warning" size="small" />
-                        </Box>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#ef4444', fontSize: '0.85rem' }}>
+                          {stats.urgent} urgente{stats.urgent > 1 ? 's' : ''}
+                        </Typography>
                       </Box>
+                      {stats.urgentList.slice(0, 3).map(r => {
+                        const c = getClientById(r.clientId);
+                        const d = r.deviceId ? getDeviceById(r.deviceId) : null;
+                        return (
+                          <Box key={r.id} sx={{ py: 0.75, borderBottom: '1px solid', borderColor: alpha('#ef4444', 0.08),
+                            '&:last-child': { borderBottom: 0 } }}>
+                            <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
+                              {c?.firstName} {c?.lastName}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              {d?.brand} {d?.model}
+                            </Typography>
+                          </Box>
+                        );
+                      })}
+                      {stats.urgent > 3 && (
+                        <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 600, mt: 0.5, display: 'block' }}>
+                          +{stats.urgent - 3} autres
+                        </Typography>
+                      )}
                     </CardContent>
                   </Card>
                 </Grid>
-              </Grid>
-            </>
-          ) : (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="body2" color="text.secondary">
-                Chargement des statistiques de suivi des réparations...
-              </Typography>
-            </Box>
-          )}
-        </AccordionDetails>
-      </Accordion>
-
-      {/* Section Suivi des réparations - Collapsible */}
-      <Accordion 
-        expanded={expandedSections.tracking}
-        onChange={() => handleSectionToggle('tracking')}
-        sx={{ 
-          mb: 4,
-          borderRadius: '16px !important',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-          '&:before': { display: 'none' },
-          '&.Mui-expanded': {
-            margin: '0 0 32px 0',
-          }
-        }}
-      >
-        <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
-          sx={{
-            backgroundColor: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-            borderRadius: '16px 16px 0 0',
-            '&.Mui-expanded': {
-              borderRadius: '16px 16px 0 0',
-            },
-            '& .MuiAccordionSummary-content': {
-              alignItems: 'center',
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <AssignmentIcon sx={{ color: 'warning.main', fontSize: 28 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              🔄 Suivi des réparations
-            </Typography>
-            <Chip 
-              label="Workflow" 
-              size="small" 
-              sx={{ 
-                backgroundColor: 'warning.main', 
-                color: 'white',
-                fontWeight: 600 
-              }} 
-            />
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails sx={{ p: 3 }}>
-          {safeRepairStatuses.length > 0 ? (
-            <>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  État du suivi des réparations - Vue d'ensemble
-                </Typography>
-                <Button 
-                  variant="outlined" 
-                  size="small"
-                  onClick={() => window.location.href = '/kanban'}
-                  sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    border: 'none',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                      transform: 'translateY(-1px)',
-                    }
-                  }}
-                >
-                  Voir le suivi des réparations
-                </Button>
-              </Box>
-              
-              <Grid container spacing={2}>
-                {safeRepairStatuses
-                  .sort((a, b) => a.order - b.order)
-                  .map((status) => {
-                    const statusRepairs = repairs.filter(repair => repair.status === status.id);
-                    // Utiliser la même logique que dans defaultStats pour la cohérence
-                    const overdueRepairs = statusRepairs.filter(repair => {
-                      const isCompleted = repair.status === 'completed' || repair.status === 'returned';
-                      const hasDueDate = repair.dueDate && !isNaN(new Date(repair.dueDate).getTime());
-                      const isOverdue = !isCompleted && hasDueDate && new Date(repair.dueDate) < new Date();
-                      return isOverdue;
-                    }).length;
-                    
-                    return (
-                      <Grid item xs={12} sm={6} md={4} lg={2} key={status.id}>
-                        <Box
-                          sx={{
-                            p: 2,
-                            border: '1px solid',
-                            borderColor: 'divider',
-                            borderRadius: 2,
-                            backgroundColor: statusRepairs.length > 0 ? 'background.paper' : 'grey.50',
-                            position: 'relative',
-                            '&:hover': {
-                              boxShadow: 2,
-                              cursor: 'pointer',
-                            },
-                          }}
-                          onClick={() => window.location.href = '/app/kanban'}
-                        >
-                          {/* Indicateur de retard */}
-                          {overdueRepairs > 0 && (
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: -8,
-                                right: -8,
-                                backgroundColor: 'error.main',
-                                color: 'white',
-                                borderRadius: '50%',
-                                width: 24,
-                                height: 24,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '0.75rem',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              {overdueRepairs}
-                            </Box>
-                          )}
-                          
-                          <Box sx={{ textAlign: 'center' }}>
-                            <Box
-                              sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: '50%',
-                                backgroundColor: status.color,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                margin: '0 auto 8px',
-                                color: 'white',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              {statusRepairs.length}
-                            </Box>
-                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                              {status.name}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {statusRepairs.length === 0 
-                                ? 'Aucune réparation' 
-                                : statusRepairs.length === 1 
-                                  ? '1 réparation' 
-                                  : `${statusRepairs.length} réparations`
-                              }
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Grid>
-                    );
-                  })}
-              </Grid>
-              
-              {/* Résumé des priorités */}
-              <Box sx={{ mt: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
-                  Priorités à traiter :
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {safeRepairStatuses
-                    .filter(status => {
-                      const statusRepairs = repairs.filter(repair => repair.status === status.id);
-                      return statusRepairs.length > 0;
-                    })
-                    .sort((a, b) => {
-                      const aRepairs = repairs.filter(repair => repair.status === a.id);
-                      const bRepairs = repairs.filter(repair => repair.status === b.id);
-                      const aUrgent = aRepairs.filter(r => r.isUrgent).length;
-                      const bUrgent = bRepairs.filter(r => r.isUrgent).length;
-                      return bUrgent - aUrgent || bRepairs.length - aRepairs.length;
-                    })
-                    .slice(0, 3)
-                    .map((status) => {
-                      const statusRepairs = repairs.filter(repair => repair.status === status.id);
-                      const urgentCount = statusRepairs.filter(r => r.isUrgent).length;
-                      
-                      return (
-                        <Chip
-                          key={status.id}
-                          label={`${status.name}: ${statusRepairs.length}${urgentCount > 0 ? ` (${urgentCount} urgent)` : ''}`}
-                          size="small"
-                          sx={{
-                            backgroundColor: status.color,
-                            color: 'white',
-                            fontWeight: 'bold',
-                          }}
-                        />
-                      );
-                    })}
-                </Box>
-              </Box>
-              
-              {/* Réparations urgentes et en retard - Section améliorée */}
-              <Card sx={{ mt: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 3, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <WarningIcon sx={{ fontSize: 28 }} />
-                    Priorités critiques
-                  </Typography>
-                  
-                  <Grid container spacing={3}>
-                  {/* Réparations urgentes - Design amélioré */}
-                  <Grid item xs={12} lg={6}>
-                    <Card 
-                      sx={{ 
-                        background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)',
-                        color: 'white',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                          opacity: 0.3,
-                        },
-                        boxShadow: '0 8px 32px rgba(255, 107, 107, 0.3)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 12px 40px rgba(255, 107, 107, 0.4)',
-                        }
-                      }}
-                    >
-                      <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ 
-                              width: 48, 
-                              height: 48, 
-                              borderRadius: '50%', 
-                              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}>
-                              <WarningIcon sx={{ fontSize: 24, color: 'white' }} />
-                            </Box>
-                            <Box>
-                              <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
-                                🔥 Réparations urgentes
-                              </Typography>
-                              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                                Priorité maximale
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <Chip 
-                            label={repairs.filter(r => r.isUrgent).length} 
-                            sx={{ 
-                              backgroundColor: 'rgba(255, 255, 255, 0.2)', 
-                              color: 'white', 
-                              fontWeight: 700,
-                              fontSize: '1.1rem',
-                              height: 32
-                            }} 
-                          />
-                        </Box>
-                        
-                        {(() => {
-                          const urgentRepairs = repairs.filter(r => r.isUrgent);
-                          if (urgentRepairs.length === 0) {
-                            return (
-                              <Box sx={{ 
-                                p: 2, 
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-                                borderRadius: 2,
-                                textAlign: 'center'
-                              }}>
-                                <Box sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.875rem' }}>
-                                  ✅ Aucune réparation urgente
-                                </Box>
-                              </Box>
-                            );
-                          }
-                          return (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                              {urgentRepairs.slice(0, 3).map((repair) => {
-                                const client = getClientById(repair.clientId);
-                                const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
-                                return (
-                                  <Box 
-                                    key={repair.id} 
-                                    sx={{ 
-                                      p: 2, 
-                                      backgroundColor: 'rgba(255, 255, 255, 0.15)', 
-                                      borderRadius: 2,
-                                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                                      backdropFilter: 'blur(10px)',
-                                      transition: 'all 0.2s ease',
-                                      '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                                        transform: 'scale(1.02)',
-                                      }
-                                    }}
-                                  >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                      <Box sx={{ 
-                                        width: 8, 
-                                        height: 8, 
-                                        borderRadius: '50%', 
-                                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                        animation: 'pulse 2s infinite'
-                                      }} />
-                                      <Box sx={{ fontWeight: 600, color: 'white', fontSize: '0.875rem' }}>
-                                        {client?.firstName} {client?.lastName}
-                                      </Box>
-                                    </Box>
-                                    <Box sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 0.5, fontSize: '0.875rem' }}>
-                                      {device?.brand} {device?.model}
-                                    </Box>
-                                    <Box sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.75rem' }}>
-                                      {repair.description}
-                                    </Box>
-                                  </Box>
-                                );
-                              })}
-                              {urgentRepairs.length > 3 && (
-                                                              <Box sx={{ 
-                                p: 1.5, 
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-                                borderRadius: 2,
-                                textAlign: 'center'
-                              }}>
-                                <Box sx={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 600, fontSize: '0.875rem' }}>
-                                  +{urgentRepairs.length - 3} autres réparations urgentes
-                                </Box>
-                              </Box>
-                              )}
-                            </Box>
-                          );
-                        })()}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  
-                  {/* Réparations en retard - Design amélioré */}
-                  <Grid item xs={12} lg={6}>
-                    <Card 
-                      sx={{ 
-                        background: 'linear-gradient(135deg, #ffa726 0%, #ff9800 100%)',
-                        color: 'white',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                          opacity: 0.3,
-                        },
-                        boxShadow: '0 8px 32px rgba(255, 167, 38, 0.3)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: '0 12px 40px rgba(255, 167, 38, 0.4)',
-                        }
-                      }}
-                    >
-                      <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ 
-                              width: 48, 
-                              height: 48, 
-                              borderRadius: '50%', 
-                              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}>
-                              <ScheduleIcon sx={{ fontSize: 24, color: 'white' }} />
-                            </Box>
-                            <Box>
-                              <Typography variant="h6" sx={{ fontWeight: 700, color: 'white' }}>
-                                ⏰ Réparations en retard
-                              </Typography>
-                              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
-                                Délais dépassés
-                              </Typography>
-                            </Box>
-                          </Box>
-                          <Chip 
-                            label={repairs.filter(repair => {
-                              const isCompleted = repair.status === 'completed' || repair.status === 'returned';
-                              const hasDueDate = repair.dueDate && !isNaN(new Date(repair.dueDate).getTime());
-                              const isOverdue = !isCompleted && hasDueDate && new Date(repair.dueDate) < new Date();
-                              return isOverdue;
-                            }).length} 
-                            sx={{ 
-                              backgroundColor: 'rgba(255, 255, 255, 0.2)', 
-                              color: 'white', 
-                              fontWeight: 700,
-                              fontSize: '1.1rem',
-                              height: 32
-                            }} 
-                          />
-                        </Box>
-                        
-                        {(() => {
-                          // Utiliser la même logique que dans defaultStats pour la cohérence
-                          const overdueRepairs = repairs.filter(repair => {
-                            const isCompleted = repair.status === 'completed' || repair.status === 'returned';
-                            const hasDueDate = repair.dueDate && !isNaN(new Date(repair.dueDate).getTime());
-                            const isOverdue = !isCompleted && hasDueDate && new Date(repair.dueDate) < new Date();
-                            return isOverdue;
-                          });
-                          
-                          if (overdueRepairs.length === 0) {
-                            return (
-                              <Box sx={{ 
-                                p: 2, 
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-                                borderRadius: 2,
-                                textAlign: 'center'
-                              }}>
-                                <Box sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.875rem' }}>
-                                  ✅ Aucune réparation en retard
-                                </Box>
-                              </Box>
-                            );
-                          }
-                          
-                          return (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                              {overdueRepairs.slice(0, 3).map((repair) => {
-                                const client = getClientById(repair.clientId);
-                                const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
-                                const daysLate = Math.floor((new Date().getTime() - new Date(repair.dueDate).getTime()) / (1000 * 60 * 60 * 24));
-                                return (
-                                  <Box 
-                                    key={repair.id} 
-                                    sx={{ 
-                                      p: 2, 
-                                      backgroundColor: 'rgba(255, 255, 255, 0.15)', 
-                                      borderRadius: 2,
-                                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                                      backdropFilter: 'blur(10px)',
-                                      transition: 'all 0.2s ease',
-                                      '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
-                                        transform: 'scale(1.02)',
-                                      }
-                                    }}
-                                  >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Box sx={{ 
-                                          width: 8, 
-                                          height: 8, 
-                                          borderRadius: '50%', 
-                                          backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                          animation: 'pulse 2s infinite'
-                                        }} />
-                                        <Box sx={{ fontWeight: 600, color: 'white', fontSize: '0.875rem' }}>
-                                          {client?.firstName} {client?.lastName}
-                                        </Box>
-                                      </Box>
-                                      <Chip 
-                                        label={`${daysLate}j`} 
-                                        size="small"
-                                        sx={{ 
-                                          backgroundColor: 'rgba(255, 255, 255, 0.2)', 
-                                          color: 'white', 
-                                          fontWeight: 700,
-                                          fontSize: '0.7rem',
-                                          height: 20
-                                        }} 
-                                      />
-                                    </Box>
-                                    <Box sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 0.5, fontSize: '0.875rem' }}>
-                                      {device?.brand} {device?.model}
-                                    </Box>
-                                    <Box sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.75rem' }}>
-                                      {repair.description}
-                                    </Box>
-                                  </Box>
-                                );
-                              })}
-                              {overdueRepairs.length > 3 && (
-                                                              <Box sx={{ 
-                                p: 1.5, 
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)', 
-                                borderRadius: 2,
-                                textAlign: 'center'
-                              }}>
-                                <Box sx={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 600, fontSize: '0.875rem' }}>
-                                  +{overdueRepairs.length - 3} autres réparations en retard
-                                </Box>
-                              </Box>
-                              )}
-                            </Box>
-                          );
-                        })()}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-                
-                  {/* Bouton d'action rapide */}
-                  <Box sx={{ mt: 3, textAlign: 'center' }}>
-                    <Button
-                      variant="contained"
-                      size="large"
-                      startIcon={<BuildIcon />}
-                      onClick={() => window.location.href = '/app/kanban'}
-                      sx={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
-                        fontWeight: 700,
-                        px: 4,
-                        py: 1.5,
-                        borderRadius: 3,
-                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
-                        }
-                      }}
-                    >
-                      Gérer toutes les priorités
-                    </Button>
-                  </Box>
-                </CardContent>
-              </Card>
-            </>
-          ) : (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="body2" color="text.secondary">
-                Chargement des données de suivi des réparations...
-              </Typography>
-            </Box>
-          )}
-        </AccordionDetails>
-      </Accordion>
-
-      {/* Section Tâches du jour - Collapsible */}
-      <Accordion 
-        expanded={expandedSections.tasks}
-        onChange={() => handleSectionToggle('tasks')}
-        sx={{ 
-          mb: 4,
-          borderRadius: '16px !important',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-          '&:before': { display: 'none' },
-          '&.Mui-expanded': {
-            margin: '0 0 32px 0',
-          }
-        }}
-      >
-        <AccordionSummary
-          expandIcon={<ExpandMoreIcon />}
-          sx={{
-            backgroundColor: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-            borderRadius: '16px 16px 0 0',
-            '&.Mui-expanded': {
-              borderRadius: '16px 16px 0 0',
-            },
-            '& .MuiAccordionSummary-content': {
-              alignItems: 'center',
-            }
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <TodayIcon sx={{ color: 'info.main', fontSize: 28 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              📋 Tâches du jour
-            </Typography>
-            <Chip 
-              label="Actions" 
-              size="small" 
-              sx={{ 
-                backgroundColor: 'info.main', 
-                color: 'white',
-                fontWeight: 600 
-              }} 
-            />
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails sx={{ p: 3 }}>
-          {safeRepairStatuses.length > 0 ? (
-            <>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  📋 Tâches à faire aujourd'hui
-                </Typography>
-                <Button 
-                  variant="outlined" 
-                  size="small"
-                  onClick={() => window.location.href = '/app/kanban'}
-                  sx={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                    color: 'white',
-                    border: 'none',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
-                      transform: 'translateY(-1px)',
-                    }
-                  }}
-                >
-                  Voir toutes les tâches
-                </Button>
-              </Box>
-              
-              <Grid container spacing={2}>
-                {/* Nouvelles réparations à traiter */}
-                {(() => {
-                  const newRepairs = repairs.filter(r => r.status === 'new');
-                  if (newRepairs.length === 0) return null;
-                  
-                  return (
-                    <Grid item xs={12} sm={6} md={6} lg={6}>
-                      <Box sx={{ p: 2, backgroundColor: 'info.light', borderRadius: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'info.dark' }}>
-                          🆕 Nouvelles réparations à traiter ({newRepairs.length})
-                        </Typography>
-                        {newRepairs.slice(0, 3).map((repair) => {
-                          const client = getClientById(repair.clientId);
-                          const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
-                          return (
-                            <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
-                              <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                {client?.firstName} {client?.lastName} - {device?.brand} {device?.model}
-                              </Typography>
-                              <Typography variant="caption" display="block" color="text.secondary">
-                                {repair.description}
-                              </Typography>
-                            </Box>
-                          );
-                        })}
-                        {newRepairs.length > 3 && (
-                          <Typography variant="caption" color="text.secondary">
-                            +{newRepairs.length - 3} autres à traiter
-                          </Typography>
-                        )}
-                      </Box>
-                    </Grid>
-                  );
-                })()}
-                
-                {/* Réparations en attente de pièces */}
-                {(() => {
-                  const waitingParts = repairs.filter(r => r.status === 'waiting_parts');
-                  if (waitingParts.length === 0) return null;
-                  
-                  return (
-                    <Grid item xs={12} sm={6} md={6} lg={6}>
-                      <Box sx={{ p: 2, backgroundColor: 'warning.light', borderRadius: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'warning.dark' }}>
-                          🔧 Réparations en attente de pièces ({waitingParts.length})
-                        </Typography>
-                        {waitingParts.slice(0, 3).map((repair) => {
-                          const client = getClientById(repair.clientId);
-                          const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
-                          return (
-                            <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
-                              <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                {client?.firstName} {client?.lastName} - {device?.brand} {device?.model}
-                              </Typography>
-                              <Typography variant="caption" display="block" color="text.secondary">
-                                {repair.description}
-                              </Typography>
-                            </Box>
-                          );
-                        })}
-                        {waitingParts.length > 3 && (
-                          <Typography variant="caption" color="text.secondary">
-                            +{waitingParts.length - 3} autres en attente
-                          </Typography>
-                        )}
-                      </Box>
-                    </Grid>
-                  );
-                })()}
-                
-                {/* Réparations prêtes à livrer */}
-                {(() => {
-                  const readyToDeliver = repairs.filter(r => r.status === 'waiting_delivery');
-                  if (readyToDeliver.length === 0) return null;
-                  
-                  return (
-                    <Grid item xs={12} sm={6} md={6} lg={6}>
-                      <Box sx={{ p: 2, backgroundColor: 'success.light', borderRadius: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'success.dark' }}>
-                          📦 Réparations prêtes à livrer ({readyToDeliver.length})
-                        </Typography>
-                        {readyToDeliver.slice(0, 3).map((repair) => {
-                          const client = getClientById(repair.clientId);
-                          const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
-                          return (
-                            <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
-                              <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                {client?.firstName} {client?.lastName} - {device?.brand} {device?.model}
-                              </Typography>
-                              <Typography variant="caption" display="block" color="text.secondary">
-                                {repair.description}
-                              </Typography>
-                            </Box>
-                          );
-                        })}
-                        {readyToDeliver.length > 3 && (
-                          <Typography variant="caption" color="text.secondary">
-                            +{readyToDeliver.length - 3} autres prêtes
-                          </Typography>
-                        )}
-                      </Box>
-                    </Grid>
-                  );
-                })()}
-                
-                {/* Réparations en cours */}
-                {(() => {
-                  const inProgress = repairs.filter(r => r.status === 'in_progress');
-                  if (inProgress.length === 0) return null;
-                  
-                  return (
-                    <Grid item xs={12} sm={6} md={6} lg={6}>
-                      <Box sx={{ p: 2, backgroundColor: 'primary.light', borderRadius: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'primary.dark' }}>
-                          ⚡ Réparations en cours ({inProgress.length})
-                        </Typography>
-                        {inProgress.slice(0, 3).map((repair) => {
-                          const client = getClientById(repair.clientId);
-                          const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
-                          return (
-                            <Box key={repair.id} sx={{ mb: 1, p: 1, backgroundColor: 'white', borderRadius: 0.5 }}>
-                              <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                {client?.firstName} {client?.lastName} - {device?.brand} {device?.model}
-                              </Typography>
-                              <Typography variant="caption" display="block" color="text.secondary">
-                                {repair.description}
-                              </Typography>
-                            </Box>
-                          );
-                        })}
-                        {inProgress.length > 3 && (
-                          <Typography variant="caption" color="text.secondary">
-                            +{inProgress.length - 3} autres en cours
-                          </Typography>
-                        )}
-                      </Box>
-                    </Grid>
-                  );
-                })()}
-              </Grid>
-              
-              {/* Message si aucune tâche */}
-              {repairs.filter(r => ['new', 'waiting_parts', 'waiting_delivery', 'in_progress'].includes(r.status)).length === 0 && (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    🎉 Aucune tâche en attente ! Toutes les réparations sont à jour.
-                  </Typography>
-                </Box>
               )}
-            </>
-          ) : (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Typography variant="body2" color="text.secondary">
-                Chargement des tâches...
-              </Typography>
-            </Box>
+              {stats.overdue > 0 && (
+                <Grid item xs={12} sm={6}>
+                  <Card sx={{ ...CARD_STATIC, bgcolor: alpha('#f59e0b', 0.04), borderColor: alpha('#f59e0b', 0.15) }}>
+                    <CardContent sx={{ p: '16px !important' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                        <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center',
+                          bgcolor: alpha('#f59e0b', 0.10), color: '#f59e0b', flexShrink: 0 }}>
+                          <OverdueIcon sx={{ fontSize: 18 }} />
+                        </Box>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.85rem' }}>
+                          {stats.overdue} en retard
+                        </Typography>
+                      </Box>
+                      {stats.overdueList.slice(0, 3).map(r => {
+                        const c = getClientById(r.clientId);
+                        const d = r.deviceId ? getDeviceById(r.deviceId) : null;
+                        const daysLate = Math.floor((Date.now() - new Date(r.dueDate).getTime()) / 86400000);
+                        return (
+                          <Box key={r.id} sx={{ py: 0.75, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            borderBottom: '1px solid', borderColor: alpha('#f59e0b', 0.08),
+                            '&:last-child': { borderBottom: 0 } }}>
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block' }}>
+                                {c?.firstName} {c?.lastName}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                {d?.brand} {d?.model}
+                              </Typography>
+                            </Box>
+                            <Chip label={`${daysLate}j`} size="small"
+                              sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700,
+                                bgcolor: alpha('#f59e0b', 0.12), color: '#f59e0b' }} />
+                          </Box>
+                        );
+                      })}
+                      {stats.overdue > 3 && (
+                        <Typography variant="caption" sx={{ color: '#f59e0b', fontWeight: 600, mt: 0.5, display: 'block' }}>
+                          +{stats.overdue - 3} autres
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
+            </Grid>
           )}
-        </AccordionDetails>
-      </Accordion>
 
-      {/* Section Activité récente - Toujours visible */}
-      <Card 
-        sx={{ 
-          mb: 4,
-          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-          border: '1px solid rgba(59, 130, 246, 0.1)',
-        }}
-      >
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-            <Box sx={{ 
-              width: 40, 
-              height: 40, 
-              borderRadius: '50%', 
-              backgroundColor: 'info.main',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <ScheduleIcon sx={{ color: 'white', fontSize: 20 }} />
-            </Box>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              📈 Activité récente
-            </Typography>
-            <Chip 
-              label="Live" 
-              size="small" 
-              sx={{ 
-                backgroundColor: 'success.main', 
-                color: 'white',
-                fontWeight: 600,
-                animation: 'pulse 2s infinite'
-              }} 
-            />
-          </Box>
-          
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={8}>
-              <Card sx={{ 
-                background: 'white',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                border: '1px solid rgba(0, 0, 0, 0.04)'
-              }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>Réparations récentes</Typography>
-                    <Button 
-                      variant="outlined" 
-                      size="small"
-                      sx={{
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                        color: 'white',
-                        border: 'none',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
-                          transform: 'translateY(-1px)',
-                        }
-                      }}
-                    >
-                      Voir tout
-                    </Button>
-                  </Box>
-              {recentRepairs.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                  Aucune réparation récente
+          {/* recent repairs */}
+          <Card sx={CARD_STATIC}>
+            <CardContent sx={{ p: '20px !important' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                  Réparations récentes
                 </Typography>
+                <Button size="small" onClick={() => navigate('/app/sav')}
+                  sx={{ textTransform: 'none', fontWeight: 600, color: '#6366f1', fontSize: '0.8rem' }}>
+                  Tout voir
+                </Button>
+              </Box>
+
+              {recentRepairs.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 6, opacity: 0.4 }}>
+                  <BuildIcon sx={{ fontSize: 32, color: 'text.disabled', mb: 1 }} />
+                  <Typography variant="body2" sx={{ color: 'text.disabled' }}>Aucune réparation</Typography>
+                </Box>
               ) : (
-                <List>
-                  {recentRepairs.map((repair, index) => {
-                    const client = getClientById(repair.clientId);
-                    const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
-                    return (
-                      <React.Fragment key={repair.id}>
-                        <ListItem alignItems="flex-start">
-                          <ListItemAvatar>
-                            <Avatar
-                              sx={{
-                                backgroundColor: getDeviceTypeColor(device?.type || 'other'),
-                              }}
-                            >
-                              {getDeviceTypeIcon(device?.type || 'other')}
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={
-                              <React.Fragment>
-                                <Typography variant="subtitle2" component="span" sx={{ mr: 1 }}>
-                                  {client?.firstName} {client?.lastName}
-                                </Typography>
-                                <Chip
-                                  label={repair.isUrgent ? 'Urgent' : 'Normal'}
-                                  size="small"
-                                  color={repair.isUrgent ? 'error' : 'default'}
-                                />
-                              </React.Fragment>
-                            }
-                            secondary={
-                              <Box>
-                                <Typography variant="body2" color="text.secondary">
-                                  {device?.brand} {device?.model} - {repair.description}
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                                  <Chip
-                                    label={repairStatuses.find(s => s.id === repair.status)?.name || repair.status}
-                                    size="small"
-                                    sx={{
-                                      backgroundColor: getStatusColor(repair.status),
-                                      color: 'white',
-                                    }}
-                                  />
-                                  <Typography variant="caption" color="text.secondary">
-                                    {safeFormatDate(repair.createdAt, 'dd/MM/yyyy HH:mm')}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            }
-                          />
-                          <Typography variant="h6" color="primary">
-                            {formatFromEUR(repair.totalPrice, currency)} TTC
+                recentRepairs.map((repair, i) => {
+                  const client = getClientById(repair.clientId);
+                  const device = repair.deviceId ? getDeviceById(repair.deviceId) : null;
+                  const statusInfo = (repairStatuses || []).find(s => s.id === repair.status);
+                  const devType = (device?.type || 'other') as string;
+                  return (
+                    <Box key={repair.id}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1.5,
+                        borderBottom: i < recentRepairs.length - 1 ? '1px solid' : 'none', borderColor: 'divider',
+                        cursor: 'pointer', borderRadius: '8px', mx: -1, px: 1,
+                        transition: 'background 0.15s',
+                        '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' },
+                      }}
+                      onClick={() => navigate('/app/sav')}>
+                      <Avatar sx={{ width: 36, height: 36,
+                        bgcolor: alpha((deviceTypeColors as any)[devType] || '#6366f1', 0.12),
+                        color: (deviceTypeColors as any)[devType] || '#6366f1' }}>
+                        {DEVICE_ICONS[devType] || <ComputerIcon sx={{ fontSize: 18 }} />}
+                      </Avatar>
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem' }} noWrap>
+                            {client?.firstName} {client?.lastName}
                           </Typography>
-                        </ListItem>
-                        {index < recentRepairs.length - 1 && <Divider variant="inset" component="li" />}
-                      </React.Fragment>
-                    );
-                  })}
-                </List>
+                          {repair.isUrgent && (
+                            <Chip label="Urgent" size="small"
+                              sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700,
+                                bgcolor: alpha('#ef4444', 0.10), color: '#ef4444' }} />
+                          )}
+                        </Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }} noWrap>
+                          {device?.brand} {device?.model} — {repair.description}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                        {statusInfo && (
+                          <Chip label={statusInfo.name} size="small"
+                            sx={{ height: 20, fontSize: '0.65rem', fontWeight: 600,
+                              bgcolor: alpha(statusInfo.color, 0.12), color: statusInfo.color, mb: 0.5, display: 'flex' }} />
+                        )}
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.68rem' }}>
+                          {safeDate(repair.createdAt, 'dd/MM HH:mm')}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                })
               )}
             </CardContent>
           </Card>
         </Grid>
 
-            <Grid item xs={12} md={4}>
-              <Card sx={{ 
-                background: 'white',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-                border: '1px solid rgba(0, 0, 0, 0.04)'
-              }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-                    📅 Rendez-vous aujourd'hui
+        {/* ─ right ─ */}
+        <Grid item xs={12} lg={4}>
+          {/* revenue */}
+          <Card sx={{ ...CARD_STATIC, mb: 3,
+            background: 'linear-gradient(135deg, #111827, #1e293b)',
+            color: '#fff', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100,
+              borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.04)' }} />
+            <Box sx={{ position: 'absolute', bottom: -30, left: -30, width: 80, height: 80,
+              borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.03)' }} />
+            <CardContent sx={{ p: '20px !important', position: 'relative' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  bgcolor: 'rgba(255,255,255,0.10)' }}>
+                  <TrendingUpIcon sx={{ fontSize: 18, color: '#22c55e' }} />
+                </Box>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 500, fontSize: '0.75rem' }}>
+                  CA du mois
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 800, letterSpacing: '-0.02em' }}>
+                {formatFromEUR(stats.monthRevenue, currency)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>
+                {stats.completed} réparation{stats.completed > 1 ? 's' : ''} terminée{stats.completed > 1 ? 's' : ''}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          {/* appointments */}
+          <Card sx={{ ...CARD_STATIC, mb: 3 }}>
+            <CardContent sx={{ p: '20px !important' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  background: `linear-gradient(135deg, #3b82f6, ${alpha('#3b82f6', 0.7)})`,
+                  color: '#fff', boxShadow: `0 4px 14px ${alpha('#3b82f6', 0.3)}` }}>
+                  <CalendarIcon sx={{ fontSize: 16 }} />
+                </Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                  Rendez-vous du jour
+                </Typography>
+                <Chip label={stats.todayAppts} size="small"
+                  sx={{ height: 22, fontSize: '0.72rem', fontWeight: 700,
+                    bgcolor: alpha('#3b82f6', 0.10), color: '#3b82f6', ml: 'auto' }} />
+              </Box>
+
+              {stats.todayApptsList.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 4, opacity: 0.4 }}>
+                  <ScheduleIcon sx={{ fontSize: 32, color: 'text.disabled', mb: 1 }} />
+                  <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
+                    Aucun rendez-vous
                   </Typography>
-                  {todayAppointments.length === 0 ? (
-                    <Box sx={{ 
-                      textAlign: 'center', 
-                      py: 3,
-                      backgroundColor: 'grey.50',
-                      borderRadius: 2,
-                      border: '2px dashed',
-                      borderColor: 'grey.300'
-                    }}>
-                      <ScheduleIcon sx={{ fontSize: 48, color: 'grey.400', mb: 1 }} />
-                      <Typography variant="body2" color="text.secondary">
-                        Aucun rendez-vous aujourd'hui
-                      </Typography>
+                </Box>
+              ) : (
+                stats.todayApptsList.map((apt, i) => {
+                  const client = apt.clientId ? getClientById(apt.clientId) : null;
+                  return (
+                    <Box key={apt.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.25,
+                      borderBottom: i < stats.todayApptsList.length - 1 ? '1px solid' : 'none', borderColor: 'divider' }}>
+                      <Box sx={{ width: 32, height: 32, borderRadius: '8px',
+                        bgcolor: alpha('#3b82f6', 0.08),
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <ScheduleIcon sx={{ fontSize: 16, color: '#3b82f6' }} />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.82rem' }} noWrap>
+                          {apt.title || (client ? `${client.firstName} ${client.lastName}` : 'Rendez-vous')}
+                        </Typography>
+                        {client && apt.title && (
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            {client.firstName} {client.lastName}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Chip label={safeDate(apt.startDate, 'HH:mm')} size="small"
+                        sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600,
+                          bgcolor: alpha('#3b82f6', 0.08), color: '#3b82f6' }} />
                     </Box>
-                  ) : (
-                    <List sx={{ p: 0 }}>
-                      {todayAppointments.map((appointment, index) => {
-                        const client = appointment.clientId ? getClientById(appointment.clientId) : null;
-                        return (
-                          <React.Fragment key={appointment.id}>
-                            <ListItem 
-                              alignItems="flex-start"
-                              sx={{
-                                backgroundColor: 'grey.50',
-                                borderRadius: 2,
-                                mb: 1,
-                                border: '1px solid',
-                                borderColor: 'grey.200',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  backgroundColor: 'primary.50',
-                                  borderColor: 'primary.200',
-                                  transform: 'translateY(-1px)',
-                                }
-                              }}
-                            >
-                              <ListItemAvatar>
-                                <Avatar sx={{ 
-                                  backgroundColor: 'primary.main',
-                                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
-                                }}>
-                                  <ScheduleIcon />
-                                </Avatar>
-                              </ListItemAvatar>
-                              <ListItemText
-                                primary={
-                                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                    {appointment.title}
-                                  </Typography>
-                                }
-                                secondary={
-                                  <React.Fragment>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                      {client?.firstName} {client?.lastName}
-                                    </Typography>
-                                    <Chip 
-                                      label={`${safeFormatDate(appointment.startDate, 'HH:mm')} - ${safeFormatDate(appointment.endDate, 'HH:mm')}`}
-                                      size="small"
-                                      sx={{
-                                        backgroundColor: 'primary.main',
-                                        color: 'white',
-                                        fontWeight: 600,
-                                        fontSize: '0.7rem'
-                                      }}
-                                    />
-                                  </React.Fragment>
-                                }
-                              />
-                            </ListItem>
-                            {index < todayAppointments.length - 1 && <Divider sx={{ my: 1 }} />}
-                          </React.Fragment>
-                        );
-                      })}
-                    </List>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+
+          {/* actions du jour */}
+          <Card sx={CARD_STATIC}>
+            <CardContent sx={{ p: '20px !important' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, fontSize: '0.95rem', mb: 2 }}>
+                Actions du jour
+              </Typography>
+
+              {[
+                { key: 'new', label: 'Nouvelles prises en charge', color: '#3b82f6', items: safeRepairs.filter(r => r.status === 'new') },
+                { key: 'waiting_parts', label: 'Attente de pièces', color: '#f59e0b', items: safeRepairs.filter(r => r.status === 'waiting_parts') },
+                { key: 'waiting_delivery', label: 'Prêtes à restituer', color: '#8b5cf6', items: safeRepairs.filter(r => r.status === 'waiting_delivery') },
+                { key: 'in_progress', label: 'En cours de réparation', color: '#22c55e', items: safeRepairs.filter(r => r.status === 'in_progress') },
+              ].filter(g => g.items.length > 0).map(group => (
+                <Box key={group.key} sx={{ mb: 2, '&:last-child': { mb: 0 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: group.color }} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: group.color, fontSize: '0.72rem',
+                      textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      {group.label}
+                    </Typography>
+                    <Chip label={group.items.length} size="small"
+                      sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700,
+                        bgcolor: alpha(group.color, 0.10), color: group.color, ml: 'auto' }} />
+                  </Box>
+                  {group.items.slice(0, 2).map(r => {
+                    const c = getClientById(r.clientId);
+                    return (
+                      <Box key={r.id} sx={{ pl: 2, py: 0.5 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                          {c?.firstName} {c?.lastName}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                  {group.items.length > 2 && (
+                    <Typography variant="caption" sx={{ pl: 2, color: 'text.secondary', fontSize: '0.68rem' }}>
+                      +{group.items.length - 2} autres
+                    </Typography>
                   )}
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
+                </Box>
+              ))}
 
-      {/* Test de connexion Supabase - MASQUÉ */}
-      {/* <Box sx={{ mt: 4 }}>
-        <SupabaseTest />
-      </Box> */}
+              {safeRepairs.filter(r => ['new', 'waiting_parts', 'waiting_delivery', 'in_progress'].includes(r.status)).length === 0 && (
+                <Box sx={{ textAlign: 'center', py: 4, opacity: 0.4 }}>
+                  <CheckCircleIcon sx={{ fontSize: 32, color: 'text.disabled', mb: 1 }} />
+                  <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
+                    Tout est à jour
+                  </Typography>
+                </Box>
+              )}
 
-      {/* Statut de l'application - MASQUÉ */}
-      {/* <Box sx={{ mt: 4 }}>
-        <AppStatus />
-      </Box> */}
-
-      {/* Outils d'administration - MASQUÉ */}
-      {/* <Box sx={{ mt: 4 }}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Outils d'administration
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Outils pour gérer la base de données et nettoyer les données.
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Button
-                variant="contained"
-                color="warning"
-                onClick={async () => {
-                  if (window.confirm('⚠️ Êtes-vous sûr de vouloir supprimer TOUTES les données ? Cette action est irréversible !')) {
-                    try {
-                      await demoDataService.clearAllData();
-                      // Recharger les données vides
-                      await Promise.all([
-                        loadClients(),
-                        loadDevices(),
-                        loadServices(),
-                        loadParts(),
-                        loadProducts(),
-                        loadRepairs(),
-                        loadSales(),
-                        loadAppointments(),
-                      ]);
-                      alert('✅ Toutes les données ont été supprimées. Site vierge prêt à l\'emploi !');
-                    } catch (error) {
-                      console.error('Erreur lors du nettoyage des données:', error);
-                      alert('❌ Erreur lors du nettoyage des données');
-                    }
-                  }
-                }}
-              >
-                🧹 Nettoyer toutes les données
+              <Button fullWidth size="small" onClick={() => navigate('/app/kanban')}
+                sx={{ mt: 2, textTransform: 'none', fontWeight: 600, color: '#6366f1',
+                  bgcolor: alpha('#6366f1', 0.06), borderRadius: '10px', py: 1,
+                  '&:hover': { bgcolor: alpha('#6366f1', 0.12) } }}>
+                Voir toutes les tâches
               </Button>
-              <Button
-                variant="outlined"
-                onClick={async () => {
-                  try {
-                    // Recharger toutes les données
-                    await Promise.all([
-                      loadClients(),
-                      loadDevices(),
-                      loadServices(),
-                      loadParts(),
-                      loadProducts(),
-                      loadRepairs(),
-                      loadSales(),
-                      loadAppointments(),
-                    ]);
-                    alert(`✅ Données rechargées : ${clients.length} clients, ${devices.length} appareils, ${repairs.length} réparations`);
-                  } catch (error) {
-                    console.error('Erreur lors du rechargement des données:', error);
-                    alert('❌ Erreur lors du rechargement des données');
-                  }
-                }}
-              >
-                🔄 Recharger les données
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
-      </Box> */}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
 
-      {/* Dialog pour la vente simplifiée */}
-      <SimplifiedSalesDialog
-        open={simplifiedSaleDialogOpen}
-        onClose={() => setSimplifiedSaleDialogOpen(false)}
-      />
+      {/* ── dialog ── */}
+      <SimplifiedSalesDialog open={saleOpen} onClose={() => setSaleOpen(false)} />
     </Box>
   );
 };

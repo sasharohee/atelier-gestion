@@ -12,7 +12,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
   Dialog,
   DialogTitle,
@@ -35,7 +34,9 @@ import {
   Badge,
   Snackbar,
   Chip,
+  Paper,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   Add as AddIcon,
   Receipt as ReceiptIcon,
@@ -61,6 +62,8 @@ import {
   Close as CloseIcon,
   Person as PersonIcon,
   Discount as DiscountIcon,
+  PointOfSale as PointOfSaleIcon,
+  SentimentDissatisfied as EmptyIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -72,6 +75,98 @@ import ClientForm from '../../components/ClientForm';
 import { useWorkshopSettings } from '../../contexts/WorkshopSettingsContext';
 import { formatFromEUR } from '../../utils/currencyUtils';
 import ThermalReceiptDialog from '../../components/ThermalReceiptDialog';
+
+/* ─── design tokens ─── */
+const CARD_BASE = {
+  borderRadius: '16px',
+  border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+  transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+  '&:hover': { boxShadow: '0 8px 32px rgba(0,0,0,0.10)', transform: 'translateY(-2px)' },
+} as const;
+const CARD_STATIC = {
+  borderRadius: '16px',
+  border: '1px solid rgba(0,0,0,0.04)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+} as const;
+const TABLE_HEAD_SX = {
+  '& th': {
+    borderBottom: '2px solid',
+    borderColor: 'divider',
+    fontWeight: 600,
+    fontSize: '0.75rem',
+    color: 'text.secondary',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+} as const;
+const BTN_DARK = {
+  borderRadius: '10px',
+  textTransform: 'none',
+  fontWeight: 600,
+  bgcolor: '#111827',
+  '&:hover': { bgcolor: '#1f2937' },
+  boxShadow: '0 2px 8px rgba(17,24,39,0.25)',
+} as const;
+const INPUT_SX = { '& .MuiOutlinedInput-root': { borderRadius: '10px' } } as const;
+
+/* ─── KPI mini card ─── */
+function KpiMini({ icon, iconColor, label, value, subtitle }: { icon: React.ReactNode; iconColor: string; label: string; value: string | number; subtitle?: string }) {
+  return (
+    <Card sx={CARD_BASE}>
+      <CardContent sx={{ p: '16px !important' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: `linear-gradient(135deg, ${iconColor}, ${alpha(iconColor, 0.7)})`,
+              color: '#fff',
+              flexShrink: 0,
+              boxShadow: `0 4px 14px ${alpha(iconColor, 0.3)}`,
+            }}
+          >
+            {icon}
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, fontSize: '1.1rem' }}>
+              {value}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}>
+              {label}
+            </Typography>
+            {subtitle && (
+              <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.6rem', display: 'block' }}>
+                {subtitle}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── filter types ─── */
+type SaleFilter = 'all' | 'completed' | 'pending' | 'returned';
+const SALE_FILTERS: { key: SaleFilter; label: string; color: string }[] = [
+  { key: 'all', label: 'Toutes', color: '#6366f1' },
+  { key: 'completed', label: 'Payées', color: '#22c55e' },
+  { key: 'pending', label: 'En attente', color: '#f59e0b' },
+  { key: 'returned', label: 'Restituées', color: '#ef4444' },
+];
+
+const PAYMENT_COLORS: Record<string, string> = {
+  cash: '#22c55e',
+  card: '#6366f1',
+  transfer: '#3b82f6',
+  check: '#f59e0b',
+  payment_link: '#8b5cf6',
+};
 
 interface SaleItemForm {
   type: 'product' | 'service' | 'part';
@@ -98,10 +193,8 @@ const Sales: React.FC = () => {
     loadServices,
     loadParts,
   } = useAppStore();
-  
+
   const { workshopSettings } = useWorkshopSettings();
-  
-  // Valeur par défaut pour éviter les erreurs
   const currency = workshopSettings?.currency || 'EUR';
 
   const [newSaleDialogOpen, setNewSaleDialogOpen] = useState(false);
@@ -118,411 +211,254 @@ const Sales: React.FC = () => {
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [discountPercentage, setDiscountPercentage] = useState<number>(0);
   const [clientFormOpen, setClientFormOpen] = useState(false);
-  
-  // État pour la notification de succès
+
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
-  // Charger les produits, services et pièces au montage du composant
+  /* ─── sales list search/filter ─── */
+  const [salesSearch, setSalesSearch] = useState('');
+  const [salesFilter, setSalesFilter] = useState<SaleFilter>('all');
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        console.log('🔄 Chargement des produits, services et pièces...');
-        await Promise.all([
-          loadProducts(),
-          loadServices(),
-          loadParts(),
-        ]);
-        console.log('✅ Chargement terminé');
-      } catch (error) {
-        console.error('❌ Erreur lors du chargement des données:', error);
+        await Promise.all([loadProducts(), loadServices(), loadParts()]);
+      } catch {
+        // silently fail
       }
     };
-    
     loadData();
   }, [loadProducts, loadServices, loadParts]);
 
-  // Recharger les données quand le dialogue s'ouvre
   useEffect(() => {
     if (newSaleDialogOpen) {
       const reloadData = async () => {
         try {
-          console.log('🔄 Rechargement des données pour la nouvelle vente...');
-          await Promise.all([
-            loadProducts(),
-            loadServices(),
-            loadParts(),
-          ]);
-          console.log('✅ Rechargement terminé');
-        } catch (error) {
-          console.error('❌ Erreur lors du rechargement des données:', error);
+          await Promise.all([loadProducts(), loadServices(), loadParts()]);
+        } catch {
+          // silently fail
         }
       };
-      
       reloadData();
     }
   }, [newSaleDialogOpen, loadProducts, loadServices, loadParts]);
 
-  // Log des produits disponibles pour débogage
-  useEffect(() => {
-    if (newSaleDialogOpen && selectedItemType === 'product') {
-      console.log('📊 État des produits:', {
-        total: products.length,
-        active: products.filter(p => p.isActive).length,
-        withCategory: products.filter(p => p.isActive && p.category).length,
-        categories: Array.from(new Set(products.filter(p => p.isActive && p.category).map(p => p.category))),
-        sample: products.filter(p => p.isActive).slice(0, 3).map(p => ({
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          isActive: p.isActive
-        }))
-      });
-    }
-  }, [newSaleDialogOpen, selectedItemType, products]);
+  /* ─── helpers ─── */
+  const roundToTwo = (num: number): number => Math.round(num * 100) / 100;
 
-  // Fonction helper pour obtenir la source d'un item
-  const getItemSource = (item: SaleItem) => {
-    switch (item.type) {
-      case 'product': return products.find(p => p.id === item.itemId);
-      case 'service': return services.find(s => s.id === item.itemId);
-      case 'part': return parts.find(p => p.id === item.itemId);
-      default: return null;
-    }
-  };
-
-  // Fonction pour arrondir à 2 décimales
-  const roundToTwo = (num: number): number => {
-    return Math.round(num * 100) / 100;
-  };
-
-  // Calcul des totaux (AVEC TVA)
-  const totals = useMemo(() => {
-    // Gestion du taux de TVA : utiliser la valeur configurée ou 20% par défaut
-    let vatRate = 20; // Valeur par défaut
-    if (workshopSettings?.vatRate !== undefined && workshopSettings?.vatRate !== null) {
-      const parsedRate = parseFloat(workshopSettings.vatRate);
-      if (!isNaN(parsedRate)) {
-        vatRate = parsedRate;
-      }
-    }
-    
-    // Calculer par unité puis multiplier pour éviter les erreurs d'arrondi
-    let subtotal = 0;
-    let tax = 0;
-    let totalTTC = 0;
-    
-    saleItems.forEach(item => {
-      // Calculer pour UNE unité
-      const unitHT = roundToTwo(item.unitPrice);
-      const unitTax = roundToTwo(unitHT * (vatRate / 100));
-      const unitTTC = roundToTwo(unitHT + unitTax);
-      
-      // Multiplier par la quantité
-      const lineHT = roundToTwo(unitHT * item.quantity);
-      const lineTax = roundToTwo(unitTax * item.quantity);
-      const lineTTC = roundToTwo(unitTTC * item.quantity);
-      
-      subtotal += lineHT;
-      tax += lineTax;
-      totalTTC += lineTTC;
-    });
-    
-    subtotal = roundToTwo(subtotal);
-    tax = roundToTwo(tax);
-    const totalBeforeDiscount = roundToTwo(totalTTC);
-    
-    // Calculer la remise
-    const discountAmount = roundToTwo((totalBeforeDiscount * discountPercentage) / 100);
-    
-    // Total final
-    const total = roundToTwo(totalBeforeDiscount - discountAmount);
-    
-    return { 
-      subtotal, 
-      subtotalHT: subtotal, 
-      subtotalTTC: totalBeforeDiscount,
-      tax, 
-      vatRate,
-      totalBeforeDiscount, 
-      discountAmount, 
-      total 
-    };
-  }, [saleItems, discountPercentage, workshopSettings?.vatRate]);
-
-  // Filtrage des articles selon le type et la recherche
-  const filteredItems = useMemo(() => {
-    let items: Array<{ id: string; name: string; price: number; type: string; category?: string }> = [];
-    
-    switch (selectedItemType) {
-      case 'product':
-        const allProducts = products || [];
-        const activeProducts = allProducts.filter(product => {
-          const isValid = product.isActive && product.id && product.name;
-          if (!isValid) {
-            console.log('🔍 Produit filtré:', {
-              id: product.id,
-              name: product.name,
-              isActive: product.isActive,
-              hasId: !!product.id,
-              hasName: !!product.name
-            });
-          }
-          return isValid;
-        });
-        
-        items = activeProducts.map(product => ({
-          id: product.id,
-          name: product.name,
-          price: product.price || 0,
-          type: 'product',
-          category: product.category || ''
-        }));
-        
-        console.log('📦 Produits filtrés:', {
-          total: allProducts.length,
-          active: activeProducts.length,
-          items: items.length,
-          categories: Array.from(new Set(items.map(i => i.category)))
-        });
-        break;
-      case 'service':
-        const allServices = services || [];
-        items = allServices
-          .filter(service => service.isActive && service.id && service.name)
-          .map(service => ({
-            id: service.id,
-            name: service.name,
-            price: service.price || 0,
-            type: 'service',
-            category: service.category || ''
-          }));
-        break;
-      case 'part':
-        const allParts = parts || [];
-        items = allParts
-          .filter(part => part.isActive && part.stockQuantity > 0 && part.id && part.name)
-          .map(part => ({
-            id: part.id,
-            name: part.name,
-            price: part.price || 0,
-            type: 'part',
-            category: part.brand || ''
-          }));
-        break;
-    }
-    
-    // Filtrage par catégorie
-    if (selectedCategory !== 'all') {
-      const beforeCategoryFilter = items.length;
-      items = items.filter(item => {
-        if (!item.category) return false;
-        return item.category.trim() === selectedCategory.trim();
-      });
-      console.log('🏷️ Filtrage par catégorie:', {
-        category: selectedCategory,
-        before: beforeCategoryFilter,
-        after: items.length
-      });
-    }
-    
-    // Filtrage par recherche
-    if (searchQuery) {
-      const beforeSearchFilter = items.length;
-      items = items.filter(item => 
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      console.log('🔍 Filtrage par recherche:', {
-        query: searchQuery,
-        before: beforeSearchFilter,
-        after: items.length
-      });
-    }
-    
-    return items;
-  }, [selectedItemType, selectedCategory, searchQuery, products, services, parts]);
-
-  // Obtenir les catégories disponibles selon le type sélectionné
-  const availableCategories = useMemo(() => {
-    let categories: string[] = [];
-    
-    switch (selectedItemType) {
-      case 'product':
-        categories = Array.from(new Set(
-          products
-            .filter(p => p.isActive && p.category && p.category.trim() !== '')
-            .map(p => p.category!)
-        ));
-        break;
-      case 'service':
-        categories = Array.from(new Set(
-          services
-            .filter(s => s.isActive && s.category && s.category.trim() !== '')
-            .map(s => s.category!)
-        ));
-        break;
-      case 'part':
-        categories = Array.from(new Set(
-          parts
-            .filter(p => p.isActive && p.stockQuantity > 0 && p.brand && p.brand.trim() !== '')
-            .map(p => p.brand!)
-        ));
-        break;
-    }
-    
-    return ['all', ...categories];
-  }, [selectedItemType, products, services, parts]);
-
-  // Obtenir le nombre d'articles par catégorie
-  const getCategoryCount = (category: string) => {
-    if (category === 'all') {
-      return filteredItems.length;
-    }
-    
-    switch (selectedItemType) {
-      case 'product':
-        return products.filter(p => p.isActive && p.category === category).length;
-      case 'service':
-        return services.filter(s => s.isActive && s.category === category).length;
-      case 'part':
-        return parts.filter(p => p.isActive && p.stockQuantity > 0 && p.brand === category).length;
-      default:
-        return 0;
-    }
-  };
-
-  // Fonction pour obtenir des informations détaillées sur un article
-  const getItemDetails = (item: { id: string; name: string; price: number; type: string; category?: string }) => {
-    switch (item.type) {
-      case 'product':
-        const product = products.find(p => p.id === item.id);
-        return {
-          description: product?.description || 'Aucune description',
-          stock: product?.stockQuantity || 0,
-          category: product?.category || 'Non catégorisé',
-          type: 'Produit'
-        };
-      case 'service':
-        const service = services.find(s => s.id === item.id);
-        return {
-          description: service?.description || 'Aucune description',
-          duration: service?.duration || 0,
-          category: service?.category || 'Non catégorisé',
-          type: 'Service'
-        };
-      case 'part':
-        const part = parts.find(p => p.id === item.id);
-        return {
-          description: part?.description || 'Aucune description',
-          stock: part?.stockQuantity || 0,
-          brand: part?.brand || 'Marque inconnue',
-          partNumber: part?.partNumber || 'N/A',
-          type: 'Pièce détachée'
-        };
-      default:
-        return {
-          description: 'Aucune information disponible',
-          stock: 0,
-          category: 'Inconnu',
-          type: 'Article'
-        };
-    }
-  };
-
-    const getStatusColor = (status: string) => {
-    const colors = {
-      pending: 'warning',
-      completed: 'success',
-      returned: 'error',
-    };
-    return colors[status as keyof typeof colors] || 'default';
+  const getStatusColor = (status: string) => {
+    const map: Record<string, string> = { pending: '#f59e0b', completed: '#22c55e', returned: '#ef4444' };
+    return map[status] || '#6b7280';
   };
 
   const getStatusLabel = (status: string) => {
-    const labels = {
-      pending: 'En attente',
-      completed: 'Terminée',
-      returned: 'Restitué',
-    };
-    return labels[status as keyof typeof labels] || status;
+    const labels: Record<string, string> = { pending: 'En attente', completed: 'Payée', returned: 'Restituée' };
+    return labels[status] || status;
   };
 
   const getPaymentMethodLabel = (method: string) => {
-    const labels = {
-      cash: 'Espèces',
-      card: 'Carte',
-      transfer: 'Virement',
-      check: 'Chèque',
-      payment_link: 'Liens paiement',
-    };
-    return labels[method as keyof typeof labels] || method;
+    const labels: Record<string, string> = { cash: 'Espèces', card: 'Carte', transfer: 'Virement', check: 'Chèque', payment_link: 'Lien paiement' };
+    return labels[method] || method;
   };
 
-  // Fonction utilitaire pour sécuriser les dates
   const safeFormatDate = (date: any, formatString: string) => {
     try {
       if (!date) return 'Date inconnue';
       const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) return 'Date invalide';
       return format(dateObj, formatString, { locale: fr });
-    } catch (error) {
-      console.error('Erreur de formatage de date:', error);
+    } catch {
       return 'Date invalide';
     }
   };
 
-  // Ajouter un article à la vente
+  /* ─── totals ─── */
+  const totals = useMemo(() => {
+    let vatRate = 20;
+    if (workshopSettings?.vatRate !== undefined && workshopSettings?.vatRate !== null) {
+      const parsedRate = parseFloat(workshopSettings.vatRate);
+      if (!isNaN(parsedRate)) vatRate = parsedRate;
+    }
+
+    let subtotal = 0;
+    let tax = 0;
+    let totalTTC = 0;
+
+    saleItems.forEach((item) => {
+      const unitHT = roundToTwo(item.unitPrice);
+      const unitTax = roundToTwo(unitHT * (vatRate / 100));
+      const unitTTC = roundToTwo(unitHT + unitTax);
+      subtotal += roundToTwo(unitHT * item.quantity);
+      tax += roundToTwo(unitTax * item.quantity);
+      totalTTC += roundToTwo(unitTTC * item.quantity);
+    });
+
+    subtotal = roundToTwo(subtotal);
+    tax = roundToTwo(tax);
+    const totalBeforeDiscount = roundToTwo(totalTTC);
+    const discountAmount = roundToTwo((totalBeforeDiscount * discountPercentage) / 100);
+    const total = roundToTwo(totalBeforeDiscount - discountAmount);
+
+    return { subtotal, subtotalHT: subtotal, subtotalTTC: totalBeforeDiscount, tax, vatRate, totalBeforeDiscount, discountAmount, total };
+  }, [saleItems, discountPercentage, workshopSettings?.vatRate]);
+
+  /* ─── dialog filtered items ─── */
+  const filteredItems = useMemo(() => {
+    let items: Array<{ id: string; name: string; price: number; type: string; category?: string }> = [];
+
+    switch (selectedItemType) {
+      case 'product':
+        items = (products || []).filter((p) => p.isActive && p.id && p.name).map((p) => ({ id: p.id, name: p.name, price: p.price || 0, type: 'product', category: p.category || '' }));
+        break;
+      case 'service':
+        items = (services || []).filter((s) => s.isActive && s.id && s.name).map((s) => ({ id: s.id, name: s.name, price: s.price || 0, type: 'service', category: s.category || '' }));
+        break;
+      case 'part':
+        items = (parts || []).filter((p) => p.isActive && p.stockQuantity > 0 && p.id && p.name).map((p) => ({ id: p.id, name: p.name, price: p.price || 0, type: 'part', category: p.brand || '' }));
+        break;
+    }
+
+    if (selectedCategory !== 'all') items = items.filter((i) => i.category && i.category.trim() === selectedCategory.trim());
+    if (searchQuery) items = items.filter((i) => i.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return items;
+  }, [selectedItemType, selectedCategory, searchQuery, products, services, parts]);
+
+  const availableCategories = useMemo(() => {
+    let categories: string[] = [];
+    switch (selectedItemType) {
+      case 'product':
+        categories = Array.from(new Set(products.filter((p) => p.isActive && p.category?.trim()).map((p) => p.category!)));
+        break;
+      case 'service':
+        categories = Array.from(new Set(services.filter((s) => s.isActive && s.category?.trim()).map((s) => s.category!)));
+        break;
+      case 'part':
+        categories = Array.from(new Set(parts.filter((p) => p.isActive && p.stockQuantity > 0 && p.brand?.trim()).map((p) => p.brand!)));
+        break;
+    }
+    return ['all', ...categories];
+  }, [selectedItemType, products, services, parts]);
+
+  const getCategoryCount = (category: string) => {
+    if (category === 'all') return filteredItems.length;
+    switch (selectedItemType) {
+      case 'product':
+        return products.filter((p) => p.isActive && p.category === category).length;
+      case 'service':
+        return services.filter((s) => s.isActive && s.category === category).length;
+      case 'part':
+        return parts.filter((p) => p.isActive && p.stockQuantity > 0 && p.brand === category).length;
+      default:
+        return 0;
+    }
+  };
+
+  const getItemDetails = (item: { id: string; type: string }) => {
+    switch (item.type) {
+      case 'product': {
+        const p = products.find((x) => x.id === item.id);
+        return { description: p?.description || '', stock: p?.stockQuantity || 0, category: p?.category || '', type: 'Produit' };
+      }
+      case 'service': {
+        const s = services.find((x) => x.id === item.id);
+        return { description: s?.description || '', duration: s?.duration || 0, category: s?.category || '', type: 'Service' };
+      }
+      case 'part': {
+        const p = parts.find((x) => x.id === item.id);
+        return { description: p?.description || '', stock: p?.stockQuantity || 0, brand: p?.brand || '', partNumber: p?.partNumber || '', type: 'Pièce' };
+      }
+      default:
+        return { description: '', stock: 0, category: '', type: 'Article' };
+    }
+  };
+
+  /* ─── revenue helpers ─── */
+  const getSalesForDate = (date: Date, period: 'day' | 'month') => {
+    const df = period === 'day' ? 'yyyy-MM-dd' : 'yyyy-MM';
+    return sales.filter((s) => {
+      try {
+        if (!s.createdAt) return false;
+        const d = new Date(s.createdAt);
+        return !isNaN(d.getTime()) && format(d, df) === format(date, df);
+      } catch {
+        return false;
+      }
+    });
+  };
+
+  const getRepairsForDate = (date: Date, period: 'day' | 'month') => {
+    const df = period === 'day' ? 'yyyy-MM-dd' : 'yyyy-MM';
+    return repairs.filter((r) => {
+      try {
+        if (!r.updatedAt && !r.createdAt) return false;
+        const d = new Date(r.updatedAt || r.createdAt);
+        return !isNaN(d.getTime()) && format(d, df) === format(date, df) && r.isPaid;
+      } catch {
+        return false;
+      }
+    });
+  };
+
+  const getTotalRevenueForDate = (date: Date, period: 'day' | 'month') => {
+    return getSalesForDate(date, period).reduce((s, sale) => s + sale.total, 0) + getRepairsForDate(date, period).reduce((s, r) => s + r.totalPrice, 0);
+  };
+
+  const getTotalTransactionsForDate = (date: Date, period: 'day' | 'month') => {
+    return getSalesForDate(date, period).length + getRepairsForDate(date, period).length;
+  };
+
+  /* ─── filtered sales list ─── */
+  const filteredSales = useMemo(() => {
+    let list = sales
+      .filter((s) => {
+        try {
+          if (!s.createdAt) return false;
+          return !isNaN(new Date(s.createdAt).getTime());
+        } catch {
+          return false;
+        }
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    if (salesFilter !== 'all') list = list.filter((s) => s.status === salesFilter);
+
+    if (salesSearch.trim()) {
+      const q = salesSearch.toLowerCase();
+      list = list.filter((s) => {
+        const client = s.clientId ? getClientById(s.clientId) : null;
+        const clientName = client ? `${client.firstName} ${client.lastName}`.toLowerCase() : 'client anonyme';
+        return s.id.toLowerCase().includes(q) || clientName.includes(q) || getPaymentMethodLabel(s.paymentMethod).toLowerCase().includes(q);
+      });
+    }
+
+    return list;
+  }, [sales, salesFilter, salesSearch, getClientById]);
+
+  /* ─── cart actions ─── */
   const addItemToSale = (item: { id: string; name: string; price: number; type: string }) => {
-    const existingItem = saleItems.find(saleItem => saleItem.itemId === item.id);
-    
-    if (existingItem) {
-      // Augmenter la quantité si l'article existe déjà
-      setSaleItems(prev => prev.map(saleItem => 
-        saleItem.itemId === item.id 
-          ? { ...saleItem, quantity: saleItem.quantity + 1, totalPrice: roundToTwo((saleItem.quantity + 1) * saleItem.unitPrice) }
-          : saleItem
-      ));
+    const existing = saleItems.find((si) => si.itemId === item.id);
+    if (existing) {
+      setSaleItems((prev) => prev.map((si) => (si.itemId === item.id ? { ...si, quantity: si.quantity + 1, totalPrice: roundToTwo((si.quantity + 1) * si.unitPrice) } : si)));
     } else {
-      // Ajouter un nouvel article
-      const newItem: SaleItemForm = {
-        type: item.type as 'product' | 'service' | 'part',
-        itemId: item.id,
-        name: item.name,
-        quantity: 1,
-        unitPrice: roundToTwo(item.price),
-        totalPrice: roundToTwo(item.price),
-      };
-      setSaleItems(prev => [...prev, newItem]);
+      setSaleItems((prev) => [...prev, { type: item.type as 'product' | 'service' | 'part', itemId: item.id, name: item.name, quantity: 1, unitPrice: roundToTwo(item.price), totalPrice: roundToTwo(item.price) }]);
     }
   };
 
-  // Supprimer un article de la vente
-  const removeItemFromSale = (itemId: string) => {
-    setSaleItems(prev => prev.filter(item => item.itemId !== itemId));
-  };
+  const removeItemFromSale = (itemId: string) => setSaleItems((prev) => prev.filter((i) => i.itemId !== itemId));
 
-  // Modifier la quantité d'un article
   const updateItemQuantity = (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeItemFromSale(itemId);
-      return;
-    }
-    
-    setSaleItems(prev => prev.map(item => 
-      item.itemId === itemId 
-        ? { ...item, quantity, totalPrice: roundToTwo(quantity * item.unitPrice) }
-        : item
-    ));
+    if (quantity <= 0) return removeItemFromSale(itemId);
+    setSaleItems((prev) => prev.map((i) => (i.itemId === itemId ? { ...i, quantity, totalPrice: roundToTwo(quantity * i.unitPrice) } : i)));
   };
 
-  // Créer une nouvelle vente
   const createSale = async () => {
     if (saleItems.length === 0) {
-      alert('Veuillez ajouter au moins un article à la vente.');
+      setSnackbarMessage('Veuillez ajouter au moins un article.');
+      setSnackbarOpen(true);
       return;
     }
 
-    const saleItemsFormatted: SaleItem[] = saleItems.map(item => ({
+    const saleItemsFormatted: SaleItem[] = saleItems.map((item) => ({
       id: item.itemId,
       type: item.type,
       itemId: item.itemId,
@@ -533,13 +469,13 @@ const Sales: React.FC = () => {
     }));
 
     const newSale: Sale = {
-      id: '', // Sera généré par le backend
+      id: '',
       clientId: selectedClientId || undefined,
       items: saleItemsFormatted,
       subtotal: totals.subtotal,
       subtotalHT: totals.subtotalHT,
       subtotalTTC: totals.subtotalTTC,
-      discountPercentage: discountPercentage,
+      discountPercentage,
       discountAmount: totals.discountAmount,
       tax: totals.tax,
       total: totals.total,
@@ -553,16 +489,13 @@ const Sales: React.FC = () => {
       const createdSale = await addSale(newSale);
       setNewSaleDialogOpen(false);
       resetForm();
-      
-      // Ouvrir automatiquement la facture de la vente créée avec le vrai ID
       openInvoice(createdSale);
-    } catch (error) {
-      console.error('Erreur lors de la création de la vente:', error);
-      alert('Erreur lors de la création de la vente.');
+    } catch {
+      setSnackbarMessage('Erreur lors de la création de la vente.');
+      setSnackbarOpen(true);
     }
   };
 
-  // Réinitialiser le formulaire
   const resetForm = () => {
     setSelectedClientId('');
     setPaymentMethod('card');
@@ -573,24 +506,21 @@ const Sales: React.FC = () => {
     setDiscountPercentage(0);
   };
 
-  // Ouvrir la facture
   const openInvoice = (sale: Sale) => {
     setSelectedSaleForInvoice(sale);
     setInvoiceOpen(true);
   };
 
-  // Fermer la facture
   const closeInvoice = () => {
     setInvoiceOpen(false);
     setSelectedSaleForInvoice(null);
   };
 
-  // Créer un nouveau client
   const handleCreateNewClient = async (clientFormData: any) => {
     try {
       const firstName = clientFormData.firstName?.trim() || 'Client';
       const lastName = clientFormData.lastName?.trim() || 'Sans nom';
-      
+
       const clientData = {
         firstName,
         lastName,
@@ -626,821 +556,416 @@ const Sales: React.FC = () => {
       };
 
       await addClient(clientData);
-      
       setClientFormOpen(false);
-      
-      // Attendre que le store soit mis à jour puis trouver et sélectionner le client créé
+
       setTimeout(() => {
-        const newClientCreated = clients.find(c => 
-          c.firstName === firstName && 
-          c.lastName === lastName && 
-          c.email === clientFormData.email
-        );
-        
-        if (newClientCreated) {
-          setSelectedClientId(newClientCreated.id);
-          setSnackbarMessage(`✅ Client ${firstName} ${lastName} créé avec succès !`);
+        const found = clients.find((c) => c.firstName === firstName && c.lastName === lastName && c.email === clientFormData.email) || clients.find((c) => c.firstName === firstName && c.lastName === lastName);
+        if (found) {
+          setSelectedClientId(found.id);
+          setSnackbarMessage(`Client ${firstName} ${lastName} créé avec succès !`);
           setSnackbarOpen(true);
-        } else {
-          // Si on ne trouve pas le client par email, chercher par nom
-          const newClientByName = clients.find(c => 
-            c.firstName === firstName && 
-            c.lastName === lastName
-          );
-          if (newClientByName) {
-            setSelectedClientId(newClientByName.id);
-            setSnackbarMessage(`✅ Client ${firstName} ${lastName} créé avec succès !`);
-            setSnackbarOpen(true);
-          }
         }
       }, 300);
     } catch (error) {
-      console.error('Erreur lors de la création du client:', error);
-      setSnackbarMessage('❌ Erreur lors de la création du client');
+      setSnackbarMessage('Erreur lors de la création du client');
       setSnackbarOpen(true);
       throw error;
     }
   };
 
-  // Gérer l'impression thermique pour les ventes
   const handleOpenThermalReceipt = (sale: Sale) => {
     setThermalReceiptSale(sale);
     setThermalReceiptDialogOpen(true);
   };
 
-  // Télécharger la facture en PDF
   const downloadInvoice = (sale: Sale) => {
-    // Vérifier que la vente existe et a des données valides
     if (!sale || !sale.id) {
-      console.error('Vente invalide pour le téléchargement:', sale);
-      alert('Erreur: Impossible de télécharger la facture. Vente invalide.');
+      setSnackbarMessage('Vente invalide pour le téléchargement.');
+      setSnackbarOpen(true);
       return;
     }
 
-    // Debug: vérifier la structure des données
-    console.log('Données de la vente pour téléchargement:', {
-      id: sale.id,
-      items: sale.items,
-      itemsType: typeof sale.items,
-      isArray: Array.isArray(sale.items),
-      subtotal: sale.subtotal,
-      total: sale.total
-    });
-
-    // Créer le contenu HTML de la facture
     const client = sale.clientId ? getClientById(sale.clientId) : null;
     const clientName = client ? `${client.firstName} ${client.lastName}` : 'Client anonyme';
     const clientEmail = client?.email || '';
     const clientPhone = client?.phone || '';
 
-    const invoiceContent = `
-      <!DOCTYPE html>
-      <html lang="fr">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Facture ${sale.id}</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: white;
-            color: #333;
-          }
-          .invoice-header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #1976d2;
-            padding-bottom: 20px;
-          }
-          .invoice-title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #1976d2;
-            margin-bottom: 10px;
-          }
-          .invoice-number {
-            font-size: 16px;
-            color: #666;
-          }
-          .invoice-details {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-          }
-          .workshop-info, .client-info {
-            width: 45%;
-          }
-          .workshop-info h3, .client-info h3 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 18px;
-          }
-          .workshop-info p, .client-info p {
-            margin: 5px 0;
-            color: #666;
-            font-size: 14px;
-          }
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-          }
-          .items-table th, .items-table td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-          }
-          .items-table th {
-            background-color: #f5f5f5;
-            font-weight: bold;
-            color: #333;
-          }
-          .items-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-          }
-          .totals {
-            float: right;
-            width: 300px;
-            margin-top: 20px;
-          }
-          .total-line {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            padding: 5px 0;
-          }
-          .total-line.final {
-            font-weight: bold;
-            font-size: 18px;
-            border-top: 2px solid #1976d2;
-            padding-top: 10px;
-            color: #1976d2;
-          }
-          .invoice-footer {
-            margin-top: 50px;
-            text-align: center;
-            color: #666;
-            font-size: 12px;
-            border-top: 1px solid #ddd;
-            padding-top: 20px;
-          }
-          @media print {
-            body { margin: 0; padding: 15px; }
-            .no-print { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="invoice-header">
-          <div class="invoice-title">FACTURE</div>
-          <div class="invoice-number">N° ${sale.id}</div>
-        </div>
+    const invoiceContent = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Facture ${sale.id}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:20px;background:#fff;color:#333}.invoice-header{text-align:center;margin-bottom:30px;border-bottom:2px solid #1976d2;padding-bottom:20px}.invoice-title{font-size:28px;font-weight:700;color:#1976d2;margin-bottom:10px}.invoice-number{font-size:16px;color:#666}.invoice-details{display:flex;justify-content:space-between;margin-bottom:30px}.workshop-info,.client-info{width:45%}.workshop-info h3,.client-info h3{margin:0 0 10px;color:#333;font-size:18px}.workshop-info p,.client-info p{margin:5px 0;color:#666;font-size:14px}.items-table{width:100%;border-collapse:collapse;margin-bottom:30px}.items-table th,.items-table td{border:1px solid #ddd;padding:12px;text-align:left}.items-table th{background:#f5f5f5;font-weight:700;color:#333}.items-table tr:nth-child(even){background:#f9f9f9}.totals{float:right;width:300px;margin-top:20px}.total-line{display:flex;justify-content:space-between;margin-bottom:10px;padding:5px 0}.total-line.final{font-weight:700;font-size:18px;border-top:2px solid #1976d2;padding-top:10px;color:#1976d2}.invoice-footer{margin-top:50px;text-align:center;color:#666;font-size:12px;border-top:1px solid #ddd;padding-top:20px}@media print{body{margin:0;padding:15px}.no-print{display:none}}</style></head><body><div class="invoice-header"><div class="invoice-title">FACTURE</div><div class="invoice-number">N&deg; ${sale.id}</div></div><div class="invoice-details"><div class="workshop-info"><h3>Atelier de R&eacute;paration</h3><p>123 Rue de la Paix</p><p>75001 Paris, France</p><p>T&eacute;l: 07 59 23 91 70</p><p>Email: contact.ateliergestion@gmail.com</p></div><div class="client-info"><h3>Factur&eacute; &agrave;</h3><p><strong>${clientName}</strong></p>${clientEmail ? `<p>Email: ${clientEmail}</p>` : ''}${clientPhone ? `<p>T&eacute;l: ${clientPhone}</p>` : ''}</div></div><table class="items-table"><thead><tr><th>Article</th><th>Quantit&eacute;</th><th>Prix unitaire</th><th>Total</th></tr></thead><tbody>${(() => {
+      let items = sale.items;
+      if (typeof items === 'string') { try { items = JSON.parse(items); } catch { items = []; } }
+      const arr = Array.isArray(items) ? items : items && typeof items === 'object' ? Object.values(items) : [];
+      return arr.length > 0 ? arr.map((i: any) => `<tr><td>${i.name || 'Article'}</td><td>${i.quantity || 1}</td><td>${formatFromEUR(i.unitPrice || 0, currency)}</td><td>${formatFromEUR(i.totalPrice || 0, currency)}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:#666">Aucun article</td></tr>';
+    })()}</tbody></table><div class="totals"><div class="total-line"><span>Sous-total HT:</span><span>${formatFromEUR(sale.subtotal || 0, currency)}</span></div><div class="total-line"><span>TVA (${workshopSettings?.vatRate || 20}%):</span><span>${formatFromEUR(sale.tax || 0, currency)}</span></div>${(sale.discountPercentage || 0) > 0 ? `<div class="total-line"><span>Remise (${sale.discountPercentage}%):</span><span>-${formatFromEUR(sale.discountAmount || 0, currency)}</span></div>` : ''}<div class="total-line final"><span>TOTAL TTC:</span><span>${formatFromEUR(sale.total || 0, currency)}</span></div></div><div class="invoice-footer"><p>Date d'&eacute;mission: ${safeFormatDate(sale.createdAt, 'dd/MM/yyyy')}</p><p>M&eacute;thode de paiement: ${getPaymentMethodLabel(sale.paymentMethod)}</p><p>Merci de votre confiance !</p></div></body></html>`;
 
-        <div class="invoice-details">
-          <div class="workshop-info">
-            <h3>Atelier de Réparation</h3>
-            <p>123 Rue de la Paix</p>
-            <p>75001 Paris, France</p>
-            <p>Tél: 07 59 23 91 70</p>
-            <p>Email: contact.ateliergestion@gmail.com</p>
-          </div>
-          <div class="client-info">
-            <h3>Facturé à</h3>
-            <p><strong>${clientName}</strong></p>
-            ${clientEmail ? `<p>Email: ${clientEmail}</p>` : ''}
-            ${clientPhone ? `<p>Tél: ${clientPhone}</p>` : ''}
-          </div>
-        </div>
-
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th>Article</th>
-              <th>Quantité</th>
-              <th>Prix unitaire</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${(() => {
-              let items = sale.items;
-              
-              // Parser les items si c'est une chaîne JSON
-              if (typeof items === 'string') {
-                try {
-                  items = JSON.parse(items);
-                } catch (error) {
-                  console.error('Error parsing items in downloadInvoice:', error);
-                  items = [];
-                }
-              }
-              
-              // Convertir en tableau si nécessaire
-              const itemsArray = Array.isArray(items) ? items : (items && typeof items === 'object' ? Object.values(items) : []);
-              
-              return itemsArray.length > 0 ? itemsArray.map(item => `
-                <tr>
-                  <td>${item.name || 'Article'}</td>
-                  <td>${item.quantity || 1}</td>
-                  <td>${formatFromEUR(item.unitPrice || 0, currency)}</td>
-                  <td>${formatFromEUR(item.totalPrice || 0, currency)}</td>
-                </tr>
-              `).join('') : '<tr><td colspan="4" style="text-align: center; color: #666;">Aucun article dans cette vente</td></tr>';
-            })()}
-          </tbody>
-        </table>
-
-        <div class="totals">
-          <div class="total-line">
-            <span>Sous-total HT:</span>
-            <span>${formatFromEUR(sale.subtotal || 0, currency)}</span>
-          </div>
-          <div class="total-line">
-            <span>TVA (${workshopSettings.vatRate || 20}%):</span>
-            <span>${formatFromEUR(sale.tax || 0, currency)}</span>
-          </div>
-          ${(sale.discountPercentage || 0) > 0 ? `
-            <div class="total-line">
-              <span>Remise (${sale.discountPercentage}%):</span>
-              <span>-${formatFromEUR(sale.discountAmount || 0, currency)}</span>
-            </div>
-          ` : ''}
-          <div class="total-line final">
-            <span>TOTAL TTC:</span>
-            <span>${formatFromEUR(sale.total || 0, currency)}</span>
-          </div>
-        </div>
-
-        <div class="invoice-footer">
-          <p>Date d'émission: ${safeFormatDate(sale.createdAt, 'dd/MM/yyyy')}</p>
-          <p>Méthode de paiement: ${getPaymentMethodLabel(sale.paymentMethod)}</p>
-          <p>Merci de votre confiance !</p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Créer un blob avec le contenu HTML
     const blob = new Blob([invoiceContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
-    
-    // Créer un lien de téléchargement
     const link = document.createElement('a');
     link.href = url;
     link.download = `Facture_${sale.id}_${safeFormatDate(sale.createdAt, 'yyyy-MM-dd')}.html`;
-    
-    // Déclencher le téléchargement
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    // Nettoyer l'URL
     URL.revokeObjectURL(url);
   };
 
-  // Changer le statut de paiement
   const handleTogglePaymentStatus = async (sale: Sale) => {
     try {
       const newStatus = sale.status === 'completed' ? 'pending' : 'completed';
       await updateSale(sale.id, { status: newStatus });
-      alert(`✅ Statut de paiement mis à jour : ${newStatus === 'completed' ? 'Payée' : 'En attente'}`);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut de paiement:', error);
-      alert('❌ Erreur lors de la mise à jour du statut de paiement');
+      setSnackbarMessage(`Statut mis à jour : ${newStatus === 'completed' ? 'Payée' : 'En attente'}`);
+      setSnackbarOpen(true);
+    } catch {
+      setSnackbarMessage('Erreur lors de la mise à jour du statut');
+      setSnackbarOpen(true);
     }
   };
 
-  // Fonctions utilitaires pour les statistiques incluant les réparations
-  const getSalesForDate = (date: Date, period: 'day' | 'month') => {
-    const dateFormat = period === 'day' ? 'yyyy-MM-dd' : 'yyyy-MM';
-    return sales.filter(sale => {
-      try {
-        if (!sale.createdAt) return false;
-        const saleDate = new Date(sale.createdAt);
-        if (isNaN(saleDate.getTime())) return false;
-        return format(saleDate, dateFormat) === format(date, dateFormat);
-      } catch (error) {
-        console.error('Erreur de date dans la vente:', error);
-        return false;
-      }
-    });
-  };
+  /* ─── computed KPI values ─── */
+  const todayTransactions = getTotalTransactionsForDate(new Date(), 'day');
+  const todayRevenue = getTotalRevenueForDate(new Date(), 'day');
+  const monthTransactions = getTotalTransactionsForDate(new Date(), 'month');
+  const monthRevenue = getTotalRevenueForDate(new Date(), 'month');
 
-  const getRepairsForDate = (date: Date, period: 'day' | 'month') => {
-    const dateFormat = period === 'day' ? 'yyyy-MM-dd' : 'yyyy-MM';
-    return repairs.filter(repair => {
-      try {
-        if (!repair.updatedAt && !repair.createdAt) return false;
-        const repairDate = new Date(repair.updatedAt || repair.createdAt);
-        if (isNaN(repairDate.getTime())) return false;
-        return format(repairDate, dateFormat) === format(date, dateFormat) && repair.isPaid;
-      } catch (error) {
-        console.error('Erreur de date dans la réparation:', error);
-        return false;
-      }
-    });
-  };
-
-  const getTotalRevenueForDate = (date: Date, period: 'day' | 'month') => {
-    const salesForDate = getSalesForDate(date, period);
-    const repairsForDate = getRepairsForDate(date, period);
-    
-    const salesRevenue = salesForDate.reduce((sum, sale) => sum + sale.total, 0);
-    const repairsRevenue = repairsForDate.reduce((sum, repair) => sum + repair.totalPrice, 0);
-    
-    return salesRevenue + repairsRevenue;
-  };
-
-  const getTotalTransactionsForDate = (date: Date, period: 'day' | 'month') => {
-    const salesForDate = getSalesForDate(date, period);
-    const repairsForDate = getRepairsForDate(date, period);
-    
-    return salesForDate.length + repairsForDate.length;
-  };
-
-
+  const todaySalesCount = getSalesForDate(new Date(), 'day').length;
+  const todayRepairsCount = getRepairsForDate(new Date(), 'day').length;
+  const todaySalesRevenue = getSalesForDate(new Date(), 'day').reduce((s, sale) => s + sale.total, 0);
+  const todayRepairsRevenue = getRepairsForDate(new Date(), 'day').reduce((s, r) => s + r.totalPrice, 0);
+  const monthSalesCount = getSalesForDate(new Date(), 'month').length;
+  const monthRepairsCount = getRepairsForDate(new Date(), 'month').length;
+  const monthSalesRevenue = getSalesForDate(new Date(), 'month').reduce((s, sale) => s + sale.total, 0);
+  const monthRepairsRevenue = getRepairsForDate(new Date(), 'month').reduce((s, r) => s + r.totalPrice, 0);
 
   return (
     <Box>
-      {/* En-tête */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
-          Ventes
-        </Typography>
-        <span style={{ color: 'text.secondary', fontSize: '1rem' }}>
-          Gestion des ventes et facturation
-        </span>
+      {/* ─── header ─── */}
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700, letterSpacing: '-0.01em' }}>
+            Ventes
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+            Gestion des ventes et facturation
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Tooltip title="Vente simplifiée (encaissement rapide)">
+            <Button
+              variant="outlined"
+              startIcon={<TouchAppIcon />}
+              onClick={() => setSimplifiedSaleDialogOpen(true)}
+              sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: '#e5e7eb', color: '#6b7280', '&:hover': { borderColor: '#8b5cf6', color: '#8b5cf6', bgcolor: alpha('#8b5cf6', 0.04) } }}
+            >
+              Vente rapide
+            </Button>
+          </Tooltip>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setNewSaleDialogOpen(true)} sx={BTN_DARK}>
+            Nouvelle vente
+          </Button>
+        </Box>
       </Box>
 
-      {/* Actions */}
-      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setNewSaleDialogOpen(true)}
-        >
-          Nouvelle vente
-        </Button>
-        <Button
-          variant="contained"
-          color="secondary"
-          startIcon={<TouchAppIcon />}
-          onClick={() => setSimplifiedSaleDialogOpen(true)}
-        >
-          Vente Simplifiée
-        </Button>
+      {/* ─── KPI ─── */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2, mb: 3 }}>
+        <KpiMini icon={<TrendingUpIcon fontSize="small" />} iconColor="#6366f1" label="Transactions du jour" value={todayTransactions} subtitle="Ventes + Réparations" />
+        <KpiMini icon={<MonetizationOnIcon fontSize="small" />} iconColor="#22c55e" label="CA du jour" value={formatFromEUR(todayRevenue, currency)} subtitle="Ventes + Réparations" />
+        <KpiMini icon={<CalendarTodayIcon fontSize="small" />} iconColor="#f59e0b" label="Transactions du mois" value={monthTransactions} subtitle="Ventes + Réparations" />
+        <KpiMini icon={<AssessmentIcon fontSize="small" />} iconColor="#8b5cf6" label="CA du mois" value={formatFromEUR(monthRevenue, currency)} subtitle="Ventes + Réparations" />
       </Box>
 
-      {/* Statistiques rapides */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <TrendingUpIcon sx={{ color: '#1976d2', mr: 1 }} />
-                <Typography color="text.secondary">
-                  Transactions du jour
-                </Typography>
+      {/* ─── breakdown cards ─── */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, mb: 3 }}>
+        <Card sx={CARD_STATIC}>
+          <CardContent sx={{ p: '20px !important' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, #3b82f6, ${alpha('#3b82f6', 0.7)})`, color: '#fff' }}>
+                <BarChartIcon sx={{ fontSize: 18 }} />
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {getTotalTransactionsForDate(new Date(), 'day')}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Ventes + Réparations payées
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <MonetizationOnIcon sx={{ color: '#2e7d32', mr: 1 }} />
-                <Typography color="text.secondary">
-                  CA du jour
-                </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Répartition du jour</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ flex: 1, minWidth: 120 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                  <ShoppingCartIcon sx={{ fontSize: 14, color: '#6366f1' }} />
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>Ventes</Typography>
+                </Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{todaySalesCount} vente{todaySalesCount > 1 ? 's' : ''}</Typography>
+                <Typography variant="caption" sx={{ color: '#6366f1', fontWeight: 600 }}>{formatFromEUR(todaySalesRevenue, currency)}</Typography>
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {formatFromEUR(getTotalRevenueForDate(new Date(), 'day'), currency)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Ventes + Réparations payées
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <CalendarTodayIcon sx={{ color: '#ed6c02', mr: 1 }} />
-                <Typography color="text.secondary">
-                  Transactions du mois
-                </Typography>
+              <Box sx={{ flex: 1, minWidth: 120 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                  <BuildIcon sx={{ fontSize: 14, color: '#22c55e' }} />
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>Réparations payées</Typography>
+                </Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{todayRepairsCount} réparation{todayRepairsCount > 1 ? 's' : ''}</Typography>
+                <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 }}>{formatFromEUR(todayRepairsRevenue, currency)}</Typography>
               </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {getTotalTransactionsForDate(new Date(), 'month')}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Ventes + Réparations payées
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <AssessmentIcon sx={{ color: '#9c27b0', mr: 1 }} />
-                <Typography color="text.secondary">
-                  CA du mois
-                </Typography>
-              </Box>
-              <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                {formatFromEUR(getTotalRevenueForDate(new Date(), 'month'), currency)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Ventes + Réparations payées
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+            </Box>
+          </CardContent>
+        </Card>
 
-      {/* Statistiques détaillées */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <BarChartIcon sx={{ color: '#1976d2', mr: 1 }} />
-                <Typography variant="h6">
-                  Répartition du jour
-                </Typography>
+        <Card sx={CARD_STATIC}>
+          <CardContent sx={{ p: '20px !important' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, #f59e0b, ${alpha('#f59e0b', 0.7)})`, color: '#fff' }}>
+                <PieChartIcon sx={{ fontSize: 18 }} />
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <ShoppingCartIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Ventes : {getSalesForDate(new Date(), 'day').length}
-                  </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Répartition du mois</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+              <Box sx={{ flex: 1, minWidth: 120 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                  <ShoppingCartIcon sx={{ fontSize: 14, color: '#6366f1' }} />
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>Ventes</Typography>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <BuildIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Réparations payées : {getRepairsForDate(new Date(), 'day').length}
-                  </Typography>
-                </Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{monthSalesCount} vente{monthSalesCount > 1 ? 's' : ''}</Typography>
+                <Typography variant="caption" sx={{ color: '#6366f1', fontWeight: 600 }}>{formatFromEUR(monthSalesRevenue, currency)}</Typography>
               </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <EuroIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    CA Ventes : {formatFromEUR(getSalesForDate(new Date(), 'day').reduce((sum, sale) => sum + sale.total, 0), currency)}
-                  </Typography>
+              <Box sx={{ flex: 1, minWidth: 120 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
+                  <BuildIcon sx={{ fontSize: 14, color: '#22c55e' }} />
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>Réparations payées</Typography>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <AttachMoneyIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    CA Réparations : {formatFromEUR(getRepairsForDate(new Date(), 'day').reduce((sum, repair) => sum + repair.totalPrice, 0), currency)}
-                  </Typography>
-                </Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{monthRepairsCount} réparation{monthRepairsCount > 1 ? 's' : ''}</Typography>
+                <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600 }}>{formatFromEUR(monthRepairsRevenue, currency)}</Typography>
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <PieChartIcon sx={{ color: '#ed6c02', mr: 1 }} />
-                <Typography variant="h6">
-                  Répartition du mois
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <ShoppingCartIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Ventes : {getSalesForDate(new Date(), 'month').length}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <BuildIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Réparations payées : {getRepairsForDate(new Date(), 'month').length}
-                  </Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <EuroIcon sx={{ color: '#1976d2', mr: 0.5, fontSize: '16px' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    CA Ventes : {formatFromEUR(getSalesForDate(new Date(), 'month').reduce((sum, sale) => sum + sale.total, 0), currency)}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <AttachMoneyIcon sx={{ color: '#2e7d32', mr: 0.5, fontSize: '16px' }} />
-                  <Typography variant="body2" color="text.secondary">
-                    CA Réparations : {formatFromEUR(getRepairsForDate(new Date(), 'month').reduce((sum, repair) => sum + repair.totalPrice, 0), currency)}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
 
-      {/* Liste des ventes */}
-      <Card>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <HistoryIcon sx={{ color: '#1976d2', mr: 1 }} />
-            <Typography variant="h6">
-              Historique des ventes
-            </Typography>
+      {/* ─── search + filters ─── */}
+      <Card sx={{ ...CARD_STATIC, mb: 3 }}>
+        <CardContent sx={{ p: '16px !important', display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <TextField
+            size="small"
+            placeholder="Rechercher par n° vente, client, méthode..."
+            value={salesSearch}
+            onChange={(e) => setSalesSearch(e.target.value)}
+            sx={{ ...INPUT_SX, minWidth: 300, flex: 1 }}
+            InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} /></InputAdornment> }}
+          />
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+            {SALE_FILTERS.map((f) => (
+              <Chip
+                key={f.key}
+                label={f.label}
+                size="small"
+                onClick={() => setSalesFilter(f.key)}
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  borderRadius: '8px',
+                  ...(salesFilter === f.key
+                    ? { bgcolor: f.color, color: '#fff', boxShadow: `0 2px 8px ${alpha(f.color, 0.35)}` }
+                    : { bgcolor: alpha(f.color, 0.08), color: f.color, '&:hover': { bgcolor: alpha(f.color, 0.16) } }),
+                }}
+              />
+            ))}
           </Box>
-          <TableContainer component={Paper} variant="outlined">
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <ReceiptIcon sx={{ mr: 0.5, fontSize: '16px' }} />
-                      N° Vente
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <InfoIcon sx={{ mr: 0.5, fontSize: '16px' }} />
-                      Client
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <CalendarTodayIcon sx={{ mr: 0.5, fontSize: '16px' }} />
-                      Date
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <MonetizationOnIcon sx={{ mr: 0.5, fontSize: '16px' }} />
-                      Montant
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PaymentIcon sx={{ mr: 0.5, fontSize: '16px' }} />
-                      Méthode
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <AssessmentIcon sx={{ mr: 0.5, fontSize: '16px' }} />
-                      Statut
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <InventoryIcon sx={{ mr: 0.5, fontSize: '16px' }} />
-                      Actions
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sales
-                  .filter(sale => {
-                    try {
-                      if (!sale.createdAt) return false;
-                      const date = new Date(sale.createdAt);
-                      return !isNaN(date.getTime());
-                    } catch (error) {
-                      console.error('Erreur de date dans la vente:', error);
-                      return false;
-                    }
-                  })
-                  .sort((a, b) => {
-                    try {
-                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                    } catch (error) {
-                      console.error('Erreur de tri des ventes:', error);
-                      return 0;
-                    }
-                  })
-                  .map((sale) => {
-                    const client = sale.clientId ? getClientById(sale.clientId) : null;
-                    return (
-                      <TableRow key={sale.id}>
-                        <TableCell>{sale.id.slice(0, 8)}</TableCell>
-                        <TableCell>
-                          {client ? `${client.firstName} ${client.lastName}` : 'Client anonyme'}
-                        </TableCell>
-                        <TableCell>
-                          {safeFormatDate(sale.createdAt, 'dd/MM/yyyy HH:mm')}
-                        </TableCell>
-                        <TableCell>
-                          <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                            {formatFromEUR(sale.total, currency)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {getPaymentMethodLabel(sale.paymentMethod)}
-                        </TableCell>
-                        <TableCell>
-                          <span style={{ 
-                            display: 'inline-flex', 
-                            alignItems: 'center',
-                            padding: '4px 8px',
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            color: getStatusColor(sale.status) === 'success' ? '#2e7d32' : 
-                                   getStatusColor(sale.status) === 'warning' ? '#ed6c02' : 
-                                   getStatusColor(sale.status) === 'error' ? '#d32f2f' : '#1976d2',
-                            backgroundColor: getStatusColor(sale.status) === 'success' ? '#e8f5e8' : 
-                                           getStatusColor(sale.status) === 'warning' ? '#fff4e5' : 
-                                           getStatusColor(sale.status) === 'error' ? '#ffebee' : '#e3f2fd',
-                            border: `1px solid ${getStatusColor(sale.status) === 'success' ? '#4caf50' : 
-                                              getStatusColor(sale.status) === 'warning' ? '#ff9800' : 
-                                              getStatusColor(sale.status) === 'error' ? '#f44336' : '#1976d2'}`,
-                            borderRadius: '12px',
-                            textTransform: 'uppercase'
-                          }}>
-                            {getStatusLabel(sale.status)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <IconButton 
-                              size="small" 
-                              title="Voir facture"
-                              onClick={() => openInvoice(sale)}
-                            >
-                              <ReceiptIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton 
-                              size="small" 
-                              title="Télécharger facture PDF"
-                              onClick={() => downloadInvoice(sale)}
-                              color="primary"
-                            >
-                              <DownloadIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton 
-                              size="small" 
-                              title="Imprimer"
-                              onClick={() => openInvoice(sale)}
-                            >
-                              <PrintIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton 
-                              size="small" 
-                              title="Reçu thermique"
-                              onClick={() => handleOpenThermalReceipt(sale)}
-                              sx={{ color: 'primary.main' }}
-                            >
-                              <ReceiptIcon fontSize="small" />
-                            </IconButton>
-
-                            <IconButton 
-                              size="small" 
-                              title={sale.status === 'completed' ? "Marquer comme non payée" : "Marquer comme payée"}
-                              onClick={() => handleTogglePaymentStatus(sale)}
-                              color={sale.status === 'completed' ? "warning" : "success"}
-                            >
-                              <PaymentIcon fontSize="small" />
-                            </IconButton>
-
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-          </TableContainer>
         </CardContent>
       </Card>
 
-      {/* Dialog nouvelle vente */}
-      <Dialog 
-        open={newSaleDialogOpen} 
-        onClose={() => setNewSaleDialogOpen(false)} 
-        maxWidth="xl" 
+      {/* ─── sales table ─── */}
+      <Card sx={CARD_STATIC}>
+        <CardContent sx={{ p: 0 }}>
+          {filteredSales.length === 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
+              <Box sx={{ width: 64, height: 64, borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, ${alpha('#6366f1', 0.12)}, ${alpha('#6366f1', 0.04)})`, mb: 2 }}>
+                <EmptyIcon sx={{ fontSize: 32, color: '#6366f1' }} />
+              </Box>
+              <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                {salesSearch || salesFilter !== 'all' ? 'Aucun résultat' : 'Aucune vente'}
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                {salesSearch || salesFilter !== 'all' ? 'Essayez de modifier vos critères de recherche' : 'Commencez par créer votre première vente'}
+              </Typography>
+              {!salesSearch && salesFilter === 'all' && (
+                <Button variant="contained" startIcon={<AddIcon />} onClick={() => setNewSaleDialogOpen(true)} sx={BTN_DARK} size="small">
+                  Créer une vente
+                </Button>
+              )}
+            </Box>
+          ) : (
+            <>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow sx={TABLE_HEAD_SX}>
+                      <TableCell>N° Vente</TableCell>
+                      <TableCell>Client</TableCell>
+                      <TableCell>Date</TableCell>
+                      <TableCell>Montant</TableCell>
+                      <TableCell>Paiement</TableCell>
+                      <TableCell>Statut</TableCell>
+                      <TableCell align="right">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredSales.map((sale) => {
+                      const client = sale.clientId ? getClientById(sale.clientId) : null;
+                      const statusColor = getStatusColor(sale.status);
+                      const pmColor = PAYMENT_COLORS[sale.paymentMethod] || '#6b7280';
+                      return (
+                        <TableRow key={sale.id} sx={{ '&:hover': { bgcolor: alpha('#6366f1', 0.03) }, transition: 'background .2s' }}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <ReceiptIcon sx={{ fontSize: 16, color: '#6366f1' }} />
+                              <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                {sale.id.slice(0, 8)}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                              <PersonIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                                {client ? `${client.firstName} ${client.lastName}` : 'Client anonyme'}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                              <CalendarTodayIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                              <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                                {safeFormatDate(sale.createdAt, 'dd/MM/yyyy HH:mm')}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.85rem', color: '#111827' }}>
+                              {formatFromEUR(sale.total, currency)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={getPaymentMethodLabel(sale.paymentMethod)}
+                              size="small"
+                              sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600, bgcolor: alpha(pmColor, 0.1), color: pmColor, borderRadius: '6px' }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={getStatusLabel(sale.status)}
+                              size="small"
+                              sx={{ height: 22, fontSize: '0.7rem', fontWeight: 700, bgcolor: alpha(statusColor, 0.1), color: statusColor, borderRadius: '6px' }}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
+                              <Tooltip title="Voir facture" arrow>
+                                <IconButton size="small" onClick={() => openInvoice(sale)} sx={{ bgcolor: alpha('#6366f1', 0.08), color: '#6366f1', '&:hover': { bgcolor: alpha('#6366f1', 0.18) }, width: 30, height: 30 }}>
+                                  <ReceiptIcon sx={{ fontSize: 15 }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Télécharger facture" arrow>
+                                <IconButton size="small" onClick={() => downloadInvoice(sale)} sx={{ bgcolor: alpha('#3b82f6', 0.08), color: '#3b82f6', '&:hover': { bgcolor: alpha('#3b82f6', 0.18) }, width: 30, height: 30 }}>
+                                  <DownloadIcon sx={{ fontSize: 15 }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Reçu thermique" arrow>
+                                <IconButton size="small" onClick={() => handleOpenThermalReceipt(sale)} sx={{ bgcolor: alpha('#8b5cf6', 0.08), color: '#8b5cf6', '&:hover': { bgcolor: alpha('#8b5cf6', 0.18) }, width: 30, height: 30 }}>
+                                  <PrintIcon sx={{ fontSize: 15 }} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title={sale.status === 'completed' ? 'Marquer non payée' : 'Marquer payée'} arrow>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleTogglePaymentStatus(sale)}
+                                  sx={{
+                                    bgcolor: alpha(sale.status === 'completed' ? '#f59e0b' : '#22c55e', 0.08),
+                                    color: sale.status === 'completed' ? '#f59e0b' : '#22c55e',
+                                    '&:hover': { bgcolor: alpha(sale.status === 'completed' ? '#f59e0b' : '#22c55e', 0.18) },
+                                    width: 30,
+                                    height: 30,
+                                  }}
+                                >
+                                  <PaymentIcon sx={{ fontSize: 15 }} />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* footer */}
+              <Box sx={{ px: 2, py: 1.5, borderTop: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  {filteredSales.length} vente{filteredSales.length > 1 ? 's' : ''}
+                  {filteredSales.length !== sales.length && ` sur ${sales.length}`}
+                </Typography>
+                {(salesSearch || salesFilter !== 'all') && (
+                  <Chip
+                    label="Effacer les filtres"
+                    size="small"
+                    onClick={() => { setSalesSearch(''); setSalesFilter('all'); }}
+                    sx={{ fontSize: '0.7rem', height: 22, borderRadius: '6px' }}
+                  />
+                )}
+              </Box>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ─── Dialog nouvelle vente ─── */}
+      <Dialog
+        open={newSaleDialogOpen}
+        onClose={() => setNewSaleDialogOpen(false)}
+        maxWidth="xl"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-            minHeight: '90vh',
-          }
-        }}
+        PaperProps={{ sx: { borderRadius: '16px', boxShadow: '0 24px 48px rgba(0,0,0,0.16)', minHeight: '90vh' } }}
       >
-        <DialogTitle
-          sx={{
-            background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
-            color: 'white',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            py: 2.5,
-            px: 3,
-          }}
-        >
+        <DialogTitle sx={{ background: 'linear-gradient(135deg, #111827 0%, #1f2937 100%)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 2.5, px: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <ShoppingCartIcon sx={{ fontSize: 32 }} />
-            <Typography variant="h5" component="span" sx={{ fontWeight: 600 }}>
-              Nouvelle vente
-            </Typography>
+            <Box sx={{ width: 40, height: 40, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(255,255,255,0.1)' }}>
+              <ShoppingCartIcon />
+            </Box>
+            <Box>
+              <Typography variant="h6" component="span" sx={{ fontWeight: 700 }}>Nouvelle vente</Typography>
+              <Typography variant="caption" sx={{ display: 'block', opacity: 0.7 }}>Sélectionnez les articles et finalisez la vente</Typography>
+            </Box>
           </Box>
-          <IconButton
-            onClick={() => {
-              setNewSaleDialogOpen(false);
-              resetForm();
-            }}
-            sx={{ 
-              color: 'white',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.1)',
-              }
-            }}
-          >
+          <IconButton onClick={() => { setNewSaleDialogOpen(false); resetForm(); }} sx={{ color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 3, bgcolor: '#f8f9fa' }}>
           <Grid container spacing={3} sx={{ mt: 0 }}>
-            {/* Informations client et paiement */}
+            {/* Client + payment */}
             <Grid item xs={12}>
-              <Paper 
-                elevation={2}
-                sx={{ 
-                  p: 3, 
-                  borderRadius: 2,
-                  bgcolor: 'white',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                  <PersonIcon sx={{ color: 'primary.main', fontSize: 28 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                    Informations client
-                  </Typography>
+              <Paper elevation={0} sx={{ p: 3, borderRadius: '14px', bgcolor: 'white', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
+                  <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, #6366f1, ${alpha('#6366f1', 0.7)})`, color: '#fff' }}>
+                    <PersonIcon sx={{ fontSize: 18 }} />
+                  </Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Informations client</Typography>
                 </Box>
-                
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={6}>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       <Autocomplete
                         fullWidth
                         options={[{ id: '', firstName: 'Client', lastName: 'anonyme', email: '', phone: '' } as any, ...clients]}
-                        value={selectedClientId ? clients.find(c => c.id === selectedClientId) || null : null}
-                        onChange={(event, newValue) => {
-                          setSelectedClientId(newValue?.id || '');
-                        }}
-                        getOptionLabel={(option) => 
-                          option.id === '' 
-                            ? 'Client anonyme' 
-                            : `${option.firstName} ${option.lastName}${option.email ? ` - ${option.email}` : ''}${option.phone ? ` - ${option.phone}` : ''}`
-                        }
+                        value={selectedClientId ? clients.find((c) => c.id === selectedClientId) || null : null}
+                        onChange={(_, v) => setSelectedClientId(v?.id || '')}
+                        getOptionLabel={(o) => (o.id === '' ? 'Client anonyme' : `${o.firstName} ${o.lastName}${o.email ? ` - ${o.email}` : ''}${o.phone ? ` - ${o.phone}` : ''}`)}
                         filterOptions={(options, { inputValue }) => {
                           if (!inputValue) return options;
-                          const searchTerm = inputValue.toLowerCase();
-                          return options.filter(option => {
-                            if (option.id === '') return 'client anonyme'.includes(searchTerm);
-                            const firstName = (option.firstName || '').toLowerCase();
-                            const lastName = (option.lastName || '').toLowerCase();
-                            const email = (option.email || '').toLowerCase();
-                            const phone = (option.phone || '').toLowerCase();
-                            return firstName.includes(searchTerm) || 
-                                   lastName.includes(searchTerm) || 
-                                   email.includes(searchTerm) || 
-                                   phone.includes(searchTerm);
+                          const q = inputValue.toLowerCase();
+                          return options.filter((o) => {
+                            if (o.id === '') return 'client anonyme'.includes(q);
+                            return [o.firstName, o.lastName, o.email, o.phone].some((f) => (f || '').toLowerCase().includes(q));
                           });
                         }}
-                        renderInput={(params) => (
-                          <TextField 
-                            {...params} 
-                            label="Client" 
-                            placeholder="Rechercher par nom, email ou téléphone..."
-                          />
-                        )}
-                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        renderInput={(params) => <TextField {...params} label="Client" placeholder="Rechercher par nom, email ou téléphone..." sx={INPUT_SX} />}
+                        isOptionEqualToValue={(o, v) => o.id === v.id}
                       />
                       <Tooltip title="Créer un nouveau client">
-                        <IconButton
-                          onClick={() => setClientFormOpen(true)}
-                          sx={{
-                            bgcolor: 'primary.main',
-                            color: 'white',
-                            '&:hover': {
-                              bgcolor: 'primary.dark',
-                            },
-                          }}
-                        >
+                        <IconButton onClick={() => setClientFormOpen(true)} sx={{ bgcolor: '#111827', color: 'white', '&:hover': { bgcolor: '#1f2937' }, borderRadius: '10px', width: 42, height: 42 }}>
                           <AddIcon />
                         </IconButton>
                       </Tooltip>
@@ -1449,16 +974,12 @@ const Sales: React.FC = () => {
                   <Grid item xs={12} md={6}>
                     <FormControl fullWidth>
                       <InputLabel>Méthode de paiement</InputLabel>
-                      <Select 
-                        value={paymentMethod} 
-                        onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'card' | 'transfer' | 'check' | 'payment_link')}
-                        label="Méthode de paiement"
-                      >
-                        <MenuItem value="cash">💵 Espèces</MenuItem>
-                        <MenuItem value="card">💳 Carte</MenuItem>
-                        <MenuItem value="transfer">🏦 Virement</MenuItem>
-                        <MenuItem value="check">📝 Chèque</MenuItem>
-                        <MenuItem value="payment_link">🔗 Liens paiement</MenuItem>
+                      <Select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as any)} label="Méthode de paiement" sx={{ borderRadius: '10px' }}>
+                        <MenuItem value="cash">Espèces</MenuItem>
+                        <MenuItem value="card">Carte</MenuItem>
+                        <MenuItem value="transfer">Virement</MenuItem>
+                        <MenuItem value="check">Chèque</MenuItem>
+                        <MenuItem value="payment_link">Lien paiement</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
@@ -1466,683 +987,318 @@ const Sales: React.FC = () => {
               </Paper>
             </Grid>
 
-            {/* Sélection d'articles */}
+            {/* Articles selection */}
             <Grid item xs={12} md={6}>
-              <Paper 
-                elevation={2}
-                sx={{ 
-                  p: 3, 
-                  borderRadius: 2,
-                  bgcolor: 'white',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  height: '100%',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                  <InventoryIcon sx={{ color: 'primary.main', fontSize: 28 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                    Sélection d'articles
-                  </Typography>
-                  <Badge 
-                    badgeContent={filteredItems.length} 
-                    color="primary"
-                    sx={{ ml: 'auto' }}
-                  />
+              <Paper elevation={0} sx={{ p: 3, borderRadius: '14px', bgcolor: 'white', border: '1px solid rgba(0,0,0,0.06)', height: '100%' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
+                  <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, #3b82f6, ${alpha('#3b82f6', 0.7)})`, color: '#fff' }}>
+                    <InventoryIcon sx={{ fontSize: 18 }} />
+                  </Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Sélection d'articles</Typography>
+                  <Chip label={filteredItems.length} size="small" sx={{ ml: 'auto', bgcolor: alpha('#3b82f6', 0.1), color: '#3b82f6', fontWeight: 700, fontSize: '0.75rem' }} />
                 </Box>
-              
-              {/* Type d'article */}
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Type d'article</InputLabel>
-                <Select 
-                  value={selectedItemType} 
-                  onChange={(e) => {
-                    setSelectedItemType(e.target.value as 'product' | 'service' | 'part');
-                    setSelectedCategory('all'); // Réinitialiser la catégorie
-                    setSearchQuery(''); // Réinitialiser la recherche
-                  }}
-                  label="Type d'article"
-                >
-                  <MenuItem value="product">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <span>🛍️ Produits & Accessoires</span>
-                      <span style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center',
-                        padding: '2px 8px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        color: '#1976d2',
-                        backgroundColor: '#e3f2fd',
-                        border: '1px solid #1976d2',
-                        borderRadius: '12px'
-                      }}>
-                        {products.filter(p => p.isActive).length}
-                      </span>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="service">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <span>🔧 Services de Réparation</span>
-                      <span style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center',
-                        padding: '2px 8px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        color: '#1976d2',
-                        backgroundColor: '#e3f2fd',
-                        border: '1px solid #1976d2',
-                        borderRadius: '12px'
-                      }}>
-                        {services.filter(s => s.isActive).length}
-                      </span>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="part">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <span>🔩 Pièces Détachées</span>
-                      <span style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center',
-                        padding: '2px 8px',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        color: '#1976d2',
-                        backgroundColor: '#e3f2fd',
-                        border: '1px solid #1976d2',
-                        borderRadius: '12px'
-                      }}>
-                        {parts.filter(p => p.isActive && p.stockQuantity > 0).length}
-                      </span>
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
 
-              {/* Catégorie */}
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Catégorie</InputLabel>
-                <Select 
-                  value={selectedCategory} 
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  label="Catégorie"
-                >
-                  {availableCategories.map((category) => {
-                    const count = getCategoryCount(category);
-                    return (
-                      <MenuItem key={category} value={category}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                          <span>
-                            {category === 'all' ? '📂 Toutes les catégories' : `🏷️ ${category}`}
-                          </span>
-                          <Chip
-                            label={count}
-                            size="small"
-                            sx={{
-                              ml: 'auto',
-                              bgcolor: count > 0 ? 'primary.main' : 'grey.300',
-                              color: count > 0 ? 'white' : 'grey.600',
-                              fontWeight: 600,
-                              fontSize: '0.75rem',
-                              height: 20,
-                              '& .MuiChip-label': {
-                                px: 1,
-                              },
-                            }}
-                          />
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Type d'article</InputLabel>
+                  <Select
+                    value={selectedItemType}
+                    onChange={(e) => { setSelectedItemType(e.target.value as any); setSelectedCategory('all'); setSearchQuery(''); }}
+                    label="Type d'article"
+                    sx={{ borderRadius: '10px' }}
+                  >
+                    <MenuItem value="product">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        Produits & Accessoires
+                        <Chip label={products.filter((p) => p.isActive).length} size="small" sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600, bgcolor: alpha('#6366f1', 0.1), color: '#6366f1' }} />
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="service">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        Services de Réparation
+                        <Chip label={services.filter((s) => s.isActive).length} size="small" sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600, bgcolor: alpha('#22c55e', 0.1), color: '#22c55e' }} />
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="part">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        Pièces Détachées
+                        <Chip label={parts.filter((p) => p.isActive && p.stockQuantity > 0).length} size="small" sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600, bgcolor: alpha('#f59e0b', 0.1), color: '#f59e0b' }} />
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Catégorie</InputLabel>
+                  <Select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} label="Catégorie" sx={{ borderRadius: '10px' }}>
+                    {availableCategories.map((cat) => (
+                      <MenuItem key={cat} value={cat}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                          <span>{cat === 'all' ? 'Toutes les catégories' : cat}</span>
+                          <Chip label={getCategoryCount(cat)} size="small" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 600, bgcolor: alpha('#6366f1', 0.08), color: '#6366f1' }} />
                         </Box>
                       </MenuItem>
-                    );
-                  })}
-                </Select>
-              </FormControl>
+                    ))}
+                  </Select>
+                </FormControl>
 
-              {/* Recherche */}
-              <TextField
-                fullWidth
-                placeholder={`Rechercher un ${selectedItemType === 'product' ? 'produit' : selectedItemType === 'service' ? 'service' : 'pièce'}...`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-              />
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder={`Rechercher un ${selectedItemType === 'product' ? 'produit' : selectedItemType === 'service' ? 'service' : 'pièce'}...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  sx={{ ...INPUT_SX, mb: 2 }}
+                  InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: 'text.disabled' }} /></InputAdornment> }}
+                />
 
-              {/* Informations sur les articles disponibles */}
-              <Alert 
-                severity="info" 
-                sx={{ 
-                  mb: 2,
-                  '& .MuiAlert-message': {
-                    width: '100%'
-                  }
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">
-                    {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} disponible{filteredItems.length > 1 ? 's' : ''}
-                  </Typography>
-                  {selectedItemType === 'part' && (
-                    <Typography variant="caption">
-                      Seules les pièces en stock
-                    </Typography>
-                  )}
-                </Box>
-              </Alert>
+                <Typography variant="caption" sx={{ color: 'text.secondary', mb: 1, display: 'block' }}>
+                  {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} disponible{filteredItems.length > 1 ? 's' : ''}
+                  {selectedItemType === 'part' && ' (en stock uniquement)'}
+                </Typography>
 
-              {/* Liste des articles disponibles */}
-              <Box sx={{ 
-                maxHeight: 450, 
-                overflow: 'auto', 
-                border: '2px solid', 
-                borderColor: 'primary.light', 
-                borderRadius: 2,
-                bgcolor: 'background.paper',
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  bgcolor: '#f1f1f1',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  bgcolor: '#888',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    bgcolor: '#555',
-                  },
-                },
-              }}>
-                <List dense>
-                  {filteredItems.map((item) => {
-                    const details = getItemDetails(item);
-                    return (
-                      <ListItem 
-                        key={item.id} 
-                        button 
-                        onClick={() => addItemToSale(item)}
-                        sx={{ 
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            bgcolor: 'primary.light',
-                            transform: 'translateX(4px)',
-                          },
-                          borderBottom: '1px solid',
-                          borderColor: 'divider'
-                        }}
-                      >
-                        <ListItemText
-                          primary={
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontWeight: 500 }}>
-                                {item.name}
-                              </span>
-                              {selectedItemType === 'part' && (
-                                <span style={{ 
-                                  display: 'inline-flex', 
-                                  alignItems: 'center',
-                                  padding: '2px 8px',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 500,
-                                  color: '#2e7d32',
-                                  backgroundColor: '#e8f5e8',
-                                  border: '1px solid #4caf50',
-                                  borderRadius: '12px',
-                                  textTransform: 'uppercase'
-                                }}>
-                                  En stock
-                                </span>
-                              )}
-                            </span>
-                          }
-                          secondary={
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                              {details.description && (
-                                <Tooltip title={details.description}>
-                                  <InfoIcon fontSize="small" color="action" />
-                                </Tooltip>
-                              )}
-                              {item.category && item.category !== 'all' && (
-                                <span style={{ 
-                                  display: 'inline-flex', 
-                                  alignItems: 'center',
-                                  padding: '2px 6px',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 500,
-                                  color: '#666',
-                                  backgroundColor: '#f5f5f5',
-                                  border: '1px solid #ddd',
-                                  borderRadius: '8px'
-                                }}>
-                                  {item.category}
-                                </span>
-                              )}
-                              <span style={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                                💰 {formatFromEUR(item.price, currency)} HT / {formatFromEUR(item.price * (1 + (parseFloat(workshopSettings?.vatRate || '20') / 100)), currency)} TTC
-                              </span>
-                              {selectedItemType === 'part' && (
-                                <span style={{ color: 'text.secondary' }}>
-                                  • Stock: {details.stock}
-                                </span>
-                              )}
-                            </span>
-                          }
-                        />
-                        <IconButton 
-                          size="small" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addItemToSale(item);
-                          }}
-                          sx={{ 
-                            color: 'primary.main',
-                            '&:hover': {
-                              bgcolor: 'primary.light',
-                              color: 'white'
-                            }
-                          }}
+                <Box sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '12px' }}>
+                  <List dense>
+                    {filteredItems.map((item) => {
+                      const details = getItemDetails(item);
+                      return (
+                        <ListItem
+                          key={item.id}
+                          button
+                          onClick={() => addItemToSale(item)}
+                          sx={{ cursor: 'pointer', transition: 'all 0.2s', '&:hover': { bgcolor: alpha('#3b82f6', 0.06) }, borderBottom: '1px solid rgba(0,0,0,0.04)' }}
                         >
-                          <AddIcon fontSize="small" />
-                        </IconButton>
-                      </ListItem>
-                    );
-                  })}
-                  {filteredItems.length === 0 && (
-                    <ListItem>
-                      <ListItemText 
-                        primary={
-                          <span style={{ textAlign: 'center', padding: '16px 0' }}>
-                            <span style={{ color: 'text.secondary', display: 'block', marginBottom: '8px' }}>
-                              🔍 Aucun article trouvé
-                            </span>
-                            <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                              Essayez de modifier votre recherche ou changer de catégorie
-                            </span>
-                          </span>
-                        }
-                      />
-                    </ListItem>
-                  )}
-                </List>
-              </Box>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{item.name}</Typography>
+                                {selectedItemType === 'part' && <Chip label="En stock" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, bgcolor: alpha('#22c55e', 0.1), color: '#22c55e' }} />}
+                              </Box>
+                            }
+                            secondary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.3 }}>
+                                {details.description && (
+                                  <Tooltip title={details.description}><InfoIcon sx={{ fontSize: 13, color: 'text.disabled' }} /></Tooltip>
+                                )}
+                                {item.category && item.category !== 'all' && (
+                                  <Chip label={item.category} size="small" sx={{ height: 16, fontSize: '0.6rem', bgcolor: alpha('#6b7280', 0.08), color: '#6b7280' }} />
+                                )}
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem' }}>
+                                  {formatFromEUR(item.price, currency)} HT / {formatFromEUR(item.price * (1 + parseFloat(workshopSettings?.vatRate || '20') / 100), currency)} TTC
+                                </Typography>
+                                {selectedItemType === 'part' && 'stock' in details && <Typography variant="caption" sx={{ color: 'text.disabled' }}>Stock: {details.stock}</Typography>}
+                              </Box>
+                            }
+                          />
+                          <IconButton size="small" onClick={(e) => { e.stopPropagation(); addItemToSale(item); }} sx={{ color: '#3b82f6', '&:hover': { bgcolor: alpha('#3b82f6', 0.12) } }}>
+                            <AddIcon fontSize="small" />
+                          </IconButton>
+                        </ListItem>
+                      );
+                    })}
+                    {filteredItems.length === 0 && (
+                      <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body2" sx={{ color: 'text.disabled' }}>Aucun article trouvé</Typography>
+                        <Typography variant="caption" sx={{ color: 'text.disabled' }}>Modifiez votre recherche ou catégorie</Typography>
+                      </Box>
+                    )}
+                  </List>
+                </Box>
               </Paper>
             </Grid>
 
-            {/* Panier */}
+            {/* Cart */}
             <Grid item xs={12} md={6}>
-              <Paper 
-                elevation={2}
-                sx={{ 
-                  p: 3, 
-                  borderRadius: 2,
-                  bgcolor: 'white',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  height: '100%',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                  <ShoppingCartIcon sx={{ color: 'success.main', fontSize: 28 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                    Panier
-                  </Typography>
-                  <Badge 
-                    badgeContent={saleItems.length} 
-                    color="success"
-                    sx={{ ml: 'auto' }}
-                  />
+              <Paper elevation={0} sx={{ p: 3, borderRadius: '14px', bgcolor: 'white', border: '1px solid rgba(0,0,0,0.06)', height: '100%' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
+                  <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, #22c55e, ${alpha('#22c55e', 0.7)})`, color: '#fff' }}>
+                    <ShoppingCartIcon sx={{ fontSize: 18 }} />
+                  </Box>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Panier</Typography>
+                  {saleItems.length > 0 && <Chip label={saleItems.length} size="small" sx={{ ml: 'auto', bgcolor: alpha('#22c55e', 0.1), color: '#22c55e', fontWeight: 700, fontSize: '0.75rem' }} />}
                 </Box>
-              
-              <Box sx={{ 
-                maxHeight: 450, 
-                overflow: 'auto', 
-                border: '2px solid', 
-                borderColor: 'success.light', 
-                borderRadius: 2, 
-                p: 2,
-                bgcolor: 'background.paper',
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  bgcolor: '#f1f1f1',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  bgcolor: '#888',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    bgcolor: '#555',
-                  },
-                },
-              }}>
-                {saleItems.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <span style={{ color: 'text.secondary', display: 'block', marginBottom: '8px' }}>
-                      🛒 Votre panier est vide
-                    </span>
-                    <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                      Sélectionnez des articles dans la liste à gauche
-                    </span>
-                  </Box>
-                ) : (
-                  <List dense>
-                    {saleItems.map((item, index) => (
-                      <ListItem 
-                        key={item.itemId}
-                        sx={{ 
-                          borderBottom: index < saleItems.length - 1 ? '1px solid' : 'none',
-                          borderColor: 'divider',
-                          py: 1
-                        }}
-                      >
-                        <ListItemText
-                          primary={
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ fontWeight: 500 }}>
-                                {item.name}
-                              </span>
-                              <span style={{ 
-                                display: 'inline-flex', 
-                                alignItems: 'center',
-                                padding: '2px 6px',
-                                fontSize: '0.7rem',
-                                fontWeight: 500,
-                                color: item.type === 'product' ? '#1976d2' : item.type === 'service' ? '#9c27b0' : '#2e7d32',
-                                backgroundColor: item.type === 'product' ? '#e3f2fd' : item.type === 'service' ? '#f3e5f5' : '#e8f5e8',
-                                border: `1px solid ${item.type === 'product' ? '#1976d2' : item.type === 'service' ? '#9c27b0' : '#2e7d32'}`,
-                                borderRadius: '8px',
-                                textTransform: 'uppercase'
-                              }}>
-                                {item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'}
-                              </span>
-                            </span>
-                          }
-                          secondary={
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 4 }}>
-                              <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                                💰 {formatFromEUR(item.unitPrice, currency)} l'unité
-                              </span>
-                              <span style={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                                📦 Quantité: {item.quantity}
-                              </span>
-                            </span>
-                          }
-                        />
-                        <ListItemSecondaryAction>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <TextField
-                              type="number"
-                              size="small"
-                              value={item.quantity}
-                              onChange={(e) => updateItemQuantity(item.itemId, parseInt(e.target.value) || 0)}
-                              sx={{ width: 70 }}
-                              inputProps={{ 
-                                min: 1,
-                                style: { textAlign: 'center' }
-                              }}
-                            />
-                            <span style={{ fontWeight: 600, minWidth: 80, textAlign: 'right', fontSize: '0.875rem' }}>
-                              {formatFromEUR(item.totalPrice, currency)}
-                            </span>
-                            <IconButton 
-                              size="small" 
-                              onClick={() => removeItemFromSale(item.itemId)}
-                              color="error"
-                              sx={{
-                                '&:hover': {
-                                  bgcolor: 'error.light',
-                                  color: 'white'
-                                }
-                              }}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-              </Box>
 
-              {/* Réduction */}
-              {saleItems.length > 0 && (
-                <Box sx={{ 
-                  mt: 2, 
-                  p: 2, 
-                  bgcolor: 'warning.50', 
-                  borderRadius: 2,
-                  border: '2px solid',
-                  borderColor: 'warning.light',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <DiscountIcon sx={{ color: 'warning.main' }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                      Réduction
-                    </Typography>
-                  </Box>
-                  <TextField
-                    fullWidth
-                    type="number"
-                    label="Réduction (%)"
-                    value={discountPercentage}
-                    onChange={(e) => setDiscountPercentage(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
-                    inputProps={{ 
-                      min: 0,
-                      max: 100,
-                      step: 0.1
-                    }}
-                    size="small"
-                    sx={{ mb: 1 }}
-                  />
-                  {discountPercentage > 0 && (
-                    <Alert severity="success" sx={{ fontSize: '0.875rem', mt: 1 }}>
-                      Réduction de {discountPercentage}% = {formatFromEUR(totals.discountAmount, currency)}
-                    </Alert>
-                  )}
-                </Box>
-              )}
-
-              {/* Totaux */}
-              {saleItems.length > 0 && (
-                <Box sx={{ 
-                  mt: 2, 
-                  p: 2, 
-                  background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-                  borderRadius: 2,
-                  border: '2px solid',
-                  borderColor: 'primary.main',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1.5 }}>
-                    <AssessmentIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                      Récapitulatif
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <MonetizationOnIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2">Prix HT:</Typography>
-                    </Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {formatFromEUR(totals.subtotal, currency)}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <AssessmentIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2">TVA ({totals.vatRate}%):</Typography>
-                    </Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {formatFromEUR(totals.tax, currency)}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
-                    <Typography variant="body2">Total TTC:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {formatFromEUR(totals.totalBeforeDiscount, currency)}
-                    </Typography>
-                  </Box>
-                  
-                  {discountPercentage > 0 && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <DiscountIcon sx={{ fontSize: 16, color: 'success.main' }} />
-                        <Typography variant="body2" sx={{ color: 'success.main' }}>
-                          Réduction ({discountPercentage}%):
-                        </Typography>
+                <Box sx={{ maxHeight: 400, overflow: 'auto', border: '1px solid rgba(0,0,0,0.06)', borderRadius: '12px', p: saleItems.length > 0 ? 1.5 : 0 }}>
+                  {saleItems.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 5 }}>
+                      <Box sx={{ width: 48, height: 48, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: alpha('#6b7280', 0.06), mx: 'auto', mb: 1.5 }}>
+                        <ShoppingCartIcon sx={{ fontSize: 24, color: 'text.disabled' }} />
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
-                        -{formatFromEUR(totals.discountAmount, currency)}
-                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.disabled', fontWeight: 500 }}>Votre panier est vide</Typography>
+                      <Typography variant="caption" sx={{ color: 'text.disabled' }}>Sélectionnez des articles à gauche</Typography>
                     </Box>
+                  ) : (
+                    <List dense>
+                      {saleItems.map((item, index) => {
+                        const typeColor = item.type === 'product' ? '#6366f1' : item.type === 'service' ? '#8b5cf6' : '#22c55e';
+                        return (
+                          <ListItem key={item.itemId} sx={{ borderBottom: index < saleItems.length - 1 ? '1px solid rgba(0,0,0,0.04)' : 'none', py: 1 }}>
+                            <ListItemText
+                              primary={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{item.name}</Typography>
+                                  <Chip
+                                    label={item.type === 'product' ? 'Produit' : item.type === 'service' ? 'Service' : 'Pièce'}
+                                    size="small"
+                                    sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: alpha(typeColor, 0.1), color: typeColor }}
+                                  />
+                                </Box>
+                              }
+                              secondary={
+                                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                  {formatFromEUR(item.unitPrice, currency)} x {item.quantity}
+                                </Typography>
+                              }
+                            />
+                            <ListItemSecondaryAction>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  value={item.quantity}
+                                  onChange={(e) => updateItemQuantity(item.itemId, parseInt(e.target.value) || 0)}
+                                  sx={{ width: 60, '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+                                  inputProps={{ min: 1, style: { textAlign: 'center', fontSize: '0.8rem', padding: '4px' } }}
+                                />
+                                <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 70, textAlign: 'right', fontSize: '0.8rem' }}>
+                                  {formatFromEUR(item.totalPrice, currency)}
+                                </Typography>
+                                <IconButton size="small" onClick={() => removeItemFromSale(item.itemId)} sx={{ color: '#ef4444', '&:hover': { bgcolor: alpha('#ef4444', 0.08) }, width: 28, height: 28 }}>
+                                  <DeleteIcon sx={{ fontSize: 15 }} />
+                                </IconButton>
+                              </Box>
+                            </ListItemSecondaryAction>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
                   )}
-                  
-                  <Divider sx={{ my: 1.5, borderColor: 'primary.main', borderWidth: 1 }} />
-                  
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    p: 1.5,
-                    bgcolor: 'primary.main',
-                    borderRadius: 1,
-                    color: 'white',
-                  }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                      TOTAL:
-                    </Typography>
-                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                      {formatFromEUR(totals.total, currency)}
-                    </Typography>
-                  </Box>
                 </Box>
-              )}
+
+                {/* Discount */}
+                {saleItems.length > 0 && (
+                  <Box sx={{ mt: 2, p: 2, bgcolor: alpha('#f59e0b', 0.04), borderRadius: '12px', border: `1px solid ${alpha('#f59e0b', 0.15)}` }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.5 }}>
+                      <DiscountIcon sx={{ fontSize: 18, color: '#f59e0b' }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Réduction</Typography>
+                    </Box>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Réduction (%)"
+                      value={discountPercentage}
+                      onChange={(e) => setDiscountPercentage(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                      inputProps={{ min: 0, max: 100, step: 0.1 }}
+                      size="small"
+                      sx={INPUT_SX}
+                    />
+                    {discountPercentage > 0 && (
+                      <Typography variant="caption" sx={{ color: '#22c55e', fontWeight: 600, mt: 1, display: 'block' }}>
+                        Réduction de {discountPercentage}% = -{formatFromEUR(totals.discountAmount, currency)}
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+
+                {/* Totals */}
+                {saleItems.length > 0 && (
+                  <Box sx={{ mt: 2, p: 2, borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)', background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.5 }}>
+                      <AssessmentIcon sx={{ fontSize: 18, color: '#6366f1' }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.8rem' }}>Récapitulatif</Typography>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>Prix HT :</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{formatFromEUR(totals.subtotal, currency)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>TVA ({totals.vatRate}%) :</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{formatFromEUR(totals.tax, currency)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>Total TTC :</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.8rem' }}>{formatFromEUR(totals.totalBeforeDiscount, currency)}</Typography>
+                    </Box>
+                    {discountPercentage > 0 && (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography variant="body2" sx={{ color: '#22c55e', fontSize: '0.8rem' }}>Réduction ({discountPercentage}%) :</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#22c55e', fontSize: '0.8rem' }}>-{formatFromEUR(totals.discountAmount, currency)}</Typography>
+                      </Box>
+                    )}
+
+                    <Divider sx={{ my: 1.5 }} />
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, bgcolor: '#111827', borderRadius: '10px', color: '#fff' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>TOTAL</Typography>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{formatFromEUR(totals.total, currency)}</Typography>
+                    </Box>
+                  </Box>
+                )}
               </Paper>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions 
-          sx={{ 
-            p: 3, 
-            bgcolor: '#f8f9fa',
-            borderTop: '2px solid',
-            borderColor: 'divider',
-            gap: 2,
-          }}
-        >
-          <Button 
-            onClick={() => {
-              setNewSaleDialogOpen(false);
-              resetForm();
-            }}
-            variant="outlined"
-            color="error"
-            size="large"
-            sx={{
-              minWidth: 120,
-              fontWeight: 600,
-            }}
-          >
+        <DialogActions sx={{ p: 3, bgcolor: '#f8f9fa', borderTop: '1px solid rgba(0,0,0,0.06)', gap: 1.5 }}>
+          <Button onClick={() => { setNewSaleDialogOpen(false); resetForm(); }} variant="outlined" sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600, borderColor: '#e5e7eb', color: '#6b7280', minWidth: 120 }}>
             Annuler
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={createSale}
             disabled={saleItems.length === 0}
-            size="large"
             startIcon={<ReceiptIcon />}
             sx={{
-              minWidth: 200,
-              background: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
-              fontWeight: 600,
-              fontSize: '1rem',
-              py: 1.5,
-              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #45a049 0%, #5db85f 100%)',
-                boxShadow: '0 6px 16px rgba(76, 175, 80, 0.4)',
-              },
-              '&:disabled': {
-                background: 'grey.300',
-                color: 'grey.500',
-              },
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: 700,
+              minWidth: 220,
+              py: 1.2,
+              bgcolor: '#22c55e',
+              '&:hover': { bgcolor: '#16a34a' },
+              boxShadow: `0 4px 14px ${alpha('#22c55e', 0.35)}`,
+              '&:disabled': { bgcolor: '#e5e7eb', color: '#9ca3af' },
             }}
           >
             Créer la vente ({formatFromEUR(totals.subtotal, currency)} HT / {formatFromEUR(totals.total, currency)} TTC)
           </Button>
         </DialogActions>
-        </Dialog>
+      </Dialog>
 
-        {/* Composant Facture */}
-        {selectedSaleForInvoice && (
-          <Invoice
-            sale={selectedSaleForInvoice}
-            client={selectedSaleForInvoice.clientId ? getClientById(selectedSaleForInvoice.clientId) : undefined}
-            open={invoiceOpen}
-            onClose={closeInvoice}
-          />
-        )}
+      {/* ─── Invoice ─── */}
+      {selectedSaleForInvoice && (
+        <Invoice sale={selectedSaleForInvoice} client={selectedSaleForInvoice.clientId ? getClientById(selectedSaleForInvoice.clientId) : undefined} open={invoiceOpen} onClose={closeInvoice} />
+      )}
 
-        {/* Dialogue Vente Simplifiée */}
-        <SimplifiedSalesDialog
-          open={simplifiedSaleDialogOpen}
-          onClose={() => setSimplifiedSaleDialogOpen(false)}
+      {/* ─── Simplified sale ─── */}
+      <SimplifiedSalesDialog open={simplifiedSaleDialogOpen} onClose={() => setSimplifiedSaleDialogOpen(false)} />
+
+      {/* ─── Thermal receipt ─── */}
+      {thermalReceiptSale && (
+        <ThermalReceiptDialog
+          open={thermalReceiptDialogOpen}
+          onClose={() => { setThermalReceiptDialogOpen(false); setThermalReceiptSale(null); }}
+          sale={thermalReceiptSale}
+          client={thermalReceiptSale.clientId ? getClientById(thermalReceiptSale.clientId) : undefined}
+          device={undefined}
+          technician={undefined}
+          workshopInfo={{
+            name: workshopSettings?.name || 'Atelier',
+            address: workshopSettings?.address,
+            phone: workshopSettings?.phone,
+            email: workshopSettings?.email,
+            siret: workshopSettings?.siret,
+            vatNumber: workshopSettings?.vatNumber,
+          }}
         />
+      )}
 
-        {/* Dialog pour l'impression thermique */}
-        {thermalReceiptSale && (
-          <ThermalReceiptDialog
-            open={thermalReceiptDialogOpen}
-            onClose={() => {
-              setThermalReceiptDialogOpen(false);
-              setThermalReceiptSale(null);
-            }}
-            sale={thermalReceiptSale}
-            client={thermalReceiptSale.clientId ? getClientById(thermalReceiptSale.clientId) : undefined}
-            device={undefined}
-            technician={undefined}
-            workshopInfo={{
-              name: workshopSettings?.name || 'Atelier',
-              address: workshopSettings?.address,
-              phone: workshopSettings?.phone,
-              email: workshopSettings?.email,
-              siret: workshopSettings?.siret,
-              vatNumber: workshopSettings?.vatNumber,
-            }}
-          />
-        )}
+      {/* ─── Client form ─── */}
+      <ClientForm open={clientFormOpen} onClose={() => setClientFormOpen(false)} onSubmit={handleCreateNewClient} existingEmails={clients.map((c) => c.email?.toLowerCase() || '')} />
 
-        {/* Dialogue de création de client */}
-        <ClientForm
-          open={clientFormOpen}
-          onClose={() => setClientFormOpen(false)}
-          onSubmit={handleCreateNewClient}
-          existingEmails={clients.map(client => client.email?.toLowerCase() || '')}
-        />
-
-        {/* Notification de succès */}
-        <Snackbar
-          open={snackbarOpen}
-          autoHideDuration={4000}
-          onClose={() => setSnackbarOpen(false)}
-          message={snackbarMessage}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        />
-
-      </Box>
-    );
-  };
+      {/* ─── Snackbar ─── */}
+      <Snackbar open={snackbarOpen} autoHideDuration={4000} onClose={() => setSnackbarOpen(false)} message={snackbarMessage} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} />
+    </Box>
+  );
+};
 
 export default Sales;

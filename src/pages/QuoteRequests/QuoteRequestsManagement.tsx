@@ -123,7 +123,7 @@ interface TechnicianCustomUrl {
   createdAt: Date;
   updatedAt: Date;
 }
-// import { useAppStore } from '../../store'; // Temporairement désactivé pour éviter les erreurs
+import { useAuth } from '../../contexts/AuthContext';
 import { quoteRequestServiceReal } from '../../services/quoteRequestServiceReal';
 
 interface TabPanelProps {
@@ -149,14 +149,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const QuoteRequestsManagement: React.FC = () => {
-  // Utilisation d'un utilisateur simulé temporaire
-  // TODO: Remplacer par l'utilisateur authentifié du store
-  const currentUser = {
-    id: 'temp-user-id', // Sera remplacé par l'ID de l'utilisateur authentifié
-    firstName: 'Jean',
-    lastName: 'Dupont',
-    email: 'jean.dupont@atelier.com'
-  };
+  const { user: currentUser } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [quoteRequests, setQuoteRequests] = useState<QuoteRequest[]>([]);
   const [stats, setStats] = useState<QuoteRequestStats | null>(null);
@@ -447,6 +440,14 @@ const QuoteRequestsManagement: React.FC = () => {
     }
   };
 
+  if (!currentUser) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <Alert severity="warning">Veuillez vous connecter pour accéder aux demandes de devis.</Alert>
+      </Box>
+    );
+  }
+
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
@@ -457,87 +458,343 @@ const QuoteRequestsManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Message de développement en cours */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '60vh',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: 3,
-          p: 6,
-          mb: 4,
-        }}
-      >
-        <Box
-          sx={{
-            textAlign: 'center',
-            background: 'rgba(255,255,255,0.95)',
-            borderRadius: 3,
-            p: 6,
-            maxWidth: 600,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-            backdropFilter: 'blur(10px)',
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
-              color: 'white',
-              mx: 'auto',
-              mb: 3,
-            }}
+      {/* En-tête */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            Demandes de devis
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Gérez les demandes de devis de vos clients
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={handleRefresh}
           >
-            <BuildIcon sx={{ fontSize: 40 }} />
-          </Box>
-          
-          <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: '#ff9800' }}>
-            🚧 Page en cours de développement
-          </Typography>
-          
-          <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
-            La gestion des demandes de devis est temporairement indisponible
-          </Typography>
-          
-          <Alert severity="info" sx={{ mb: 4, textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
-              Nous travaillons actuellement sur l'amélioration de cette fonctionnalité.
-            </Typography>
-            <Typography variant="body2">
-              Cette page sera bientôt disponible avec de nouvelles fonctionnalités pour gérer vos demandes de devis.
-            </Typography>
-          </Alert>
-
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="body1" sx={{ fontWeight: 500, mb: 2 }}>
-              En attendant, vous pouvez :
-            </Typography>
-            <Box sx={{ textAlign: 'left', maxWidth: 400, mx: 'auto' }}>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                • Gérer vos réparations via le Kanban
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                • Consulter vos statistiques
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                • Gérer votre catalogue de produits
-              </Typography>
-            </Box>
-          </Box>
-
-          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-            Merci de votre compréhension
-          </Typography>
+            Actualiser
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setIsUrlDialogOpen(true)}
+          >
+            Nouvelle URL
+          </Button>
         </Box>
       </Box>
 
+      {/* Statistiques */}
+      {stats && (
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700 }}>{stats.total}</Typography>
+                <Typography variant="body2" color="text.secondary">Total</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: 'warning.main' }}>{stats.pending}</Typography>
+                <Typography variant="body2" color="text.secondary">En attente</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: 'info.main' }}>{stats.inReview}</Typography>
+                <Typography variant="body2" color="text.secondary">En examen</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>{stats.quoted}</Typography>
+                <Typography variant="body2" color="text.secondary">Devis envoyé</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>{stats.accepted}</Typography>
+                <Typography variant="body2" color="text.secondary">Acceptés</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={6} sm={4} md={2}>
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: 'error.main' }}>{stats.rejected}</Typography>
+                <Typography variant="body2" color="text.secondary">Rejetés</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Onglets */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={tabValue} onChange={handleTabChange}>
+          <Tab label="Demandes" />
+          <Tab label="URLs personnalisées" />
+        </Tabs>
+      </Paper>
+
+      {/* Onglet Demandes */}
+      <TabPanel value={tabValue} index={0}>
+        {quoteRequests.length === 0 ? (
+          <Alert severity="info">Aucune demande de devis pour le moment.</Alert>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>N°</TableCell>
+                  <TableCell>Client</TableCell>
+                  <TableCell>Appareil</TableCell>
+                  <TableCell>Urgence</TableCell>
+                  <TableCell>Statut</TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {quoteRequests.map((request) => (
+                  <TableRow key={request.id} hover>
+                    <TableCell>{request.requestNumber}</TableCell>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {request.clientFirstName} {request.clientLastName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {request.clientEmail}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {request.deviceType} {request.deviceBrand && `- ${request.deviceBrand}`}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getUrgencyLabel(request.urgency)}
+                        color={getUrgencyColor(request.urgency) as any}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getStatusLabel(request.status)}
+                        color={getStatusColor(request.status) as any}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {new Date(request.createdAt).toLocaleDateString('fr-FR')}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Voir">
+                        <IconButton size="small" onClick={() => handleViewRequest(request)}>
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Répondre">
+                        <IconButton size="small" onClick={() => handleReply(request)}>
+                          <EmailIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </TabPanel>
+
+      {/* Onglet URLs personnalisées */}
+      <TabPanel value={tabValue} index={1}>
+        {customUrls.length === 0 ? (
+          <Alert severity="info">
+            Aucune URL personnalisée. Créez-en une pour recevoir des demandes de devis.
+          </Alert>
+        ) : (
+          <List>
+            {customUrls.map((url) => (
+              <ListItem key={url.id} sx={{ mb: 1, bgcolor: 'background.paper', borderRadius: 1 }}>
+                <ListItemIcon>
+                  <LinkIcon />
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        {url.customUrl}
+                      </Typography>
+                      <Chip
+                        label={url.isActive ? 'Active' : 'Inactive'}
+                        color={url.isActive ? 'success' : 'default'}
+                        size="small"
+                      />
+                    </Box>
+                  }
+                  secondary={`Créée le ${new Date(url.createdAt).toLocaleDateString('fr-FR')}`}
+                />
+                <ListItemSecondaryAction>
+                  <Tooltip title="Copier l'URL">
+                    <IconButton size="small" onClick={() => copyToClipboard(`${window.location.origin}/quote/${url.customUrl}`)}>
+                      <ContentCopyIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={url.isActive ? 'Désactiver' : 'Activer'}>
+                    <IconButton size="small" onClick={() => handleToggleUrlStatus(url.id)}>
+                      <PowerSettingsNewIcon fontSize="small" color={url.isActive ? 'success' : 'disabled'} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Modifier">
+                    <IconButton size="small" onClick={() => handleEditUrl(url)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Supprimer">
+                    <IconButton size="small" onClick={() => handleDeleteUrl(url.id)}>
+                      <DeleteIcon fontSize="small" color="error" />
+                    </IconButton>
+                  </Tooltip>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </TabPanel>
+
+      {/* Dialog détail demande */}
+      <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} maxWidth="md" fullWidth>
+        {selectedRequest && (
+          <>
+            <DialogTitle>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6">Demande {selectedRequest.requestNumber}</Typography>
+                <Chip
+                  label={getStatusLabel(selectedRequest.status)}
+                  color={getStatusColor(selectedRequest.status) as any}
+                />
+              </Box>
+            </DialogTitle>
+            <DialogContent dividers>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>Client</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <PersonIcon fontSize="small" color="action" />
+                    <Typography>{selectedRequest.clientFirstName} {selectedRequest.clientLastName}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <EmailIcon fontSize="small" color="action" />
+                    <Typography variant="body2">{selectedRequest.clientEmail}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <PhoneIcon fontSize="small" color="action" />
+                    <Typography variant="body2">{selectedRequest.clientPhone}</Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>Appareil</Typography>
+                  <Typography variant="body2">Type : {selectedRequest.deviceType || 'Non spécifié'}</Typography>
+                  <Typography variant="body2">Marque : {selectedRequest.deviceBrand || 'Non spécifié'}</Typography>
+                  <Typography variant="body2">Modèle : {selectedRequest.deviceModel || 'Non spécifié'}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>Description du problème</Typography>
+                  <Typography variant="body2">{selectedRequest.issueDescription}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>Urgence</Typography>
+                  <Chip
+                    label={getUrgencyLabel(selectedRequest.urgency)}
+                    color={getUrgencyColor(selectedRequest.urgency) as any}
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>Changer le statut</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {['pending', 'in_review', 'quoted', 'accepted', 'rejected'].map((status) => (
+                      <Button
+                        key={status}
+                        size="small"
+                        variant={selectedRequest.status === status ? 'contained' : 'outlined'}
+                        onClick={() => handleUpdateStatus(selectedRequest.id, status)}
+                      >
+                        {getStatusLabel(status)}
+                      </Button>
+                    ))}
+                  </Box>
+                </Grid>
+              </Grid>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => handleReply(selectedRequest)} startIcon={<EmailIcon />}>
+                Répondre par email
+              </Button>
+              <Button onClick={() => setIsDialogOpen(false)}>Fermer</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
+
+      {/* Dialog ajout URL */}
+      <Dialog open={isUrlDialogOpen} onClose={() => setIsUrlDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Nouvelle URL personnalisée</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Créez une URL personnalisée que vos clients pourront utiliser pour vous envoyer des demandes de devis.
+          </Typography>
+          <TextField
+            fullWidth
+            label="URL personnalisée"
+            value={newCustomUrl}
+            onChange={(e) => setNewCustomUrl(e.target.value)}
+            placeholder="mon-atelier"
+            helperText={`L'URL sera : ${window.location.origin}/quote/${newCustomUrl || 'mon-atelier'}`}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsUrlDialogOpen(false)}>Annuler</Button>
+          <Button variant="contained" onClick={handleAddCustomUrl}>Créer</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog modification URL */}
+      <Dialog open={isEditUrlDialogOpen} onClose={() => setIsEditUrlDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Modifier l'URL personnalisée</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="URL personnalisée"
+            value={editCustomUrl}
+            onChange={(e) => setEditCustomUrl(e.target.value)}
+            placeholder="mon-atelier"
+            sx={{ mt: 1 }}
+            helperText={`L'URL sera : ${window.location.origin}/quote/${editCustomUrl || 'mon-atelier'}`}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsEditUrlDialogOpen(false)}>Annuler</Button>
+          <Button variant="contained" onClick={handleUpdateCustomUrl}>Enregistrer</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
