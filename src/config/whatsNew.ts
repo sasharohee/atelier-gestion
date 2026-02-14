@@ -1,3 +1,5 @@
+import React from 'react';
+
 export interface WhatsNewItem {
   id: string;
   date: string;
@@ -26,7 +28,7 @@ export const whatsNewItems: WhatsNewItem[] = [
   },
   {
     id: 'sav-module-v1',
-    date: '2024-10-15',
+    date: '2025-10-15',
     title: 'Nouveau module SAV',
     description: 'Gestion complète des tickets SAV avec suivi des réparations.',
     category: 'feature',
@@ -34,7 +36,7 @@ export const whatsNewItems: WhatsNewItem[] = [
   },
   {
     id: 'payment-status-tracking',
-    date: '2024-10-10',
+    date: '2025-10-10',
     title: 'Suivi des statuts de paiement',
     description: 'Amélioration du système de suivi des paiements avec mise à jour automatique des statuts.',
     category: 'improvement',
@@ -42,7 +44,7 @@ export const whatsNewItems: WhatsNewItem[] = [
   },
   {
     id: 'device-brands-fix',
-    date: '2024-09-28',
+    date: '2025-09-28',
     title: 'Correction gestion des marques',
     description: 'Résolution des problèmes d\'ambiguïté dans la gestion des marques d\'appareils.',
     category: 'fix',
@@ -50,7 +52,7 @@ export const whatsNewItems: WhatsNewItem[] = [
   },
   {
     id: 'loyalty-points-system',
-    date: '2024-09-25',
+    date: '2025-09-25',
     title: 'Système de points de fidélité',
     description: 'Nouveau système de fidélité avec gestion des niveaux et avantages clients.',
     category: 'feature',
@@ -58,7 +60,7 @@ export const whatsNewItems: WhatsNewItem[] = [
   },
   {
     id: 'kanban-performance',
-    date: '2024-09-20',
+    date: '2025-09-20',
     title: 'Optimisation du Kanban',
     description: 'Amélioration des performances du tableau Kanban avec chargement plus rapide.',
     category: 'improvement',
@@ -66,11 +68,18 @@ export const whatsNewItems: WhatsNewItem[] = [
   }
 ];
 
-export const getCategoryInfo = (category: string) => {
-  const categories = {
-    feature: { label: 'Nouvelle fonctionnalité', color: '#10b981', icon: '✨' },
-    improvement: { label: 'Amélioration', color: '#3b82f6', icon: '⚡' },
-    fix: { label: 'Correction', color: '#f59e0b', icon: '🔧' }
+export interface CategoryInfo {
+  label: string;
+  color: string;
+  bgColor: string;
+  icon: string;
+}
+
+export const getCategoryInfo = (category: string): CategoryInfo => {
+  const categories: Record<string, CategoryInfo> = {
+    feature: { label: 'Nouveauté', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.08)', icon: 'sparkles' },
+    improvement: { label: 'Amélioration', color: '#6366f1', bgColor: 'rgba(99, 102, 241, 0.08)', icon: 'bolt' },
+    fix: { label: 'Correction', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.08)', icon: 'wrench' }
   };
   return categories[category as keyof typeof categories] || categories.feature;
 };

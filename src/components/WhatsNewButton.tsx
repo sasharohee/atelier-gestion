@@ -3,15 +3,22 @@ import {
   IconButton,
   Badge,
   Tooltip,
-  Fade,
+  Box,
+  alpha,
+  keyframes,
 } from '@mui/material';
 import {
-  NewReleases as NewReleasesIcon,
+  AutoAwesomeOutlined as SparkleIcon,
 } from '@mui/icons-material';
 import WhatsNewModal from './WhatsNewModal';
 import { whatsNewItems } from '../config/whatsNew';
 
 const STORAGE_KEY = 'app-atelier-last-read-news';
+
+const softPulse = keyframes`
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12); }
+`;
 
 const WhatsNewButton: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
@@ -29,7 +36,7 @@ const WhatsNewButton: React.FC = () => {
         }
 
         const lastRead = new Date(lastReadDate);
-        const unreadItems = whatsNewItems.filter(item => 
+        const unreadItems = whatsNewItems.filter(item =>
           new Date(item.date) > lastRead
         );
         setUnreadCount(unreadItems.length);
@@ -47,7 +54,7 @@ const WhatsNewButton: React.FC = () => {
     };
 
     window.addEventListener('openWhatsNew', handleOpenWhatsNew);
-    
+
     return () => {
       window.removeEventListener('openWhatsNew', handleOpenWhatsNew);
     };
@@ -72,39 +79,45 @@ const WhatsNewButton: React.FC = () => {
     }
   };
 
+  const hasUnread = unreadCount > 0;
+
   return (
     <>
-      <Tooltip title="Dernières nouveautés" arrow>
+      <Tooltip title="Nouveautés" arrow>
         <IconButton
           onClick={handleOpenModal}
+          size="small"
           sx={{
-            backgroundColor: 'rgba(0,0,0,0.04)',
-            color: 'text.primary',
+            width: 34,
+            height: 34,
+            color: hasUnread ? '#6366f1' : '#94a3b8',
+            backgroundColor: hasUnread ? alpha('#6366f1', 0.08) : 'transparent',
+            border: '1px solid',
+            borderColor: hasUnread ? alpha('#6366f1', 0.15) : 'transparent',
+            animation: hasUnread ? `${softPulse} 3s ease-in-out infinite` : 'none',
             '&:hover': {
-              backgroundColor: 'rgba(0,0,0,0.08)',
-              transform: 'scale(1.05)',
+              backgroundColor: hasUnread ? alpha('#6366f1', 0.12) : 'rgba(0,0,0,0.04)',
+              color: hasUnread ? '#6366f1' : '#475569',
             },
-            transition: 'all 0.2s ease-in-out',
-            position: 'relative',
+            transition: 'all 0.15s ease-out',
           }}
         >
           <Badge
-            badgeContent={unreadCount}
-            color="error"
+            variant={hasUnread ? 'dot' : undefined}
+            invisible={!hasUnread}
             sx={{
               '& .MuiBadge-badge': {
-                backgroundColor: '#ff4757',
-                color: 'white',
-                fontWeight: 600,
-                fontSize: '0.7rem',
-                minWidth: 18,
-                height: 18,
-                borderRadius: '50%',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                backgroundColor: '#6366f1',
+                width: 8,
+                height: 8,
+                minWidth: 8,
+                border: '2px solid white',
+                top: 2,
+                right: 2,
               },
             }}
           >
-            <NewReleasesIcon />
+            <SparkleIcon sx={{ fontSize: '1.15rem' }} />
           </Badge>
         </IconButton>
       </Tooltip>

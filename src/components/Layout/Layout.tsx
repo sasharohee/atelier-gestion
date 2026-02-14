@@ -15,15 +15,17 @@ import {
   Badge,
   Fade,
   Tooltip,
+  alpha,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
-
-  AccountCircle as AccountIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-  Help as HelpIcon,
-  Home as HomeIcon,
+  SettingsOutlined as SettingsIcon,
+  LogoutOutlined as LogoutIcon,
+  HelpOutlineOutlined as HelpIcon,
+  HomeOutlined as HomeIcon,
+  NavigateNext as NavigateNextIcon,
+  SearchOutlined as SearchIcon,
+  NotificationsNoneOutlined as NotificationsIcon,
+  KeyboardArrowDownOutlined as ArrowDownIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../store';
@@ -55,7 +57,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const handleLogout = () => {
-    // Logique de déconnexion
     handleMenuClose();
     navigate('/auth');
   };
@@ -68,7 +69,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       '/app/dashboard': 'Dashboard',
       '/app/kanban': 'Suivi des Réparations',
       '/app/calendar': 'Calendrier',
-  
+
       '/app/catalog': 'Catalogue',
       '/app/catalog/device-management': 'Gestion des Appareils',
       '/app/catalog/services': 'Services',
@@ -98,7 +99,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     const path = location.pathname;
     const breadcrumbs = [];
 
-    // Ajouter le lien vers le dashboard
     breadcrumbs.push(
       <Link
         key="home"
@@ -108,20 +108,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           e.preventDefault();
           navigate('/app/dashboard');
         }}
-        sx={{ 
-          textDecoration: 'none',
+        underline="none"
+        sx={{
           display: 'flex',
           alignItems: 'center',
           gap: 0.5,
-          color: 'text.secondary',
+          color: '#94a3b8',
+          fontSize: '0.78rem',
+          fontWeight: 500,
           '&:hover': {
-            color: 'text.primary',
+            color: '#475569',
           },
-          transition: 'color 0.2s ease-in-out',
+          transition: 'color 0.15s ease-out',
         }}
       >
-        <HomeIcon sx={{ fontSize: '1rem' }} />
-        Dashboard
+        <HomeIcon sx={{ fontSize: '0.9rem' }} />
+        Accueil
       </Link>
     );
 
@@ -135,19 +137,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             e.preventDefault();
             navigate('/app/catalog');
           }}
-          sx={{ 
-            textDecoration: 'none',
-            color: 'text.secondary',
-            '&:hover': {
-              color: 'text.primary',
-            },
-            transition: 'color 0.2s ease-in-out',
+          underline="none"
+          sx={{
+            color: '#94a3b8',
+            fontSize: '0.78rem',
+            fontWeight: 500,
+            '&:hover': { color: '#475569' },
+            transition: 'color 0.15s ease-out',
           }}
         >
           Catalogue
         </Link>
       );
-      
+
       const subPath = path.replace('/app/catalog/', '');
       const subTitles: Record<string, string> = {
         'device-management': 'Gestion des Appareils',
@@ -156,10 +158,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         'products': 'Produits',
         'out-of-stock': 'Ruptures de stock',
       };
-      
+
       if (subTitles[subPath]) {
         breadcrumbs.push(
-          <Typography key="sub" sx={{ color: 'text.primary', fontWeight: 500 }}>
+          <Typography key="sub" sx={{ color: '#334155', fontWeight: 600, fontSize: '0.78rem' }}>
             {subTitles[subPath]}
           </Typography>
         );
@@ -174,19 +176,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             e.preventDefault();
             navigate('/app/transaction');
           }}
-          sx={{ 
-            textDecoration: 'none',
-            color: 'text.secondary',
-            '&:hover': {
-              color: 'text.primary',
-            },
-            transition: 'color 0.2s ease-in-out',
+          underline="none"
+          sx={{
+            color: '#94a3b8',
+            fontSize: '0.78rem',
+            fontWeight: 500,
+            '&:hover': { color: '#475569' },
+            transition: 'color 0.15s ease-out',
           }}
         >
           Transaction
         </Link>
       );
-      
+
       const subPath = path.replace('/app/transaction/', '');
       const subTitles: Record<string, string> = {
         'clients': 'Clients',
@@ -195,17 +197,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         'quotes': 'Devis',
         'orders': 'Suivi Commandes',
       };
-      
+
       if (subTitles[subPath]) {
         breadcrumbs.push(
-          <Typography key="sub" sx={{ color: 'text.primary', fontWeight: 500 }}>
+          <Typography key="sub" sx={{ color: '#334155', fontWeight: 600, fontSize: '0.78rem' }}>
             {subTitles[subPath]}
           </Typography>
         );
       }
     } else if (path !== '/app/dashboard') {
       breadcrumbs.push(
-        <Typography key="current" sx={{ color: 'text.primary', fontWeight: 500 }}>
+        <Typography key="current" sx={{ color: '#334155', fontWeight: 600, fontSize: '0.78rem' }}>
           {getPageTitle()}
         </Typography>
       );
@@ -215,44 +217,42 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Sidebar */}
+    <Box sx={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
       <Sidebar />
-      
-      {/* Contenu principal */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-        {/* Barre de navigation supérieure avec design moderne */}
-        <AppBar
-          position="static"
-          elevation={0}
+
+      <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minWidth: 0 }}>
+        {/* Top Bar */}
+        <Box
+          component="header"
           sx={{
-            background: 'white',
-            borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
-            color: 'text.primary',
-            position: 'relative',
+            position: 'sticky',
+            top: 0,
+            zIndex: 1100,
+            background: 'rgba(255, 255, 255, 0.72)',
+            backdropFilter: 'blur(16px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+            borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
           }}
         >
-          <Toolbar sx={{ minHeight: 70, position: 'relative', zIndex: 1 }}>
-            {/* Titre et breadcrumbs avec design amélioré */}
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography 
-                variant="h6" 
-                component="div" 
-                sx={{ 
-                  fontWeight: 700,
-                  color: 'text.primary',
-                  fontSize: '1.25rem',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                {getPageTitle()}
-              </Typography>
-              <Breadcrumbs 
-                aria-label="breadcrumb" 
-                sx={{ 
-                  mt: 0.5,
-                  '& .MuiBreadcrumbs-separator': {
-                    color: 'text.secondary',
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              px: { xs: 2, sm: 3 },
+              height: 60,
+            }}
+          >
+            {/* Gauche : breadcrumbs uniquement */}
+            <Box sx={{ minWidth: 0 }}>
+              <Breadcrumbs
+                aria-label="breadcrumb"
+                separator={
+                  <NavigateNextIcon sx={{ fontSize: '0.8rem', color: '#cbd5e1' }} />
+                }
+                sx={{
+                  '& .MuiBreadcrumbs-ol': {
+                    flexWrap: 'nowrap',
                   },
                 }}
               >
@@ -260,64 +260,122 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </Breadcrumbs>
             </Box>
 
-            {/* Actions de droite avec design amélioré */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {/* Statut de connexion */}
+            {/* Droite : actions */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {/* Connexion */}
               <ConnectionStatus />
-              
-              {/* Bouton nouveautés */}
+
+              {/* Nouveautés */}
               <WhatsNewButton />
-              
-              {/* Profil utilisateur avec redirection vers réglages */}
-              <Tooltip title="Réglages" arrow>
-                <IconButton
-                  color="inherit"
-                  size="large"
-                  onClick={() => navigate('/app/settings')}
-                  sx={{
+
+              {/* Séparateur */}
+              <Box sx={{
+                width: 1,
+                height: 20,
+                backgroundColor: 'rgba(0,0,0,0.06)',
+                mx: 0.8,
+                borderRadius: 1,
+              }} />
+
+              {/* Profil cliquable */}
+              <Box
+                onClick={handleProfileMenuOpen}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  pl: 0.5,
+                  pr: 1,
+                  py: 0.5,
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease-out',
+                  '&:hover': {
                     backgroundColor: 'rgba(0,0,0,0.04)',
-                    color: 'text.primary',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0,0,0,0.08)',
-                      transform: 'scale(1.05)',
-                    },
-                    transition: 'all 0.2s ease-in-out',
+                  },
+                }}
+              >
+                <Avatar
+                  src={currentUser?.avatar}
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    border: '2px solid rgba(99, 102, 241, 0.15)',
                   }}
                 >
-                  <Avatar
-                    src={currentUser?.avatar}
-                    sx={{ 
-                      width: 32, 
-                      height: 32,
-                      border: '2px solid rgba(0,0,0,0.1)',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                    }}
-                  >
-                    {currentUser?.firstName?.charAt(0)}
-                  </Avatar>
-                </IconButton>
-              </Tooltip>
+                  {currentUser?.firstName?.charAt(0)}
+                </Avatar>
+                <Box sx={{ display: { xs: 'none', md: 'block' }, minWidth: 0 }}>
+                  <Typography sx={{
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    lineHeight: 1.2,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: 120,
+                  }}>
+                    {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''}
+                  </Typography>
+                  <Typography sx={{
+                    fontSize: '0.68rem',
+                    color: '#94a3b8',
+                    fontWeight: 500,
+                    lineHeight: 1.2,
+                    textTransform: 'capitalize',
+                  }}>
+                    {currentUser?.role}
+                  </Typography>
+                </Box>
+                <ArrowDownIcon sx={{
+                  fontSize: '1rem',
+                  color: '#94a3b8',
+                  display: { xs: 'none', md: 'block' },
+                }} />
+              </Box>
             </Box>
-          </Toolbar>
-        </AppBar>
+          </Box>
 
-        {/* Contenu principal avec padding ajusté */}
+          {/* Titre de page */}
+          <Box sx={{
+            px: { xs: 2, sm: 3 },
+            pb: 1.5,
+          }}>
+            <Typography
+              component="h1"
+              sx={{
+                fontWeight: 700,
+                color: '#0f172a',
+                fontSize: '1.35rem',
+                letterSpacing: '-0.02em',
+                lineHeight: 1,
+              }}
+            >
+              {getPageTitle()}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Contenu principal */}
         <Box
           component="main"
           sx={{
             flexGrow: 1,
             overflow: 'auto',
-            backgroundColor: 'background.default',
             p: 3,
-            background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
-            minHeight: 'calc(100vh - 70px)',
+            background: '#f8fafc',
+            minHeight: 'calc(100vh - 96px)',
           }}
         >
           {children}
         </Box>
       </Box>
 
-      {/* Menu profil avec design amélioré */}
+      {/* Menu profil dropdown */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -325,75 +383,129 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         PaperProps={{
           sx: {
             mt: 1,
-            minWidth: 250,
-            borderRadius: 2,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            backdropFilter: 'blur(10px)',
-            background: 'rgba(255,255,255,0.95)',
+            minWidth: 220,
+            borderRadius: '12px',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
+            border: 'none',
+            overflow: 'hidden',
           },
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
-            {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            {currentUser?.email}
-          </Typography>
+        {/* En-tête profil */}
+        <Box sx={{
+          px: 2,
+          pt: 2,
+          pb: 1.5,
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(139,92,246,0.04) 100%)',
+          borderBottom: '1px solid rgba(0,0,0,0.05)',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, mb: 1.2 }}>
+            <Avatar
+              src={currentUser?.avatar}
+              sx={{
+                width: 38,
+                height: 38,
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              }}
+            >
+              {currentUser?.firstName?.charAt(0)}
+            </Avatar>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.85rem', lineHeight: 1.3 }}>
+                {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : ''}
+              </Typography>
+              <Typography sx={{ color: '#94a3b8', fontSize: '0.72rem', fontWeight: 500 }}>
+                {currentUser?.email}
+              </Typography>
+            </Box>
+          </Box>
           <Chip
             label={currentUser?.role}
             size="small"
-            color="primary"
-            sx={{ 
-              backgroundColor: 'primary.main',
+            sx={{
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
               color: 'white',
               fontWeight: 600,
+              fontSize: '0.65rem',
+              height: 22,
+              textTransform: 'capitalize',
             }}
           />
         </Box>
-        <MenuItem 
-          onClick={() => { handleMenuClose(); navigate('/app/settings'); }}
-          sx={{
-            '&:hover': {
-              backgroundColor: 'primary.light',
-              color: 'primary.contrastText',
-            },
-            transition: 'all 0.2s ease-in-out',
-          }}
-        >
-          <SettingsIcon sx={{ mr: 2, color: 'primary.main' }} />
-          Réglages
-        </MenuItem>
-        <MenuItem 
-          onClick={handleMenuClose}
-          sx={{
-            '&:hover': {
-              backgroundColor: 'info.light',
-              color: 'info.contrastText',
-            },
-            transition: 'all 0.2s ease-in-out',
-          }}
-        >
-          <HelpIcon sx={{ mr: 2, color: 'info.main' }} />
-          Aide
-        </MenuItem>
-        <Divider />
-        <MenuItem 
-          onClick={handleLogout}
-          sx={{
-            '&:hover': {
-              backgroundColor: 'error.light',
-              color: 'error.contrastText',
-            },
-            transition: 'all 0.2s ease-in-out',
-          }}
-        >
-          <LogoutIcon sx={{ mr: 2, color: 'error.main' }} />
-          Déconnexion
-        </MenuItem>
+
+        {/* Actions */}
+        <Box sx={{ py: 0.5 }}>
+          <MenuItem
+            onClick={() => { handleMenuClose(); navigate('/app/settings'); }}
+            sx={{
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              color: '#475569',
+              borderRadius: '8px',
+              mx: 0.5,
+              py: 1,
+              gap: 1.2,
+              '&:hover': {
+                backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                color: '#6366f1',
+                '& .menu-icon': { color: '#6366f1' },
+              },
+              transition: 'all 0.12s ease-out',
+            }}
+          >
+            <SettingsIcon className="menu-icon" sx={{ fontSize: '1.15rem', color: '#94a3b8', transition: 'color 0.12s ease-out' }} />
+            Réglages
+          </MenuItem>
+          <MenuItem
+            onClick={handleMenuClose}
+            sx={{
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              color: '#475569',
+              borderRadius: '8px',
+              mx: 0.5,
+              py: 1,
+              gap: 1.2,
+              '&:hover': {
+                backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                color: '#6366f1',
+                '& .menu-icon': { color: '#6366f1' },
+              },
+              transition: 'all 0.12s ease-out',
+            }}
+          >
+            <HelpIcon className="menu-icon" sx={{ fontSize: '1.15rem', color: '#94a3b8', transition: 'color 0.12s ease-out' }} />
+            Centre d'aide
+          </MenuItem>
+        </Box>
+
+        <Divider sx={{ mx: 1.5, borderColor: 'rgba(0,0,0,0.05)' }} />
+
+        <Box sx={{ py: 0.5 }}>
+          <MenuItem
+            onClick={handleLogout}
+            sx={{
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              color: '#ef4444',
+              borderRadius: '8px',
+              mx: 0.5,
+              py: 1,
+              gap: 1.2,
+              '&:hover': {
+                backgroundColor: 'rgba(239, 68, 68, 0.06)',
+              },
+              transition: 'all 0.12s ease-out',
+            }}
+          >
+            <LogoutIcon sx={{ fontSize: '1.15rem' }} />
+            Déconnexion
+          </MenuItem>
+        </Box>
       </Menu>
     </Box>
   );
